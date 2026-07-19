@@ -2,7 +2,7 @@
 export const SecurityAudit = {
   // Log security events (in production, this would go to a monitoring service)
   logSecurityEvent: (event: string, details?: Record<string, unknown>) => {
-    if (process.env.NODE_ENV === 'development') {
+    if (import.meta.env.DEV) {
       console.warn(`[SECURITY] ${event}`, details);
     }
     // In production, send to monitoring service
