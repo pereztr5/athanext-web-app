@@ -4,6 +4,7 @@ import { sanitizeHTML } from "@/utils/sanitize";
 const HTML_TAG_PATTERN = /<\/?[a-z][\s\S]*>/i;
 const BLOCK_TAG_CLOSE_PATTERN = /<\/(p|div|h[1-6]|li|blockquote|section|article|pre)>/gi;
 const PARAGRAPH_BREAK_TOKEN = "__ATHANEXT_PARAGRAPH_BREAK__";
+// eslint-disable-next-line no-misleading-character-class
 const INVISIBLE_BREAK_CHAR_PATTERN = /[\u00ad\u200b\u200c\u200d\u2060\ufeff]/gi;
 const INVISIBLE_BREAK_ENTITY_PATTERN =
   /&(nbsp|shy|ZeroWidthSpace);|&#(?:173|8203|8204|8205|8288|65279);/gi;

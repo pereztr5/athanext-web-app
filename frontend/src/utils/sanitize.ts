@@ -20,7 +20,7 @@ export function sanitizeHTML(html: string): string {
       'href', 'title', 'target', 'rel', 'class', 'id'
     ],
     ALLOW_DATA_ATTR: false,
-    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.\-]+(?:[^a-z+.\-:]|$))/i,
+    ALLOWED_URI_REGEXP: /^(?:(?:(?:f|ht)tps?|mailto|tel|callto|sms|cid|xmpp):|[^a-z]|[a-z+.-]+(?:[^a-z+.:-]|$))/i,
     // Ensure links open securely
     ADD_ATTR: ['target'],
     // Force all links to open in new tab with security attributes
