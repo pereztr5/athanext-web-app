@@ -1,0 +1,184 @@
+# ============================================================================
+# Azure Pipelines - AthaLink Development Pipeline
+# ============================================================================
+# CONFIGURATION: Dev environment only (dev branch)
+# ARTIFACTS: Development build zip file
+# DEPLOYMENT: Azure blob storage or local dev machine
+# ============================================================================
+
+trigger:
+  branches:
+    include:
+      - dev
+    exclude:
+      - qa
+      - main
+      - feature/*
+      - bugfix/*
+
+pr:
+  branches:
+    include:
+      - dev
+
+pool:
+  name: 'Azure Pipelines'  
+  demands:
+    - npm
+    - node.js
+
+variables:
+  nodeVersion: '18.x'
+  buildConfiguration: 'development'
+  artifactName: 'dev-build'
+
+# ============================================================================
+# STAGES
+# ============================================================================
+
+stages:
+  # --------------------------------------------------------------------------
+  # STAGE 1: Setup & Validation
+  # --------------------------------------------------------------------------
+  - stage: Setup
+    displayName: '📦 Setup & Validation'
+    jobs:
+      - job: SetupJob
+        displayName: 'Install Dependencies & Validate'
+        steps:
+          # Use specific Node version
+          - task: NodeTool@0
+            displayName: 'Use Node.js $(nodeVersion)'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          # Clean npm cache for fresh install
+          - script: npm cache clean --force
+            displayName: '🧹 Clean npm cache'
+            continueOnError: true
+
+          # Install dependencies
+          - script: npm ci
+            displayName: '📥 Install dependencies (npm ci)'
+
+          # Validate package-lock.json consistency
+          - script: npm ls --depth=0
+            displayName: '✓ Validate dependencies'
+            continueOnError: true
+
+          # Type checking
+          - script: npm run type-check
+            displayName: '✓ TypeScript type checking'
+            continueOnError: false
+
+  # --------------------------------------------------------------------------
+  # STAGE 2: Development Build & Artifact
+  # --------------------------------------------------------------------------
+  - stage: DevelopmentBuild
+    displayName: '🔨 Development Build'
+    dependsOn: Setup
+    condition: succeeded()
+    jobs:
+      - job: DevelopmentBuildJob
+        displayName: 'Build & Create Artifact'
+        steps:
+          # Use specific Node version
+          - task: NodeTool@0
+            displayName: 'Use Node.js $(nodeVersion)'
+            inputs:
+              versionSpec: $(nodeVersion)
+
+          # Install dependencies
+          - script: npm ci
+            displayName: '📥 Install dependencies'
+
+          # Load environment variables from pipeline variable groups
+          # In Azure DevOps, create a Variable Group named 'dev-env'
+          # containing: VITE_SUPABASE_PROJECT_ID, VITE_SUPABASE_URL, etc.
+          # Uncomment the following task if using Variable Groups:
+          # - task: DownloadSecureFile@1
+          #   name: envFile
+          #   displayName: 'Download .env.dev file'
+          #   inputs:
+          #     secureFile: '.env.dev'
+
+          # Create .env file from pipeline variables (alternative approach)
+          - script: |
+              cat > .env << EOF
+              VITE_SUPABASE_PROJECT_ID=$(VITE_SUPABASE_PROJECT_ID)
+              VITE_SUPABASE_URL=$(VITE_SUPABASE_URL)
+              VITE_SUPABASE_PUBLISHABLE_KEY=$(VITE_SUPABASE_PUBLISHABLE_KEY)
+              VITE_SUPABASE_SERVICE_ROLE_KEY=$(VITE_SUPABASE_SERVICE_ROLE_KEY)
+              VITE_STRIPE_PUBLISHABLE_KEY=$(VITE_STRIPE_PUBLISHABLE_KEY)
+              VITE_STRIPE_SECRET_KEY=$(VITE_STRIPE_SECRET_KEY)
+              VITE_EMAIL_SERVICE_API_KEY=$(VITE_EMAIL_SERVICE_API_KEY)
+              VITE_EMAIL_FROM_ADDRESS=$(VITE_EMAIL_FROM_ADDRESS)
+              VITE_APP_URL=$(VITE_APP_URL)
+              VITE_API_BASE_URL=$(VITE_API_BASE_URL)
+              VITE_ENVIRONMENT=development
+              VITE_GOOGLE_ANALYTICS_ID=$(VITE_GOOGLE_ANALYTICS_ID)
+              VITE_SENTRY_DSN=$(VITE_SENTRY_DSN)
+              EOF
+            displayName: '⚙️ Create .env from pipeline variables'
+
+          # Build for development
+          - script: npm run build:dev
+            displayName: '🔨 Build for development'
+
+          # Verify dist folder was created
+          - script: |
+              if [ -d "dist" ]; then
+                echo "✓ Build artifact created successfully"
+                ls -la dist/
+              else
+                echo "✗ Build failed: dist folder not found"
+                exit 1
+              fi
+            displayName: '✓ Verify build output'
+
+          # Create zip artifact
+          - task: ArchiveFiles@2
+            displayName: '📦 Create deployment archive'
+            inputs:
+              rootFolderOrFile: '$(System.DefaultWorkingDirectory)/dist'
+              includeRootFolder: false
+              archiveType: 'zip'
+              archiveFile: '$(Build.ArtifactStagingDirectory)/dev-build-$(Build.BuildId).zip'
+              replaceExistingArchive: true
+
+          # Publish artifact
+          - task: PublishBuildArtifacts@1
+            displayName: '📤 Publish artifact to pipeline'
+            inputs:
+              PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+              ArtifactName: $(artifactName)
+              publishLocation: 'Container'
+
+          # Display summary
+          - script: |
+              echo "=========================================="
+              echo "✓ Build Complete!"
+              echo "=========================================="
+              echo "Build ID: $(Build.BuildId)"
+              echo "Build Number: $(Build.BuildNumber)"
+              echo "Source Branch: $(Build.SourceBranchName)"
+              echo "Artifact: dev-build-$(Build.BuildId).zip"
+              echo "=========================================="
+            displayName: '📋 Build Summary'
+
+# ============================================================================
+# PIPELINE COMPLETION
+# ============================================================================
+# After successful build:
+# 1. Download the artifact from Azure Pipelines
+# 2. Extract the zip file
+# 3. Deploy to your dev machine or dev server
+# 4. Run: npm install && npm run preview (if needed)
+#
+# MANUAL DEPLOYMENT STEPS:
+# 1. Go to Pipeline > Run
+# 2. Select branch: dev
+# 3. Wait for completion
+# 4. Download artifact from "Published" section
+# 5. Extract to your dev deployment location
+# ============================================================================

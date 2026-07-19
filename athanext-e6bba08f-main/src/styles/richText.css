@@ -1,0 +1,89 @@
+.rich-text-content {
+  font-size: 0.95rem;
+  line-height: 1.75;
+  color: inherit;
+  word-break: normal;
+  overflow-wrap: break-word;
+  hyphens: none;
+}
+
+.rich-text-content > *:first-child {
+  margin-top: 0;
+}
+
+.rich-text-content > *:last-child {
+  margin-bottom: 0;
+}
+
+.rich-text-content p {
+  margin: 0 0 0.85rem;
+}
+
+.rich-text-content ul,
+.rich-text-content ol {
+  margin: 0.75rem 0;
+  padding-left: 1.5rem;
+}
+
+.rich-text-content ul {
+  list-style: disc;
+}
+
+.rich-text-content ol {
+  list-style: decimal;
+}
+
+.rich-text-content li {
+  margin: 0.35rem 0;
+}
+
+.rich-text-content a {
+  color: hsl(var(--primary));
+  text-decoration: underline;
+}
+
+.rich-text-content blockquote {
+  margin: 0.75rem 0;
+  border-left: 3px solid hsl(var(--border));
+  padding-left: 1rem;
+  color: hsl(var(--muted-foreground));
+}
+
+.rich-text-content strong {
+  font-weight: 600;
+}
+
+.coach-bio-editor .ql-toolbar,
+.coach-bio-editor .ql-container {
+  border-color: hsl(var(--border));
+}
+
+.coach-bio-editor .ql-toolbar {
+  border-top-left-radius: calc(var(--radius) - 2px);
+  border-top-right-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--background));
+}
+
+.coach-bio-editor .ql-container {
+  min-height: 12rem;
+  border-bottom-left-radius: calc(var(--radius) - 2px);
+  border-bottom-right-radius: calc(var(--radius) - 2px);
+  background: hsl(var(--background));
+  font-size: 0.95rem;
+}
+
+.coach-bio-editor .ql-editor {
+  min-height: 12rem;
+  line-height: 1.75;
+  color: hsl(var(--foreground));
+}
+
+.coach-bio-editor .ql-editor.ql-blank::before {
+  color: hsl(var(--muted-foreground));
+  font-style: normal;
+}
+
+.coach-bio-editor:focus-within .ql-toolbar,
+.coach-bio-editor:focus-within .ql-container {
+  border-color: hsl(var(--ring));
+}

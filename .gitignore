@@ -1,0 +1,11 @@
+# Planning docs stay local — never commit
+docs/planning/
+
+# Never re-commit the source zip
+*.zip
+
+node_modules/
+.DS_Store
+
+# Supabase CLI scratch
+**/supabase/.temp/

@@ -1,0 +1,131 @@
+.content-wrapper {
+  /* font-family: Helvetica, Arial, sans-serif; */
+  font-size: 13px;
+  line-height: 1.42;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+  color: #333;
+}
+
+/* Paragraphs */
+.content-wrapper p {
+  margin: 0 0 0.75em 0;
+  line-height: 1.5;
+}
+
+/* Headers */
+.content-wrapper h1 {
+  font-size: 2em;
+  font-weight: bold;
+  margin: 0.67em 0 0.5em 0;
+}
+
+.content-wrapper h2 {
+  font-size: 1.5em;
+  font-weight: bold;
+  margin: 0.75em 0 0.5em 0;
+}
+
+.content-wrapper h3 {
+  font-size: 1.17em;
+  font-weight: bold;
+  margin: 0.75em 0 0.5em 0;
+}
+
+/* Bold, Italic, Underline */
+.content-wrapper strong,
+.content-wrapper b {
+  font-weight: bold;
+}
+
+.content-wrapper em,
+.content-wrapper i {
+  font-style: italic;
+}
+
+.content-wrapper u {
+  text-decoration: underline;
+}
+
+/* Links */
+.content-wrapper a {
+  color: #06c;
+  text-decoration: underline;
+}
+.content-wrapper a:hover {
+  color: #004080;
+}
+
+/* Unordered lists (bullet) */
+.content-wrapper ul {
+  list-style: none;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.content-wrapper ul > li {
+  position: relative;
+  margin: 0.25em 0;
+  padding-left: 1.5em;
+}
+
+.content-wrapper ul > li::before {
+  content: '\2022'; /* bullet */
+  position: absolute;
+  left: 0;
+  color: #777;
+  font-weight: bold;
+}
+
+/* Ordered lists (decimal) */
+.content-wrapper ol {
+  list-style: none;
+  counter-reset: list-counter;
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+.content-wrapper ol > li {
+  position: relative;
+  margin: 0.25em 0;
+  padding-left: 1.5em;
+  counter-increment: list-counter;
+}
+
+.content-wrapper ol > li::before {
+  content: counter(list-counter) ". ";
+  position: absolute;
+  left: 0;
+  color: #777;
+}
+
+/* Nested lists */
+.content-wrapper ul li ul,
+.content-wrapper ul li ol,
+.content-wrapper ol li ul,
+.content-wrapper ol li ol {
+  padding-left: 1.5em;
+}
+
+/* Blockquote */
+.content-wrapper blockquote {
+  border-left: 4px solid #ccc;
+  padding-left: 1em;
+  margin: 0.5em 0;
+  color: #555;
+}
+
+/* Code / Pre */
+.content-wrapper pre,
+.content-wrapper code {
+  background-color: #f0f0f0;
+  border-radius: 3px;
+  padding: 0.25em 0.5em;
+  /* font-family: monospace; */
+}
+
+.content-wrapper img {
+  max-width: 100%;
+  height: auto;
+}
+ 
