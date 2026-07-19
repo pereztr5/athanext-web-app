@@ -1,7 +1,7 @@
 import { User } from "@supabase/supabase-js";
 import { authAPI, apiClient } from "@/api";
 import { strings } from "@/config/strings";
-import { userProfilesAPI, type UserProfile } from "@/api/endpoints/userProfiles";
+import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
 import { clearReviewsCache } from "@/hooks/useReviews";
 import { clearCoachCache } from "@/hooks/useCoachDetails";
 import { clearProfileCache } from "@/hooks/useProfile";

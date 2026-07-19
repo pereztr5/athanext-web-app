@@ -8,7 +8,7 @@ import { strings } from '@/config/strings';
 import { useAuth } from "@/hooks/useAuth";
 import { Package } from 'lucide-react';
 import { PROFILE_TYPE } from "@/utils/db";
-import { packagesAPI } from "@/api/endpoints/packages";
+import { packagesAPI } from "@/api/packages";
 import { apiClient } from "@/api/client";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
 

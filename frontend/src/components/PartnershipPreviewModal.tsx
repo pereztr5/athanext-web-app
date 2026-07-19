@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
 import { CheckCircle2, Sparkles } from "lucide-react";
 import { colors } from "@/config/colors";
-import { PartnershipStatus, type Partnership } from "@/api/endpoints/partnerships";
+import { PartnershipStatus, type Partnership } from "@/api/partnerships";
 
 interface PartnershipPreviewModalProps {
   partnership: Partnership;

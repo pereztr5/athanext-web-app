@@ -6,7 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/routes";
-import { bookingsAPI, type BookingConfirmationData } from "@/api/endpoints/bookings";
+import { bookingsAPI, type BookingConfirmationData } from "@/api/bookings";
 import { formatSlotTime } from "@/utils/sessionFormatting";
 import { parseISODateLocal } from "@/utils/dateHelpers";
 import { formatDateToUSA } from "@/utils/helperFunctions";

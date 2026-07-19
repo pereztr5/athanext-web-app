@@ -9,7 +9,7 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { colors } from "@/config/colors";
 import { strings } from "@/config/strings";
-import { packagesAPI } from "@/api/endpoints/packages";
+import { packagesAPI } from "@/api/packages";
 import { apiClient } from "@/api/client";
 
 interface PackagesModalProps {

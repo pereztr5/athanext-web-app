@@ -3,7 +3,7 @@
  * Centralized API functions for booking confirmation and related operations
  */
 
-import type { ApiResponse, ApiError } from '../client';
+import type { ApiResponse, ApiError } from './client';
 import { supabase } from '@/integrations/supabase/client';
 
 export interface BookingConfirmationData {

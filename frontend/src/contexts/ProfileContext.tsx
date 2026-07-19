@@ -4,7 +4,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { PROFILE_TYPE } from "@/utils/db";
 import type { CoachDetails } from "@/hooks/useCoachDetails";
 import type { AthleteProfile } from "@/hooks/useProfile";
-import type { UserProfile } from "@/api/endpoints/userProfiles";
+import type { UserProfile } from "@/api/userProfiles";
 import { calculateProfileProgress, DEFAULT_PROFILE_PROGRESS, type ProfileData } from "@/utils/profileCompletion";
 
 export type UserType = "coach" | "athlete" | null;

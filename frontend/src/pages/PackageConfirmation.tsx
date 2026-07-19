@@ -5,7 +5,7 @@ import { CheckCircle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { packagesAPI, type Package } from "@/api/endpoints/packages";
+import { packagesAPI, type Package } from "@/api/packages";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { ROUTES } from "@/routes";

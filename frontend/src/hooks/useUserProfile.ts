@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { userProfilesAPI, type UserProfile } from "@/api/endpoints/userProfiles";
+import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
 import { useAuth } from "./useAuth";
 
 interface UseUserProfileReturn {

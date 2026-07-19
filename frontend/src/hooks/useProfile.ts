@@ -8,7 +8,7 @@ import { PROFILE_TYPE } from "@/utils/db";
 import type { CoachDetails } from "./useCoachDetails";
 import { useCallback, useEffect, useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
-import { type UserProfile as SupabaseUserProfile } from "@/api/endpoints/userProfiles";
+import { type UserProfile as SupabaseUserProfile } from "@/api/userProfiles";
 
 export type UserType = "coach" | "athlete" | null;
 

@@ -3,7 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { packagesAPI } from "@/api/endpoints/packages";
+import { packagesAPI } from "@/api/packages";
 import { ROUTES } from "@/routes";
 
 type VerificationStatus = "verifying" | "pending" | "success" | "error";

@@ -2,7 +2,7 @@ import * as authActions from "./actions";
 import { authAPI, apiClient } from "@/api";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from "@supabase/supabase-js";
-import { type UserProfile } from "@/api/endpoints/userProfiles";
+import { type UserProfile } from "@/api/userProfiles";
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { DEFAULT_PROFILE_PROGRESS, type ProfileProgress } from "@/utils/profileCompletion";
 

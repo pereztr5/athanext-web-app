@@ -17,7 +17,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { usePartnershipInquirySubmission } from "@/hooks/usePartnershipInquirySubmission";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";
-import { PartnershipStatus } from "@/api/endpoints/partnerships";
+import { PartnershipStatus } from "@/api/partnerships";
 import footballIcon from "../assets/images/colored-soccer.png";
 import rowerIcon from "../assets/images/colored-rowing.png";
 

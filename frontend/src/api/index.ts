@@ -21,7 +21,7 @@ export {
 } from './configurations';
 
 // Sport Pillars API
-export { coachesAPI, type PublicCoach, type CoachInsert, type CoachUpdate } from './endpoints/coaches';
+export { coachesAPI, type PublicCoach, type CoachInsert, type CoachUpdate } from './coaches';
 
 // Auth API
 export {
@@ -29,14 +29,14 @@ export {
   type SignUpData,
   type SignInData,
   type AuthResponse,
-} from './endpoints/auth';
+} from './auth';
 
 // Profiles API
 export {
   profilesAPI,
   type UserProfile,
   type UserProfileUpsert,
-} from './endpoints/profiles';
+} from './profiles';
 
 // User Profiles API
 export {
@@ -44,7 +44,7 @@ export {
   type UserProfile as UserProfileData,
   type UserProfileInsert,
   type UserProfileUpdate,
-} from './endpoints/userProfiles';
+} from './userProfiles';
 
 // Reviews API
 export {
@@ -52,7 +52,7 @@ export {
   type Review,
   type ReviewSummary,
   type SubmitReviewInput,
-} from './endpoints/reviews';
+} from './reviews';
 
 // Appointments API
 export {
@@ -60,7 +60,7 @@ export {
   type Appointment,
   type CreateAppointmentInput,
   type AvailableSlot,
-} from './endpoints/appointments';
+} from './appointments';
 
 // Packages API
 export {
@@ -68,7 +68,7 @@ export {
   type Package,
   type PackagePurchase,
   type PurchasePackageInput,
-} from './endpoints/packages';
+} from './packages';
 
 // Partnerships API
 export {
@@ -76,7 +76,7 @@ export {
   type Partnership,
   type PartnershipInquiry,
   type SubmitInquiryInput,
-} from './endpoints/partnerships';
+} from './partnerships';
 
 // Votes API
 export {
@@ -84,13 +84,13 @@ export {
   type Vote,
   type VoteStats,
   type SubmitVoteInput,
-} from './endpoints/votes';
+} from './votes';
 
 // Contact Info API
 export {
   contactInfoAPI,
   type ContactInfo,
-} from './endpoints/contactInfo';
+} from './contactInfo';
 
 // Chat API
 export {
@@ -98,17 +98,17 @@ export {
   type ConversationWithParticipants,
   type MessageWithSender,
   type GetMessagesOptions,
-} from './endpoints/chat';
+} from './chat';
 export {
   athletesAPI,
   type AthleteProfileStats,
-} from './endpoints/athletes';
+} from './athletes';
 export {
   athleteProfilesAPI,
   type AthleteProfile,
   type AthleteProfileInsert,
   type AthleteProfileUpdate,
-} from './endpoints/athleteProfiles';
+} from './athleteProfiles';
 // Sessions API (coach_slot_bookings)
 export {
   getMySessions,
@@ -122,7 +122,7 @@ export {
   bookingsAPI,
   type BookingConfirmationData,
   type CoachInfo,
-} from './endpoints/bookings';
+} from './bookings';
 
 export type {
   CoachSlotBooking,
