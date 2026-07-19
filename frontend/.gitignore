@@ -57,7 +57,4 @@ jest-*.json
 *.njsproj
 *.sln
 *.sw?
-.md
-
-.sql
 .agents
