@@ -86,7 +86,7 @@ cp .env.example .env         # fill in your Supabase and service credentials
 npm run dev                  # start the local development server
 ```
 
-The development server runs on `http://localhost:5173` by default. Use `npm run qa` or `npm run prod` to boot the app against alternate Vite modes that load environment-specific configs. All commands below are run from `frontend/`.
+The development server runs on `http://localhost:8080` by default. Use `npm run qa` or `npm run prod` to boot the app against alternate Vite modes that load environment-specific configs. All commands below are run from `frontend/`.
 
 ## Environment Variables
 Create `.env`, `.env.local`, or `.env.<mode>` files with the following keys:
