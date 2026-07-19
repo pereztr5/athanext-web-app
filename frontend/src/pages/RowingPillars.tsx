@@ -1,4 +1,4 @@
-import AthletePillarsGraphic from "@/components/AthletePillarsGraphic";
+import AthletePillarsGraphic from "@/components/coach/AthletePillarsGraphic";
 
 const RowingPillars = () => {
   return (

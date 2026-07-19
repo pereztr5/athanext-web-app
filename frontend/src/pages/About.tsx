@@ -1,5 +1,5 @@
-import ScrollToTop from '@/components/ScrollToTop';
-import ErrorBoundary from '@/components/ErrorBoundary';
+import ScrollToTop from '@/components/common/ScrollToTop';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
 import { AboutHero } from '@/components/sections/about/AboutHero';
 import { AboutStory } from '@/components/sections/about/AboutStory';
 import { AboutMissionVision } from '@/components/sections/about/AboutMissionVision';

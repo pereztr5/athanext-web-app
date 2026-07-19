@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { Calendar, Clock4, MapPin, SendHorizontal, Users, X } from "lucide-react";
 
-import { RateCoachDialogSkeleton } from "@/components/RateCoachDialogSkeleton";
+import { RateCoachDialogSkeleton } from "@/components/reviews/RateCoachDialogSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";

@@ -9,7 +9,7 @@ import CoachSchedulingModal from "./CoachSchedulingModal";
 import { PackagesModal } from "./PackagesModal";
 import CoachQuickPreviewModal from "./CoachQuickPreviewModal";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
-import CoachCard from "@/components/CoachCard";
+import CoachCard from "@/components/coach/CoachCard";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/use-mobile";

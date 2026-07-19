@@ -11,7 +11,7 @@ import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { ConfirmationDialog } from '@/components/ConfirmationDialog';
+import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
 import { AlertCircle, Calendar, Clock, X, Info } from 'lucide-react';
 import {
   validateAvailabilityForm,

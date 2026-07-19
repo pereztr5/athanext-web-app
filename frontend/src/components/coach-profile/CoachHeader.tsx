@@ -15,7 +15,7 @@ import rowerIcon from "@/assets/images/colored-rowing.png";
 import { GenderSelect } from "@/components/form/GenderSelect";
 import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
 import footballIcon from "@/assets/images/colored-soccer.png";
-import { CoachVerificationBadge } from "@/components/CoachVerificationBadge";
+import { CoachVerificationBadge } from "@/components/coach/CoachVerificationBadge";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatLocationDisplay, type LocationInfo } from "@/utils/geolocation";
 import { MapPin, Clock, Instagram, ExternalLink, Camera, Plus, Trash2, X, Save, Edit, Loader2 } from "lucide-react";

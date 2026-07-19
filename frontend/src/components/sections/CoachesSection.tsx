@@ -1,10 +1,10 @@
 import { useState } from "react";
-import CoachCard from "../CoachCard";
+import CoachCard from "../coach/CoachCard";
 import { Skeleton } from "@/components/ui/skeleton";
 import type { PublicCoach } from "@/hooks/useCoaches";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import CoachSchedulingModal from "@/components/CoachSchedulingModal";
+import CoachSchedulingModal from "@/components/coach/CoachSchedulingModal";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";

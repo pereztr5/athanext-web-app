@@ -9,7 +9,7 @@ import {
     TrainingSpecialization,
 } from "@/components/coach-profile";
 import { CoachAvailabilitySection } from "@/components/coach-profile/CoachAvailabilitySection";
-import ErrorBoundary from "@/components/ErrorBoundary";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { ProfileSkeleton } from "@/components/athlete-profile";
 import { PROFILE_TYPE } from "@/utils/db";
 import { useState, useEffect, useMemo } from "react";
@@ -32,10 +32,10 @@ import { Label } from "@/components/ui/label";
 import { useProfile } from '@/contexts/ProfileContext';
 import { clearGlobalImageCache } from '@/contexts/ProfileContext';
 import { useAuth } from "@/contexts/AuthContext";
-import { ReviewModal } from "@/components/ReviewModal";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
-import { PackagesModal } from "@/components/PackagesModal";
+import { PackagesModal } from "@/components/coach/PackagesModal";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCoachDetails, clearCoachCache } from "@/hooks/useCoachDetails";

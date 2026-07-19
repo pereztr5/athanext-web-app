@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import rowingIcon from "../../assets/images/colored-rowing.png";
 import soccerBallIcon from "../../assets/images/colored-soccer.png";
-import { SportsPoll } from "@/components/SportsPoll";
+import { SportsPoll } from "@/components/common/SportsPoll";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import type { Enums } from "@/integrations/supabase/types";
 import { useMemo } from "react";

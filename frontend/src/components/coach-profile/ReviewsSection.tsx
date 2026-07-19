@@ -1,7 +1,7 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
-import { RatingBreakdown } from "@/components/RatingBreakdown";
+import { RatingBreakdown } from "@/components/reviews/RatingBreakdown";
 
 interface Review {
   id: string;

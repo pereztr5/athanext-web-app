@@ -41,7 +41,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useSportPillars } from "@/hooks/useSportPillars";
-import { RateCoachDialog } from "@/components/RateCoachDialog";
+import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
 import {
   upsertSlotFeedback,

@@ -2,7 +2,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Carousel } from "@/components/coach-profile";
-import { CoachVerificationBadge } from "@/components/CoachVerificationBadge";
+import { CoachVerificationBadge } from "@/components/coach/CoachVerificationBadge";
 import { Calendar, MapPin, MessageCircle } from "lucide-react";
 import footballCover from "@/assets/images/footballs.png";
 

@@ -1,4 +1,4 @@
-import MyKonnectLanding from "@/components/MyKonnectLanding";
+import MyKonnectLanding from "@/components/sections/MyKonnectLanding";
 
 const Index = () => {
   return <MyKonnectLanding />;

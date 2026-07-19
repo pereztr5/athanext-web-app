@@ -14,7 +14,7 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { strings } from "@/config/strings";
 import { Button } from "@/components/ui/button";
-import { UserMenu } from "@/components/UserMenu";
+import { UserMenu } from "@/components/common/UserMenu";
 import { Menu, ChevronDown, MessageCircle } from "lucide-react";
 import { FiMessageCircle } from "react-icons/fi";
 import footballIcon from "@/assets/images/colored-soccer.png";
@@ -26,7 +26,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useNavigate, useLocation } from "react-router-dom";
-import { ProfileIncompleteBanner } from "@/components/ProfileIncompleteBanner";
+import { ProfileIncompleteBanner } from "@/components/common/ProfileIncompleteBanner";
 import { PROFILE_TYPE } from "@/utils/db";
 import { calculateProfileProgress } from "@/utils/profileCompletion";
 

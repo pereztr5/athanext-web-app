@@ -7,7 +7,7 @@ import { HelpCircle, CheckCircle2 } from "lucide-react";
 import { useSportsPoll } from "@/hooks/useSportsPoll";
 import { toast } from "@/hooks/use-toast";
 import { colors } from "@/config/colors";
-import nextIcon from "../assets/images/whats-next.png";
+import nextIcon from "../../assets/images/whats-next.png";
 import { strings } from "@/config/strings";
 
 

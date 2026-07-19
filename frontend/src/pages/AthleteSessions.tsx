@@ -35,7 +35,7 @@ import {
   ATHLETE_SESSIONS_SOCCER_PILLARS,
 } from "@/utils/db";
 import { getInitialsFromName } from "@/utils/sessionFormatting";
-import { RateCoachDialog } from "@/components/RateCoachDialog";
+import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import type {
   AthleteSession,
   FiltersState,

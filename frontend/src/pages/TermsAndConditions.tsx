@@ -5,7 +5,7 @@ import { useTermsAndConditions } from '@/hooks/useTermsAndConditions';
 import { sanitizeHTML } from '@/utils/sanitize';
 import { formatDateToUSA } from '@/utils/helperFunctions';
 import '@/styles/privacyPolicy-termsCondition.css';
-import PolicyLoadingSkeleton from '@/components/PolicyLoadingSkeleton';
+import PolicyLoadingSkeleton from '@/components/common/PolicyLoadingSkeleton';
 
 const TermsAndConditions = () => {
   const { termsAndConditions, loading, error, refetch } = useTermsAndConditions();

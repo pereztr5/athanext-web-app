@@ -9,7 +9,7 @@ import { Label } from "@/components/ui/label";
 import { SOCCER_THEME, ROWING_BLUE_THEME } from "@/config/colors";
 
 import { Loader2, ShoppingCart, Info, Filter } from "lucide-react";
-import { PartnershipPreviewModal } from "@/components/PartnershipPreviewModal";
+import { PartnershipPreviewModal } from "@/components/sections/PartnershipPreviewModal";
 import { cn } from "@/lib/utils";
 import { capitalize } from "@/utils/helperFunctions";
 import { usePartnerships } from "@/hooks/usePartnerships";

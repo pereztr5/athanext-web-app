@@ -22,7 +22,7 @@ import AthleteProfile from "./pages/AthleteProfile";
 // import AthleteProfileEdit from "./pages/AthleteProfileEdit";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import { AuthGuard } from "./components/AuthGuard";
+import { AuthGuard } from "./components/common/AuthGuard";
 import CoachSessionFeedback from "./pages/CoachSessionFeedback";
 import MySessions from "./pages/MySessions";
 import AthleteSessions from "./pages/AthleteSessions";

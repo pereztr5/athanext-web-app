@@ -1,10 +1,10 @@
-import { Badge } from './ui/badge';
+import { Badge } from '../ui/badge';
 import { useState } from "react";
-import { Button } from './ui/button';
+import { Button } from '../ui/button';
 import { MapPin, Star, Instagram } from 'lucide-react';
-import { Card, CardContent } from './ui/card';
-import rowerIcon from '../assets/images/colored-rowing.png';
-import footballIcon from '../assets/images/colored-soccer.png';
+import { Card, CardContent } from '../ui/card';
+import rowerIcon from '../../assets/images/colored-rowing.png';
+import footballIcon from '../../assets/images/colored-soccer.png';
 import { CoachVerificationBadge } from './CoachVerificationBadge';
 import { PRIMARY, colors } from '@/config/colors';
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";

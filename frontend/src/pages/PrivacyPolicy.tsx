@@ -1,13 +1,13 @@
 import { usePrivacyPolicy } from '@/hooks/usePrivacyPolicy';
 import { AlertCircle } from 'lucide-react';
-import ErrorBoundary from '@/components/ErrorBoundary';
-import ScrollToTop from '@/components/ScrollToTop';
+import ErrorBoundary from '@/components/common/ErrorBoundary';
+import ScrollToTop from '@/components/common/ScrollToTop';
 import { formatDateToUSA } from '@/utils/helperFunctions';
 import { sanitizeHTML } from '@/utils/sanitize';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import '@/styles/privacyPolicy-termsCondition.css';
-import PolicyLoadingSkeleton from '@/components/PolicyLoadingSkeleton';
+import PolicyLoadingSkeleton from '@/components/common/PolicyLoadingSkeleton';
 
 
 export default function PrivacyPolicy() {
