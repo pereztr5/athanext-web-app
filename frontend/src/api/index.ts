@@ -31,16 +31,10 @@ export {
   type AuthResponse,
 } from './auth';
 
-// Profiles API
-export {
-  profilesAPI,
-  type UserProfile,
-  type UserProfileUpsert,
-} from './profiles';
-
 // User Profiles API
 export {
   userProfilesAPI,
+  type UserProfile,
   type UserProfile as UserProfileData,
   type UserProfileInsert,
   type UserProfileUpdate,
