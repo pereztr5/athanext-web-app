@@ -1,4 +1,4 @@
-import type { AthleteProfileFormData } from "@/type/athleteProfile";
+import type { AthleteProfileFormData } from "@/types/athleteProfile";
 import type { AthleteProfileUpsertPayload, AthleteProfile as DbAthleteProfile } from "@/hooks/useProfile";
 import { deriveInitials } from "@/utils/helperFunctions";
 

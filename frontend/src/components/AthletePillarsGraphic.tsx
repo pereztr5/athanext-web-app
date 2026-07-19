@@ -22,7 +22,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { chatAPI } from "@/api";
 import { buildId } from "@/utils/chatHelpers";
-import type { Coach } from "@/type/coachProfile";
+import type { Coach } from "@/types/coachProfile";
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 
 interface AthletePillarsGraphicProps {

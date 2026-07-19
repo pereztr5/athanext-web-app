@@ -56,7 +56,7 @@ import { calculateProfileCompletion } from "@/utils/profileCompletion";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { ProfileStrengthMeter } from "@/components/coach-profile/ProfileStrengthMeter";
 import { EditProfileDialog, ProfileSkeleton } from "@/components/athlete-profile";
-import type { AthleteProfileFormData } from "@/type/athleteProfile";
+import type { AthleteProfileFormData } from "@/types/athleteProfile";
 import { type AthleteProfile as DbAthleteProfile } from "@/hooks/useProfile";
 import { athletesAPI, chatAPI } from "@/api";
 import { getAthleteSessions } from "@/api/sessions";

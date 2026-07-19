@@ -8,7 +8,7 @@ import footballIcon from '../assets/images/colored-soccer.png';
 import { CoachVerificationBadge } from './CoachVerificationBadge';
 import { PRIMARY, colors } from '@/config/colors';
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
-import type { Coach } from '@/type/coachProfile'
+import type { Coach } from '@/types/coachProfile'
 interface CoachCardProps {
     coach: Coach;
     onViewProfile: (coachId: string) => void;

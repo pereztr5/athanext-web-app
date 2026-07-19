@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Send, X } from "lucide-react";
 
-import type { Coach } from "@/type/coachProfile";
+import type { Coach } from "@/types/coachProfile";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { chatAPI, type MessageWithSender } from "@/api";
 import { useAuth } from "@/hooks/useAuth";

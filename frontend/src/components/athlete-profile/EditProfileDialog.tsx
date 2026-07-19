@@ -64,7 +64,7 @@ import {
 import type {
   AthleteProfileFormData,
   EditProfileDialogProps,
-} from "@/type/athleteProfile";
+} from "@/types/athleteProfile";
 
 const emptyProfile: AthleteProfileFormData = {
   fullName: "",

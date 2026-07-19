@@ -19,7 +19,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { emptyProfileData, deriveInitials, mapFormToDbPayload } from "@/utils/athleteProfileHelpers";
-import type { AthleteProfileFormData } from "@/type/athleteProfile";
+import type { AthleteProfileFormData } from "@/types/athleteProfile";
 import { ATHLETE_SPORTS_OPTIONS } from "@/utils/db";
 import { ROUTES } from "@/routes";
 

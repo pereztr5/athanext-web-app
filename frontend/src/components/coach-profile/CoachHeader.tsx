@@ -19,7 +19,7 @@ import { CoachVerificationBadge } from "@/components/CoachVerificationBadge";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatLocationDisplay, type LocationInfo } from "@/utils/geolocation";
 import { MapPin, Clock, Instagram, ExternalLink, Camera, Plus, Trash2, X, Save, Edit, Loader2 } from "lucide-react";
-import type { Coach, SportTheme, CoachHeaderProps } from "@/type/coachProfile";
+import type { Coach, SportTheme, CoachHeaderProps } from "@/types/coachProfile";
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import { createPortal } from "react-dom";
 import Cropper, { type Area } from "react-easy-crop";

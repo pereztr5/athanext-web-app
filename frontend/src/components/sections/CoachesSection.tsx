@@ -10,7 +10,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { chatAPI } from "@/api";
-import type { Coach } from "@/type/coachProfile";
+import type { Coach } from "@/types/coachProfile";
 import { buildId } from "@/utils/chatHelpers";
 
 interface CoachesSectionProps {
