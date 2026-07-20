@@ -1,0 +1,757 @@
+import { coachesAPI } from "@/api";
+import {
+    QuickInfo,
+    FAQSection,
+    CoachHeader,
+    AboutSection,
+    ReviewsSection,
+    CertificationsSection,
+    TrainingSpecialization,
+} from "@/components/coach-profile";
+import { CoachAvailabilitySection } from "@/components/coach-profile/CoachAvailabilitySection";
+import ErrorBoundary from "@/components/common/ErrorBoundary";
+import { ProfileSkeleton } from "@/components/athlete-profile";
+import { PROFILE_TYPE } from "@/utils/db";
+import { useState, useEffect, useMemo } from "react";
+import { useToast } from "@/hooks/use-toast";
+import { COACH_PROFILE_THEMES } from "@/config/colors";
+import AthleteProfile from "./AthleteProfile";
+import { useMySessions } from "@/hooks/useMySessions";
+import { useReviews } from "@/hooks/useReviews";
+import { Button } from "@/components/ui/button";
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useProfile } from '@/contexts/ProfileContext';
+import { clearGlobalImageCache } from '@/contexts/ProfileContext';
+import { useAuth } from "@/contexts/AuthContext";
+import { ReviewModal } from "@/components/reviews/ReviewModal";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { supabase } from "@/integrations/supabase/client";
+import { PackagesModal } from "@/components/coach/PackagesModal";
+import { useCoachPackages } from "@/hooks/useCoachPackages";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { useCoachDetails, clearCoachCache } from "@/hooks/useCoachDetails";
+import { calculateProfileProgress, DEFAULT_PROFILE_PROGRESS } from "@/utils/profileCompletion";
+import { detectCoachSport } from "@/utils/coachSport";
+import { X } from "lucide-react";
+import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
+import { useSportPillars } from "@/hooks/useSportPillars";
+
+const Profile = () => {
+    const { toast } = useToast();
+    const navigate = useNavigate();
+    const [searchParams, setSearchParams] = useSearchParams();
+
+    const { user, loading: authLoading, setUserImg, setUserName, setProfileCompletion, setProfileProgress, refreshUserProfile } = useAuth();
+
+    const { profile, loading: profileLoading, error, saveAthleteProfile, refetchProfile } = useProfile();
+    const { updateProfile } = useUserProfile();
+    const coachId = profile?.userProfile?.coach_id;
+
+    // Fetch athlete sessions for athlete profiles
+    const { grouped: athleteSessionGrouped, isLoading: athleteSessionsLoading, error: athleteSessionsError } = useMySessions('athlete');
+
+    // Refetch trigger for data updates
+    const [refetchTrigger, setRefetchTrigger] = useState(0);
+
+    // Call all hooks unconditionally
+    const { coach, loading } = useCoachDetails(coachId || '', refetchTrigger);
+
+    // Update profile completion whenever coach data changes
+    useEffect(() => {
+        console.log("coach=>",coach)
+        if (coach && Object.keys(coach).length > 0) {
+            const progress = calculateProfileProgress(coach);
+            setProfileProgress(progress);
+            setProfileCompletion(progress.completion);
+        } else {
+            setProfileProgress(DEFAULT_PROFILE_PROGRESS);
+            setProfileCompletion(DEFAULT_PROFILE_PROGRESS.completion);
+        }
+    }, [coach, setProfileCompletion, setProfileProgress]);
+
+    // Refetch coach data when availability changes
+    const refetchCoachData = () => {
+        if (coachId) {
+            clearCoachCache();
+            setRefetchTrigger(prev => prev + 1);
+        }
+    };
+
+    const { data: packages = [] } = useCoachPackages(coachId || '');
+    const { averageRating, reviews, ratingDistribution, totalReviews, submitReview } = useReviews(coachId || '');
+
+    const [showReviewModal, setShowReviewModal] = useState(false);
+    const [showPackagesModal, setShowPackagesModal] = useState(false);
+
+    // Edit mode state
+    const [isSaving, setIsSaving] = useState(false);
+    const [isEditMode, setIsEditMode] = useState(false);
+    const [editedCoach, setEditedCoach] = useState<any>(null);
+    const [coverImagesToUpload, setCoverImagesToUpload] = useState<File[]>([]);
+    const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
+    const [coverImageUrlsToRemove, setCoverImageUrlsToRemove] = useState<string[]>([]);
+    const [certDialogOpen, setCertDialogOpen] = useState(false);
+    const [savingCerts, setSavingCerts] = useState(false);
+    const [certificationsDraft, setCertificationsDraft] = useState<
+        { id?: string; certification_name: string; issuing_organization?: string | null }[]
+    >([]);
+    const normalizedCoachSport = useMemo(() => detectCoachSport(coach as any), [coach]);
+    const { sportPillars: coachPillarOptions } = useSportPillars({
+        sport: normalizedCoachSport,
+    });
+
+    // Check URL params for edit mode
+    useEffect(() => {
+        if (searchParams.get('mode') === 'edit') {
+            setIsEditMode(true);
+        }
+    }, [searchParams]);
+
+    // Initialize edited coach data when coach data loads or edit mode changes
+    useEffect(() => {
+        if (coach && isEditMode) {
+            setEditedCoach({ ...coach });
+        }
+    }, [coach, isEditMode]);
+
+    useEffect(() => {
+        if (coach?.certifications) {
+            setCertificationsDraft(
+                coach.certifications.map((cert) => ({
+                    id: cert.id,
+                    certification_name: cert.certification_name || "",
+                    issuing_organization: cert.issuing_organization || "",
+                }))
+            );
+        } else {
+            setCertificationsDraft([]);
+        }
+    }, [coach?.certifications]);
+
+    // Show loading state while determining profile type
+    if (authLoading || profileLoading || loading) {
+        return <ProfileSkeleton />;
+    }
+
+    // Early returns AFTER all hooks have been called and loading is complete
+    if (profile?.type === PROFILE_TYPE.athlete) {
+        return <AthleteProfile profile={profile} loading={false} error={error} saveAthleteProfile={saveAthleteProfile} refetchProfile={refetchProfile} user={user} authLoading={false} upcomingSessions={athleteSessionGrouped?.upcoming || []} sessionsLoading={athleteSessionsLoading} sessionsError={athleteSessionsError} />;
+    }
+
+    // Sport detection for dynamic theming
+    const getSportTheme = () => {
+        if (normalizedCoachSport === "soccer") {
+            return COACH_PROFILE_THEMES.soccer;
+        }
+
+        if (normalizedCoachSport === "rowing") {
+            return COACH_PROFILE_THEMES.rowing;
+        }
+
+        // Default theme - Blue
+        return COACH_PROFILE_THEMES.default;
+    };
+
+    const sportTheme = getSportTheme();
+
+    const handleEdit = () => {
+        if (coach) {
+            setEditedCoach({ ...coach });
+        }
+        setIsEditMode(true);
+        setSearchParams({ mode: 'edit' });
+    };
+
+    const handleCancelEdit = () => {
+        setIsEditMode(false);
+        setSearchParams({});
+        setEditedCoach(null);
+    };
+
+    const handleSaveEdit = async () => {
+        if (!coach || !editedCoach) return;
+
+        if (editedCoach.name.trim().length < 3) {
+            toast({
+                title: 'Invalid Name',
+                description: 'Coach name must be at least 3 characters long.',
+                variant: 'destructive',
+                duration: 2000,
+            });
+            return;
+        }
+
+        if (!editedCoach.specialties || editedCoach.specialties.length === 0) {
+            toast({
+                title: 'Development Pillars Required',
+                description: 'Please select at least one development pillar.',
+                variant: 'destructive',
+                duration: 2000,
+            });
+            return;
+        }
+
+        try {
+            setIsSaving(true);
+
+            // Ensure user is authenticated before storage/db writes
+            const { data: { user: authUser } } = await supabase.auth.getUser();
+            if (!authUser) {
+                toast({
+                    title: 'Not logged in',
+                    description: 'Please sign in again to save changes.',
+                    variant: 'destructive',
+                });
+                setIsSaving(false);
+                return;
+            }
+
+            // If there's a selected profile image, upload it first
+            let uploadedImageUrl: string | null = null;
+            if (selectedImageFile) {
+                // Enforce 8MB bucket limit
+                if (selectedImageFile.size > 8 * 1024 * 1024) {
+                    toast({
+                        title: 'Image too large',
+                        description: 'Please select a profile image under 8MB.',
+                        variant: 'destructive',
+                    });
+                    setIsSaving(false);
+                    return;
+                }
+
+                const fileExt = selectedImageFile.name.split('.').pop();
+                const fileName = `${coach.id}-${Date.now()}.${fileExt}`;
+                const filePath = `coach-profiles/${fileName}`;
+
+                const { error: uploadError } = await supabase
+                    .storage
+                    .from('athalink-images')
+                    .upload(filePath, selectedImageFile, {
+                        cacheControl: '3600',
+                        upsert: true,
+                    });
+
+                if (uploadError) {
+                    throw new Error(uploadError.message);
+                }
+
+                const { data: publicUrlData } = supabase
+                    .storage
+                    .from('athalink-images')
+                    .getPublicUrl(filePath);
+
+                // Add cache-busting parameter to force browser reload of new image
+                uploadedImageUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
+            }
+
+            // Upload new cover images
+            const uploadedCoverUrls: string[] = [];
+            for (const file of coverImagesToUpload) {
+                if (file.size > 10 * 1024 * 1024) {
+                    toast({
+                        title: 'File too large',
+                        description: `${file.name} is over 10MB. Skipping.`,
+                        variant: 'destructive',
+                    });
+                    continue;
+                }
+
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${coach.id}-cover-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
+                const filePath = `coach-profiles/covers/${fileName}`;
+
+                const { error: uploadError } = await supabase
+                    .storage
+                    .from('athalink-images')
+                    .upload(filePath, file, {
+                        cacheControl: '3600',
+                        upsert: false,
+                    });
+
+                if (uploadError) {
+                    console.error('Failed to upload cover image:', uploadError);
+                    continue;
+                }
+
+                const { data: publicUrlData } = supabase
+                    .storage
+                    .from('athalink-images')
+                    .getPublicUrl(filePath);
+
+                uploadedCoverUrls.push(publicUrlData.publicUrl);
+            }
+
+            // Merge with existing cover images (removing the ones marked for deletion)
+            const existingUrls = coach.cover_image_urls || [];
+            const filteredUrls = existingUrls.filter((url) =>
+                !coverImageUrlsToRemove.includes(url)
+            );
+            const newCoverUrls = [...filteredUrls, ...uploadedCoverUrls];
+
+            console.log('[Cover Image Update] Debug Info:', {
+                existingUrls,
+                coverImageUrlsToRemove,
+                filteredUrls,
+                uploadedCoverUrls,
+                newCoverUrls,
+            });
+
+            // Determine if cover_image_urls should be updated
+            const shouldUpdateCoverUrls = coverImageUrlsToRemove.length > 0 || uploadedCoverUrls.length > 0;
+
+            // Update coach profile
+            // Note: Database column is 'position', not 'coach_position' (which is an alias in get_coaches_public)
+            const response = await coachesAPI.updateCoach(coach.id, {
+                name: editedCoach.name,
+                position: editedCoach.coach_position,
+                company: editedCoach.company,
+                bio: editedCoach.bio,
+                specialties: editedCoach.specialties,
+                positions: editedCoach.favourite_positions ?? coach.favourite_positions,
+                favourite_positions: editedCoach.favourite_positions ?? coach.favourite_positions,
+                locations: editedCoach.locations,
+                instagram_handle: editedCoach.instagram_handle,
+                hourly_rate: editedCoach.hourly_rate,
+                years_experience: editedCoach.years_experience,
+                ...(uploadedImageUrl ? { image_url: uploadedImageUrl } : {}),
+                ...(shouldUpdateCoverUrls ? { cover_image_urls: newCoverUrls } : {}),
+            });
+
+            if (response.error) {
+                throw new Error(response.error.message);
+            }
+
+            // Update user_profiles with user-specific fields
+            if (user?.id) {
+                const userProfileUpdates: Record<string, any> = {};
+
+                if (uploadedImageUrl) {
+                    userProfileUpdates.image_url = uploadedImageUrl;
+                }
+
+                if (editedCoach.name !== coach.name) {
+                    userProfileUpdates.name = editedCoach.name;
+                }
+
+                if (editedCoach.gender !== coach.gender) {
+                    userProfileUpdates.gender = editedCoach.gender;
+                }
+
+                if (editedCoach.zip_code !== coach.zip_code) {
+                    userProfileUpdates.zip_code = editedCoach.zip_code;
+                }
+
+                if (Object.keys(userProfileUpdates).length > 0) {
+                    await updateProfile(userProfileUpdates);
+                }
+
+                // Update auth context AFTER database update completes
+                if (uploadedImageUrl) {
+                    setUserImg(uploadedImageUrl);
+                    // Clear the global image cache to force reload of new image
+                    clearGlobalImageCache();
+                }
+
+                if (editedCoach.name !== coach.name) {
+                    setUserName(editedCoach.name);
+                }
+            }
+
+            toast({
+                title: "Profile Updated",
+                description: "Your coach profile has been successfully updated.",
+            });
+
+            setIsEditMode(false);
+            setSearchParams({});
+            setCoverImagesToUpload([]);
+            setCoverImageUrlsToRemove([]);
+
+            // Clear coach cache and refresh profile data
+            clearCoachCache();
+            
+            // Refresh user profile from database to ensure header gets updated with new image
+            await refreshUserProfile();
+
+            // Refresh coach data without page reload - this updates the profile page with new image
+            refetchCoachData();
+        } catch (error) {
+            console.error('Error updating profile:', error);
+            toast({
+                title: 'Update Failed',
+                description: error instanceof Error ? error.message : 'Failed to update profile. Please try again.',
+                variant: 'destructive',
+            });
+        } finally {
+            setIsSaving(false);
+        }
+    };
+
+    const handleFieldChange = (field: string, value: any) => {
+        setEditedCoach((prev: any) => {
+            if (!prev) {
+                // If editedCoach is null, initialize it with coach data
+                return {
+                    ...coach,
+                    [field]: value
+                };
+            }
+            return {
+                ...prev,
+                [field]: value
+            };
+        });
+    };
+
+    const handleImageSelect = (file: File) => {
+        setSelectedImageFile(file);
+    };
+
+    const handleCoverImagesSelect = (files: File[]) => {
+        setCoverImagesToUpload(prev => [...prev, ...files]);
+    };
+
+    const handleCoverImageRemove = (urlOrIndex: string | number) => {
+        // If it's a number (index), get the URL from coverPreviews in CoachHeader
+        // But we need to pass the actual URL to track removal properly
+        if (typeof urlOrIndex === 'string') {
+            setCoverImageUrlsToRemove(prev => [...prev, urlOrIndex]);
+        } else {
+            // Fallback for index-based (convert to URL)
+            const existingUrls = coach.cover_image_urls || [];
+            if (existingUrls[urlOrIndex]) {
+                setCoverImageUrlsToRemove(prev => [...prev, existingUrls[urlOrIndex]]);
+            }
+        }
+    };
+
+    const handleAddCertificationRow = () => {
+        setCertificationsDraft((prev) => [
+            ...prev,
+            { id: crypto.randomUUID(), certification_name: "", issuing_organization: "" },
+        ]);
+    };
+
+    const handleUpdateCertification = (
+        index: number,
+        key: "certification_name" | "issuing_organization",
+        value: string
+    ) => {
+        setCertificationsDraft((prev) =>
+            prev.map((item, idx) => (idx === index ? { ...item, [key]: value } : item))
+        );
+    };
+
+    const handleRemoveCertification = (index: number) => {
+        setCertificationsDraft((prev) => prev.filter((_, idx) => idx !== index));
+    };
+
+    const handleSaveCertifications = async () => {
+        if (!coach?.id) return;
+
+        const sanitized = certificationsDraft
+            .map((cert) => ({
+                id: cert.id || crypto.randomUUID(),
+                certification_name: cert.certification_name.trim(),
+                issuing_organization: cert.issuing_organization?.trim() || null,
+            }))
+            .filter((cert) => cert.certification_name.length > 0);
+
+        setSavingCerts(true);
+        try {
+            if (sanitized.length > 0) {
+                const upsertPayload = sanitized.map((cert) => ({
+                    ...cert,
+                    coach_id: coach.id,
+                }));
+
+                const { error: upsertError } = await supabase
+                    .from("coach_certifications")
+                    .upsert(upsertPayload, { onConflict: "id" });
+                if (upsertError) throw upsertError;
+            }
+
+            const existingIds = (coach.certifications || []).map((c: any) => c.id);
+            const keepIds = sanitized
+                .map((cert) => cert.id)
+                .filter((id): id is string => Boolean(id));
+            const toDelete = existingIds.filter((id: string) => !keepIds.includes(id));
+
+            if (toDelete.length > 0) {
+                const { error: deleteError } = await supabase
+                    .from("coach_certifications")
+                    .delete()
+                    .in("id", toDelete);
+                if (deleteError) throw deleteError;
+            }
+
+            clearCoachCache();
+            refetchCoachData();
+            toast({
+                title: "Certifications updated",
+                description: "Your certifications have been saved.",
+            });
+            setCertDialogOpen(false);
+        } catch (err) {
+            console.error("Failed to save certifications", err);
+            toast({
+                title: "Save failed",
+                description: "We couldn't update your certifications. Please try again.",
+                variant: "destructive",
+            });
+        } finally {
+            setSavingCerts(false);
+        }
+    };
+
+    const handleSendMessage = () => {
+        toast({
+            title: "Send Message",
+            description: "Messaging feature coming soon!",
+        });
+    };
+
+    if (!coach && (profileLoading || !profile?.type)) {
+        return <ProfileSkeleton />;
+    }
+
+    if (!profileLoading && profile?.type === PROFILE_TYPE.coach) {
+        if (!coach) {
+            return (
+                <div className={`min-h-screen bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] flex items-center justify-center`}>
+                    <div className="text-center space-y-4">
+                        <h1 className="text-2xl font-bold text-foreground">No Coach Profile Found</h1>
+                        <p className="text-muted-foreground">Create your coach profile to get started</p>
+                        <Button onClick={() => navigate("/become-a-coach")} className="bg-blue-600 hover:bg-blue-700">
+                            Become a Coach
+                        </Button>
+                    </div>
+                </div>
+            );
+        }
+    }
+
+    return coach && Object.entries(coach).length && (
+        <div className={`min-h-screen w-full px-4 bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] mb-20`}>
+            <div className="max-w-8xl mx-auto flex flex-col gap-6 md:gap-8">
+                <section className="flex w-full flex-col">
+                    <CoachHeader
+                        isCoachProfile
+                        className="pt-0"
+                        isEditMode={isEditMode}
+                        sportTheme={sportTheme}
+                        onSendMessage={handleSendMessage}
+                        onFieldChange={handleFieldChange}
+                        onImageSelect={handleImageSelect}
+                        sport={normalizedCoachSport ?? (profile?.userProfile?.sport || "")}
+                        onCoverImageRemove={handleCoverImageRemove}
+                        onCoverImagesSelect={handleCoverImagesSelect}
+                        onViewPackages={() => setShowPackagesModal(true)}
+                        coach={coach}
+                        coachPillarOptions={coachPillarOptions}
+                        editedCoach={isEditMode ? editedCoach : undefined}
+                        onBook={() => {
+                            toast({
+                                title: "Book Yourself?",
+                                description: "This is your own profile. Share your profile link with athletes!",
+                            });
+                        }}
+                        onEdit={handleEdit}
+                        onCancelEdit={handleCancelEdit}
+                        onSaveEdit={handleSaveEdit}
+                        isSaving={isSaving}
+                    />
+                </section>
+
+                <div className="flex flex-col xl:flex-row gap-6 md:gap-8">
+                    {/* Main Content */}
+                    <div className="min-w-0 xl:flex-1 space-y-6">
+                        {/* Availability Section - Full width at top */}
+                        <ErrorBoundary>
+                            <CoachAvailabilitySection
+                                coachId={coach.id}
+                                iconColor={sportTheme.iconColor}
+                            />
+                        </ErrorBoundary>
+
+                        <ErrorBoundary>
+                            <CoachingPackages
+                                packages={packages}
+                                coachId={coach.id}
+                                coachName={coach.name}
+                                coachSport={coach.sport}
+                                iconColor={sportTheme.iconColor}
+                            />
+                        </ErrorBoundary>
+
+                        <AboutSection
+                            coachName={coach.name}
+                            bio={isEditMode && editedCoach ? editedCoach.bio : coach.bio}
+                            iconColor={sportTheme.iconColor}
+                            isEditMode={isEditMode}
+                            onBioChange={(bio) => handleFieldChange('bio', bio)}
+                        />
+
+                        <div className="space-y-2">
+                            {isEditMode && (
+                                <div className="flex justify-end">
+                                    <Button
+                                        size="sm"
+                                        variant="outline"
+                                        onClick={() => setCertDialogOpen(true)}
+                                    >
+                                        Edit certifications
+                                    </Button>
+                                </div>
+                            )}
+                            <CertificationsSection
+                                certifications={coach.certifications}
+                                iconColor={sportTheme.iconColor}
+                                certBg={sportTheme.certBg}
+                                certIcon={sportTheme.certIcon}
+                            />
+                        </div>
+
+                        <TrainingSpecialization
+                            specializations={coach.specialties}
+                            sessionTypes={coach.session_types}
+                            locations={coach.locations}
+                            iconColor={sportTheme.iconColor}
+                        />
+
+                        <ReviewsSection
+                            averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
+                            totalReviews={totalReviews}
+                            distribution={ratingDistribution}
+                            reviews={reviews}
+                            iconColor={sportTheme.iconColor}
+                            onLeaveReview={() => setShowReviewModal(true)}
+                        />
+                    </div>
+
+                    {/* Sidebar */}
+                    <div className="w-full xl:w-[22rem] flex-shrink-0 space-y-6 md:space-y-8">
+                        <QuickInfo
+                            responseTime={coach.response_time_hours}
+                            sessionTypes={coach.session_types}
+                            languages={coach.languages}
+                            locations={coach.locations}
+                            zipCode={coach.zip_code}
+                            cancellationPolicy={coach.cancellation_policy}
+                        />
+
+                        <FAQSection />
+                    </div>
+                </div>
+            </div>
+
+            {/* Modals */}
+            <ReviewModal
+                open={showReviewModal}
+                onOpenChange={setShowReviewModal}
+                coachName={coach.name}
+                onSubmit={submitReview}
+            />
+
+            <PackagesModal
+                isOpen={showPackagesModal}
+                onClose={() => setShowPackagesModal(false)}
+                packages={packages}
+                coachName={coach.name}
+            />
+
+            <Dialog open={certDialogOpen} onOpenChange={setCertDialogOpen}>
+                <DialogContent className="max-w-2xl">
+                    <DialogHeader>
+                        <DialogTitle>Edit certifications</DialogTitle>
+                        <DialogDescription>
+                            Update the certifications that appear on your profile.
+                        </DialogDescription>
+                    </DialogHeader>
+
+                    <div className="space-y-4">
+                        {certificationsDraft.length === 0 && (
+                            <div className="text-sm text-muted-foreground">
+                                Add your first certification to showcase your credentials.
+                            </div>
+                        )}
+
+                        {certificationsDraft.map((cert, index) => (
+                            <div
+                                key={cert.id ?? `new-${index}`}
+                                className="rounded-lg border border-slate-200 p-4 space-y-3"
+                            >
+                                <div className="grid gap-3 md:grid-cols-2">
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor={`cert-name-${index}`}>Certification name</Label>
+                                        <Input
+                                            id={`cert-name-${index}`}
+                                            value={cert.certification_name}
+                                            onChange={(event) =>
+                                                handleUpdateCertification(index, "certification_name", event.target.value)
+                                            }
+                                            placeholder="e.g., UEFA B License"
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label htmlFor={`cert-org-${index}`}>Issuing organization</Label>
+                                        <Input
+                                            id={`cert-org-${index}`}
+                                            value={cert.issuing_organization || ""}
+                                            onChange={(event) =>
+                                                handleUpdateCertification(index, "issuing_organization", event.target.value)
+                                            }
+                                            placeholder="e.g., U.S. Soccer"
+                                        />
+                                    </div>
+                                </div>
+                                <div className="flex justify-end">
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="sm"
+                                        onClick={() => handleRemoveCertification(index)}
+                                        className="text-red-600 hover:text-red-700"
+                                    >
+                                        <X className="h-4 w-4 mr-1" />
+                                        Remove
+                                    </Button>
+                                </div>
+                            </div>
+                        ))}
+
+                        <Button type="button" variant="outline" onClick={handleAddCertificationRow}>
+                            + Add certification
+                        </Button>
+                    </div>
+
+                    <DialogFooter className="pt-2">
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            onClick={() => setCertDialogOpen(false)}
+                            disabled={savingCerts}
+                        >
+                            Cancel
+                        </Button>
+                        <Button onClick={handleSaveCertifications} disabled={savingCerts}>
+                            {savingCerts ? "Saving..." : "Save changes"}
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+};
+
+export default Profile;

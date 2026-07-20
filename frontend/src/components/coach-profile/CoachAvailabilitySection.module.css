@@ -1,0 +1,281 @@
+/* CoachAvailabilitySection.module.css */
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 2rem;
+}
+
+.titleContainer {
+  flex: 1;
+}
+
+.addButton {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+.skeletonContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.skeleton {
+  height: 100px;
+  border-radius: 0.5rem;
+}
+
+.availabilityList {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.periodCard {
+  border: 1px solid #e5e7eb;
+  border-radius: 0.75rem;
+  background-color: #fafbfc;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.periodHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #e5e7eb;
+}
+
+.periodDates {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.dateRange {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1f2937;
+}
+
+.deleteButton {
+  padding: 0.5rem;
+  height: auto;
+}
+
+.slotsContainer {
+  margin-top: 1rem;
+}
+
+.slotsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1.25rem;
+}
+
+.slotCard {
+  background-color: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 0.625rem;
+  overflow: hidden;
+  transition: all 0.2s ease;
+  display: flex;
+  flex-direction: column;
+}
+
+.slotCard:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+  border-color: #d1d5db;
+}
+
+.slotDay {
+  background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+  color: white;
+  padding: 0.75rem 1rem;
+  font-weight: 600;
+  font-size: 0.95rem;
+}
+
+.slotContent {
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.slotName {
+  font-weight: 600;
+  color: #1f2937;
+  font-size: 0.95rem;
+}
+
+.slotMeta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.metaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #6b7280;
+}
+
+.metaItem svg {
+  width: 1rem;
+  height: 1rem;
+  flex-shrink: 0;
+  color: #3b82f6;
+}
+
+.duration {
+  display: inline-block;
+  background-color: #eff6ff;
+  color: #1e40af;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.25rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.slotTags {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.tag {
+  display: inline-block;
+  background-color: #f0fdf4;
+  color: #15803d;
+  padding: 0.25rem 0.625rem;
+  border-radius: 0.375rem;
+  font-size: 0.8rem;
+  font-weight: 500;
+  border: 1px solid #d1fae5;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .header {
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .addButton {
+    width: 100%;
+  }
+
+  .slotsGrid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
+}
+
+@media (max-width: 768px) {
+  .periodCard {
+    padding: 1rem;
+  }
+
+  .periodHeader {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .slotsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .slotCard {
+    margin-bottom: 0.5rem;
+  }
+}
+
+/* Empty State */
+.emptyState {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+/* Loading State */
+.loading {
+  opacity: 0.6;
+  pointer-events: none;
+}
+
+/* Animation for slot appearance */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.slotCard {
+  animation: slideIn 0.3s ease;
+}
+
+/* Status indicators */
+.statusBadge {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #10b981;
+}
+
+.statusBadge.inactive {
+  background-color: #ef4444;
+}
+/* Animations */
+@keyframes slideInFromTop {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+}
+
+.newlyAdded {
+  animation: slideInFromTop 0.4s ease-out, pulse 2s ease-in-out 0.4s;
+}
+
+.deletingCard {
+  animation: fadeOut 0.3s ease-out forwards;
+}

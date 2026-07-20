@@ -1,0 +1,12 @@
+export { CoachHeader } from './CoachHeader';
+export { AboutSection } from './AboutSection';
+export { CertificationsSection } from './CertificationsSection';
+export { SportPillars } from './SportPillars';
+export { TrainingSpecialization } from './TrainingSpecialization';
+export { ReviewsSection } from './ReviewsSection';
+export { ReadyToStart } from './ReadyToStart';
+export { AvailabilitySection } from './AvailabilitySection';
+export { QuickInfo } from './QuickInfo';
+export { FAQSection } from './FAQSection';
+export { OtherTopCoaches } from './OtherTopCoaches';
+export { Carousel } from './Carousel';

@@ -1,0 +1,19 @@
+project_id = "nnhmiokeizmfmkvdqrvi"
+
+[functions.create-appointment-payment]
+verify_jwt = true
+
+[functions.create-partnership-payment]
+verify_jwt = true
+
+[functions.reconcile-partnership-payment]
+verify_jwt = true
+
+[functions.reconcile-package-payment]
+verify_jwt = true
+
+[functions.create-package-payment]
+verify_jwt = true
+
+[functions.submit-sports-vote]
+verify_jwt = false
