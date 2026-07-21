@@ -6,7 +6,8 @@ import {
 import { useAuth } from "./useAuth";
 import { PROFILE_TYPE } from "@/utils/db";
 import type { CoachDetails } from "./useCoachDetails";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { type UserProfile as SupabaseUserProfile } from "@/api/userProfiles";
 
@@ -70,20 +71,10 @@ const defaultProfileState: ProfileState = {
   data: null,
   userProfile: null,
 };
-const profileCache = new Map<string, ProfileState>();
-const fetchAttempted = new Map<string, boolean>();
 
 // Rate limiting for profile updates
 const updateTimestamps = new Map<string, number>();
 const MIN_UPDATE_INTERVAL = 3000; // 3 seconds between updates
-
-// Export function to clear cache
-export const clearProfileCache = () => {
-  profileCache.clear();
-  fetchAttempted.clear();
-  updateTimestamps.clear();
-};
-
 
 const canUpdateProfile = (userId: string): boolean => {
   const lastUpdate = updateTimestamps.get(userId);
@@ -99,89 +90,19 @@ export const useProfile = () => {
     setProfileProgress,
     setProfileCompletion,
   } = useAuth();
-  const [profile, setProfileState] =
-    useState<ProfileState>(defaultProfileState);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const setProfile = useCallback(
-    (next: ProfileState | ((prev: ProfileState) => ProfileState)) => {
-      setProfileState((prev) => {
-        const resolved =
-          typeof next === "function"
-            ? (next as (prev: ProfileState) => ProfileState)(prev)
-            : next;
-        if (user?.id) {
-          profileCache.set(user.id, resolved);
-        }
-        return resolved;
-      });
-    },
-    [user?.id]
-  );
+  const queryClient = useQueryClient();
 
-  useEffect(() => {
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
+  // Include persona_type and coach_id so a persona/coach change refetches (matches old effect deps)
+  const profileKey = ["profile", user?.id, userProfile?.persona_type, userProfile?.coach_id];
 
-    if (!user?.id) {
-      setProfileState(defaultProfileState);
-      setLoading(false);
-      return;
-    }
-
-    // Check cache first (but only if we haven't already attempted a fresh fetch)
-    const alreadyAttemptedFetch = fetchAttempted.get(user.id);
-    const cached = profileCache.get(user.id);
-    
-    if (cached && alreadyAttemptedFetch) {
-      // Use cache only if we've already fetched fresh data in this session
-      setProfileState(cached);
-      setLoading(false);
-      return;
-    }
-
-    // If no valid cache or first load, prepare to fetch fresh data
-    setProfileState(defaultProfileState);
-    setLoading(true);
-  }, [authLoading, user?.id]);
-
-  const fetchProfile = useCallback(async () => {
-    if (authLoading) {
-      setLoading(true);
-      return;
-    }
-
-    if (!user?.id) {
-      setProfile(defaultProfileState);
-      setLoading(false);
-      return;
-    }
-
-    // Skip fetch if we've already attempted for this user and have data
-    const alreadyFetched = fetchAttempted.get(user.id);
-    const cachedProfile = profileCache.get(user.id);
-    if (alreadyFetched && cachedProfile && cachedProfile.data) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
+  const query = useQuery<ProfileState>({
+    queryKey: profileKey,
+    queryFn: async () => {
       // Use userProfile from auth context instead of fetching again
       const baseProfile = userProfile;
 
       if (!baseProfile) {
-        setProfile({
-          type: null,
-          data: null,
-          userProfile: null,
-        });
-        fetchAttempted.set(user.id, true);
-        setLoading(false);
-        return;
+        return { type: null, data: null, userProfile: null };
       }
 
       const personaHint = (baseProfile?.persona_type ||
@@ -191,7 +112,6 @@ export const useProfile = () => {
         personaHint === PROFILE_TYPE.parent ? PROFILE_TYPE.athlete : personaHint;
 
       // Fetch only the relevant profile type based on persona hint
-      // This reduces unnecessary parallel queries
       if (resolvedPersonaHint === PROFILE_TYPE.coach && baseProfile?.coach_id) {
         const { data: coachData, error: coachError } = await supabase
           .from("coaches")
@@ -226,32 +146,26 @@ export const useProfile = () => {
                 ? resolvedCoachData.user_profiles[0]?.zip_code
                 : null,
           };
-          setProfile({
+          return {
             type: "coach",
             data: enhancedCoachData,
             userProfile: baseProfile || null,
-          });
-          fetchAttempted.set(user.id, true);
-          setLoading(false);
-          return;
+          };
         }
 
         // Coach persona but no coach record yet (or coach_id doesn't exist in coaches table)
-        setProfile({
+        return {
           type: "coach",
           data: null,
           userProfile: baseProfile || null,
-        });
-        fetchAttempted.set(user.id, true);
-        setLoading(false);
-        return;
+        };
       } else if (resolvedPersonaHint === PROFILE_TYPE.athlete) {
         const { data: athleteData, error: athleteError } = await supabase
           .from("athlete_profiles")
           .select(
             "id, user_id, full_name, date_of_birth, sport, position, phone_number, location, tags, profile_image_url, cover_image_urls, bio, profile_completed, created_at, updated_at, instagram_handle, graduation_year, current_year, high_school, gpa, height, weight, dominant_hand"
           )
-          .eq("user_id", user.id)
+          .eq("user_id", user!.id)
           .maybeSingle();
 
         if (athleteError) {
@@ -259,36 +173,20 @@ export const useProfile = () => {
         }
 
         const resolvedAthleteData = (athleteData as any) as AthleteProfile | null;
-        if (resolvedAthleteData) {
-          setProfile({
-            type: "athlete",
-            data: resolvedAthleteData,
-            userProfile: baseProfile || null,
-          });
-          fetchAttempted.set(user.id, true);
-          setLoading(false);
-          return;
-        }
-
-        // Athlete persona but no profile data yet
-        setProfile({
+        return {
           type: "athlete",
-          data: null,
+          data: resolvedAthleteData ?? null,
           userProfile: baseProfile || null,
-        });
-        fetchAttempted.set(user.id, true);
-        setLoading(false);
-        return;
+        };
       }
 
       // Fallback: check both if persona hint is unclear
-      // Only do this if we don't have a clear persona type
       const athletePromise = supabase
         .from("athlete_profiles")
         .select(
           "id, user_id, full_name, date_of_birth, sport, position, phone_number, location, tags, profile_image_url, cover_image_urls, bio, profile_completed, created_at, updated_at, instagram_handle, graduation_year, current_year, high_school, gpa, height, weight, dominant_hand"
         )
-        .eq("user_id", user.id)
+        .eq("user_id", user!.id)
         .maybeSingle();
       const coachPromise = baseProfile?.coach_id
         ? supabase
@@ -320,66 +218,43 @@ export const useProfile = () => {
       const resolvedAthleteData = (athleteData as any) as AthleteProfile | null;
 
       if (resolvedCoachData) {
-        setProfile({
+        return {
           type: "coach",
           data: resolvedCoachData,
           userProfile: baseProfile || null,
-        });
+        };
       } else if (resolvedAthleteData) {
-        setProfile({
+        return {
           type: "athlete",
           data: resolvedAthleteData,
           userProfile: baseProfile || null,
-        });
-      } else {
-        setProfile({
-          type:
-            resolvedPersonaHint === PROFILE_TYPE.athlete
-              ? PROFILE_TYPE.athlete
-              : resolvedPersonaHint === PROFILE_TYPE.coach
-              ? PROFILE_TYPE.coach
-              : null,
-          data: null,
-          userProfile: baseProfile || null,
-        });
+        };
       }
 
-      fetchAttempted.set(user.id, true);
-    } catch (err) {
-      console.error("Error fetching profile:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch profile");
-    } finally {
-      setLoading(false);
-    }
-    // Note: userProfile is intentionally read from closure to avoid refetch on every userProfile change
-    // Only key fields that determine profile type are tracked
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    user?.id,
-    user?.user_metadata?.persona_type,
-    user?.user_metadata?.persona,
-    userProfile?.persona_type,
-    userProfile?.coach_id,
-    authLoading,
-    setProfile,
-  ]);
+      return {
+        type:
+          resolvedPersonaHint === PROFILE_TYPE.athlete
+            ? PROFILE_TYPE.athlete
+            : resolvedPersonaHint === PROFILE_TYPE.coach
+            ? PROFILE_TYPE.coach
+            : null,
+        data: null,
+        userProfile: baseProfile || null,
+      } as ProfileState;
+    },
+    enabled: !authLoading && !!user?.id,
+    staleTime: Infinity, // Fetch once per session; updates flow through setQueryData / invalidation
+  });
+
+  const profile = query.data ?? defaultProfileState;
 
   /**
-   * Save or update an athlete's profile with validation and sanitization
-   * Implements rate limiting, input validation, and XSS protection
-   *
-   * @param payload - The athlete profile data to save
+   * Save or update an athlete's profile with validation and sanitization.
+   * Rate limiting (3s), input sanitization, required-field validation, XSS protection.
    * @throws Error if user is not authenticated or rate limit is exceeded
-   * @returns Promise<AthleteProfile> - The saved athlete profile
-   *
-   * Security features:
-   * - Rate limiting: 3-second cooldown between updates
-   * - Input sanitization: Limits field lengths to prevent overflow
-   * - Array validation: Validates and limits tags/images count
-   * - Required field validation: Ensures email is included
    */
-  const saveAthleteProfile = useCallback(
-    async (payload: AthleteProfileUpsertPayload) => {
+  const saveMutation = useMutation({
+    mutationFn: async (payload: AthleteProfileUpsertPayload): Promise<AthleteProfile> => {
       if (!user?.id) {
         throw new Error("You must be signed in to update your profile.");
       }
@@ -452,31 +327,29 @@ export const useProfile = () => {
         throw error;
       }
 
+      return (data as any) as AthleteProfile;
+    },
+    onSuccess: (athleteProfile) => {
+      if (!user?.id) return;
+
       // Update rate limiting timestamp
       updateTimestamps.set(user.id, Date.now());
 
-      const athleteProfile = (data as any) as AthleteProfile;
-      
-      // Get current profile state to preserve userProfile
-      const currentState = profileCache.get(user.id) || profile;
-      const updatedProfileState = {
-        type: "athlete" as UserType,
+      // Preserve userProfile from current cached state
+      const currentState =
+        queryClient.getQueryData<ProfileState>(profileKey) ?? profile;
+      queryClient.setQueryData<ProfileState>(profileKey, {
+        type: "athlete",
         data: athleteProfile,
         userProfile: currentState.userProfile,
-      };
-      
-      // Update both local state and cache
-      setProfile(updatedProfileState);
-      profileCache.set(user.id, updatedProfileState);
-      
-      return athleteProfile;
+      });
     },
-    [user, setProfile, profile]
-  );
+  });
 
-  useEffect(() => {
-    fetchProfile();
-  }, [fetchProfile]);
+  const saveAthleteProfile = useCallback(
+    (payload: AthleteProfileUpsertPayload) => saveMutation.mutateAsync(payload),
+    [saveMutation]
+  );
 
   useEffect(() => {
     if (authLoading) return;
@@ -486,7 +359,7 @@ export const useProfile = () => {
       setProfileCompletion(DEFAULT_PROFILE_PROGRESS.completion);
       return;
     }
-    
+
     if (profile?.type === "coach" && profile?.data) {
       const progress = calculateProfileProgress(profile.data as CoachDetails);
       setProfileProgress(progress);
@@ -505,11 +378,11 @@ export const useProfile = () => {
 
   return {
     profile,
-    loading,
-    error,
+    loading: authLoading || query.isLoading,
+    error: query.error ? query.error.message : null,
     user,
     authLoading,
-    refetchProfile: fetchProfile,
+    refetchProfile: query.refetch,
     saveAthleteProfile,
   };
 };
