@@ -76,17 +76,17 @@ One way to do each thing. PRs that introduce a second way get bounced.
 ## Getting Started
 Prerequisites:
 - Node.js 18+ (LTS recommended)
-- npm 8+ (bundled with Node) or bun if you prefer
+- npm 8+ (bundled with Node)
 
 ```bash
 git clone <repo-url>
 cd prod-clone/frontend
 npm install
-cp .env.dev .env.local       # or duplicate the env file that matches your target mode
+cp .env.example .env         # fill in your Supabase and service credentials
 npm run dev                  # start the local development server
 ```
 
-The development server runs on `http://localhost:5173` by default. Use `npm run qa` or `npm run prod` to boot the app against alternate Vite modes that load environment-specific configs. All commands below are run from `frontend/`.
+The development server runs on `http://localhost:8080` by default. Use `npm run qa` or `npm run prod` to boot the app against alternate Vite modes that load environment-specific configs. All commands below are run from `frontend/`.
 
 ## Environment Variables
 Create `.env`, `.env.local`, or `.env.<mode>` files with the following keys:
@@ -113,7 +113,7 @@ Only `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` are needed to run t
 npm run dev        # Vite dev server (default mode)
 npm run qa         # Dev server with qa mode
 npm run prod       # Dev server with prod mode settings
-npm run build      # Production build (defaults to dev mode unless overridden)
+npm run build      # Production build (--mode prod)
 npm run build:qa   # Build with qa mode
 npm run build:prod # Build with prod mode
 npm run preview    # Preview the dist build locally
