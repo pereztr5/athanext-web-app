@@ -6,6 +6,15 @@
 
 import { Constants } from "@/integrations/supabase/types";
 
+export interface Option {
+  value: string;
+  label: string;
+}
+
+export interface SportOption extends Option {
+  positions: Option[];
+}
+
 // ============================================================================
 // ATHLETE PROFILE CONSTANTS & MOCK DATA
 // ============================================================================
@@ -76,7 +85,7 @@ export const DEFAULT_PERSONA = PERSONA_TYPES[0]; // "athlete"
 // AVAILABILITY LOCATION OPTIONS (UI LABELS)
 // ============================================================================
 
-export const LOCATION_OPTIONS = [
+export const LOCATION_OPTIONS: Option[] = [
   { value: "in-person", label: "In-Person" },
   { value: "online", label: "Online" },
 ];
@@ -85,7 +94,7 @@ export const LOCATION_OPTIONS = [
 // SPORTS AND POSITIONS
 // ============================================================================
 
-export const SPORTS_OPTIONS = [
+export const SPORTS_OPTIONS: SportOption[] = [
   {
     value: "Soccer",
     label: "Soccer",
@@ -105,7 +114,7 @@ export const SPORTS_OPTIONS = [
 ];
 
 // Athlete/parent positions are different from coach positions.
-export const ATHLETE_SPORTS_OPTIONS = [
+export const ATHLETE_SPORTS_OPTIONS: SportOption[] = [
   {
     value: "Soccer",
     label: "Soccer",
@@ -130,7 +139,7 @@ export const ATHLETE_SPORTS_OPTIONS = [
   },
 ];
 
-export const normalizePosition = (sport, position) => {
+export const normalizePosition = (sport: string, position: string): string => {
   if (!position) return "";
   const normalizedSport = (sport || "").toLowerCase();
   const normalizedPosition = String(position).toLowerCase();
@@ -146,7 +155,7 @@ export const normalizePosition = (sport, position) => {
   return String(position);
 };
 
-export const normalizeAthletePosition = (sport, position) => {
+export const normalizeAthletePosition = (sport: string, position: string): string => {
   if (!position) return "";
   const normalizedSport = (sport || "").toLowerCase();
   const normalizedPosition = String(position).toLowerCase();
