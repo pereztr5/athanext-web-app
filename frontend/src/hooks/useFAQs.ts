@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getFAQs, type FAQsResponse, type FAQ } from '@/api/faqs';
 
 interface UseFAQsReturn {
@@ -6,8 +6,14 @@ interface UseFAQsReturn {
   loading: boolean;
   error: string | null;
   source: 'database' | 'fallback' | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
   hasFAQs: boolean;
+  total: number;
+}
+
+interface FAQsResult {
+  faqs: FAQ[];
+  source: 'database' | 'fallback' | null;
   total: number;
 }
 
@@ -17,67 +23,49 @@ interface UseFAQsReturn {
  * Always ensures FAQs are available with intelligent fallback
  */
 export function useFAQs(): UseFAQsReturn {
-  const [faqs, setFaqs] = useState<FAQ[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [source, setSource] = useState<'database' | 'fallback' | null>(null);
-  const [total, setTotal] = useState(0);
+  const query = useQuery<FAQsResult>({
+    queryKey: ['faqs'],
+    queryFn: async () => {
+      try {
+        const response = await getFAQs();
 
-  const fetchFAQs = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await getFAQs();
-
-      if (response.error) {
-        console.error('[FAQs Hook] Error:', response.error);
-        setError(null); // Don't show error - we have fallback
-      }
-
-      if (response.data) {
-        const { faqs: faqData, source: dataSource, total: totalCount } = response.data as FAQsResponse;
-
-        // Validate that faqs is an array
-        if (!Array.isArray(faqData)) {
-          console.warn('[FAQs Hook] FAQs data is not an array');
-          setFaqs([]);
-          setTotal(0);
-        } else if (faqData.length === 0) {
-          console.warn('[FAQs Hook] No FAQs returned');
-          setFaqs([]);
-          setTotal(0);
-        } else {
-          setFaqs(faqData);
-          setTotal(totalCount || faqData.length);
-          setSource(dataSource);
-          console.log(`[FAQs Hook] Loaded ${faqData.length} FAQs from ${dataSource}`);
+        if (response.error) {
+          console.error('[FAQs Hook] Error:', response.error);
+          // Don't surface error - we have fallback
         }
-      } else {
-        setFaqs([]);
-        setTotal(0);
+
+        if (response.data) {
+          const { faqs: faqData, source: dataSource, total: totalCount } = response.data as FAQsResponse;
+
+          if (!Array.isArray(faqData)) {
+            console.warn('[FAQs Hook] FAQs data is not an array');
+            return { faqs: [], source: null, total: 0 };
+          }
+          if (faqData.length === 0) {
+            console.warn('[FAQs Hook] No FAQs returned');
+            return { faqs: [], source: null, total: 0 };
+          }
+          return { faqs: faqData, source: dataSource, total: totalCount || faqData.length };
+        }
+
+        return { faqs: [], source: null, total: 0 };
+      } catch (err) {
+        console.error('[FAQs Hook] Unexpected error:', err);
+        return { faqs: [], source: null, total: 0 };
       }
-    } catch (err) {
-      console.error('[FAQs Hook] Unexpected error:', err);
-      setError(null); // Don't show error to user
-      setFaqs([]);
-      setTotal(0);
-    }
+    },
+    staleTime: Infinity,
+  });
 
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchFAQs();
-  }, []);
+  const faqs = query.data?.faqs ?? [];
 
   return {
     faqs,
-    loading,
-    error,
-    source,
-    refetch: fetchFAQs,
+    loading: query.isLoading,
+    error: null, // Never surface error - fallback always provides FAQs
+    source: query.data?.source ?? null,
+    refetch: query.refetch,
     hasFAQs: faqs.length > 0,
-    total,
+    total: query.data?.total ?? 0,
   };
 }
