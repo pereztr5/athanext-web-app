@@ -68,8 +68,9 @@ export const sanitizeInput = (input: string): string => {
 };
 
 /**
- * Rate limiting helper - tracks submission timestamps
- * Prevents spam and abuse
+ * UX throttle — client-side only (localStorage), so it is NOT a security
+ * control: anyone can clear it. It exists to stop accidental double-submits.
+ * Real rate limiting belongs server-side.
  */
 export const checkRateLimit = (storageKey: string, limitMinutes: number = 5): boolean => {
   try {

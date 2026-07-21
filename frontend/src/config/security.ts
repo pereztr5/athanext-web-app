@@ -1,20 +1,7 @@
 /**
- * Security Configuration
- * Centralized security settings and utilities for the application
+ * Input validation and sanitization utilities
+ * (validators, HTML escaping, upload limits)
  */
-
-// Content Security Policy configuration
-export const CSP_DIRECTIVES = {
-  'default-src': ["'self'"],
-  'script-src': ["'self'", "'unsafe-inline'", "'unsafe-eval'"], // Consider removing unsafe-* in production
-  'style-src': ["'self'", "'unsafe-inline'"],
-  'img-src': ["'self'", 'data:', 'blob:', 'https:'],
-  'font-src': ["'self'", 'data:'],
-  'connect-src': ["'self'", import.meta.env.VITE_SUPABASE_URL || ''],
-  'frame-ancestors': ["'none'"],
-  'base-uri': ["'self'"],
-  'form-action': ["'self'"],
-};
 
 // File upload restrictions
 export const FILE_UPLOAD_CONFIG = {
@@ -35,12 +22,6 @@ export const INPUT_LIMITS = {
   MAX_BIO_LENGTH: 500,
   MIN_AGE: 5,
   MAX_AGE: 120,
-} as const;
-
-// Rate limiting configuration
-export const RATE_LIMITS = {
-  PROFILE_UPDATE_INTERVAL: 3000, // 3 seconds
-  API_REQUEST_INTERVAL: 1000, // 1 second
 } as const;
 
 /**
@@ -87,14 +68,6 @@ export const AUTHENTIC_EMAIL_MESSAGE =
 export const isValidPhoneNumber = (phone: string): boolean => {
   const phoneRegex = /^[+]?[(]?[0-9]{1,4}[)]?[-\s.]?[(]?[0-9]{1,4}[)]?[-\s.]?[0-9]{1,9}$/;
   return phoneRegex.test(phone);
-};
-
-/**
- * Validate date is not in the future
- */
-export const isValidPastDate = (dateString: string): boolean => {
-  const date = new Date(dateString);
-  return !isNaN(date.getTime()) && date <= new Date();
 };
 
 /**
@@ -168,20 +141,4 @@ export const validateImageMagicBytes = (file: File): Promise<boolean> => {
 export const truncateString = (str: string, maxLength: number): string => {
   if (str.length <= maxLength) return str;
   return str.slice(0, maxLength);
-};
-
-/**
- * Remove potential SQL injection characters (for additional safety)
- */
-export const sanitizeSqlInput = (input: string): string => {
-  return input.replace(/['";\\]/g, '');
-};
-
-/**
- * Generate Content Security Policy header
- */
-export const generateCSPHeader = (): string => {
-  return Object.entries(CSP_DIRECTIVES)
-    .map(([directive, sources]) => `${directive} ${sources.join(' ')}`)
-    .join('; ');
 };
