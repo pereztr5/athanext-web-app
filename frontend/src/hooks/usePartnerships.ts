@@ -1,36 +1,28 @@
-import { useState, useEffect } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { partnershipsAPI, type Partnership } from "@/api";
 
 export const usePartnerships = () => {
-  const [partnerships, setPartnerships] = useState<Partnership[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    fetchPartnerships();
-  }, []);
-
-  const fetchPartnerships = async () => {
-    try {
-      setIsLoading(true);
-      const response = await partnershipsAPI.getPartnerships();
-
-      if (response.error) {
-        throw response.error;
+  const query = useQuery<Partnership[]>({
+    queryKey: ["partnerships"],
+    queryFn: async () => {
+      try {
+        const response = await partnershipsAPI.getPartnerships();
+        if (response.error) {
+          throw response.error;
+        }
+        return (response.data || []) as Partnership[];
+      } catch (err) {
+        console.error("Error fetching partnerships:", err);
+        throw err;
       }
-
-      setPartnerships((response.data || []) as Partnership[]);
-    } catch (err) {
-      console.error("Error fetching partnerships:", err);
-      setError(err instanceof Error ? err.message : "Failed to load partnerships");
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    },
+  });
 
   return {
-    partnerships,
-    isLoading,
-    error,
+    partnerships: query.data ?? [],
+    isLoading: query.isLoading,
+    error: query.error
+      ? (query.error instanceof Error ? query.error.message : "Failed to load partnerships")
+      : null,
   };
 };
