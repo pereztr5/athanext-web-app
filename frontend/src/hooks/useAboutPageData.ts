@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { type AboutData } from "@/api/about";
 import { getAboutPageData } from '@/api/about';
 import { ABOUT_PAGE_DATA } from "@/utils/db";
@@ -7,7 +7,7 @@ interface UseAboutPageDataReturn {
   data: AboutData | null;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
   hasData: boolean;
 }
 
@@ -18,40 +18,43 @@ interface UseAboutPageDataReturn {
  */
 const FALLBACK_DATA: AboutData = ABOUT_PAGE_DATA;
 
+interface AboutPageResult {
+  aboutData: AboutData | null;
+  errorMsg: string | null;
+}
+
 export function useAboutPageData(): UseAboutPageDataReturn {
-  const [data, setData] = useState<AboutData | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery<AboutPageResult>({
+    queryKey: ['about-page-data'],
+    queryFn: async () => {
+      try {
+        const response = await getAboutPageData();
 
-  const fetchData = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      const response = await getAboutPageData();
-      
-      if (response.error) {
-        setError(response.error.message);
-      } else if (response.data) {
-        setData(response.data);
+        if (response.error) {
+          return { aboutData: null, errorMsg: response.error.message };
+        }
+        if (response.data) {
+          return { aboutData: response.data, errorMsg: null };
+        }
+        return { aboutData: null, errorMsg: null };
+      } catch (err) {
+        // Even on error, provide fallback data
+        return {
+          aboutData: FALLBACK_DATA,
+          errorMsg: err instanceof Error ? err.message : 'Failed to load about data',
+        };
       }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to load about data');
-      // Even on error, set fallback data
-      setData(FALLBACK_DATA);
-    } finally {
-      setLoading(false);
-    }
-  };
+    },
+    staleTime: Infinity,
+  });
 
-  useEffect(() => {
-    fetchData();
-  }, []);
+  const aboutData = query.data?.aboutData ?? null;
 
   return {
-    data,
-    loading,
-    error,
-    refetch: fetchData,
-    hasData: !!data,
+    data: aboutData,
+    loading: query.isLoading,
+    error: query.data?.errorMsg ?? null,
+    refetch: query.refetch,
+    hasData: !!aboutData,
   };
 }
