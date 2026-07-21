@@ -51,7 +51,8 @@ export const SecurityAudit = {
     return true;
   },
 
-  // Check for suspicious activity patterns
+  // UX throttle — client-side only (localStorage), trivially bypassable.
+  // Not a security control; server-side enforcement would be needed for that.
   checkRateLimit: (action: string, maxAttempts: number = 5, windowMs: number = 60000): boolean => {
     const key = `rate_limit_${action}`;
     const now = Date.now();

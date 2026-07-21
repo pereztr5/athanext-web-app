@@ -164,7 +164,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
 
   const handleBookSession = async () => {
     // Security: Rate limiting for booking attempts
-    if (!SecurityAudit.checkRateLimit('booking_attempt', 10, 300000)) { // 3 attempts per 5 minutes
+    if (!SecurityAudit.checkRateLimit('booking_attempt', 10, 300000)) { // 10 attempts per 5 minutes
       toast({
         title: strings.appointments.tooManyBookingAttempts,
         description: strings.appointments.waitBeforeTryingAgain,
