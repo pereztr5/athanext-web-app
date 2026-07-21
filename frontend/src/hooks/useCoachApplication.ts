@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { apiClient } from "@/api";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -20,11 +20,7 @@ interface CoachApplicationData {
 }
 
 export const useCoachApplication = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
   const submitApplication = async (data: CoachApplicationData): Promise<boolean> => {
-    setIsSubmitting(true);
-
     try {
       const { data: { user } } = await apiClient.getSupabaseClient().auth.getUser();
 
@@ -69,13 +65,15 @@ export const useCoachApplication = () => {
         description: "Please try again later."
       });
       return false;
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
+  const submitMutation = useMutation({
+    mutationFn: submitApplication,
+  });
+
   return {
-    submitApplication,
-    isSubmitting
+    submitApplication: submitMutation.mutateAsync,
+    isSubmitting: submitMutation.isPending
   };
 };

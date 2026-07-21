@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { z } from "zod";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -65,14 +66,12 @@ const populateTemplate = (
 };
 
 export const usePartnershipInquirySubmission = () => {
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const submitInquiry = async (
     formData: PartnershipInquiryFormData
   ): Promise<boolean> => {
-    setIsSubmitting(true);
     setErrors({});
 
     try {
@@ -256,14 +255,16 @@ export const usePartnershipInquirySubmission = () => {
       }
 
       return false;
-    } finally {
-      setIsSubmitting(false);
     }
   };
 
+  const submitMutation = useMutation({
+    mutationFn: submitInquiry,
+  });
+
   return {
-    submitInquiry,
-    isSubmitting,
+    submitInquiry: submitMutation.mutateAsync,
+    isSubmitting: submitMutation.isPending,
     errors,
   };
 };

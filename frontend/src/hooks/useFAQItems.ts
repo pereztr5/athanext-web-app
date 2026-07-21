@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 interface FAQItem {
@@ -10,33 +10,19 @@ interface FAQItem {
 }
 
 export const useFAQItems = (type: string = 'general') => {
-  const [faqs, setFaqs] = useState<FAQItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  return useQuery({
+    queryKey: ['faq-items', type],
+    queryFn: async (): Promise<FAQItem[]> => {
+      const { data, error } = await supabase
+        .from('faq_items' as any)
+        .select('*')
+        .eq('type', type)
+        .order('position', { ascending: true });
 
-  useEffect(() => {
-    const fetchFAQs = async () => {
-      try {
-        setLoading(true);
-        const { data, error } = await supabase
-          .from('faq_items' as any)
-          .select('*')
-          .eq('type', type)
-          .order('position', { ascending: true });
+      if (error) throw error;
 
-        if (error) throw error;
-
-        setFaqs((data as any) || []);
-      } catch (err) {
-        console.error('Error fetching FAQs:', err);
-        setError(err instanceof Error ? err.message : 'Failed to fetch FAQs');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchFAQs();
-  }, [type]);
-
-  return { faqs, loading, error };
+      return (data as any) || [];
+    },
+    staleTime: Infinity,
+  });
 };

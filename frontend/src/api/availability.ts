@@ -57,8 +57,6 @@ export async function fetchPeriodWithOverrides(
     const weekStartISO = toLocalISODate(weekStart);
     const weekEndISO = toLocalISODate(weekEnd);
 
-    console.log('🔍 Fetching overrides for first week:', weekStartISO, 'to', weekEndISO);
-
     // Fetch overrides for the FIRST WEEK only
     const { data: overrides, error } = await supabase
       .from('coach_availability_slot_overrides' as any)
@@ -75,8 +73,6 @@ export async function fetchPeriodWithOverrides(
       };
     }
 
-    console.log('📦 Found overrides:', overrides?.length || 0, overrides);
-
     // Map overrides by slot_id - keep the first one we find (for the slot's day of week in week 1)
     const overridesBySlotId = new Map<string, SlotOverride>();
     (overrides || []).forEach((ov: any) => {
@@ -86,17 +82,12 @@ export async function fetchPeriodWithOverrides(
       }
     });
 
-    console.log('🗺️ Overrides by slot_id:', Object.fromEntries(overridesBySlotId));
-
     // Merge overrides with base slots
     const mergedSlots: CoachAvailabilitySlot[] = period.slots.map((slot: any) => {
       const override = overridesBySlotId.get(slot.id);
       if (!override) {
-        console.log(`➡️ Slot ${slot.id} (${slot.day_of_week}): No override, using base`);
         return slot;
       }
-
-      console.log(`✏️ Slot ${slot.id} (${slot.day_of_week}): Merging override`, override);
 
       // Apply override values to the base slot
       return {
@@ -112,8 +103,6 @@ export async function fetchPeriodWithOverrides(
         is_enabled: override.is_enabled !== null ? override.is_enabled : slot.is_enabled,
       } as CoachAvailabilitySlot;
     });
-
-    console.log('✅ Merged slots:', mergedSlots);
 
     return {
       data: {

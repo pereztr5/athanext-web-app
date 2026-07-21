@@ -10,7 +10,7 @@ interface FAQSectionProps {
 
 export function FAQSection({ type = 'general', language = 'en' }: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
-  const { faqs, loading, error } = useFAQItems(type);
+  const { data: faqs = [], isLoading: loading, error } = useFAQItems(type);
 
   const toggleFAQ = (index: number) => {
     setOpenIndex(openIndex === index ? null : index);

@@ -130,7 +130,6 @@ const hydrateProfile = (profile: AthleteProfileFormData | null): AthleteProfileF
 export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImageSelect, onCoverImagesSelect, onCoverImageRemove, genderLabel }: EditProfileDialogProps) => {
   const { toast } = useToast();
   const hydratedProfile = useMemo(() => {
-    console.log('hydrateProfile called with:', profile);
     return hydrateProfile(profile);
   }, [profile]);
 
@@ -779,8 +778,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
     // Get the URL being removed before updating state
     if (Array.isArray(coverImages) && coverImages[index]) {
       const urlToRemove = coverImages[index];
-      console.log('[Remove Cover] Removing image at index', index, '- URL:', urlToRemove);
-      
+
       // Notify parent BEFORE removing from local state (pass the actual URL)
       onCoverImageRemove?.(urlToRemove);
     }
@@ -888,18 +886,15 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
   };
 
   const handleSave = async () => {
-    console.log('handleSave STARTED', { formData, coverImages, isCurrentlyStudying, currentYearLevel, resolvedLocation });
     setErrors({});
     
     // Safety checks before validation
     if (!formData) {
-      console.log('handleSave FAILED: formData is missing');
       setErrors({ form: "Profile data is missing. Please refresh and try again." });
       return;
     }
 
     if (formData.zipCode && !isLocationValid) {
-      console.log('handleSave FAILED: location invalid', { zipCode: formData.zipCode, isLocationValid });
       setErrors((prev) => ({ ...prev, zipCode: "Enter a valid zip code to resolve location." }));
       return;
     }
@@ -910,10 +905,8 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
       coverImageUrls: Array.isArray(coverImages) ? coverImages : [],
     };
 
-    console.log('handleSave: Validating payload', payload);
     const validation = profileSchema.safeParse(payload);
     if (!validation.success) {
-      console.log('handleSave FAILED: Validation errors', validation.error.issues);
       const fieldErrors: Partial<Record<keyof AthleteProfileFormData | "form", string>> = {};
       validation.error.issues.forEach((issue) => {
         const fieldName = issue.path[0];
@@ -927,7 +920,6 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
       return;
     }
 
-    console.log('handleSave: Validation passed, calling onSave');
     try {
       setIsSaving(true);
       

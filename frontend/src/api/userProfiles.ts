@@ -19,8 +19,8 @@ export const userProfilesAPI = {
    * @param userId - User ID to fetch profile for
    * @returns ApiResponse with user profile
    */
-  async getUserProfile(userId: string): Promise<ApiResponse<UserProfile>> {
-    return apiClient.query<UserProfile>(
+  async getUserProfile(userId: string): Promise<ApiResponse<UserProfile | null>> {
+    return apiClient.query<UserProfile | null>(
       async (client) => client
         .from('user_profiles')
         .select('*')

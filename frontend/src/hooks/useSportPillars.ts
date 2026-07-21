@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useCallback } from 'react';
+import { useQuery, useMutation } from '@tanstack/react-query';
 import { getSportPillars, setSportPillars, type SPORTPILLARS, type CoachSportPillarLink } from '@/api/sport-pillars';
 import type { Enums } from '@/integrations/supabase/types';
 
@@ -12,7 +13,7 @@ interface UseSportPillarsReturn {
   total: number;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
   linkPillarsToCoach: (coachId: string, sport: Enums<'sport_type'>, pillarIds: string[]) => Promise<{
     success: boolean;
     data?: CoachSportPillarLink[];
@@ -21,103 +22,68 @@ interface UseSportPillarsReturn {
   isLinking: boolean;
 }
 
+interface SportPillarsResult {
+  sportPillars: SPORTPILLARS[];
+  total: number;
+}
+
 /**
  * Custom hook to fetch and manage sport pillars
- * 
+ *
  * @example
- * // Fetch sport pillars for a specific sport
  * const { sportPillars, loading, error, refetch } = useSportPillars({ sport: 'soccer' });
- * 
  * @example
- * // Manual fetch
  * const { sportPillars, loading, refetch } = useSportPillars({ autoFetch: false });
- * // Later...
- * refetch();
- * 
  * @example
- * // Link pillars to a coach
  * const { linkPillarsToCoach, isLinking } = useSportPillars({ sport: 'soccer' });
- * const result = await linkPillarsToCoach(coachId, 'soccer', [pillarId1, pillarId2]);
  */
 export function useSportPillars(options: UseSportPillarsOptions = {}): UseSportPillarsReturn {
   const { sport, autoFetch = true } = options;
 
-  const [sportPillars, setSportPillarsState] = useState<SPORTPILLARS[]>([]);
-  const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [isLinking, setIsLinking] = useState(false);
-
-  const fetchSportPillars = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
+  const query = useQuery<SportPillarsResult>({
+    queryKey: ['sport-pillars', sport ?? null],
+    queryFn: async () => {
       const response = await getSportPillars((sport ?? null) as any);
-
       if (response.error) {
-        setError(response.error.message);
-        setSportPillarsState([]);
-        setTotal(0);
-      } else if (response.data) {
-        setSportPillarsState(response.data.sportPillars);
-        setTotal(response.data.total);
+        throw new Error(response.error.message);
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch sport pillars';
-      setError(errorMessage);
-      setSportPillarsState([]);
-      setTotal(0);
-    } finally {
-      setLoading(false);
-    }
-  }, [sport]);
+      return response.data ?? { sportPillars: [], total: 0 };
+    },
+    enabled: autoFetch,
+    staleTime: Infinity,
+  });
+
+  const linkMutation = useMutation({
+    mutationFn: async (vars: { coachId: string; sportType: Enums<'sport_type'>; pillarIds: string[] }) => {
+      const response = await setSportPillars(vars.coachId, vars.sportType, vars.pillarIds);
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+      return response.data;
+    },
+  });
 
   const linkPillarsToCoach = useCallback(async (
     coachId: string,
     sportType: Enums<'sport_type'>,
     pillarIds: string[]
   ) => {
-    setIsLinking(true);
-
     try {
-      const response = await setSportPillars(coachId, sportType, pillarIds);
-
-      if (response.error) {
-        return {
-          success: false,
-          error: response.error.message,
-        };
-      }
-
-      return {
-        success: true,
-        data: response.data,
-      };
+      const data = await linkMutation.mutateAsync({ coachId, sportType, pillarIds });
+      return { success: true, data };
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to link sport pillars';
-      return {
-        success: false,
-        error: errorMessage,
-      };
-    } finally {
-      setIsLinking(false);
+      return { success: false, error: errorMessage };
     }
-  }, []);
-
-  useEffect(() => {
-    if (autoFetch) {
-      fetchSportPillars();
-    }
-  }, [autoFetch, fetchSportPillars]);
+  }, [linkMutation]);
 
   return {
-    sportPillars,
-    total,
-    loading,
-    error,
-    refetch: fetchSportPillars,
+    sportPillars: query.data?.sportPillars ?? [],
+    total: query.data?.total ?? 0,
+    loading: query.isLoading,
+    error: query.error ? query.error.message : null,
+    refetch: () => { query.refetch(); },
     linkPillarsToCoach,
-    isLinking,
+    isLinking: linkMutation.isPending,
   };
 }

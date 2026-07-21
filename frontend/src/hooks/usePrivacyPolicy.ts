@@ -1,12 +1,17 @@
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { getPrivacyPolicyContent, type PrivacyPolicyContent } from '@/api/privacy-policy';
 
 interface UsePrivacyPolicyReturn {
   policy: PrivacyPolicyContent | null;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
   hasContent: boolean;
+}
+
+interface PrivacyPolicyResult {
+  policy: PrivacyPolicyContent | null;
+  errorMsg: string | null;
 }
 
 /**
@@ -14,47 +19,36 @@ interface UsePrivacyPolicyReturn {
  * Handles loading states, errors, and fallback data
  */
 export function usePrivacyPolicy(): UsePrivacyPolicyReturn {
-  const [policy, setPolicy] = useState<PrivacyPolicyContent | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const query = useQuery<PrivacyPolicyResult>({
+    queryKey: ['privacy-policy'],
+    queryFn: async () => {
+      try {
+        const response = await getPrivacyPolicyContent();
 
-  const fetchPolicy = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await getPrivacyPolicyContent();
-
-      if (response.error) {
-        console.error('[Privacy Policy Hook] Error:', response.error);
-        // Still use demo data if available
-        if (response.data?.policy) {
-          setPolicy(response.data.policy);
+        if (response.error) {
+          console.error('[Privacy Policy Hook] Error:', response.error);
+          // Still use demo data if available; don't surface error - we have fallback
+          return { policy: response.data?.policy ?? null, errorMsg: null };
         }
-        setError(null); // Don't show error to user - we have fallback
-      } else if (response.data?.policy) {
-        setPolicy(response.data.policy);
-        setError(null);
-      } else {
-        setError('Unable to load privacy policy');
+        if (response.data?.policy) {
+          return { policy: response.data.policy, errorMsg: null };
+        }
+        return { policy: null, errorMsg: 'Unable to load privacy policy' };
+      } catch (err) {
+        console.error('[Privacy Policy Hook] Unexpected error:', err);
+        return { policy: null, errorMsg: null };
       }
-    } catch (err) {
-      console.error('[Privacy Policy Hook] Unexpected error:', err);
-      setError(null); // Still try to show demo data
-    }
+    },
+    staleTime: Infinity,
+  });
 
-    setLoading(false);
-  };
-
-  useEffect(() => {
-    fetchPolicy();
-  }, []);
+  const policy = query.data?.policy ?? null;
 
   return {
     policy,
-    loading,
-    error,
-    refetch: fetchPolicy,
+    loading: query.isLoading,
+    error: query.data?.errorMsg ?? null,
+    refetch: query.refetch,
     hasContent: policy !== null && policy.content.trim().length > 0,
   };
 }

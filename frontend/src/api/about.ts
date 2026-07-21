@@ -99,11 +99,9 @@ export async function getAboutPageData(): Promise<ApiResponse<AboutData>> {
           image_url: dbStory.image_url,
           stats,
         };
-        console.log('[About API] Loaded story data from Supabase:', storyData);
       }
     } catch (err) {
       // Table doesn't exist or no data - that's OK, use fallback
-      console.log('[About API] Story table not found, using demo data', err);
     }
 
     // Fetch values and team members from about_items table
@@ -139,7 +137,6 @@ export async function getAboutPageData(): Promise<ApiResponse<AboutData>> {
 
         if (teamMembers.length > 0) {
           teamData = teamMembers;
-          console.log('[About API] Loaded team members from Supabase:', teamData);
         }
 
         // Parse values
@@ -165,11 +162,10 @@ export async function getAboutPageData(): Promise<ApiResponse<AboutData>> {
 
         if (values.length > 0) {
           valuesData = values;
-          console.log('[About API] Loaded values from Supabase:', valuesData);
         }
       }
     } catch (err) {
-      console.log('[About API] about_items table not found, using demo data', err);
+      // Table doesn't exist or no data - that's OK, use fallback
     }
 
     // Return data with fetched or fallback story

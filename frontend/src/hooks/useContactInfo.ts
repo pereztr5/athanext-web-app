@@ -3,53 +3,40 @@
  * Handles loading states, errors, and provides contact details
  */
 
-import { useState, useEffect } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { contactInfoAPI, type ContactInfo } from '@/api';
 
 interface UseContactInfoReturn {
   contactInfo: ContactInfo | null;
   loading: boolean;
   error: string | null;
-  refetch: () => Promise<void>;
+  refetch: () => void;
 }
 
 export function useContactInfo(): UseContactInfoReturn {
-  const [contactInfo, setContactInfo] = useState<ContactInfo | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  const fetchContactInfo = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const response = await contactInfoAPI.getContactInfo();
-      console.log('[Contact Info Hook] Response:', response);
-
-      if (response.error) {
-        setError('Failed to load contact information');
-        setContactInfo(null);
-      } else if (response.data) {
-        setContactInfo(response.data);
-      } else {
-        setContactInfo(null);
+  const query = useQuery<ContactInfo | null>({
+    queryKey: ['contact-info'],
+    queryFn: async () => {
+      try {
+        const response = await contactInfoAPI.getContactInfo();
+        if (response.error) {
+          throw new Error('Failed to load contact information');
+        }
+        return response.data ?? null;
+      } catch (err) {
+        if (err instanceof Error && err.message === 'Failed to load contact information') {
+          throw err;
+        }
+        throw new Error('An unexpected error occurred');
       }
-    } catch (err) {
-      setError('An unexpected error occurred');
-      setContactInfo(null);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  useEffect(() => {
-    fetchContactInfo();
-  }, []);
+    },
+    staleTime: Infinity,
+  });
 
   return {
-    contactInfo,
-    loading,
-    error,
-    refetch: fetchContactInfo,
+    contactInfo: query.data ?? null,
+    loading: query.isLoading,
+    error: query.error ? query.error.message : null,
+    refetch: query.refetch,
   };
 }

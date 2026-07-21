@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { reviewsAPI } from "@/api";
 import { useToast } from "@/hooks/use-toast";
 
@@ -11,98 +11,58 @@ export interface Review {
   reviewer_name?: string;
 }
 
-// Cache for reviews to prevent duplicate fetches
-const reviewsCache = new Map<string, {
+type RatingDistribution = Record<number, number>;
+
+interface ReviewsResult {
   reviews: Review[];
   averageRating: number;
   totalReviews: number;
-  ratingDistribution: Record<number, number>;
-}>();
+  ratingDistribution: RatingDistribution;
+}
 
-// Export function to clear cache
-export const clearReviewsCache = () => {
-  reviewsCache.clear();
-};
+const EMPTY_DISTRIBUTION: RatingDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
 
 export const useReviews = (coachId: string | undefined) => {
-  const [reviews, setReviews] = useState<Review[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [averageRating, setAverageRating] = useState<number>(0);
-  const [totalReviews, setTotalReviews] = useState<number>(0);
-  const [ratingDistribution, setRatingDistribution] = useState<Record<number, number>>({
-    5: 0,
-    4: 0,
-    3: 0,
-    2: 0,
-    1: 0
-  });
   const { toast } = useToast();
 
-  const fetchReviews = useCallback(async () => {
-    if (!coachId) return;
+  const query = useQuery<ReviewsResult>({
+    queryKey: ["reviews", coachId],
+    queryFn: async () => {
+      const fallback: ReviewsResult = {
+        reviews: [],
+        averageRating: 0,
+        totalReviews: 0,
+        ratingDistribution: EMPTY_DISTRIBUTION,
+      };
 
-    // Check cache first
-    const cached = reviewsCache.get(coachId);
-    if (cached) {
-      setReviews(cached.reviews);
-      setAverageRating(cached.averageRating);
-      setTotalReviews(cached.totalReviews || cached.reviews.length || 0);
-      setRatingDistribution(cached.ratingDistribution);
-      setLoading(false);
-      return;
-    }
+      try {
+        const statsResponse = await reviewsAPI.getCoachRatingStats(coachId as string);
 
-    try {
-      setLoading(true);
-      
-      const statsResponse = await reviewsAPI.getCoachRatingStats(coachId);
+        if (!statsResponse.error && statsResponse.data) {
+          return {
+            reviews: [], // No direct comments fetched
+            averageRating: statsResponse.data.averageRating ?? 0,
+            totalReviews: statsResponse.data.totalReviews ?? 0,
+            ratingDistribution: (statsResponse.data.distribution as RatingDistribution) ?? EMPTY_DISTRIBUTION,
+          };
+        }
 
-      const fallbackDistribution = { 5: 0, 4: 0, 3: 0, 2: 0, 1: 0 };
-      let averageRatingValue = 0;
-      let distributionValue = fallbackDistribution;
-      let totalReviewsValue = 0;
-
-      if (!statsResponse.error && statsResponse.data) {
-        averageRatingValue = statsResponse.data.averageRating ?? 0;
-        distributionValue = statsResponse.data.distribution as typeof fallbackDistribution;
-        totalReviewsValue = statsResponse.data.totalReviews ?? 0;
-      } else {
         // If stats RPC fails, leave defaults
         console.warn('Falling back to empty stats due to RPC error');
+        return fallback;
+      } catch (error) {
+        console.error('Error fetching reviews:', error);
+        toast({
+          title: "Error",
+          description: "Failed to load reviews",
+          variant: "destructive",
+        });
+        return fallback;
       }
-
-      setReviews([]); // No direct comments fetched
-      setAverageRating(averageRatingValue);
-      setTotalReviews(totalReviewsValue);
-      setRatingDistribution(distributionValue);
-
-      reviewsCache.set(coachId, {
-        reviews: [],
-        averageRating: averageRatingValue,
-        totalReviews: totalReviewsValue,
-        ratingDistribution: distributionValue,
-      });
-    } catch (error) {
-      console.error('Error fetching reviews:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load reviews",
-        variant: "destructive"
-      });
-    } finally {
-      setLoading(false);
-    }
-  }, [coachId, toast]);
-
-  useEffect(() => {
-    if (!coachId) {
-      setLoading(false);
-      return;
-    }
-
-    fetchReviews();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [coachId]);
+    },
+    enabled: !!coachId,
+    staleTime: Infinity, // Cache until explicitly invalidated (mirrors old clearReviewsCache behavior)
+  });
 
   // Reviews are derived from slot_feedback_v2; direct submissions are not supported here.
   const submitReview = async () => ({
@@ -110,12 +70,12 @@ export const useReviews = (coachId: string | undefined) => {
   });
 
   return {
-    reviews,
-    loading,
-    averageRating,
-    totalReviews,
-    ratingDistribution,
+    reviews: query.data?.reviews ?? [],
+    loading: query.isLoading,
+    averageRating: query.data?.averageRating ?? 0,
+    totalReviews: query.data?.totalReviews ?? 0,
+    ratingDistribution: query.data?.ratingDistribution ?? EMPTY_DISTRIBUTION,
     submitReview,
-    refreshReviews: fetchReviews
+    refreshReviews: query.refetch,
   };
 };

@@ -45,7 +45,8 @@ import { createPortal } from "react-dom";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import type { SessionUIModel } from "@/types/sessions-api";
-import { useUserProfile, clearUserProfileCache } from "@/hooks/useUserProfile";
+import { useUserProfile } from "@/hooks/useUserProfile";
+import { useQueryClient } from "@tanstack/react-query";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import footballCover from "@/assets/images/footballs.png";
 import type { ProfileData } from "@/utils/profileCompletion";
@@ -71,6 +72,7 @@ const { MAX_COVER_IMAGES } = ATHLETE_PROFILE_CONSTANTS;
 
 const AthleteProfile = ({ profile: profileState, loading: profileLoading, error: profileError, saveAthleteProfile, refetchProfile, user, authLoading, upcomingSessions = [], sessionsLoading = false, sessionsError = null }: AthleteProfileProps) => {
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const { updateProfile } = useUserProfile();
   const { setUserImg, setUserName, refreshUserProfile, userProfile: authUserProfile } = useAuth();
   const navigate = useNavigate();
@@ -710,8 +712,8 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
         // Only persist when we have something to update (persona + identifiers are always present)
         if (Object.keys(updates).length > 0) {
           await updateProfile(updates);
-          // Clear profile cache to force fresh fetch from database
-          clearUserProfileCache(user?.id);
+          // Invalidate profile query to force fresh fetch from database
+          queryClient.invalidateQueries({ queryKey: ["user-profile", user?.id] });
           // Refresh AuthContext userProfile, which will trigger ProfileContext to refetch
           await refreshUserProfile();
         }

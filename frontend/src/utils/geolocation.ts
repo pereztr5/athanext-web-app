@@ -34,7 +34,6 @@ export async function fetchLocationFromZipCode(zip: string): Promise<LocationInf
       };
     } else if (response.status === 404) {
       // 404 means zip code not found in US database, try international
-      console.log('US zip code not found, trying international lookup');
     }
   } catch (error) {
     console.error('Error fetching location from zippopotam:', error);
@@ -57,11 +56,9 @@ export async function fetchLocationFromZipCode(zip: string): Promise<LocationInf
         };
       } else {
         // Empty array means postal code not found
-        console.log('International postal code not found');
         return null;
       }
     } else if (geoResponse.status === 404) {
-      console.log('Postal code not found in international lookup (404)');
       return null;
     }
   } catch (error) {
