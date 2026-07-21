@@ -100,8 +100,6 @@ export const useCreateAvailability = () => {
           is_enabled: true,
         }));
 
-      console.log('Creating availability with slots:', JSON.stringify(slotsToInsert, null, 2));
-
       if (slotsToInsert.length > 0) {
         const { error: slotsError } = await supabase
           .from('coach_availability_slots_v2' as any)
