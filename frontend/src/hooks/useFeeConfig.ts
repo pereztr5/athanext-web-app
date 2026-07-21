@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { getNumericConfiguration } from "@/api/configurations";
 
 interface FeeConfig {
@@ -7,44 +7,36 @@ interface FeeConfig {
   loading: boolean;
 }
 
+interface FeeConfigData {
+  platformFeePerc: number;
+  stripeFeePerc: number;
+}
+
 export const useFeeConfig = (): FeeConfig => {
-  const [platformFeePerc, setPlatformFeePerc] = useState<number>(0);
-  const [stripeFeePerc, setStripeFeePerc] = useState<number>(0);
-  const [loading, setLoading] = useState<boolean>(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const loadFees = async () => {
+  const query = useQuery<FeeConfigData>({
+    queryKey: ["fee-config"],
+    queryFn: async () => {
       try {
         const [platformResp, stripeResp] = await Promise.all([
           getNumericConfiguration("platform_fees"),
           getNumericConfiguration("stripe_fees"),
         ]);
 
-        if (!isMounted) return;
-
-        if (platformResp.data !== null) {
-          setPlatformFeePerc(platformResp.data);
-        }
-        if (stripeResp.data !== null) {
-          setStripeFeePerc(stripeResp.data);
-        }
+        return {
+          platformFeePerc: platformResp.data ?? 0,
+          stripeFeePerc: stripeResp.data ?? 0,
+        };
       } catch {
         // ignore errors; defaults remain 0
-      } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        return { platformFeePerc: 0, stripeFeePerc: 0 };
       }
-    };
+    },
+    staleTime: Infinity,
+  });
 
-    loadFees();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  return { platformFeePerc, stripeFeePerc, loading };
+  return {
+    platformFeePerc: query.data?.platformFeePerc ?? 0,
+    stripeFeePerc: query.data?.stripeFeePerc ?? 0,
+    loading: query.isLoading,
+  };
 };
-
