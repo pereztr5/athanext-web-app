@@ -7,12 +7,11 @@ import React, { useState, useCallback, useEffect, useMemo } from 'react';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Switch } from '@/components/ui/switch';
 import { Skeleton } from '@/components/ui/skeleton';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { AlertCircle, Calendar, Clock, X, Info } from 'lucide-react';
+import { AlertCircle, Clock, X } from 'lucide-react';
 import {
   validateAvailabilityForm,
   calculateEndTime,
@@ -34,8 +33,7 @@ import type {
   CoachAvailability,
 } from '@/types/availability';
 import { useToast } from '@/hooks/use-toast';
-import { capitalizeFirst, formatDateForInput } from '@/utils/helperFunctions';
-import { SETUP_INSTRUCTIONS } from '@/utils/db';
+import { capitalizeFirst } from '@/utils/helperFunctions';
 import { ManageAvailabilityTableHeader } from '@/components/availability/ManageAvailabilityTableHeader';
 import { ManageAvailabilityTableRow } from '@/components/availability/ManageAvailabilityTableRow';
 import { useCoachDetails } from '@/hooks/useCoachDetails';
@@ -57,7 +55,7 @@ import {
   filterWeekSlotsWithinRange,
   buildWeekSlotsFromOccurrences,
 } from '@/utils/availabilityModalHelpers';
-import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { DateRangeHeader } from './DateRangeHeader';
 import type { Enums } from '@/integrations/supabase/types';
 import { useOccurrencesV3, useUpsertOccurrencesEditV3, useUpsertOccurrencesV3 } from '@/hooks/useAvailabilityOccurrences';
 import { supabase } from '@/integrations/supabase/client';
@@ -108,8 +106,6 @@ export const ManageAvailabilityModal = ({
   const [weekErrors, setWeekErrors] = useState<Record<string, AvailabilityValidationErrors>>({});
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
-  const [showInfoPopover, setShowInfoPopover] = useState(false);
-  const infoPopoverRef = React.useRef<HTMLDivElement | null>(null);
   const issueScrollRef = React.useRef<HTMLDivElement | null>(null);
   const resetDatesRef = React.useRef(false);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
@@ -147,7 +143,6 @@ export const ManageAvailabilityModal = ({
     open && isEditMode
   );
   const MIN_RANGE_DAYS = 6; // inclusive: start + 6 days = 7-day span
-  const recurringInfo = SETUP_INSTRUCTIONS.recurring;
 
   // Memoized derived values
   const formStartISO = useMemo(() => toLocalISODate(formData.start_date), [formData.start_date]);
@@ -287,24 +282,11 @@ export const ManageAvailabilityModal = ({
       setErrors({});
       setWeekErrors({});
       setDuplicateError(null);
-      setShowInfoPopover(false);
       setShowRecurringConfirm(false);
       setCurrentWeekIndex(0);
       setPendingFocusTarget(null);
     }
   }, [editData, isEditMode, open]);
-
-  // Close info popover on outside click
-  useEffect(() => {
-    if (!showInfoPopover) return;
-    const handleClickOutside = (event: MouseEvent) => {
-      if (infoPopoverRef.current && !infoPopoverRef.current.contains(event.target as Node)) {
-        setShowInfoPopover(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, [showInfoPopover]);
 
   useEffect(() => {
     if (!open) return;
@@ -1412,108 +1394,32 @@ export const ManageAvailabilityModal = ({
           key={isEditMode ? 'edit' : `add-${addResetKey}`}
           className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto overflow-x-auto flex-1"
         >
-          {/* Date Range Section */}
-          <div className="flex flex-wrap items-center gap-2 md:gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="w-5 h-5 text-blue-600" />
-              <span className="font-semibold text-sm md:text-base">Availability Period:</span>
-              <span className="text-gray-600 text-sm md:text-base">
-                {formatDateForInput(formData.start_date)} - {formatDateForInput(formData.end_date)}
-              </span>
-            </div>
-            <DateRangePicker
-              startDate={formData.start_date}
-              endDate={formData.end_date}
-              onChange={handleRangeChange}
-              minDays={MIN_RANGE_DAYS}
-              minStartDate={getMinStartDate()}
-              disabled={isEditMode}
-              badgeText="Min 1 week"
-            />
-            <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
-              <Switch
-                checked={isRecurring}
-                onCheckedChange={(checked) => {
-                  if (checked) {
-                    handleEnableRecurring();
-                    return;
-                  }
-                  setIsRecurring(false);
-                }}
-                id="recurring-toggle"
-              />
-              <label htmlFor="recurring-toggle" className="text-sm font-semibold text-slate-700">
-                Recurring session
-              </label>
-              <span className="text-xs text-slate-500">
-                {isRecurring ? 'Applies to all weeks' : 'Only this week'}
-              </span>
-            </div>
-            {/* Info Button with Popover */}
-            <div className="relative ml-2">
-              <div ref={infoPopoverRef} className="relative">
-              <button
-                onClick={() => setShowInfoPopover(!showInfoPopover)}
-                className="bg-blue-100 hover:bg-blue-200 rounded-full p-2 transition"
-                title="Setup instructions"
-              >
-                <Info className="h-5 w-5 text-blue-600" />
-              </button>
-              {showInfoPopover && (
-                <div className="absolute right-0 mt-2 w-80 bg-white text-gray-900 rounded-lg shadow-lg p-4 z-50 border border-gray-200">
-                  <h3 className="font-semibold text-blue-900 mb-3">{SETUP_INSTRUCTIONS.title}</h3>
-                  <ul className="space-y-2 text-sm text-gray-700">
-                    {SETUP_INSTRUCTIONS.steps.map((step, idx) => (
-                      <li key={idx} className="flex gap-2">
-                        <span className="font-semibold text-blue-600">{idx + 1}.</span>
-                        <span>{step}</span>
-                      </li>
-                    ))}
-                  </ul>
-                  {recurringInfo && (
-                    <div className="mt-3 pt-3 border-t border-gray-200">
-                      <p className="font-semibold text-blue-900 mb-1">{recurringInfo.title}</p>
-                      <p className="text-sm text-blue-800">{recurringInfo.description}</p>
-                    </div>
-                  )}
-                </div>
-              )}
-              </div>
-            </div>
-          </div>
-          {showDateChangeConfirm && pendingDateRange && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-900 rounded-lg px-4 py-3 flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <AlertCircle className="w-4 h-4" />
-                <div>
-                  <p className="text-sm font-semibold">Apply new date range?</p>
-                  <p className="text-xs text-amber-800">
-                    Changing dates may reset weekly slots. Overlapping weeks will be preserved.
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => {
-                    setPendingDateRange(null);
-                    setShowDateChangeConfirm(false);
-                  }}
-                >
-                  Cancel
-                </Button>
-                <Button
-                  size="sm"
-                  onClick={() => {
-                    applyDateRange(pendingDateRange.start, pendingDateRange.end, true);
-                  }}
-                >
-                  Apply
-                </Button>
-              </div>
-            </div>
-          )}
+          <DateRangeHeader
+            formData={formData}
+            isEditMode={isEditMode}
+            isRecurring={isRecurring}
+            minDays={MIN_RANGE_DAYS}
+            minStartDate={getMinStartDate()}
+            pendingDateRange={pendingDateRange}
+            showDateChangeConfirm={showDateChangeConfirm}
+            onRangeChange={handleRangeChange}
+            onRecurringToggle={(checked) => {
+              if (checked) {
+                handleEnableRecurring();
+                return;
+              }
+              setIsRecurring(false);
+            }}
+            onConfirmDateChange={() => {
+              if (pendingDateRange) {
+                applyDateRange(pendingDateRange.start, pendingDateRange.end, true);
+              }
+            }}
+            onCancelDateChange={() => {
+              setPendingDateRange(null);
+              setShowDateChangeConfirm(false);
+            }}
+          />
 
           {hasAnyErrors && (
             <Alert variant="destructive" className="bg-red-50 border py-2 border-red-200 flex items-center gap-3 min-h-[55px]">
