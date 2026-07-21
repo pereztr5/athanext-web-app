@@ -1,10 +1,8 @@
 import { User } from "@supabase/supabase-js";
+import { QueryClient } from "@tanstack/react-query";
 import { authAPI, apiClient } from "@/api";
 import { strings } from "@/config/strings";
 import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
-import { clearReviewsCache } from "@/hooks/useReviews";
-import { clearCoachCache } from "@/hooks/useCoachDetails";
-import { clearProfileCache } from "@/hooks/useProfile";
 import { DEFAULT_PROFILE_PROGRESS, type ProfileProgress } from "@/utils/profileCompletion";
 
 // Toast type definition
@@ -166,7 +164,8 @@ export const signOut = async (
   setUserImg?: (img: string | null) => void,
   setUserName?: (name: string | null) => void,
   setProfileProgress?: (progress: ProfileProgress) => void,
-  setProfileCompletion?: (completion: number) => void
+  setProfileCompletion?: (completion: number) => void,
+  queryClient?: QueryClient
 ): Promise<{ error: any }> => {
   const response = await authAPI.signOut();
 
@@ -175,10 +174,8 @@ export const signOut = async (
   }
   profileFetchPromises.clear();
 
-  // Clear all other module-level caches
-  clearReviewsCache();
-  clearCoachCache();
-  clearProfileCache();
+  // Clear all React Query caches (reviews, coach details, profile, etc.) on sign-out
+  queryClient?.clear();
 
   // Reset local state
   setUser(null);

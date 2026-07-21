@@ -4,6 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { User, Session } from "@supabase/supabase-js";
 import { type UserProfile } from "@/api/userProfiles";
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { DEFAULT_PROFILE_PROGRESS, type ProfileProgress } from "@/utils/profileCompletion";
 
 // Helper to check if profile is complete based on required fields
@@ -61,6 +62,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
   const [hasNewMessage, setHasNewMessage] = useState(false);
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const initialCheckDone = useRef(false);
   const lastProfileFetch = useRef<number>(0);
   const previousUserIdRef = useRef<string | null>(null);
@@ -220,7 +222,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserImg,
       setUserName,
       setProfileProgress,
-      setProfileCompletion
+      setProfileCompletion,
+      queryClient
     );
 
     // Reset profile fetch timer so next login always fetches fresh data

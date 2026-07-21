@@ -38,7 +38,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { PackagesModal } from "@/components/coach/PackagesModal";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { useCoachDetails, clearCoachCache } from "@/hooks/useCoachDetails";
+import { useCoachDetails } from "@/hooks/useCoachDetails";
+import { useQueryClient } from "@tanstack/react-query";
 import { calculateProfileProgress, DEFAULT_PROFILE_PROGRESS } from "@/utils/profileCompletion";
 import { detectCoachSport } from "@/utils/coachSport";
 import { X } from "lucide-react";
@@ -60,10 +61,10 @@ const Profile = () => {
     const { grouped: athleteSessionGrouped, isLoading: athleteSessionsLoading, error: athleteSessionsError } = useMySessions('athlete');
 
     // Refetch trigger for data updates
-    const [refetchTrigger, setRefetchTrigger] = useState(0);
+    const queryClient = useQueryClient();
 
     // Call all hooks unconditionally
-    const { coach, loading } = useCoachDetails(coachId || '', refetchTrigger);
+    const { coach, loading } = useCoachDetails(coachId || '');
 
     // Update profile completion whenever coach data changes
     useEffect(() => {
@@ -81,8 +82,7 @@ const Profile = () => {
     // Refetch coach data when availability changes
     const refetchCoachData = () => {
         if (coachId) {
-            clearCoachCache();
-            setRefetchTrigger(prev => prev + 1);
+            queryClient.invalidateQueries({ queryKey: ["coach-details", coachId] });
         }
     };
 
@@ -377,9 +377,9 @@ const Profile = () => {
             setCoverImagesToUpload([]);
             setCoverImageUrlsToRemove([]);
 
-            // Clear coach cache and refresh profile data
-            clearCoachCache();
-            
+            // Invalidate coach details and refresh profile data
+            queryClient.invalidateQueries({ queryKey: ["coach-details"] });
+
             // Refresh user profile from database to ensure header gets updated with new image
             await refreshUserProfile();
 
@@ -495,7 +495,6 @@ const Profile = () => {
                 if (deleteError) throw deleteError;
             }
 
-            clearCoachCache();
             refetchCoachData();
             toast({
                 title: "Certifications updated",
