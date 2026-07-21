@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 
@@ -7,20 +7,13 @@ export type PublicCoach = Omit<Tables<"coaches">, "email"> & {
 };
 
 export const useTopCoaches = (limit: number = 3) => {
-  const [coaches, setCoaches] = useState<PublicCoach[]>([]);
-  const [coachesLoading, setCoachesLoading] = useState(true);
-
-  useEffect(() => {
-    let isMounted = true;
-
-    const fetchTopCoaches = async () => {
+  const query = useQuery<PublicCoach[]>({
+    queryKey: ["top-coaches", limit],
+    queryFn: async () => {
       try {
-        setCoachesLoading(true);
-
         const { data, error } = await supabase.rpc("get_coaches_public");
 
         if (error) throw error;
-        if (!isMounted) return;
 
         const topCoaches = (data ?? [])
           .map((coach) => ({
@@ -31,24 +24,13 @@ export const useTopCoaches = (limit: number = 3) => {
           .sort((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
           .slice(0, limit);
 
-        setCoaches(topCoaches as PublicCoach[]);
+        return topCoaches as PublicCoach[];
       } catch (error) {
-        if (!isMounted) return;
-        setCoaches([]);
         console.error("Failed to load top coaches:", error);
-      } finally {
-        if (isMounted) {
-          setCoachesLoading(false);
-        }
+        return [];
       }
-    };
+    },
+  });
 
-    void fetchTopCoaches();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [limit]);
-
-  return { coaches, coachesLoading };
+  return { coaches: query.data ?? [], coachesLoading: query.isLoading };
 };
