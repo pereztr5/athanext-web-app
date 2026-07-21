@@ -68,7 +68,6 @@ const Profile = () => {
 
     // Update profile completion whenever coach data changes
     useEffect(() => {
-        console.log("coach=>",coach)
         if (coach && Object.keys(coach).length > 0) {
             const progress = calculateProfileProgress(coach);
             setProfileProgress(progress);
@@ -297,14 +296,6 @@ const Profile = () => {
                 !coverImageUrlsToRemove.includes(url)
             );
             const newCoverUrls = [...filteredUrls, ...uploadedCoverUrls];
-
-            console.log('[Cover Image Update] Debug Info:', {
-                existingUrls,
-                coverImageUrlsToRemove,
-                filteredUrls,
-                uploadedCoverUrls,
-                newCoverUrls,
-            });
 
             // Determine if cover_image_urls should be updated
             const shouldUpdateCoverUrls = coverImageUrlsToRemove.length > 0 || uploadedCoverUrls.length > 0;

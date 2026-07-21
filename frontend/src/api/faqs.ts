@@ -54,20 +54,13 @@ export async function getFAQs(): Promise<ApiResponse<FAQsResponse>> {
         // Successfully fetched FAQs from database
         faqsData = result.data;
         source = 'database';
-        console.log('[FAQs API] Loaded from Supabase database -', faqsData.length, 'FAQs');
       } else {
         // No data returned or error occurred
-        if (result?.error) {
-          console.log('[FAQs API] Database error or no records -', result.error.message);
-        } else {
-          console.log('[FAQs API] No FAQs found in database, using fallback');
-        }
         faqsData = DEFAULT_FAQS;
         source = 'fallback';
       }
     } catch (err) {
       // Table doesn't exist or network error
-      console.log('[FAQs API] 📋 Using fallback data (table not created or network error)');
       faqsData = DEFAULT_FAQS;
       source = 'fallback';
     }
@@ -160,7 +153,6 @@ export async function getFAQById(id: string): Promise<ApiResponse<FAQ>> {
  */
 export async function createFAQ(faq: Omit<FAQ, 'id' | 'created_at' | 'updated_at'>): Promise<ApiResponse<FAQ>> {
   try {
-    console.log('[FAQs Create] Table creation not available until faqs table is created');
     return {
       data: null as unknown as FAQ,
       error: {
@@ -188,7 +180,6 @@ export async function createFAQ(faq: Omit<FAQ, 'id' | 'created_at' | 'updated_at
  */
 export async function updateFAQ(id: string, updates: Partial<FAQ>): Promise<ApiResponse<void>> {
   try {
-    console.log('[FAQs Update] Table update not available until faqs table is created');
     return { data: undefined, error: null };
   } catch (error) {
     console.error('[FAQs Update Error]', error);
@@ -209,7 +200,6 @@ export async function updateFAQ(id: string, updates: Partial<FAQ>): Promise<ApiR
  */
 export async function deleteFAQ(id: string): Promise<ApiResponse<void>> {
   try {
-    console.log('[FAQs Delete] Table deletion not available until faqs table is created');
     return { data: undefined, error: null };
   } catch (error) {
     console.error('[FAQs Delete Error]', error);

@@ -111,10 +111,6 @@ const CoachSessionFeedback = () => {
   const { mutate: upsertFeedback, isPending: isSubmittingFeedback } = useUpsertSlotFeedback(slotId || undefined);
   const { mutate: upsertSessionFeedbackMutation, isPending: isUpdatingSessionFeedback } = useUpsertSessionFeedback(slotId || undefined);
 
-  console.log("isUpdatingAttendance", isUpdatingAttendance);
-  console.log("isUpdatingSessionFeedback", isUpdatingSessionFeedback);
-  console.log("feedbackData", feedbackData);
-
   // Derive header/session metadata from first RPC row and profile
   const sessionHeader = useMemo(() => {
     const row: any = Array.isArray(feedbackData) && feedbackData.length > 0 ? feedbackData[0] : null;
@@ -172,13 +168,6 @@ const CoachSessionFeedback = () => {
   useEffect(() => {
     if (profileLoading) return;
 
-    console.log('🔐 PROFILE & SLOT CHECK:', {
-      slotId,
-      profileType: profile.type,
-      profileData: profile.data,
-      hasCoachData: profile.type === 'coach' && !!profile.data
-    });
-
     if (profile.type !== 'coach' || !profile.data) {
       toast({
         title: 'Access Denied',
@@ -212,21 +201,12 @@ const CoachSessionFeedback = () => {
 
   // Load data from backend
   useEffect(() => {
-    console.log('📥 API DATA FETCH:', { slotId, feedbackData, isLoadingData, dataError, feedbackDataLength: feedbackData?.length });
     if (!feedbackData || feedbackData.length === 0) {
       console.warn('⚠️ NO FEEDBACK DATA RETURNED for slotId:', slotId);
       return;
     }
 
     // Log first row to debug session metadata
-    if (feedbackData.length > 0) {
-      console.log('📋 FIRST ROW DATA:', feedbackData[0]);
-      console.log('📋 FIRST ROW KEYS:', Object.keys(feedbackData[0]));
-      console.log('📋 athlete_name:', feedbackData[0].athlete_name);
-      console.log('📋 athlete_id:', feedbackData[0].athlete_id);
-      console.log('📋 booking_id:', feedbackData[0].booking_id);
-    }
-
     const athletesData: Athlete[] = [];
     const attendanceData: Record<string, boolean> = {};
     const absentReasonsData: Record<string, string> = {};
@@ -306,8 +286,6 @@ const CoachSessionFeedback = () => {
     if (coachNotesFromDB) {
       setCoachNotes(coachNotesFromDB);
     }
-
-    console.log('✅ DATA LOADED:', { athletesCount: athletesData.length, athletes: athletesData, attendance: attendanceData });
   }, [feedbackData]);
 
   // Initialize default attendance (all present) if no attendance records exist

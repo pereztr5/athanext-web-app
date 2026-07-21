@@ -236,7 +236,6 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
 
   const fetchCoaches = useCallback(async () => {
     try {
-      console.log('Fetching coaches...');
       const { data, error } = await supabase
         .rpc('get_coaches_public');
       
@@ -274,20 +273,9 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
           // Map positions to favourite_positions for compatibility
           favourite_positions: coach.positions || []
         };
-        console.log('Mapped coach:', {
-          name: mapped.name,
-          sport: mapped.sport,
-          specialties: mapped.specialties,
-          position: mapped.position,
-          coach_position: mapped.coach_position,
-          favourite_positions: mapped.favourite_positions,
-          favorite_positions: mapped.favorite_positions,
-          positions: mapped.positions
-        });
         return mapped;
       }) || [];
 
-      console.log(`✓ Successfully fetched ${mappedCoaches.length} coaches`);
       setCoaches(mappedCoaches);
     } catch (error) {
       console.error('❌ Exception fetching coaches:', error);
@@ -471,26 +459,15 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
     if (!pillarTitle) return [];
 
     const normalizedTitle = pillarTitle.toLowerCase();
-    
-    // Debug logging
-    console.log('=== getCoachesForSpecialty DEBUG ===');
-    console.log('Searching for pillar:', pillarTitle);
-    console.log('Normalized pillar title:', normalizedTitle);
-    console.log('Selected sport:', selectedSport);
-    console.log('Total coaches:', coaches.length);
-    console.log('All coaches:', coaches);
-    
+
     // Filter coaches by:
     // 1. Sport matches selected sport
     // 2. Specialties match pillar title (case-insensitive)
     const filteredCoaches = coaches.filter((coach) => {
       const coachSport = getCoachSportValue(coach);
       const specialtiesArray = Array.isArray(coach.specialties) ? coach.specialties : [];
-      
-      console.log(`Coach: ${coach.name}, Sport: ${coachSport}, Specialties:`, specialtiesArray);
-      
+
       if (!coachSport || coachSport !== selectedSport) {
-        console.log(`  ❌ Sport mismatch or missing - coachSport: ${coachSport}, selectedSport: ${selectedSport}`);
         return false;
       }
 
@@ -499,15 +476,11 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
         const hasMatch = coach.specialties.some(
           (specialty) => specialty?.toLowerCase() === normalizedTitle
         );
-        console.log(`  ${hasMatch ? '✓' : '❌'} Specialty match - checking against:`, coach.specialties);
         return hasMatch;
       }
 
-      console.log(`  ❌ Specialties not an array`);
       return false;
     });
-
-    console.log('Filtered coaches (by sport & specialty):', filteredCoaches.length, filteredCoaches);
 
     const filteredByFavorite = filteredCoaches.filter((coach) => {
       if (!selectedFavoritePosition) return true;
@@ -518,21 +491,12 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
         : typeof rawFavoritePositions === "string"
           ? rawFavoritePositions.split(",").map((item: string) => item.trim()).filter(Boolean)
           : [];
-      
-      console.log(`Filtering by position "${selectedFavoritePosition}" for coach ${coach.name}:`, {
-        rawFavoritePositions,
-        favoritePositions,
-        normalized: favoritePositions.map(p => normalizePosition(selectedSport, p))
-      });
-      
+
       return favoritePositions.some((position: string) => {
         const normalized = normalizePosition(selectedSport, position);
         return normalized.toLowerCase() === selectedFavoritePosition.toLowerCase();
       });
     });
-
-    console.log('Final filtered coaches:', filteredByFavorite.length, filteredByFavorite);
-    console.log('=== END DEBUG ===\n');
 
     return filteredByFavorite;
   };

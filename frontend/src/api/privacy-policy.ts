@@ -126,11 +126,9 @@ export async function getPrivacyPolicyContent(): Promise<ApiResponse<PrivacyPoli
           updated_at: result.data.updated_at,
         };
         isFromDatabase = true;
-        console.log('[Privacy Policy API] ✅ Loaded from Supabase database');
       }
     } catch (err) {
       // Table doesn't exist or no published content - use demo data
-      console.log('[Privacy Policy API] 📋 Using demo data (table not created or no published content)');
     }
 
     return {
@@ -165,7 +163,6 @@ export async function getPrivacyPolicyContent(): Promise<ApiResponse<PrivacyPoli
  */
 export async function updatePrivacyPolicy(updates: Partial<PrivacyPolicyContent>): Promise<ApiResponse<void>> {
   try {
-    console.log('[Privacy Policy Update] Table update not available until privacy_policy is created');
     return { data: undefined, error: null };
   } catch (error) {
     console.error('[Privacy Policy Update Error]', error);

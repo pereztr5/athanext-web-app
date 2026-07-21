@@ -400,10 +400,6 @@ const Auth = () => {
             personaOptions
           );
 
-          console.log('normalizedSport',normalizedSport)
-          console.log('defaultPosition',defaultPosition)
-          console.log('normalizedPosition',normalizedPosition)
-
           setEmail(defaultEmail);
           setPersona(defaultPersona);
           setName(defaultName);
@@ -911,21 +907,15 @@ const Auth = () => {
 
       // Refresh cached user profile so downstream checks see the completed data
       await refreshUserProfile();
-      
-      console.log("persona while navigating persona",persona)
-      console.log("persona while navigating ROUTES.PROFILE",ROUTES.PROFILE)
 
       setTimeout(() => {
 
   // Navigate based on persona type - navigate BEFORE setting state
       if (persona === PROFILE_TYPE.coach) {
         navigate(ROUTES.PROFILE, { replace: true });
-        console.log('persona and navigated to coach profile')
       } else if (persona === PROFILE_TYPE.athlete || persona === PROFILE_TYPE.parent) {
-        console.log("persona and navigate to athlete profile")
         navigate(ROUTES.PROFILE, { replace: true });
       } else {
-        console.log("persona else")
         navigate(ROUTES.PROFILE, { replace: true });
       }
 

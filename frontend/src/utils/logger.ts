@@ -1,3 +1,4 @@
+/* eslint-disable no-console */
 /**
  * Logger utility that respects environment modes
  * Logs are disabled in production builds

@@ -698,11 +698,6 @@ const AllCoaches = () => {
 
   useEffect(() => {
     if (!Array.isArray(coaches)) return;
-    console.info("[Coaching Pillars] Derived from coach.specialties", {
-      coachCount: coaches.length,
-      pillarCount: coachingPillarCount,
-      pillars: coachingPillars,
-    });
   }, [coaches, coachingPillarCount, coachingPillars]);
 
   const { sportCount, sportLabel } = useMemo(() => {
