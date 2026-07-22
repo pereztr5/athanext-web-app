@@ -21,7 +21,7 @@ import SignupConfirmation from "./pages/SignupConfirmation";
 import AthleteProfile from "./pages/AthleteProfile";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
-import { AuthGuard } from "./components/common/AuthGuard";
+import { ProtectedRoute } from "./components/common/ProtectedRoute";
 import CoachSessionFeedback from "./pages/CoachSessionFeedback";
 import MySessions from "./pages/MySessions";
 import ChatPage from "./pages/ChatPage";
@@ -63,32 +63,45 @@ interface AppRoute {
   element: ReactNode;
 }
 
-export const APP_ROUTES: AppRoute[] = [
+export const PUBLIC_ROUTES: AppRoute[] = [
   { path: ROUTES.HOME, element: <Index /> },
   { path: ROUTES.WHY_ATHALINK, element: <WhyMyKonnect /> },
   { path: ROUTES.BECOME_COACH, element: <BecomeACoach /> },
-  { path: ROUTES.AUTH, element: <Auth /> },
-  { path: ROUTES.FORGOT_PASSWORD, element: <ForgotPassword /> },
-  { path: ROUTES.RESET_PASSWORD, element: <ResetPassword /> },
   { path: ROUTES.COACHES, element: <AllCoaches /> },
+  { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
   { path: ROUTES.PARTNERSHIPS, element: <Partnerships /> },
   { path: ROUTES.PARTNERSHIP_SUCCESS, element: <PartnershipSuccess /> },
   { path: ROUTES.SOCCER, element: <SoccerPillars /> },
   { path: ROUTES.ROWING, element: <RowingPillars /> },
-  { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
-  { path: ROUTES.BOOKING_CONFIRMATION, element: <AuthGuard><BookingConfirmation /></AuthGuard> },
-  { path: ROUTES.PACKAGE_CONFIRMATION, element: <PackageConfirmation /> },
-  { path: ROUTES.COACH_SESSION_FEEDBACK, element: <CoachSessionFeedback /> },
-  { path: ROUTES.MY_SESSIONS, element: <MySessions /> },
-  { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <AuthGuard><CreateAthleteProfile /></AuthGuard> },
-  { path: ROUTES.SETTINGS, element: <ChangePassword /> },
   { path: ROUTES.ABOUT, element: <About /> },
-  { path: ROUTES.SIGN_UP_CONFIRMATION, element: <SignupConfirmation /> },
   { path: ROUTES.PRIVACY_POLICY, element: <PrivacyPolicy /> },
   { path: ROUTES.TERMS_AND_CONDITIONS, element: <TermsAndConditions /> },
   { path: ROUTES.CONTACT_US, element: <ContactUs /> },
-  { path: ROUTES.CHAT, element: <ChatPage /> },
-  { path: ROUTES.PROFILE, element: <AuthGuard><Profile /></AuthGuard> },
+];
+
+export const AUTH_FLOW_ROUTES: AppRoute[] = [
+  { path: ROUTES.AUTH, element: <Auth /> },
+  { path: ROUTES.FORGOT_PASSWORD, element: <ForgotPassword /> },
+  { path: ROUTES.RESET_PASSWORD, element: <ResetPassword /> },
+  { path: ROUTES.SIGN_UP_CONFIRMATION, element: <SignupConfirmation /> },
+];
+
+// Authenticated app routes - every element wrapped in ProtectedRoute
+export const APP_ROUTES: AppRoute[] = [
+  { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
+  { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
+  { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
+  { path: ROUTES.SETTINGS, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
+  { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },
+  { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><CoachSessionFeedback /></ProtectedRoute> },
+  { path: ROUTES.BOOKING_CONFIRMATION, element: <ProtectedRoute><BookingConfirmation /></ProtectedRoute> },
+  { path: ROUTES.PACKAGE_CONFIRMATION, element: <ProtectedRoute><PackageConfirmation /></ProtectedRoute> },
+];
+
+export const ALL_ROUTES: AppRoute[] = [
+  ...PUBLIC_ROUTES,
+  ...AUTH_FLOW_ROUTES,
+  ...APP_ROUTES,
 ];
 
 export const NOT_FOUND_ROUTE: AppRoute = {
