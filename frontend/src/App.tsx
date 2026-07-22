@@ -1,19 +1,18 @@
-import { useEffect, useState } from "react";
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, useNavigate, useLocation } from "react-router-dom";
-import { Header } from "@/components/common/Header";
-import { Footer } from "@/components/sections/Footer";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import ScrollToTop from "@/components/common/ScrollToTop";
 import { NetworkStatusBanner } from "@/components/common/NetworkStatusBanner";
-import { ALL_ROUTES, NOT_FOUND_ROUTE } from "@/routes";
+import { PUBLIC_ROUTES, AUTH_FLOW_ROUTES, APP_ROUTES, DUAL_CHROME_ROUTES, NOT_FOUND_ROUTE } from "@/routes";
+import { MarketingLayout } from "@/layouts/MarketingLayout";
+import { AppLayout } from "@/layouts/AppLayout";
+import { ChromeSwitch } from "@/layouts/ChromeSwitch";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
-import { AthaNextLogo } from "@/assets";
-import { CLOUD_IMAGES } from "@/config/cloud-image";
 
 import "./App.css";
 
@@ -39,16 +38,6 @@ const AppContent = () => {
       navigate(`/reset-password${location.search}${location.hash}`, { replace: true });
     }
   }, [location, navigate]);
-
-  const handleSportClick = (sport: string) => {
-    navigate(`/${sport.toLowerCase()}`);
-  };
-
-  const onCompleteProfile = location.pathname === '/auth' && location.search.includes('mode=complete-profile');
-  const showHeader = !onCompleteProfile;
-  const completeProfileLogoUrl = CLOUD_IMAGES.completeProfileLogoUrl;
-  const [completeProfileLogoSrc, setCompleteProfileLogoSrc] = useState(AthaNextLogo);
-  const [logoFallbackTried, setLogoFallbackTried] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -76,36 +65,24 @@ const AppContent = () => {
     <ErrorBoundary>
       <ScrollToTop />
       <NetworkStatusBanner />
-      {showHeader ? (
-        <Header onSportClick={handleSportClick} />
-      ) : (
-        onCompleteProfile && (
-          <header
-            className="fixed w-full z-50 bg-white border-b border-border h-[3.8rem] px-4 flex items-center"
-            style={{ top: "var(--network-banner-height, 0px)" }}
-          >
-            <div className="mx-auto flex items-center gap-3">
-              <img
-                src={completeProfileLogoSrc}
-                alt="AthaNext"
-                className="h-8 w-auto"
-                onError={() => {
-                  if (logoFallbackTried) return;
-                  setLogoFallbackTried(true);
-                  setCompleteProfileLogoSrc(completeProfileLogoUrl);
-                }}
-              />
-            </div>
-          </header>
-        )
-      )}
       <Routes>
-        {ALL_ROUTES.map(({ path, element }) => (
-          <Route key={path} path={path} element={element} />
-        ))}
-        <Route path={NOT_FOUND_ROUTE.path} element={NOT_FOUND_ROUTE.element} />
+        <Route element={<MarketingLayout />}>
+          {[...PUBLIC_ROUTES, ...AUTH_FLOW_ROUTES].map(({ path, element }) => (
+            <Route key={path} path={path} element={element} />
+          ))}
+          <Route path={NOT_FOUND_ROUTE.path} element={NOT_FOUND_ROUTE.element} />
+        </Route>
+        <Route element={<ChromeSwitch />}>
+          {DUAL_CHROME_ROUTES.map(({ path, element }) => (
+            <Route key={path} path={path} element={element} />
+          ))}
+        </Route>
+        <Route element={<AppLayout />}>
+          {APP_ROUTES.map(({ path, element }) => (
+            <Route key={path} path={path} element={element} />
+          ))}
+        </Route>
       </Routes>
-      <Footer onSportClick={handleSportClick} />
     </ErrorBoundary>
   );
 };
