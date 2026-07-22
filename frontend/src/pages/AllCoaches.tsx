@@ -22,6 +22,7 @@ import { FreeConsultationInfoDialog } from "@/components/coach/FreeConsultationI
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { strings } from "@/config/strings";
 import starIcon from "../assets/images/star.png";
@@ -47,7 +48,7 @@ type Coach = Omit<Tables<"coaches">, "email"> & {
 const AllCoaches = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
 
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -97,8 +98,7 @@ const AllCoaches = () => {
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [sendingMessageFor, setSendingMessageFor] = useState<string | null>(null);
 
-  const personaType =
-    (userProfile as any)?.persona_type || (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType } = useRole();
 
   const sports = ["All Sports", "Soccer", "Rowing"];
 

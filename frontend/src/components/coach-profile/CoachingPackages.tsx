@@ -6,8 +6,8 @@ import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { strings } from '@/config/strings';
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { Package } from 'lucide-react';
-import { PROFILE_TYPE } from "@/utils/db";
 import { packagesAPI } from "@/api/packages";
 import { apiClient } from "@/api/client";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
@@ -31,7 +31,7 @@ export const CoachingPackages = ({
   const navigate = useNavigate();
   const [purchasing, setPurchasing] = useState<string | null>(null);
   const { userProfile } = useAuth();
-  const isCoachPersona = (userProfile?.persona_type || "").toLowerCase() === PROFILE_TYPE.coach;
+  const { isCoach: isCoachPersona } = useRole();
 
   const derivedIconColor = useMemo(() => {
     if (iconColor) return iconColor;

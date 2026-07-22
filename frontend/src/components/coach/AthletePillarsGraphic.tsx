@@ -19,6 +19,7 @@ import { getSportPillars, type SPORTPILLARS, type CoachSportPillarLink } from "@
 import type { Enums } from "@/integrations/supabase/types";
 import { DEFAULT_PILLARS, ICON_MAP, type SportKey } from "@/utils/pillarIcons";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { chatAPI } from "@/api";
 import { buildId } from "@/utils/chatHelpers";
@@ -158,8 +159,7 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
   const [showChatPanel, setShowChatPanel] = useState(false);
   const { user } = useAuth();
   const { toast } = useToast();
-  const personaType = (user as any)?.user_metadata?.persona_type || null;
-  const isCoachPersona = personaType === "coach";
+  const { role: personaType, isCoach: isCoachPersona } = useRole();
   const [selectedFavoritePosition, setSelectedFavoritePosition] = useState<string | null>(null);
 
   const sportOption = useMemo(

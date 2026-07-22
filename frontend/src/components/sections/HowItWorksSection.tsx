@@ -1,5 +1,6 @@
 import { ROUTES } from "@/routes";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -13,11 +14,10 @@ import bgImage from "../../assets/images/how-it-workd-bg.png"
 
 export const HowItWorksSection = () => {
   const navigate = useNavigate();
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
-  const personaType =
-    (userProfile as any)?.persona_type || (user?.user_metadata as any)?.persona_type || null;
-  const shouldShowFindCoach = personaType !== "coach";
+  const { isCoach } = useRole();
+  const shouldShowFindCoach = !isCoach;
 
   const processSteps = [
     {

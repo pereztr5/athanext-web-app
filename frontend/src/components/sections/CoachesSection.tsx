@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import CoachSchedulingModal from "@/components/coach/CoachSchedulingModal";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { useNavigate } from "react-router-dom";
 import { chatAPI } from "@/api";
@@ -34,12 +35,11 @@ export const CoachesSection = ({
   const [chatConversationId, setChatConversationId] = useState<string | null>(null);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [sendingMessageFor, setSendingMessageFor] = useState<string | null>(null);
-  const { user, userProfile } = useAuth();
+  const { user } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const personaType =
-    (userProfile as any)?.persona_type || (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType } = useRole();
 
   // Normalize hourly rates to be between $120-200
   const getNormalizedRate = (rate: number | null): number => {
