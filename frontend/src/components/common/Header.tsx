@@ -489,7 +489,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                   </NavigationMenuLink>
                 </NavigationMenuItem>
 
-                {!userData && (
+                {personaType !== "coach" && (
                   <NavigationMenuItem className="hidden xl:flex">
                     <NavigationMenuLink asChild>
                       <button
@@ -528,7 +528,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                       >
                         {strings.about.navigation.aboutUs}
                       </DropdownMenuItem>
-                      {!userData && (
+                      {personaType !== "coach" && (
                         <DropdownMenuItem
                           onClick={() => navigate("/become-a-coach")}
                           className={cn("cursor-pointer xl:hidden", isOnBecomeACoachPage && "bg-accent text-accent-foreground")}
