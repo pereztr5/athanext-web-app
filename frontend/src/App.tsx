@@ -10,7 +10,7 @@ import ErrorBoundary from "@/components/common/ErrorBoundary";
 import ScrollToTop from "@/components/common/ScrollToTop";
 import { NetworkStatusBanner } from "@/components/common/NetworkStatusBanner";
 import { ALL_ROUTES, NOT_FOUND_ROUTE } from "@/routes";
-import { AuthProvider, useAuth } from "@/contexts/AuthContext";
+import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { AthaNextLogo } from "@/assets";
 import { CLOUD_IMAGES } from "@/config/cloud-image";
@@ -29,13 +29,6 @@ const queryClient = new QueryClient({
 const AppContent = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user, userProfile, isProfileComplete, loading, initialCheckComplete, profileReady } = useAuth();
-  const [needsProfileCompletion, setNeedsProfileCompletion] = useState(false);
-
-  const isRecoveryFlow =
-    location.pathname === "/reset-password" ||
-    location.hash.includes("type=recovery") ||
-    location.search.includes("type=recovery");
 
   useEffect(() => {
     const hasRecoveryFlag =
@@ -47,36 +40,6 @@ const AppContent = () => {
     }
   }, [location, navigate]);
 
-  // Use isProfileComplete from AuthContext - wait for initial auth check to complete
-  useEffect(() => {
-    if (!user) {
-      setNeedsProfileCompletion(false);
-      return;
-    }
-
-    if (!initialCheckComplete || !profileReady) return;
-
-    const isComplete = userProfile?.is_profile_completed === true;
-    setNeedsProfileCompletion(!isComplete);
-  }, [user, userProfile, initialCheckComplete, profileReady]);
-
-  useEffect(() => {
-    if (!user) return;
-    if (!initialCheckComplete || !profileReady) return; // Wait for auth/profile to initialize
-    if (isRecoveryFlow) return;
-    const isComplete = userProfile?.is_profile_completed === true;
-    if (isComplete) {
-      if (location.pathname === "/auth" && location.search.includes("mode=complete-profile")) {
-        navigate("/", { replace: true });
-      }
-      return; // Already complete
-    }
-    if (!needsProfileCompletion) return;
-    if (location.pathname === "/auth") return;
-
-    navigate("/auth?mode=complete-profile", { replace: true });
-  }, [needsProfileCompletion, location.pathname, navigate, user, initialCheckComplete, profileReady, userProfile, isRecoveryFlow]);
-  
   const handleSportClick = (sport: string) => {
     navigate(`/${sport.toLowerCase()}`);
   };
