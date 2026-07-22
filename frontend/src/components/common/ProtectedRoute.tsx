@@ -3,7 +3,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { useRole } from "@/hooks/useRole";
 
 export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
-  const { isAuthenticated, ready } = useRole();
+  const { isAuthenticated, isProfileComplete, ready } = useRole();
   const location = useLocation();
 
   if (!ready) {
@@ -16,6 +16,10 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (!isAuthenticated) {
     return <Navigate to="/auth?mode=signin" replace state={{ from: location }} />;
+  }
+
+  if (!isProfileComplete) {
+    return <Navigate to="/auth?mode=complete-profile" replace />;
   }
 
   return <>{children}</>;
