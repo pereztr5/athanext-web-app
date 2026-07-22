@@ -18,7 +18,6 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ContactUs from "./pages/ContactUs";
 import SignupConfirmation from "./pages/SignupConfirmation";
-import AthleteProfile from "./pages/AthleteProfile";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/common/ProtectedRoute";
