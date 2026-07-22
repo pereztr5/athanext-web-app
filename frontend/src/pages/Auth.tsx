@@ -910,18 +910,9 @@ const Auth = () => {
       await refreshUserProfile();
 
       setTimeout(() => {
+        navigate(ROUTES.PROFILE, { replace: true });
+      }, 500);
 
-  // Navigate based on persona type - navigate BEFORE setting state
-      if (persona === PROFILE_TYPE.coach) {
-        navigate(ROUTES.PROFILE, { replace: true });
-      } else if (persona === PROFILE_TYPE.athlete || persona === PROFILE_TYPE.parent) {
-        navigate(ROUTES.PROFILE, { replace: true });
-      } else {
-        navigate(ROUTES.PROFILE, { replace: true });
-      }
-
-      },500)
-      
       setNeedsProfileCompletion(false);
     } catch (error) {
       console.error("Complete profile error:", error);

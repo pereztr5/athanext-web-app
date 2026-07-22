@@ -4,14 +4,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Loader2, Eye, EyeOff, ShieldCheck, KeyRound, Lock } from "lucide-react";
+import { Eye, EyeOff, ShieldCheck, KeyRound, Lock } from "lucide-react";
 import { useAuth } from "@/contexts/AuthContext";
 import { strings } from "@/config/strings";
 import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswordValidation";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 
 const ChangePassword = () => {
-  const { user, loading, changePassword, signOut } = useAuth();
+  const { user, changePassword, signOut } = useAuth();
   const navigate = useNavigate();
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -26,11 +26,6 @@ const ChangePassword = () => {
   const logoutTimerRef = useRef<NodeJS.Timeout | null>(null);
   const { items: passwordValidationItems, allValid: allPasswordRulesMet } = usePasswordValidation(newPassword);
 
-  useEffect(() => {
-    if (!loading && !user) {
-      navigate("/auth?mode=signin", { replace: true });
-    }
-  }, [user, loading, navigate]);
 
   useEffect(() => {
     return () => {
@@ -46,26 +41,6 @@ const ChangePassword = () => {
     }
   }, [formError, allPasswordRulesMet]);
 
-  if (loading || (!user && loading)) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background to-muted pt-20">
-        <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
-          <Card className="w-full max-w-md">
-            <CardContent className="flex flex-col items-center gap-4 py-10">
-              <Loader2 className="h-6 w-6 animate-spin text-primary" />
-              <p className="text-sm text-muted-foreground">
-                {strings.info.pleaseWait}
-              </p>
-            </CardContent>
-          </Card>
-        </div>
-      </div>
-    );
-  }
-
-  if (!user) {
-    return null;
-  }
 
   const handlePasswordChange = async (event: React.FormEvent) => {
     event.preventDefault();

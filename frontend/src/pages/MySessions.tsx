@@ -517,7 +517,7 @@ const PastDraftCard = ({
 
 const MySessions = () => {
   const navigate = useNavigate();
-  const { userProfile, loading: authLoading, initialCheckComplete } = useAuth();
+  const { userProfile, loading: authLoading } = useAuth();
   const { profile } = useProfile();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<SessionFilters>({
@@ -993,12 +993,6 @@ const MySessions = () => {
     return role === PROFILE_TYPE.coach ? Boolean(session.hasSessionFeedback) : Boolean(session.hasSlotFeedback);
   };
 
-  // Redirect only if initial check is complete AND no userProfile AND no loading
-  useEffect(() => {
-    if (initialCheckComplete && !authLoading && !userProfile) {
-      navigate('/auth');
-    }
-  }, [initialCheckComplete, authLoading, userProfile, navigate]);
 
   // Show skeleton while auth or data is loading
   if (authLoading || isLoading) {
