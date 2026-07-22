@@ -475,7 +475,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           </DropdownMenuItem>
         )}
         <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={() => signOut()} style={{ color: colors.status.error }} className="!cursor-pointer">
+        <DropdownMenuItem
+          onClick={async () => {
+            await signOut();
+            navigate(ROUTES.HOME);
+          }}
+          style={{ color: colors.status.error }}
+          className="!cursor-pointer"
+        >
           <LogOut className="mr-2 h-4 w-4" />
           <span>Sign out</span>
         </DropdownMenuItem>
