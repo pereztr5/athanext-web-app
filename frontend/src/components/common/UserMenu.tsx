@@ -32,7 +32,6 @@ type UserMenuProps = {
   img?: string | null;
   fallbackImg?: string | null;
   useFallbackDelay?: boolean;
-  completionOverride?: number | null;
   avatarReady?: boolean;
 };
 
@@ -42,7 +41,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   img = null,
   fallbackImg = null,
   useFallbackDelay = false,
-  completionOverride = null,
   avatarReady: avatarReadyProp,
 }) => {
   const {
@@ -53,10 +51,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     user,
     hasNewMessage,
     setHasNewMessage,
-    profileProgress,
     profileReady,
   } = useAuth();
-  const { profile } = useProfile();
+  const { profile, profileProgress } = useProfile();
   const navigate = useNavigate();
   const location = useLocation();
   const { toast, dismiss } = useToast();
@@ -354,7 +351,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     ringDegrees,
     avatarNode,
   } = useMemo(() => {
-    const completionSource = completionOverride ?? profileProgress?.completion ?? 0;
+    const completionSource = profileProgress?.completion ?? 0;
     const clampedCompletion = Math.min(Math.max(completionSource, 0), 100);
     const isComplete = clampedCompletion >= 100;
     const degrees = clampedCompletion * 3.6;
@@ -385,7 +382,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
       ringDegrees: degrees,
       avatarNode: node,
     };
-  }, [shouldShowSkeleton, displayAvatarUrl, displayName, initials, profileProgress?.completion, completionOverride]);
+  }, [shouldShowSkeleton, displayAvatarUrl, displayName, initials, profileProgress?.completion]);
 
   const handleProfileNavigation = () => {
     navigate(ROUTES.PROFILE);

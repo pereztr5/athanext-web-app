@@ -39,7 +39,6 @@ import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useQueryClient } from "@tanstack/react-query";
-import { calculateProfileProgress, DEFAULT_PROFILE_PROGRESS } from "@/utils/profileCompletion";
 import { detectCoachSport } from "@/utils/coachSport";
 import { X } from "lucide-react";
 import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
@@ -50,7 +49,7 @@ const Profile = () => {
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
 
-    const { user, loading: authLoading, setUserImg, setUserName, setProfileCompletion, setProfileProgress, refreshUserProfile } = useAuth();
+    const { user, loading: authLoading, setUserImg, setUserName, refreshUserProfile } = useAuth();
 
     const { profile, loading: profileLoading, error, saveAthleteProfile, refetchProfile } = useProfile();
     const { updateProfile } = useUserProfile();
@@ -64,18 +63,6 @@ const Profile = () => {
 
     // Call all hooks unconditionally
     const { coach, loading } = useCoachDetails(coachId || '');
-
-    // Update profile completion whenever coach data changes
-    useEffect(() => {
-        if (coach && Object.keys(coach).length > 0) {
-            const progress = calculateProfileProgress(coach);
-            setProfileProgress(progress);
-            setProfileCompletion(progress.completion);
-        } else {
-            setProfileProgress(DEFAULT_PROFILE_PROGRESS);
-            setProfileCompletion(DEFAULT_PROFILE_PROGRESS.completion);
-        }
-    }, [coach, setProfileCompletion, setProfileProgress]);
 
     // Refetch coach data when availability changes
     const refetchCoachData = () => {

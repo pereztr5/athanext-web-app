@@ -5,7 +5,6 @@ import { User, Session } from "@supabase/supabase-js";
 import { type UserProfile } from "@/api/userProfiles";
 import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { DEFAULT_PROFILE_PROGRESS, type ProfileProgress } from "@/utils/profileCompletion";
 
 // Helper to check if profile is complete based on required fields
 const isProfileCompleteHelper = (userProfile: UserProfile | null): boolean => {
@@ -19,13 +18,9 @@ interface AuthContextType {
   userProfile: UserProfile | null;
   userImg: string | null;
   userName: string | null;
-  profileProgress: ProfileProgress;
-  profileCompletion: number;
   profileReady: boolean;
   setUserImg: (img: string | null) => void;
   setUserName: (name: string | null) => void;
-  setProfileProgress: (progress: ProfileProgress) => void;
-  setProfileCompletion: (completion: number) => void;
   hasNewMessage: boolean;
   setHasNewMessage: (hasNew: boolean) => void;
   isProfileComplete: boolean;
@@ -49,13 +44,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [loading, setLoading] = useState(true);
   const [initialCheckComplete, setInitialCheckComplete] = useState(false);
   const [profileReady, setProfileReady] = useState(false);
-  const [profileProgress, setProfileProgress] = useState<ProfileProgress>(DEFAULT_PROFILE_PROGRESS);
-
-  const setProfileCompletion = useCallback((completion: number) => {
-    setProfileProgress((prev) => ({ ...prev, completion }));
-  }, []);
-
-  const profileCompletion = profileProgress.completion;
 
   const [userImg, setUserImg] = useState<string | null>(null);
   const [userName, setUserName] = useState<string | null>(null);
@@ -221,8 +209,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setUserProfile,
       setUserImg,
       setUserName,
-      setProfileProgress,
-      setProfileCompletion,
       queryClient
     );
 
@@ -264,10 +250,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         setUserImg,
         userName,
         setUserName,
-        profileProgress,
-        profileCompletion,
-        setProfileProgress,
-        setProfileCompletion,
           hasNewMessage,
           setHasNewMessage,
           isProfileComplete,

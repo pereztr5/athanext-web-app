@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback } from "react";
+import { createContext, useContext, useState, useEffect, useMemo, ReactNode, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PROFILE_TYPE } from "@/utils/db";
@@ -6,7 +6,7 @@ import { resolveRole } from "@/utils/role";
 import type { CoachDetails } from "@/hooks/useCoachDetails";
 import type { AthleteProfile } from "@/hooks/useProfile";
 import type { UserProfile } from "@/api/userProfiles";
-import { calculateProfileProgress, DEFAULT_PROFILE_PROGRESS, type ProfileData } from "@/utils/profileCompletion";
+import { calculateProfileProgress, DEFAULT_PROFILE_PROGRESS, type ProfileData, type ProfileProgress } from "@/utils/profileCompletion";
 
 export type UserType = "coach" | "athlete" | null;
 
@@ -18,6 +18,7 @@ export interface ProfileState {
 
 interface ProfileContextType {
   profile: ProfileState;
+  profileProgress: ProfileProgress;
   loading: boolean;
   error: string | null;
   user: any;
@@ -39,8 +40,6 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     user,
     userProfile,
     loading: authLoading,
-    setProfileProgress,
-    setProfileCompletion,
   } = useAuth();
   const [profile, setProfile] = useState<ProfileState>(defaultProfileState);
   const [loading, setLoading] = useState(true);
@@ -234,27 +233,19 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [userProfile?.image_url, userProfile?.zip_code, userProfile?.gender, user?.id]);
 
-  useEffect(() => {
-    if (!user) {
-      setProfileProgress(DEFAULT_PROFILE_PROGRESS);
-      setProfileCompletion(DEFAULT_PROFILE_PROGRESS.completion);
-      return;
-    }
-
-    if (profile?.data) {
-      const progress = calculateProfileProgress(profile.data as ProfileData);
-      setProfileProgress(progress);
-      setProfileCompletion(progress.completion);
-    } else {
-      setProfileProgress(DEFAULT_PROFILE_PROGRESS);
-      setProfileCompletion(DEFAULT_PROFILE_PROGRESS.completion);
-    }
-  }, [user, profile?.data, profile?.type, setProfileCompletion, setProfileProgress]);
+  const profileProgress = useMemo(
+    () =>
+      user && profile.data
+        ? calculateProfileProgress(profile.data as ProfileData)
+        : DEFAULT_PROFILE_PROGRESS,
+    [user, profile.data]
+  );
 
   return (
     <ProfileContext.Provider
       value={{
         profile,
+        profileProgress,
         loading,
         error,
         user,
