@@ -7,6 +7,7 @@ import {
   SidebarMenu,
   SidebarMenuButton,
   SidebarMenuItem,
+  useSidebar,
 } from "@/components/ui/sidebar";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -30,6 +31,7 @@ export const AppSidebar = () => {
   const location = useLocation();
   const { isCoach } = useRole();
   const { hasNewMessage } = useAuth();
+  const { setOpenMobile } = useSidebar();
   const items = isCoach ? COACH_NAV : ATHLETE_NAV;
 
   return (
@@ -48,7 +50,7 @@ export const AppSidebar = () => {
                 isActive={location.pathname === item.url}
                 className="h-11 rounded-lg px-3 text-sm data-[active=true]:bg-white data-[active=true]:border data-[active=true]:border-sidebar-border data-[active=true]:shadow-sm data-[active=true]:font-medium data-[active=true]:text-sidebar-primary"
               >
-                <Link to={item.url}>
+                <Link to={item.url} onClick={() => setOpenMobile(false)}>
                   <item.icon className="h-4 w-4" />
                   <span>{item.title}</span>
                   {item.url === ROUTES.CHAT && hasNewMessage && (
