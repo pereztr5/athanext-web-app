@@ -1,6 +1,5 @@
 import type { ReactNode } from "react";
 
-import Index from "./pages/Index";
 import WhyMyKonnect from "./pages/WhyMyKonnect";
 import BecomeACoach from "./pages/BecomeACoach";
 import Auth from "./pages/Auth";
@@ -27,6 +26,7 @@ import ChatPage from "./pages/ChatPage";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import PackageConfirmation from "./pages/PackageConfirmation";
 import CreateAthleteProfile from "./pages/CreateAthleteProfile";
+import { HomeSwitch } from "./layouts/HomeSwitch";
 
 export const ROUTES = {
   HOME: "/",
@@ -63,7 +63,7 @@ interface AppRoute {
 }
 
 export const PUBLIC_ROUTES: AppRoute[] = [
-  { path: ROUTES.HOME, element: <Index /> },
+  { path: ROUTES.HOME, element: <HomeSwitch /> },
   { path: ROUTES.WHY_ATHALINK, element: <WhyMyKonnect /> },
   { path: ROUTES.BECOME_COACH, element: <BecomeACoach /> },
   { path: ROUTES.PARTNERSHIPS, element: <Partnerships /> },

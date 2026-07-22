@@ -37,7 +37,7 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-5">
-        <Link to={ROUTES.HOME} aria-label="AthaNext home">
+        <Link to={ROUTES.MY_SESSIONS} aria-label="AthaNext home">
           <img src={AthaNextLogo} alt="AthaNext" className="h-8 w-auto" />
         </Link>
       </SidebarHeader>

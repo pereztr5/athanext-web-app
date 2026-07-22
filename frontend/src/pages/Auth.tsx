@@ -434,7 +434,7 @@ const Auth = () => {
           setNeedsProfileCompletion(false);
           setHasShownGoogleWarning(false);
           const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from;
-          navigate(from ? `${from.pathname}${from.search ?? ""}` : "/", { replace: true });
+          navigate(from ? `${from.pathname}${from.search ?? ""}` : ROUTES.MY_SESSIONS, { replace: true });
         }
       } finally {
         if (isMounted) {
