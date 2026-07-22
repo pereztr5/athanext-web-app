@@ -5,29 +5,27 @@ import { useNavigate } from "react-router-dom";
 import { CheckCircle2 } from "lucide-react";
 import { CoachApplicationModal } from "@/components/coach/CoachApplicationModal";
 import { strings } from "@/config/strings";
-import { useProfile } from "@/contexts/ProfileContext";
+import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { getConfigurationValue } from "@/api/configurations";
 
 const BecomeACoach = () => {
   const navigate = useNavigate();
-  const { profile } = useProfile();
+  const { role, isCoach, isAthleteLike } = useRole();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
   const handleApplyToCoach = () => {
-    if (!profile?.userProfile) {
+    if (!role) {
       // Not logged in, navigate to signup with coach persona preselected
       navigate(ROUTES.AUTH + '?mode=signup&persona=coach');
-    } else if (profile.userProfile.persona_type === 'coach') {
-      // Logged in as coach, navigate to their profile
+    } else if (isCoach) {
       navigate(ROUTES.PROFILE);
     }
     // If athlete/parent, button is disabled so this won't be called
   };
 
-  const isAthlete = profile?.userProfile?.persona_type === 'athlete' || profile?.userProfile?.persona_type === 'parent';
-  const isCoach = profile?.userProfile?.persona_type === 'coach';
+  const isAthlete = isAthleteLike;
   const fallbackAdminEmail = "support@athanext.com";
 
   useEffect(() => {

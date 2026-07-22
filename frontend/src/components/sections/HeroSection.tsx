@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import Banner from "@/assets/Banner-latest.png";
 
@@ -9,13 +10,14 @@ type HeroSectionProps = object
 export const HeroSection = (props: HeroSectionProps) => {
   const navigate = useNavigate();
   const { profile } = useProfile();
+  const { role, isCoach, isAthleteLike } = useRole();
 
   const handleBeginTraining = () => {
-    if (!profile?.userProfile) {
+    if (!role) {
       // Not logged in, navigate to signup
       navigate(ROUTES.AUTH + '?mode=signup');
     } else {
-      const sport = (profile.userProfile as any)?.sport?.toLowerCase?.().trim?.();
+      const sport = (profile?.userProfile as any)?.sport?.toLowerCase?.().trim?.();
       if (sport === 'soccer' || sport === 'football' || sport === 'scoccer') {
         navigate('/soccer');
         return;
@@ -29,11 +31,10 @@ export const HeroSection = (props: HeroSectionProps) => {
   };
 
   const handleBeginCoaching = () => {
-    if (!profile?.userProfile) {
+    if (!role) {
       // Not logged in, navigate to signup with coach persona preselected
       navigate(ROUTES.AUTH + '?mode=signup&persona=coach');
-    } else if (profile.userProfile.persona_type === 'coach') {
-      // Logged in as coach, navigate to their profile
+    } else if (isCoach) {
       navigate(ROUTES.PROFILE);
     }
   };
@@ -61,7 +62,7 @@ export const HeroSection = (props: HeroSectionProps) => {
 
         <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mt-6">
           {/* Show "Begin Training" for non-logged in users and athletes */}
-          {(!profile?.userProfile || profile.userProfile.persona_type === 'athlete' || profile.userProfile.persona_type === 'parent') && (
+          {(!role || isAthleteLike) && (
             <Button
               size="lg"
               className="w-full max-w-[280px] sm:w-auto px-5 py-3 sm:px-8 sm:py-6 !rounded-full text-sm sm:text-lg font-semibold bg-primary text-primary-foreground shadow-lg hover:shadow-xl transition-all duration-300 hover-scale"
@@ -72,7 +73,7 @@ export const HeroSection = (props: HeroSectionProps) => {
             </Button>
           )}
           {/* Show "Begin Coaching" for non-logged in users and coaches */}
-          {(!profile?.userProfile || profile.userProfile.persona_type === 'coach') && (
+          {(!role || isCoach) && (
             <Button
               variant="outline"
               size="lg"

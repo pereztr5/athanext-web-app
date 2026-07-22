@@ -39,6 +39,7 @@ import { capitalizeFirst } from "@/lib/utils";
 import { colors } from "@/config/colors";
 import { parseISODateLocal } from "@/utils/dateHelpers";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { differenceInMonths, format, formatDistanceToNowStrict, isValid, parseISO } from "date-fns";
 import { createPortal } from "react-dom";
@@ -63,7 +64,7 @@ import { athletesAPI, chatAPI } from "@/api";
 import { getAthleteSessions } from "@/api/sessions";
 import { supabase } from "@/integrations/supabase/client";
 import { clearGlobalImageCache } from "@/contexts/ProfileContext";
-import { ATHLETE_PROFILE_BASE_STATS, ATHLETE_PROFILE_CONSTANTS, PROFILE_TYPE, ATHLETE_IMAGE_LIMITS } from "@/utils/db";
+import { ATHLETE_PROFILE_BASE_STATS, ATHLETE_PROFILE_CONSTANTS, ATHLETE_IMAGE_LIMITS } from "@/utils/db";
 import { getAcademicYearLabel } from "@/utils/academicYear";
 import { getStoragePathFromPublicUrl } from "@/utils/storage";
 import type { AthleteProfileProps, AthleteStatMetrics, ConversationCardItem, ViewAllSection } from "@/types/athlete-profile";
@@ -75,6 +76,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
   const queryClient = useQueryClient();
   const { updateProfile } = useUserProfile();
   const { setUserImg, setUserName, refreshUserProfile, userProfile: authUserProfile } = useAuth();
+  const { role } = useRole();
   const navigate = useNavigate();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -770,8 +772,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
     return 0;
   }, [profileState]);
 
-  const isParentPersona =
-    (profileState.userProfile?.persona_type || user?.user_metadata?.persona_type) === PROFILE_TYPE.parent;
+  const isParentPersona = role === "parent";
 
   const isProfileIncomplete = profileCompletion < 100;
 
