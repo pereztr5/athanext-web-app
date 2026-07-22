@@ -34,6 +34,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { capitalizeFirst, cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useMySessions } from "@/hooks/useMySessions";
 import { useAthleteAvatarsByNames } from "@/hooks/useAthleteAvatars";
 import { useCoachAvatarsByIds } from "@/hooks/useCoachAvatars";
@@ -544,7 +545,7 @@ const MySessions = () => {
 
   const { toast } = useToast();
 
-  const persona = userProfile?.persona_type?.toLowerCase();
+  const { role: persona } = useRole();
   const athleteProfileId = userProfile?.athlete_id || userProfile?.id || null;
   const coachProfileId = userProfile?.coach_id || null;
   const role = useMemo<UserRole>(() => {
