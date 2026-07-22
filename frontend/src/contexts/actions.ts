@@ -3,7 +3,6 @@ import { QueryClient } from "@tanstack/react-query";
 import { authAPI, apiClient } from "@/api";
 import { strings } from "@/config/strings";
 import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
-import { DEFAULT_PROFILE_PROGRESS, type ProfileProgress } from "@/utils/profileCompletion";
 
 // Toast type definition
 export interface ToastFunction {
@@ -163,8 +162,6 @@ export const signOut = async (
   setUserProfile: (profile: UserProfile | null) => void,
   setUserImg?: (img: string | null) => void,
   setUserName?: (name: string | null) => void,
-  setProfileProgress?: (progress: ProfileProgress) => void,
-  setProfileCompletion?: (completion: number) => void,
   queryClient?: QueryClient
 ): Promise<{ error: any }> => {
   const response = await authAPI.signOut();
@@ -183,8 +180,6 @@ export const signOut = async (
   setUserProfile(null);
   setUserImg?.(null);
   setUserName?.(null);
-  setProfileProgress?.(DEFAULT_PROFILE_PROGRESS);
-  setProfileCompletion?.(DEFAULT_PROFILE_PROGRESS.completion);
 
   if (response.error) {
     toast({

@@ -63,7 +63,6 @@ import { type AthleteProfile as DbAthleteProfile } from "@/hooks/useProfile";
 import { athletesAPI, chatAPI } from "@/api";
 import { getAthleteSessions } from "@/api/sessions";
 import { supabase } from "@/integrations/supabase/client";
-import { clearGlobalImageCache } from "@/contexts/ProfileContext";
 import { ATHLETE_PROFILE_BASE_STATS, ATHLETE_PROFILE_CONSTANTS, ATHLETE_IMAGE_LIMITS } from "@/utils/db";
 import { getAcademicYearLabel } from "@/utils/academicYear";
 import { getStoragePathFromPublicUrl } from "@/utils/storage";
@@ -667,9 +666,6 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
     setOverrideProfile(optimisticProfile);
 
     try {
-      // Invalidate cache BEFORE saving so ProfileContext refetch gets fresh data
-      clearGlobalImageCache();
-      
       const savedProfile = await saveAthleteProfile(payload);
 
       // Update user_profiles table to keep persona and identifiers in sync

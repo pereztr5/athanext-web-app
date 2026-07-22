@@ -29,7 +29,6 @@ import { useRole } from "@/hooks/useRole";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileIncompleteBanner } from "@/components/common/ProfileIncompleteBanner";
 import { PROFILE_TYPE } from "@/utils/db";
-import { calculateProfileProgress } from "@/utils/profileCompletion";
 
 interface HeaderProps {
   onSportClick: (sport: string) => void;
@@ -39,13 +38,11 @@ export const Header = ({ onSportClick }: HeaderProps) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const { user: userData, loading: authLoading, profileProgress, hasNewMessage, setHasNewMessage, userImg, profileReady } = useAuth();
-  const { profile, loading } = useProfile();
+  const { user: userData, loading: authLoading, hasNewMessage, setHasNewMessage, userImg, profileReady } = useAuth();
+  const { profile, loading, profileProgress } = useProfile();
   const { role: personaType } = useRole();
 
-  const contextProfileCompletion = profileProgress.completion;
-  const headerProfileCompletion =
-    profile?.data ? calculateProfileProgress(profile.data as any).completion : contextProfileCompletion;
+  const profileCompletion = profileProgress.completion;
 
   const isMobile = useIsMobile();
   const isHoveringRef = useRef(false);
@@ -228,7 +225,6 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                         fallbackImg={(userInfo as any).fallbackImg}
                         useFallbackDelay
                         avatarReady={profileReady}
-                        completionOverride={headerProfileCompletion}
                       />
                     </>
                   ) : (
@@ -344,7 +340,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
         </header>
         {userData && personaType && (
           <ProfileIncompleteBanner
-            profileCompletion={contextProfileCompletion}
+            profileCompletion={profileCompletion}
           />
         )}
       </>
@@ -648,7 +644,6 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                     fallbackImg={(userInfo as any).fallbackImg}
                     useFallbackDelay
                     avatarReady={profileReady}
-                    completionOverride={headerProfileCompletion}
                   />
                 ) : (
                   <div className="flex items-center justify-center">
@@ -672,7 +667,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
       {!(location.pathname === ROUTES.PROFILE || location.pathname === ROUTES.AUTH) &&
         userData && personaType && (
           <ProfileIncompleteBanner
-            profileCompletion={contextProfileCompletion}
+            profileCompletion={profileCompletion}
           />
         )}
     </>

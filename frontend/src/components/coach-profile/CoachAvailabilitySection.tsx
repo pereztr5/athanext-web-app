@@ -10,7 +10,7 @@ import { AvailabilityTable } from '@/components/availability/AvailabilityTable';
 import useCoachAvailabilityWithOccurrences from '@/hooks/useCoachAvailabilityWithOccurrences';
 import { useToast } from '@/hooks/use-toast';
 import { useAuth } from '@/contexts/AuthContext';
-import { useProfile } from '@/hooks/useProfile';
+import { useProfile } from '@/contexts/ProfileContext';
 import { supabase } from '@/integrations/supabase/client';
 import { getDefaultGroupCapacity } from '@/api/configurations';
 import { CoachAvailability, CoachAvailabilitySlot, DayOfWeek, SlotBookingStatus } from '@/types/availability';
