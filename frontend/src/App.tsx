@@ -9,7 +9,7 @@ import { Footer } from "@/components/sections/Footer";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import ScrollToTop from "@/components/common/ScrollToTop";
 import { NetworkStatusBanner } from "@/components/common/NetworkStatusBanner";
-import { APP_ROUTES, NOT_FOUND_ROUTE } from "@/routes";
+import { ALL_ROUTES, NOT_FOUND_ROUTE } from "@/routes";
 import { AuthProvider, useAuth } from "@/contexts/AuthContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 import { AthaNextLogo } from "@/assets";
@@ -137,7 +137,7 @@ const AppContent = () => {
         )
       )}
       <Routes>
-        {APP_ROUTES.map(({ path, element }) => (
+        {ALL_ROUTES.map(({ path, element }) => (
           <Route key={path} path={path} element={element} />
         ))}
         <Route path={NOT_FOUND_ROUTE.path} element={NOT_FOUND_ROUTE.element} />
