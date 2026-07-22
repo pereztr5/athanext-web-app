@@ -137,7 +137,7 @@ const PackageConfirmation = () => {
     (!pkg && !error);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-8 sm:py-12 lg:py-16 mt-5">
+    <div className="flex items-start justify-center px-4 py-8 sm:py-12 lg:py-16">
       <div className="max-w-5xl w-full space-y-6">
         <div className="rounded-xl border border-blue-100 bg-blue-50 px-6 sm:px-10 py-10 text-center shadow-sm">
           <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow">

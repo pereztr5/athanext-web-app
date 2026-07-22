@@ -111,7 +111,7 @@ const ChangePassword = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-[#f0f4ff] pt-24 pb-16 relative overflow-hidden">
+    <div className="pt-6 pb-16 relative overflow-hidden">
       <div className="absolute inset-0">
         <div className="h-[40vh] bg-gradient-to-b from-blue-200/40 to-transparent" aria-hidden="true" />
         <div className="absolute bottom-[-120px] right-[-80px] h-[320px] w-[320px] rounded-full bg-blue-200/50 blur-[130px]" aria-hidden="true" />
