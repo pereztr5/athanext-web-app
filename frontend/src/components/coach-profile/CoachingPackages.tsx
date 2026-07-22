@@ -5,7 +5,7 @@ import type { CoachPackage } from '@/hooks/useCoachPackages';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { strings } from '@/config/strings';
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { Package } from 'lucide-react';
 import { PROFILE_TYPE } from "@/utils/db";
 import { packagesAPI } from "@/api/packages";

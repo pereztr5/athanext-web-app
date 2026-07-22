@@ -11,7 +11,7 @@ import { CalendarIcon, Clock, MapPin, DollarSign, Lock, AlertCircle } from "luci
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/hooks/useProfile";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";

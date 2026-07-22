@@ -10,7 +10,7 @@ import {
 import strings from "@/config/strings";
 import { colors } from "@/config/colors";
 import { cn, getInitials } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";

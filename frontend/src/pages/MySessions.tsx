@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { capitalizeFirst, cn } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useMySessions } from "@/hooks/useMySessions";
 import { useAthleteAvatarsByNames } from "@/hooks/useAthleteAvatars";
 import { useCoachAvatarsByIds } from "@/hooks/useCoachAvatars";

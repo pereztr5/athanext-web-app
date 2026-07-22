@@ -13,7 +13,7 @@ import { PartnershipPreviewModal } from "@/components/sections/PartnershipPrevie
 import { cn } from "@/lib/utils";
 import { capitalize } from "@/utils/helperFunctions";
 import { usePartnerships } from "@/hooks/usePartnerships";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { usePartnershipInquirySubmission } from "@/hooks/usePartnershipInquirySubmission";
 import { supabase } from "@/integrations/supabase/client";
 import { useNavigate, useLocation } from "react-router-dom";

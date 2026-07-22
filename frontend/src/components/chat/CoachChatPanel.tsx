@@ -4,7 +4,7 @@ import { Send, X } from "lucide-react";
 import type { Coach } from "@/types/coachProfile";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { chatAPI, type MessageWithSender } from "@/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {

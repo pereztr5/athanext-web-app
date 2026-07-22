@@ -14,7 +14,7 @@ import {
   type ConversationWithParticipants,
   type MessageWithSender,
 } from "@/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { formatDisplayName, sendConversationNotificationEmail } from "@/utils/chatHelpers";
