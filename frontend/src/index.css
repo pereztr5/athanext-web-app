@@ -94,21 +94,28 @@ All colors MUST be HSL.
     --crew-shadow-medium: 0 8px 30px -4px hsl(0 70% 50% / 0.1);
     --crew-shadow-strong: 0 12px 40px -6px hsl(0 70% 50% / 0.08);
 
-    --sidebar-background: 0 0% 98%;
+    --sidebar-background: 49 24% 95%;
 
-    --sidebar-foreground: 240 5.3% 26.1%;
+    --sidebar-foreground: 240 4% 26%;
 
-    --sidebar-primary: 240 5.9% 10%;
+    --sidebar-primary: 221 79% 48%;
 
-    --sidebar-primary-foreground: 0 0% 98%;
+    --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-accent: 240 4.8% 95.9%;
+    --sidebar-accent: 47 22% 91%;
 
-    --sidebar-accent-foreground: 240 5.9% 10%;
+    --sidebar-accent-foreground: 240 6% 10%;
 
-    --sidebar-border: 220 13% 91%;
+    --sidebar-border: 45 23% 89%;
 
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-ring: 221 79% 48%;
+
+    /* App shell canvas + persona pill (see wave4 design doc) */
+    --app-background: 48 27% 96%;
+
+    --app-pill: 137 39% 91%;
+
+    --app-pill-foreground: 143 57% 30%;
   }
 
   .dark {

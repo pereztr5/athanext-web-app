@@ -27,6 +27,11 @@ export default {
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
+				'app-background': 'hsl(var(--app-background))',
+				'app-pill': {
+					DEFAULT: 'hsl(var(--app-pill))',
+					foreground: 'hsl(var(--app-pill-foreground))'
+				},
 				foreground: 'hsl(var(--foreground))',
 				primary: {
 					DEFAULT: 'hsl(var(--primary))',
