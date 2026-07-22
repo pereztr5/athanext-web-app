@@ -19,13 +19,11 @@ import TermsAndConditions from "./pages/TermsAndConditions";
 import ContactUs from "./pages/ContactUs";
 import SignupConfirmation from "./pages/SignupConfirmation";
 import AthleteProfile from "./pages/AthleteProfile";
-// import AthleteProfileEdit from "./pages/AthleteProfileEdit";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { AuthGuard } from "./components/common/AuthGuard";
 import CoachSessionFeedback from "./pages/CoachSessionFeedback";
 import MySessions from "./pages/MySessions";
-import AthleteSessions from "./pages/AthleteSessions";
 import ChatPage from "./pages/ChatPage";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import PackageConfirmation from "./pages/PackageConfirmation";
@@ -49,17 +47,13 @@ export const ROUTES = {
   PACKAGE_CONFIRMATION: "/package-confirmation",
   COACH_SESSION_FEEDBACK: "/coach-session-feedback",
   MY_SESSIONS: "/my-sessions",
-  ATHLETE_SESSIONS: "/athlete-sessions",
   CREATE_ATHLETE_PROFILE: "/athlete-profile/create",
   SETTINGS: "/settings",
   ABOUT: "/about",
   PRIVACY_POLICY: "/privacy-policy",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",
   CONTACT_US: "/contact",
-  ATHLETE_PROFILE: "/athlete-profile",
-  ATHLETE_PROFILE_EDIT: "/athlete-profile/edit/:id?",
   PROFILE: "/profile",
-  ATHLETE_RESOURCES: "/athlete-resources",
   CHAT: "/chat",
   NOT_FOUND: "*",
 } as const;
@@ -86,7 +80,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.PACKAGE_CONFIRMATION, element: <PackageConfirmation /> },
   { path: ROUTES.COACH_SESSION_FEEDBACK, element: <CoachSessionFeedback /> },
   { path: ROUTES.MY_SESSIONS, element: <MySessions /> },
-  { path: ROUTES.ATHLETE_SESSIONS, element: <AthleteSessions /> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <AuthGuard><CreateAthleteProfile /></AuthGuard> },
   { path: ROUTES.SETTINGS, element: <ChangePassword /> },
   { path: ROUTES.ABOUT, element: <About /> },
@@ -95,7 +88,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.TERMS_AND_CONDITIONS, element: <TermsAndConditions /> },
   { path: ROUTES.CONTACT_US, element: <ContactUs /> },
   { path: ROUTES.CHAT, element: <ChatPage /> },
-  // { path: ROUTES.ATHLETE_PROFILE_EDIT, element: <AuthGuard><AthleteProfileEdit /></AuthGuard> },
   { path: ROUTES.PROFILE, element: <AuthGuard><Profile /></AuthGuard> },
 ];
 
