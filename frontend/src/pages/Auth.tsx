@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -126,6 +126,7 @@ const Auth = () => {
   }, [user]);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
   const {
     items: signupPasswordValidationItems,
@@ -357,7 +358,7 @@ const Auth = () => {
               });
               setHasShownGoogleWarning(true);
             }
-            navigate(`${ROUTES.AUTH}?mode=complete-profile`, { replace: true });
+            navigate(`${ROUTES.AUTH}?mode=complete-profile`, { replace: true, state: location.state });
           }
 
           const defaultPersona =
@@ -432,7 +433,8 @@ const Auth = () => {
         } else {
           setNeedsProfileCompletion(false);
           setHasShownGoogleWarning(false);
-          navigate("/");
+          const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from;
+          navigate(from ? `${from.pathname}${from.search ?? ""}` : "/", { replace: true });
         }
       } finally {
         if (isMounted) {
@@ -446,7 +448,7 @@ const Auth = () => {
     return () => {
       isMounted = false;
     };
-  }, [user, navigate, searchParams, toast, hasShownGoogleWarning]);
+  }, [user, navigate, searchParams, toast, hasShownGoogleWarning, location.state]);
 
   useEffect(() => {
     const emailParam = searchParams.get('email');
@@ -1344,7 +1346,7 @@ const Auth = () => {
           <CardContent>
             <Tabs value={activeTab} onValueChange={(value) => {
               setActiveTab(value);
-              navigate(`/auth?mode=${value}`, { replace: true });
+              navigate(`/auth?mode=${value}`, { replace: true, state: location.state });
             }} className="w-full">
               <TabsList className="grid w-full grid-cols-2">
                 <TabsTrigger value="signin">{strings.buttons.signIn}</TabsTrigger>
