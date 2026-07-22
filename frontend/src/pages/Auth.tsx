@@ -65,7 +65,6 @@ const findSportOption = (value?: string | null, options = SPORTS_OPTIONS) => {
   if (!value) return undefined;
   const normalizedValue = value.trim().toLowerCase();
   return options.find((option) => option.value.toLowerCase() === normalizedValue);
-  return options.find((option) => option.value.toLowerCase() === normalizedValue);
 };
 
 const normalizeSportValue = (value?: string | null, options = SPORTS_OPTIONS) => {
@@ -1165,9 +1164,6 @@ const Auth = () => {
                         <p className="text-sm text-muted-foreground">
                           Select a sport first to pick coaching specializations.
                         </p>
-                      )}
-                      {errors.position && (
-                        <p className="text-sm text-destructive">{errors.position}</p>
                       )}
                     </>
                   ) : (

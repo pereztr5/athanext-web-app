@@ -489,7 +489,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                   </NavigationMenuLink>
                 </NavigationMenuItem>
 
-                {!userData && (
+                {personaType !== "coach" && (
                   <NavigationMenuItem className="hidden xl:flex">
                     <NavigationMenuLink asChild>
                       <button
@@ -513,7 +513,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                       <button
                       className={cn(
                         "flex items-center gap-1 px-2 md:px-2.5 lg:px-4 py-2 text-[11px] md:text-xs lg:text-sm font-medium hover:bg-accent rounded-md transition-colors whitespace-nowrap",
-                        (isOnAboutPage || isOnContactPage) 
+                        (isOnAboutPage || isOnContactPage) && "bg-accent text-accent-foreground"
                       )}
                     >
                         <span className="hidden lg:inline">Get In Touch</span>
@@ -524,21 +524,21 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                     <DropdownMenuContent align="start" className="z-50 w-[180px] bg-popover">
                       <DropdownMenuItem
                         onClick={() => navigate("/about")}
-                        className={cn("cursor-pointer", isOnAboutPage )}
+                        className={cn("cursor-pointer", isOnAboutPage && "bg-accent text-accent-foreground")}
                       >
                         {strings.about.navigation.aboutUs}
                       </DropdownMenuItem>
-                      {!userData && (
+                      {personaType !== "coach" && (
                         <DropdownMenuItem
                           onClick={() => navigate("/become-a-coach")}
-                          className={cn("cursor-pointer xl:hidden", isOnBecomeACoachPage)}
+                          className={cn("cursor-pointer xl:hidden", isOnBecomeACoachPage && "bg-accent text-accent-foreground")}
                         >
                           Become a Coach
                         </DropdownMenuItem>
                       )}
                       <DropdownMenuItem
                         onClick={() => navigate(ROUTES.CONTACT_US)}
-                        className={cn("cursor-pointer", isOnContactPage )}
+                        className={cn("cursor-pointer", isOnContactPage && "bg-accent text-accent-foreground")}
                       >
                         {strings.titles.contactUs}
                       </DropdownMenuItem>
