@@ -10,7 +10,8 @@ import {
 import strings from "@/config/strings";
 import { colors } from "@/config/colors";
 import { cn, getInitials } from "@/lib/utils";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
@@ -64,7 +65,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const subscriptionsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
   const subscribedConversationIds = useRef<Set<string>>(new Set());
   const isMobile = useIsMobile();
-  const personaType: "coach" | "athlete" | "parent" | null = (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType, isAthleteLike } = useRole();
   const loadedAvatarCacheRef = useRef<Set<string>>(new Set());
 
   const resolveSenderName = async (senderId: string) => {
@@ -460,7 +461,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <UserIcon className="mr-2 h-4 w-4" />
           <span>Profile</span>
         </DropdownMenuItem>
-        {personaType === "athlete" && (
+        {isAthleteLike && (
           <DropdownMenuItem onClick={() => navigate(ROUTES.COACHES)} className="!cursor-pointer">
             <Search className="mr-2 h-4 w-4" />
             <span>Find a Coach</span>

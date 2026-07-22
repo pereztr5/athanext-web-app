@@ -25,6 +25,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect, useRef } from "react";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useRole } from "@/hooks/useRole";
 import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileIncompleteBanner } from "@/components/common/ProfileIncompleteBanner";
 import { PROFILE_TYPE } from "@/utils/db";
@@ -40,6 +41,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
 
   const { user: userData, loading: authLoading, profileProgress, hasNewMessage, setHasNewMessage, userImg, profileReady } = useAuth();
   const { profile, loading } = useProfile();
+  const { role: personaType } = useRole();
 
   const contextProfileCompletion = profileProgress.completion;
   const headerProfileCompletion =
@@ -82,11 +84,6 @@ export const Header = ({ onSportClick }: HeaderProps) => {
   // For coaches, profile.data might be null if coach record doesn't exist yet
   // But userProfile should still exist for authenticated users
 
-  // Helper to get persona type from either profile or user metadata
-  const getPersonaType = () => {
-    return profile?.userProfile?.persona_type || userData?.user_metadata?.persona_type || null;
-  };
-  
   // Helper to get user display info with persistent image caching
   const getUserInfo = () => {
     // Always prioritize profile.userProfile when available
@@ -101,7 +98,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
         email: profile.userProfile.email || userData?.email || '',
         img: profileReady ? platformImg : null,
         fallbackImg: googleImg,
-        personaType: profile.userProfile.persona_type,
+        personaType,
       };
     }
     // Fallback to userData if profile not loaded yet
@@ -111,11 +108,10 @@ export const Header = ({ onSportClick }: HeaderProps) => {
       email: userData?.email || '',
       img: profileReady ? userImg : null,
       fallbackImg: googleImg,
-      personaType: userData?.user_metadata?.persona_type || null,
+      personaType,
     };
   };
   
-  const personaType = getPersonaType();
   const userInfo = getUserInfo();
   const personaSport = (
     profile?.data?.sport ||

@@ -9,7 +9,7 @@ import { DeleteConfirmationDialog } from '@/components/common/DeleteConfirmation
 import { AvailabilityTable } from '@/components/availability/AvailabilityTable';
 import useCoachAvailabilityWithOccurrences from '@/hooks/useCoachAvailabilityWithOccurrences';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { useProfile } from '@/hooks/useProfile';
 import { supabase } from '@/integrations/supabase/client';
 import { getDefaultGroupCapacity } from '@/api/configurations';

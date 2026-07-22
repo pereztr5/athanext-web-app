@@ -4,7 +4,7 @@ import { PRIMARY } from '@/config/colors';
 import { strings } from "@/config/strings";
 import { useNavigate } from "react-router-dom";
 import { ROUTES } from "@/routes";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { PROFILE_TYPE } from "@/utils/db";
 
 export function AboutCTA() {

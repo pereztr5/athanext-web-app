@@ -4,7 +4,7 @@
  */
 
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
-import { useAuth } from '@/hooks/useAuth';
+import { useAuth } from '@/contexts/AuthContext';
 import { getMySessions, cancelSession } from '@/api/sessions';
 import type { SessionUIModel, SessionGrouped, SessionFilters } from '@/types/sessions-api';
 import { useMemo, useCallback, useEffect, useState } from 'react';

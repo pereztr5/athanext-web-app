@@ -10,7 +10,7 @@ import { useNavigate } from "react-router-dom";
 import { strings } from "@/config/strings";
 import { useState } from "react";
 import { useFAQs } from "@/hooks/useFAQs";
-import { useProfile } from "@/contexts/ProfileContext";
+import { useRole } from "@/hooks/useRole";
 import { WHY_MYKONNECT_STRINGS } from "@/utils/db";
 import { ROUTES } from "@/routes";
 import { 
@@ -30,13 +30,11 @@ const MAX_VISIBLE_FAQS = 7;
 const WhyMyKonnect = () => {
   const navigate = useNavigate();
   const { faqs, loading, error, hasFAQs, source } = useFAQs();
-  const { profile } = useProfile();
   const [showAllFaqs, setShowAllFaqs] = useState(false);
-  const personaType = profile?.userProfile?.persona_type || null;
-  const isCoach = personaType === "coach";
+  const { role, isCoach, isAthleteLike } = useRole();
 
   const handleBeginTraining = () => {
-    if (!profile?.userProfile) {
+    if (!role) {
       // Not logged in, navigate to signup
       navigate(ROUTES.AUTH + '?mode=signup');
     } else {
@@ -46,10 +44,10 @@ const WhyMyKonnect = () => {
   };
 
   const handleBeginCoaching = () => {
-    if (!profile?.userProfile) {
+    if (!role) {
       // Not logged in, navigate to signup with coach persona preselected
       navigate(ROUTES.AUTH + '?mode=signup&persona=coach');
-    } else if (profile.userProfile.persona_type === 'coach') {
+    } else if (isCoach) {
       // Logged in as coach, navigate to their profile
       navigate(ROUTES.PROFILE);
     }
@@ -129,7 +127,7 @@ const WhyMyKonnect = () => {
           {/* CTA Buttons */}
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {/* Show "Begin Training" for non-logged in users and athletes */}
-            {(!profile?.userProfile || profile.userProfile.persona_type === 'athlete' || profile.userProfile.persona_type === 'parent') && (
+            {(!role || isAthleteLike) && (
               <Button 
                 size="lg" 
                 onClick={handleBeginTraining}
@@ -139,7 +137,7 @@ const WhyMyKonnect = () => {
               </Button>
             )}
             {/* Show "Begin Coaching" for non-logged in users and coaches */}
-            {(!profile?.userProfile || profile.userProfile.persona_type === 'coach') && (
+            {(!role || isCoach) && (
               <Button 
                 size="lg" 
                 variant="outline"
@@ -345,7 +343,7 @@ const WhyMyKonnect = () => {
       </section>
 
       {/* Final CTA Banner (hide for coaches) */}
-      {personaType !== 'coach' && (
+      {role !== 'coach' && (
         <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 to-secondary/10">
           <div className="max-w-4xl mx-auto text-center animate-fade-in">
             <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-slate-800 dark:text-slate-200">

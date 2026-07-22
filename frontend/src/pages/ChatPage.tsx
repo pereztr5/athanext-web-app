@@ -14,7 +14,8 @@ import {
   type ConversationWithParticipants,
   type MessageWithSender,
 } from "@/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { formatDisplayName, sendConversationNotificationEmail } from "@/utils/chatHelpers";
@@ -34,7 +35,7 @@ const CONVERSATION_PAGE_SIZE = 6;
 const ChatPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, userProfile, loading: authLoading, setHasNewMessage } = useAuth();
+  const { user, loading: authLoading, setHasNewMessage } = useAuth();
   const isMobile = useIsMobile();
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -59,8 +60,7 @@ const ChatPage = () => {
   const firstMessageNotifiedRef = useRef<Set<string>>(new Set());
   const firstReplyNotifiedRef = useRef<Set<string>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const personaType =
-    (userProfile as any)?.persona_type || (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType } = useRole();
 
   // Redirect unauthenticated users after auth state is known
   useEffect(() => {

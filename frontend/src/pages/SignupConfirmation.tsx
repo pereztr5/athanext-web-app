@@ -7,7 +7,7 @@ import SignUpConfirmation from "../assets/images/sign-up-confirmation.png";
 import { Mail, RefreshCcw, ArrowLeft } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { authAPI } from "@/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { ROUTES } from "@/routes";
 
 interface SignupConfirmationProps {

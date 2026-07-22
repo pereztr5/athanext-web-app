@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
-import { useAuth } from "./useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface UseUserProfileReturn {
   profile: UserProfile | null;

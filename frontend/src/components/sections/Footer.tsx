@@ -3,15 +3,14 @@ import { Link } from "react-router-dom";
 import { strings } from "@/config/strings";
 import { ROUTES } from "@/routes";
 import logo from "@/assets/AthaNext-Logo-White.svg";
-import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 
 interface FooterProps {
   onSportClick: (sport: string) => void;
 }
 
 export const Footer = ({ onSportClick }: FooterProps) => {
-  const { user } = useAuth();
-  const personaType = (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType } = useRole();
 
   return (
     <footer className="bg-gradient-to-br from-slate-800 via-gray-900 to-slate-900 dark:from-slate-900 dark:via-black dark:to-slate-800 text-white py-12" role="contentinfo">

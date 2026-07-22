@@ -32,6 +32,7 @@ import {
 import { CoachAvailabilitySection } from "@/components/coach-profile/CoachAvailabilitySection";
 import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { chatAPI } from "@/api";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { buildId } from "@/utils/chatHelpers";
@@ -67,9 +68,9 @@ const CoachProfile = () => {
   const [startingChat, setStartingChat] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [chatConversationId, setChatConversationId] = useState<string | null>(null);
-  const personaType = (userProfile as any)?.persona_type || (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType, isAthleteLike } = useRole();
   const canSendMessage = true;
-  const canBookSlots = personaType === "athlete" || personaType === "parent";
+  const canBookSlots = isAthleteLike;
   const availabilitySectionRef = useRef<HTMLDivElement | null>(null);
   const packagesSectionRef = useRef<HTMLDivElement | null>(null);
   const normalizedCoachSport = detectCoachSport(coach as any);

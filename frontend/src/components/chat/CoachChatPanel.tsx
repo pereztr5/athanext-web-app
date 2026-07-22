@@ -4,7 +4,8 @@ import { Send, X } from "lucide-react";
 import type { Coach } from "@/types/coachProfile";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { chatAPI, type MessageWithSender } from "@/api";
-import { useAuth } from "@/hooks/useAuth";
+import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import {
@@ -47,7 +48,7 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
   const [isSending, setIsSending] = useState(false);
   const [loadingMessages, setLoadingMessages] = useState(false);
   const [messagesError, setMessagesError] = useState<string | null>(null);
-  const personaType = (userProfile as any)?.persona_type || (user?.user_metadata as any)?.persona_type || null;
+  const { role: personaType } = useRole();
   const firstMessageNotifiedRef = useRef<Set<string>>(new Set());
   const firstReplyNotifiedRef = useRef<Set<string>>(new Set());
   const coachUserIdRef = useRef<string | null>(null);

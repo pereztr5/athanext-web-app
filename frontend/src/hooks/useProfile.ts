@@ -3,7 +3,7 @@ import {
   calculateProfileProgress,
   DEFAULT_PROFILE_PROGRESS,
 } from "@/utils/profileCompletion";
-import { useAuth } from "./useAuth";
+import { useAuth } from "@/contexts/AuthContext";
 import { PROFILE_TYPE } from "@/utils/db";
 import type { CoachDetails } from "./useCoachDetails";
 import { useCallback, useEffect } from "react";
