@@ -30,7 +30,6 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useProfile } from '@/contexts/ProfileContext';
-import { clearGlobalImageCache } from '@/contexts/ProfileContext';
 import { useAuth } from "@/contexts/AuthContext";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { useUserProfile } from "@/hooks/useUserProfile";
@@ -349,8 +348,6 @@ const Profile = () => {
                 // Update auth context AFTER database update completes
                 if (uploadedImageUrl) {
                     setUserImg(uploadedImageUrl);
-                    // Clear the global image cache to force reload of new image
-                    clearGlobalImageCache();
                 }
 
                 if (editedCoach.name !== coach.name) {
