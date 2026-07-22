@@ -35,7 +35,7 @@ const CONVERSATION_PAGE_SIZE = 6;
 const ChatPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, loading: authLoading, setHasNewMessage } = useAuth();
+  const { user, setHasNewMessage } = useAuth();
   const isMobile = useIsMobile();
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -62,13 +62,6 @@ const ChatPage = () => {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { role: personaType } = useRole();
 
-  // Redirect unauthenticated users after auth state is known
-  useEffect(() => {
-    if (authLoading) return;
-    if (!user) {
-      navigate("/auth?mode=signin");
-    }
-  }, [authLoading, user, navigate]);
 
   useEffect(() => {
     if (isMobile) {

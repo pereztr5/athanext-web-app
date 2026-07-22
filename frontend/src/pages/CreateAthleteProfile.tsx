@@ -133,21 +133,6 @@ const CreateAthleteProfile = () => {
     }
   };
 
-  if (!user) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-slate-50/40 to-slate-100/40 flex flex-col items-center justify-center px-4 text-center">
-        <div className="max-w-md space-y-4">
-          <h1 className="text-2xl font-semibold text-slate-900">Sign in to continue</h1>
-          <p className="text-sm text-slate-600">
-            You need an account to create your athlete profile.
-          </p>
-          <Button onClick={() => navigate(ROUTES.AUTH)} className="px-6">
-            Go to Sign In
-          </Button>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 pt-24 pb-16">
