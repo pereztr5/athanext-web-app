@@ -2,6 +2,7 @@ import { createContext, useContext, useState, useEffect, ReactNode, useCallback 
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { PROFILE_TYPE } from "@/utils/db";
+import { resolveRole } from "@/utils/role";
 import type { CoachDetails } from "@/hooks/useCoachDetails";
 import type { AthleteProfile } from "@/hooks/useProfile";
 import type { UserProfile } from "@/api/userProfiles";
@@ -70,11 +71,9 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         return;
       }
 
-      const personaHint = (baseProfile?.persona_type ||
-        user?.user_metadata?.persona_type ||
-        user?.user_metadata?.persona) as UserType | string | undefined;
-      const resolvedPersonaHint =
-        personaHint === PROFILE_TYPE.parent ? PROFILE_TYPE.athlete : personaHint;
+      const role = resolveRole(user, baseProfile);
+      // parent uses the athlete data path
+      const resolvedPersonaHint = role === "parent" ? PROFILE_TYPE.athlete : role;
 
       if (resolvedPersonaHint === PROFILE_TYPE.coach && baseProfile?.coach_id) {
         const { data: coachData, error: coachError } = await supabase
@@ -178,7 +177,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
     } finally {
       setLoading(false);
     }
-  }, [user?.id, user?.user_metadata?.persona_type, user?.user_metadata?.persona, userProfile?.persona_type, userProfile?.coach_id, userProfile?.athlete_id, authLoading]);
+  }, [user?.id, user?.user_metadata?.persona_type, userProfile?.persona_type, userProfile?.coach_id, userProfile?.athlete_id, authLoading]);
 
   const saveAthleteProfile = useCallback(
     async (payload: any) => {
