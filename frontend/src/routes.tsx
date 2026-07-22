@@ -26,10 +26,12 @@ import ChatPage from "./pages/ChatPage";
 import BookingConfirmation from "./pages/BookingConfirmation";
 import PackageConfirmation from "./pages/PackageConfirmation";
 import CreateAthleteProfile from "./pages/CreateAthleteProfile";
+import Dashboard from "./pages/Dashboard";
 import { HomeSwitch } from "./layouts/HomeSwitch";
 
 export const ROUTES = {
   HOME: "/",
+  DASHBOARD: "/dashboard",
   WHY_ATHALINK: "/why-athalink",
   BECOME_COACH: "/become-a-coach",
   AUTH: "/auth",
@@ -91,6 +93,7 @@ export const AUTH_FLOW_ROUTES: AppRoute[] = [
 
 // Authenticated app routes - every element wrapped in ProtectedRoute
 export const APP_ROUTES: AppRoute[] = [
+  { path: ROUTES.DASHBOARD, element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
   { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },

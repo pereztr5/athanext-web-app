@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Calendar, MessageCircle, Search, User } from "lucide-react";
+import { Calendar, LayoutGrid, MessageCircle, Search, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -16,12 +16,14 @@ import { AthaNextLogo } from "@/assets";
 
 // Dashboard and Development nav items land with the dashboard PR (PR 9).
 const ATHLETE_NAV = [
+  { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Browse coaches", url: ROUTES.COACHES, icon: Search },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
 ];
 
 const COACH_NAV = [
+  { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "My Profile", url: ROUTES.PROFILE, icon: User },
