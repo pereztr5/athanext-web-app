@@ -23,9 +23,13 @@ const timeRange12h = (startIso: string, endIso: string) => {
 };
 
 const relativeDay = (iso: string) => {
-  const days = Math.round((Date.now() - new Date(iso).getTime()) / 86_400_000);
-  if (days <= 0) return longDate(iso);
-  if (days === 1) return "1d";
+  const diffMs = Date.now() - new Date(iso).getTime();
+  if (diffMs < 0) return longDate(iso);
+  const minutes = Math.floor(diffMs / 60_000);
+  if (minutes < 60) return `${Math.max(minutes, 1)}m`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h`;
+  const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d`;
   return longDate(iso);
 };
@@ -101,7 +105,7 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { userName, userProfile, user } = useAuth();
   const { isCoach } = useRole();
-  const { isLoading, nextSession, upcoming, stats, activities, coaches } = useDashboardData();
+  const { isLoading, error, nextSession, upcoming, stats, activities, coaches } = useDashboardData();
 
   const conversationsQuery = useQuery({
     queryKey: ["dashboard-conversations", user?.id],
@@ -133,7 +137,7 @@ const Dashboard = () => {
                 <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
                   <span>{timeRange12h(nextSession.start, nextSession.end)}</span>
                   <TypeChip type={nextSession.type} />
-                  {nextSession.coachName && <CoachChip name={nextSession.coachName} />}
+                  {!isCoach && nextSession.coachName && <CoachChip name={nextSession.coachName} />}
                 </div>
               </div>
               <div className="flex flex-col gap-2">
@@ -148,10 +152,10 @@ const Dashboard = () => {
               <div>
                 <p className="text-sm text-muted-foreground">Your next session</p>
                 <p className="mt-1 text-xl font-semibold">
-                  {isLoading ? "Loading…" : "No upcoming sessions"}
+                  {isLoading ? "Loading…" : error ? "Couldn't load your sessions" : "No upcoming sessions"}
                 </p>
               </div>
-              {!isCoach && !isLoading && (
+              {!isCoach && !isLoading && !error && (
                 <Button onClick={() => navigate(ROUTES.COACHES)}>Find a coach</Button>
               )}
             </>
@@ -160,11 +164,11 @@ const Dashboard = () => {
       </Card>
 
       <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatTile icon={Calendar} value={stats.completedCount}
+        <StatTile icon={Calendar} value={error ? "—" : stats.completedCount}
           label={isCoach ? "Sessions taught" : "Sessions completed"} sub="All time" />
-        <StatTile icon={Clock} value={stats.hoursTotal}
+        <StatTile icon={Clock} value={error ? "—" : stats.hoursTotal}
           label={isCoach ? "Hours coached" : "Hours trained"} sub="Total training time" />
-        <StatTile icon={isCoach ? Calendar : User} value={stats.thirdStat}
+        <StatTile icon={isCoach ? Calendar : User} value={error ? "—" : stats.thirdStat}
           label={isCoach ? "Upcoming sessions" : "Coaches worked with"}
           sub={isCoach ? "On the calendar" : "All time"} />
       </div>
@@ -186,7 +190,7 @@ const Dashboard = () => {
                 ))
               ) : (
                 <p className="text-sm text-muted-foreground">
-                  {isLoading ? "Loading…" : "Nothing scheduled yet."}
+                  {isLoading ? "Loading…" : error ? "Couldn't load sessions." : "Nothing scheduled yet."}
                 </p>
               )}
             </div>
@@ -272,7 +276,9 @@ const Dashboard = () => {
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">No activity yet.</p>
+                <p className="text-sm text-muted-foreground">
+                  {error ? "Couldn't load activity." : "No activity yet."}
+                </p>
               )}
             </div>
           </CardContent>

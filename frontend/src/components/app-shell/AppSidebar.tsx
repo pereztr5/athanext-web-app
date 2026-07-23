@@ -14,7 +14,7 @@ import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 
-// Dashboard and Development nav items land with the dashboard PR (PR 9).
+// Development nav item deferred (owner decision 2026-07-22).
 const ATHLETE_NAV = [
   { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
