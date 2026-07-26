@@ -56,12 +56,10 @@ export const claimReferral = async (token: string, answer: AttestationAnswer) =>
   supabase.rpc("claim_coach_referral" as any, { _token: token, _answer: answer });
 
 export const acknowledgeReferral = async (referralId: string, accept: boolean) =>
-  table()
-    .update({
-      status: accept ? "confirmed" : "declined",
-      confirmed_at: accept ? new Date().toISOString() : null,
-    })
-    .eq("id", referralId);
+  supabase.rpc("acknowledge_coach_referral" as any, {
+    _referral_id: referralId,
+    _accept: accept,
+  });
 
 export const removeReferral = async (referralId: string) =>
   table().delete().eq("id", referralId);

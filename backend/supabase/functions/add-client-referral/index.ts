@@ -136,7 +136,7 @@ serve(async (req) => {
         continue;
       }
 
-      if (!adminCreated && fromEmail) {
+      if (fromEmail && (!adminCreated || !athleteId)) {
         const link = athleteId
           ? `${origin}/my-coaches`
           : `${origin}/auth?mode=signup&persona=athlete&invite=${inserted.invite_token}`;
