@@ -431,7 +431,21 @@ serve(async (req) => {
     }
 
     // Fees
-    const { platformFeePerc, stripeFeePerc } = await fetchFeePercents(supabaseClient);
+    const { platformFeePerc: basePlatformFeePerc, stripeFeePerc } =
+      await fetchFeePercents(supabaseClient);
+
+    // Platform fee waiver: confirmed offline coach-client relationship.
+    // supabaseClient uses the service role key (RLS bypassed here); the query
+    // is scoped explicitly by coach_id + athlete_id + status.
+    const { data: waiverRow } = await supabaseClient
+      .from("coach_client_referrals" as any)
+      .select("id")
+      .eq("coach_id", coachId)
+      .eq("athlete_id", athleteId)
+      .eq("status", "confirmed")
+      .maybeSingle();
+    const platformFeePerc = waiverRow ? 0 : basePlatformFeePerc;
+
     const feeFactor = 1 + platformFeePerc / 100 + stripeFeePerc / 100;
 
     const totalBase = occurrences.reduce((sum, occ) => sum + Number(occ.price || 0), 0);
