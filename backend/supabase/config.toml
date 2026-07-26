@@ -17,3 +17,6 @@ verify_jwt = true
 
 [functions.submit-sports-vote]
 verify_jwt = false
+
+[functions.add-client-referral]
+verify_jwt = true
