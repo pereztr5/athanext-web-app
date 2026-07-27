@@ -1005,7 +1005,7 @@ const MySessions = () => {
   }
 
   return (
-    <div className="min-h-screen bg-slate-50 pt-24 pb-40 px-4 lg:px-6">
+    <div className="pt-6 pb-40 px-4 lg:px-6">
       <div className="max-w-6xl mx-auto space-y-6">
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-center gap-2">

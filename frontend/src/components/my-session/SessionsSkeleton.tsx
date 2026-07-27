@@ -5,7 +5,7 @@ import { Skeleton } from "@/components/ui/skeleton";
  * Displays placeholder session cards while data is being fetched
  */
 export const SessionsSkeleton = () => (
-  <div className="min-h-screen bg-slate-50 pt-24 pb-40 px-4 lg:px-6">
+  <div className="pt-6 pb-40 px-4 lg:px-6">
     <div className="max-w-6xl mx-auto space-y-6">
       {/* Header */}
       <div className="space-y-2">

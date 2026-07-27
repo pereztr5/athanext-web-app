@@ -502,7 +502,7 @@ const Profile = () => {
     if (!profileLoading && profile?.type === PROFILE_TYPE.coach) {
         if (!coach) {
             return (
-                <div className={`min-h-screen bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] flex items-center justify-center`}>
+                <div className="min-h-[50vh] flex items-center justify-center">
                     <div className="text-center space-y-4">
                         <h1 className="text-2xl font-bold text-foreground">No Coach Profile Found</h1>
                         <p className="text-muted-foreground">Create your coach profile to get started</p>
@@ -516,7 +516,7 @@ const Profile = () => {
     }
 
     return coach && Object.entries(coach).length && (
-        <div className={`min-h-screen w-full px-4 bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] mb-20`}>
+        <div className="w-full px-4 pt-6 mb-20">
             <div className="max-w-8xl mx-auto flex flex-col gap-6 md:gap-8">
                 <section className="flex w-full flex-col">
                     <CoachHeader

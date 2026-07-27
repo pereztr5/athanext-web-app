@@ -1,22 +1,18 @@
-import { Outlet, useNavigate } from "react-router-dom";
-import { Header } from "@/components/common/Header";
-import { Footer } from "@/components/sections/Footer";
+import { Outlet } from "react-router-dom";
+import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
+import { AppSidebar } from "@/components/app-shell/AppSidebar";
+import { AppTopBar } from "@/components/app-shell/AppTopBar";
 
-// v1: identical chrome to MarketingLayout so the shell split lands with zero
-// visual change. PR 8 replaces the internals with the sidebar shell.
-// App routes never render /auth?mode=complete-profile, so no mini-header here.
 export const AppLayout = () => {
-  const navigate = useNavigate();
-
-  const handleSportClick = (sport: string) => {
-    navigate(`/${sport.toLowerCase()}`);
-  };
-
   return (
-    <>
-      <Header onSportClick={handleSportClick} />
-      <Outlet />
-      <Footer onSportClick={handleSportClick} />
-    </>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset className="bg-app-background">
+        <AppTopBar />
+        <main className="flex-1">
+          <Outlet />
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 };

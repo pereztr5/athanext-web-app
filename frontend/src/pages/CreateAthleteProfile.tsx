@@ -135,7 +135,7 @@ const CreateAthleteProfile = () => {
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/20 to-slate-100 pt-24 pb-16">
+    <div className="pt-6 pb-16">
       <div className="max-w-4xl mx-auto px-4 space-y-6">
         <Card className="border-0 shadow-sm bg-white/80 backdrop-blur">
           <CardHeader className="pb-3">

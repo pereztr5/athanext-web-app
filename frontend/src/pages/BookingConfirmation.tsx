@@ -217,7 +217,7 @@ const BookingConfirmation = () => {
   ]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex items-start justify-center px-4 py-8 sm:py-12 lg:py-16">
+    <div className="flex items-start justify-center px-4 py-8 sm:py-12 lg:py-16">
       <div className="w-full max-w-6xl space-y-8 lg:space-y-10">
         {/* Header Section */}
         <div className="bg-blue-50 rounded-3xl px-6 py-12 sm:px-10 sm:py-14 lg:px-12 lg:py-16 text-center flex flex-col items-center gap-5">

@@ -773,7 +773,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="min-h-screen bg-[#f4f7fb] pt-16">
+    <div className="bg-[#f4f7fb]">
       <div className="mx-auto max-w-[1400px] h-[calc(100vh-6rem)] bg-white border border-slate-200 rounded-2xl shadow-soft overflow-hidden flex relative">
         {/* Sidebar */}
         <aside

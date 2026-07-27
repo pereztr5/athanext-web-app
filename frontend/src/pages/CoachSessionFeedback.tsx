@@ -499,7 +499,7 @@ const CoachSessionFeedback = () => {
 
   if (isLoadingData || profileLoading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pt-24 pb-16 flex items-center justify-center">
+      <div className="min-h-[50vh] pt-6 pb-16 flex items-center justify-center">
         <div className="text-center">
           <p className="text-lg text-slate-600">Loading session data...</p>
         </div>
@@ -508,7 +508,7 @@ const CoachSessionFeedback = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50/30 to-slate-100 pt-24 pb-16">
+    <div className="pt-6 pb-16">
       <div className="max-w-6xl mx-auto px-4 lg:px-6 flex flex-col gap-6">
         <div className="flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
