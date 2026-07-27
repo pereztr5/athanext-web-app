@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Calendar, MessageCircle, Search, User } from "lucide-react";
+import { Calendar, LayoutGrid, MessageCircle, Search, User } from "lucide-react";
 import {
   Sidebar,
   SidebarContent,
@@ -14,14 +14,16 @@ import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 
-// Dashboard and Development nav items land with the dashboard PR (PR 9).
+// Development nav item deferred (owner decision 2026-07-22).
 const ATHLETE_NAV = [
+  { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Browse coaches", url: ROUTES.COACHES, icon: Search },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
 ];
 
 const COACH_NAV = [
+  { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "My Profile", url: ROUTES.PROFILE, icon: User },
@@ -37,7 +39,7 @@ export const AppSidebar = () => {
   return (
     <Sidebar>
       <SidebarHeader className="px-4 py-5">
-        <Link to={ROUTES.MY_SESSIONS} aria-label="AthaNext home">
+        <Link to={ROUTES.DASHBOARD} aria-label="AthaNext home">
           <img src={AthaNextLogo} alt="AthaNext" className="h-8 w-auto" />
         </Link>
       </SidebarHeader>
