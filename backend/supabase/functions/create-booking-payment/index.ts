@@ -7,14 +7,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-const capitalizeFirst = (value?: string | null) => {
-  if (!value) return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  return trimmed.charAt(0).toUpperCase() + trimmed.slice(1);
-};
+const RECONCILE_FUNCTION_NAME = "reconcile-stripe-fees";
 
-const RECONCILE_FUNCTION_NAME = "reconcile-stripe-fees"; 
+const NOTIFICATION_FUNCTION_NAME = "send-booking-notifications";
 
 const isSessionPaid = (session: Stripe.Checkout.Session) => {
   const payStatus = session.payment_status;
@@ -26,8 +21,23 @@ const isSessionPaid = (session: Stripe.Checkout.Session) => {
   );
 };
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-type SupabaseClient = any;
+type SupabaseClient = ReturnType<typeof createClient>;
+
+type PaymentUpdateResult = {
+  paid: boolean;
+  newlyPaid: boolean;
+  bookingIds: string[];
+};
+
+const extractPaymentIntentId = (session: Stripe.Checkout.Session): string | null => {
+  const intent = session.payment_intent;
+  if (!intent) return null;
+  if (typeof intent === "string") return intent;
+  if (typeof intent === "object" && "id" in intent) {
+    return (intent as Stripe.PaymentIntent).id ?? null;
+  }
+  return null;
+};
 
 const parsePercent = (value: unknown): number | null => {
   const num = Number.parseFloat(String(value ?? ""));
@@ -44,7 +54,7 @@ const fetchFeePercents = async (client: SupabaseClient) => {
 
   if (feeErr) throw feeErr;
 
-  (feeRows as Array<{ key: string; value: string }> | null)?.forEach((row) => {
+  feeRows?.forEach((row) => {
     const v = Number.parseFloat(row.value);
     if (Number.isFinite(v)) {
       if (row.key === "platform_fees") platformFeePerc = v;
@@ -53,6 +63,22 @@ const fetchFeePercents = async (client: SupabaseClient) => {
   });
 
   return { platformFeePerc, stripeFeePerc };
+};
+
+const fetchDefaultGroupCapacity = async (client: SupabaseClient): Promise<number> => {
+  try {
+    const { data, error } = await client
+      .from("configurations" as any)
+      .select("value")
+      .eq("key", "default_max_bookings_group")
+      .maybeSingle();
+    if (error) return 50;
+    const parsed = Number.parseInt(data?.value ?? "", 10);
+    return Number.isFinite(parsed) && parsed > 0 ? parsed : 50;
+  } catch (err) {
+    console.error("Failed to load default group capacity", err);
+    return 50;
+  }
 };
 
 const resolveFeePercents = async (
@@ -78,6 +104,7 @@ const ensurePaymentRowsForSession = async (
   client: SupabaseClient,
 ) => {
   const { platformFeePerc, stripeFeePerc } = await resolveFeePercents(session, client);
+  const paymentIntentId = extractPaymentIntentId(session);
 
   const { data: bookings, error: bookingFetchErr } = await client
     .from("coach_slot_bookings" as any)
@@ -87,18 +114,7 @@ const ensurePaymentRowsForSession = async (
   if (bookingFetchErr) throw bookingFetchErr;
   if (!bookings || bookings.length === 0) return;
 
-  const typedBookings = bookings as Array<{ id: string; occurrence_id: string }>;
-  const bookingIds = typedBookings.map((b) => b.id);
-  const { data: existingPayments, error: paymentsFetchErr } = await client
-    .from("payments" as any)
-    .select("booking_id")
-    .in("booking_id", bookingIds);
-
-  if (paymentsFetchErr) throw paymentsFetchErr;
-
-  const typedPayments = existingPayments as Array<{ booking_id: string }> | null;
-  const alreadyRecorded = new Set((typedPayments || []).map((row) => row.booking_id));
-  const occurrenceIds = typedBookings.map((b) => b.occurrence_id);
+  const occurrenceIds = bookings.map((b) => b.occurrence_id);
 
   const { data: occurrences, error: occErr } = await client
     .from("coach_availability_slot_occurrences" as any)
@@ -106,35 +122,35 @@ const ensurePaymentRowsForSession = async (
     .in("id", occurrenceIds);
   if (occErr) throw occErr;
 
-  const typedOccurrences = occurrences as Array<{ id: string; price: number }> | null;
-  const occurrenceById = new Map((typedOccurrences || []).map((occ) => [occ.id, occ]));
+  const occurrenceById = new Map((occurrences || []).map((occ) => [occ.id, occ]));
 
-  const paymentRows = typedBookings
-    .filter((booking) => !alreadyRecorded.has(booking.id))
+  const paymentRows = bookings
     .map((booking) => {
       const occ = occurrenceById.get(booking.occurrence_id);
       if (!occ) return null;
       const baseAmount = Number(occ.price || 0);
       const platformFeeAmount = Number((baseAmount * platformFeePerc / 100).toFixed(2));
-      const stripeFeeAmount = Number((baseAmount * stripeFeePerc / 100).toFixed(2)); // estimated pricing
+      const stripeFeeAmount = Number((baseAmount * stripeFeePerc / 100).toFixed(2));
       const totalAmount = Number((baseAmount + platformFeeAmount + stripeFeeAmount).toFixed(2));
       return {
         booking_id: booking.id,
         slot_id: booking.occurrence_id,
         coach_offer_amount: baseAmount,
         platform_fee_amount: platformFeeAmount,
-        stripe_price_amount: stripeFeeAmount, // estimated pricing
+        stripe_price_amount: stripeFeeAmount,
         total_amount: totalAmount,
         currency: "USD",
         type: "booking_credit",
+        stripe_session_id: session.id,
+        stripe_payment_intent: paymentIntentId,
       };
     })
-    .filter((row) => Boolean(row)) as Array<Record<string, unknown>>;
+    .filter((row): row is Record<string, unknown> => Boolean(row));
 
   if (paymentRows.length) {
     const { error: paymentsInsertErr } = await client
       .from("payments" as any)
-      .insert(paymentRows as any);
+      .upsert(paymentRows as any, { onConflict: "booking_id" });
     if (paymentsInsertErr) throw paymentsInsertErr;
   }
 };
@@ -151,7 +167,8 @@ const getBookingIdsForSession = async (client: SupabaseClient, sessionId: string
 
 
 const callReconcileEndpointForBookings = async (bookingIds: string[]) => {
-  if (!bookingIds.length) return;
+  const uniqueIds = Array.from(new Set(bookingIds));
+  if (!uniqueIds.length) return;
 
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
@@ -163,13 +180,12 @@ const callReconcileEndpointForBookings = async (bookingIds: string[]) => {
 
   const url = `${supabaseUrl}/functions/v1/${RECONCILE_FUNCTION_NAME}`;
 
-  for (const booking_id of bookingIds) {
+  for (const booking_id of uniqueIds) {
     try {
       const resp = await fetch(url, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          // Call as server-to-server with service role
           "Authorization": `Bearer ${serviceRole}`,
         },
         body: JSON.stringify({ booking_id }),
@@ -187,29 +203,83 @@ const callReconcileEndpointForBookings = async (bookingIds: string[]) => {
   }
 };
 
+const callNotificationEndpointForBookings = async (bookingIds: string[]) => {
+  const uniqueIds = Array.from(new Set(bookingIds));
+  if (!uniqueIds.length) return;
+
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+
+  if (!supabaseUrl || !serviceRole) {
+    console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for notification call");
+    return;
+  }
+
+  const url = `${supabaseUrl}/functions/v1/${NOTIFICATION_FUNCTION_NAME}`;
+
+  for (const booking_id of uniqueIds) {
+    try {
+      const resp = await fetch(url, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${serviceRole}`,
+        },
+        body: JSON.stringify({ booking_id }),
+      });
+
+      const text = await resp.text();
+      if (!resp.ok) {
+        console.error("Notification failed for booking:", booking_id, resp.status, text);
+      } else {
+        console.log("Notification ok for booking:", booking_id, text);
+      }
+    } catch (e) {
+      console.error("Notification call error for booking:", booking_id, e);
+    }
+  }
+};
+
 const updateBookingPaymentStatus = async (
   session: Stripe.Checkout.Session,
   client: SupabaseClient,
-) => {
+): Promise<PaymentUpdateResult> => {
   const paid = isSessionPaid(session);
-
-  const { error: updErr } = await client
-    .from("coach_slot_bookings" as any)
-    .update({
-      status: paid ? "booked" : "pending_payment",
-      payment_status: paid ? "paid" : "unpaid",
-      stripe_session_id: session.id,
-      stripe_payment_intent: session.payment_intent || null,
-    })
-    .eq("stripe_session_id", session.id);
-
-  if (updErr) throw updErr;
-
-  if (paid) {
-    await ensurePaymentRowsForSession(session, client);
+  if (!paid) {
+    return { paid: false, newlyPaid: false, bookingIds: [] as string[] };
   }
 
-  return paid;
+  const paymentIntentId = extractPaymentIntentId(session);
+
+  const { data: updatedRows, error: updErr } = await client
+    .from("coach_slot_bookings" as any)
+    .update({
+      status: "booked",
+      payment_status: "paid",
+      stripe_session_id: session.id,
+      stripe_payment_intent: paymentIntentId,
+    })
+    .eq("stripe_session_id", session.id)
+    .neq("payment_status", "paid")
+    .select("id");
+  if (updErr) throw updErr;
+
+  const newlyPaidIds = (updatedRows || []).map((r) => r.id);
+
+  if (!newlyPaidIds.length) {
+    const { error: syncErr } = await client
+      .from("coach_slot_bookings" as any)
+      .update({
+        stripe_session_id: session.id,
+        stripe_payment_intent: paymentIntentId,
+      })
+      .eq("stripe_session_id", session.id);
+    if (syncErr) throw syncErr;
+  }
+
+  await ensurePaymentRowsForSession(session, client);
+
+  return { paid: true, newlyPaid: newlyPaidIds.length > 0, bookingIds: newlyPaidIds };
 };
 
 serve(async (req) => {
@@ -219,7 +289,6 @@ serve(async (req) => {
 
   const supabaseClient = createClient(
     Deno.env.get("SUPABASE_URL") ?? "",
-    // Use service role for server-side writes (RLS bypass)
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "",
   );
 
@@ -232,7 +301,6 @@ serve(async (req) => {
     const stripeSignature = req.headers.get("stripe-signature");
     const parsedBody = rawBody && !stripeSignature ? JSON.parse(rawBody) : {};
 
-    // GET verification by session_id
     if (req.method === "GET") {
       const url = new URL(req.url);
       const sessionId = url.searchParams.get("session_id");
@@ -247,24 +315,23 @@ serve(async (req) => {
         expand: ["payment_intent"],
       });
 
-      const paid = await updateBookingPaymentStatus(session, supabaseClient);
+      const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
 
-      if (paid) {
-        const bookingIds = await getBookingIdsForSession(supabaseClient, sessionId);
+      if (paid && newlyPaid) {
         await callReconcileEndpointForBookings(bookingIds);
+        await callNotificationEndpointForBookings(bookingIds);
       }
 
       return new Response(
         JSON.stringify({
           session_id: sessionId,
           payment_status: session.payment_status,
-          reconcile_called: paid,
+          reconcile_called: paid && newlyPaid,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
     }
 
-    // Webhook handling
     if (stripeSignature) {
       const webhookSecret = Deno.env.get("STRIPE_CHECKOUT_WEBHOOK_SECRET");
       if (!webhookSecret) {
@@ -290,11 +357,11 @@ serve(async (req) => {
 
         if (isSessionPaid(session)) {
           try {
-            const paid = await updateBookingPaymentStatus(session, supabaseClient);
+            const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
 
-            if (paid) {
-              const bookingIds = await getBookingIdsForSession(supabaseClient, session.id);
+            if (paid && newlyPaid) {
               await callReconcileEndpointForBookings(bookingIds);
+              await callNotificationEndpointForBookings(bookingIds);
             }
           } catch (updErr: any) {
             console.error("Failed to mark bookings paid:", updErr);
@@ -312,7 +379,6 @@ serve(async (req) => {
       });
     }
 
-    // Manual verification path
     if (parsedBody.session_id && typeof parsedBody.session_id === "string") {
       const sessionId = parsedBody.session_id;
 
@@ -320,18 +386,18 @@ serve(async (req) => {
         expand: ["payment_intent"],
       });
 
-      const paid = await updateBookingPaymentStatus(session, supabaseClient);
+      const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
 
-      if (paid) {
-        const bookingIds = await getBookingIdsForSession(supabaseClient, sessionId);
+      if (paid && newlyPaid) {
         await callReconcileEndpointForBookings(bookingIds);
+        await callNotificationEndpointForBookings(bookingIds);
       }
 
       return new Response(
         JSON.stringify({
           session_id: sessionId,
           payment_status: session.payment_status,
-          reconcile_called: paid,
+          reconcile_called: paid && newlyPaid,
         }),
         { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
       );
@@ -371,7 +437,6 @@ serve(async (req) => {
     }
     const athleteId = athlete_id.trim();
 
-    // Fetch occurrences
     const { data: occurrences, error: occErr } = await supabaseClient
       .from("coach_availability_slot_occurrences" as any)
       .select(
@@ -391,18 +456,19 @@ serve(async (req) => {
       throw new Error("Occurrences must belong to the same coach");
     }
 
-    // Capacity check
-    const { data: bookingCounts, error: countErr } = await supabaseClient
+    const defaultGroupCapacity = await fetchDefaultGroupCapacity(supabaseClient);
+    const { data: existingBookings, error: bookingsErr } = await supabaseClient
       .from("coach_slot_bookings" as any)
-      .select("occurrence_id, status")
+      .select("id, occurrence_id, athlete_id, status, stripe_session_id")
       .in("occurrence_id", occurrenceIds)
       .in("status", ["pending_payment", "booked", "completed"]);
-    if (countErr) throw countErr;
+    if (bookingsErr) throw bookingsErr;
 
-    const countMap = new Map<string, number>();
-    (bookingCounts || []).forEach((row) => {
-      const current = countMap.get(row.occurrence_id) || 0;
-      countMap.set(row.occurrence_id, current + 1);
+    const bookingsByOccurrence = new Map<string, any[]>();
+    (existingBookings || []).forEach((row) => {
+      const list = bookingsByOccurrence.get(row.occurrence_id) || [];
+      list.push(row);
+      bookingsByOccurrence.set(row.occurrence_id, list);
     });
 
     for (const occ of occurrences) {
@@ -410,28 +476,43 @@ serve(async (req) => {
         throw new Error(`Occurrence ${occ.id} is disabled`);
       }
       const capacity = occ.session_type === "group"
-        ? (occ.max_bookings_per_slot && occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : 50)
+        ? (occ.max_bookings_per_slot && occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : defaultGroupCapacity)
         : (occ.max_bookings_per_slot && occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : 1);
-      const currentCount = countMap.get(occ.id) || 0;
-      if (currentCount >= capacity) {
+      const bookingsForOcc = bookingsByOccurrence.get(occ.id) || [];
+      const currentCount = bookingsForOcc.length;
+      const myBookingForOcc = bookingsForOcc.find((b) => b.athlete_id === athleteId);
+      if (currentCount >= capacity && !myBookingForOcc) {
         throw new Error(`Occurrence on ${occ.occurrence_date} is fully booked`);
       }
     }
 
-    // Prevent duplicate booking by the same athlete for the same occurrence
-    const { data: existingAthleteBookings, error: existingBookingErr } = await supabaseClient
-      .from("coach_slot_bookings" as any)
-      .select("occurrence_id")
-      .in("occurrence_id", occurrenceIds)
-      .eq("athlete_id", athleteId)
-      .in("status", ["pending_payment", "booked", "completed"]);
-    if (existingBookingErr) throw existingBookingErr;
-    if (existingAthleteBookings && existingAthleteBookings.length > 0) {
+    const myBookings = (existingBookings || []).filter((b) => b.athlete_id === athleteId);
+    const hasPaidBooking = myBookings.some((b) => b.status === "booked" || b.status === "completed");
+    if (hasPaidBooking) {
       throw new Error("You already have a booking for this session.");
     }
 
-    // Fees
-    const { platformFeePerc, stripeFeePerc } = await fetchFeePercents(supabaseClient);
+    const myPendingBookings = myBookings.filter((b) => b.status === "pending_payment");
+    const pendingOccSet = new Set(myPendingBookings.map((b) => b.occurrence_id));
+    const coversAllPending = myPendingBookings.length > 0
+      && occurrenceIds.every((id) => pendingOccSet.has(id))
+      && pendingOccSet.size === occurrenceIds.length;
+    let reusingPendingBookings = false;
+
+    const { platformFeePerc: basePlatformFeePerc, stripeFeePerc } = await fetchFeePercents(supabaseClient);
+
+    // Platform fee waiver: confirmed offline coach-client relationship for this
+    // exact (coach, athlete) pair. This client is service-role (RLS bypassed);
+    // the query is scoped by the explicit filters. A query error falls through
+    // to the full fee (fails safe toward charging, never toward a discount).
+    const { data: waiverRow } = await supabaseClient
+      .from("coach_client_referrals" as any)
+      .select("id")
+      .eq("coach_id", coachId)
+      .eq("athlete_id", athleteId)
+      .eq("status", "confirmed")
+      .maybeSingle();
+    const platformFeePerc = waiverRow ? 0 : basePlatformFeePerc;
     const feeFactor = 1 + platformFeePerc / 100 + stripeFeePerc / 100;
 
     const totalBase = occurrences.reduce((sum, occ) => sum + Number(occ.price || 0), 0);
@@ -441,27 +522,35 @@ serve(async (req) => {
       throw new Error("Total amount must be greater than zero");
     }
 
-    // Insert bookings (pending)
-    const inserts = occurrences.map((occ) => ({
-      occurrence_id: occ.id,
-      weekly_slot_id: occ.weekly_slot_id,
-      availability_id: occ.availability_id,
-      coach_id: occ.coach_id,
-      athlete_id: athleteId,
-      status: "pending_payment",
-      payment_status: "unpaid",
-      notes: notes || null,
-      created_by: user.id,
-    }));
+    let bookingIds: string[] = [];
+    if (coversAllPending) {
+      reusingPendingBookings = true;
+      bookingIds = myPendingBookings.map((b) => b.id);
+    } else {
+      if (myPendingBookings.length) {
+        throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
+      }
 
-    const { data: bookingRows, error: bookingErr } = await supabaseClient
-      .from("coach_slot_bookings" as any)
-      .insert(inserts)
-      .select("id, occurrence_id");
-    if (bookingErr) throw bookingErr;
-    const bookingIds = (bookingRows || []).map((b) => b.id);
+      const inserts = occurrences.map((occ) => ({
+        occurrence_id: occ.id,
+        weekly_slot_id: occ.weekly_slot_id,
+        availability_id: occ.availability_id,
+        coach_id: occ.coach_id,
+        athlete_id: athleteId,
+        status: "pending_payment",
+        payment_status: "unpaid",
+        notes: notes || null,
+        created_by: user.id,
+      }));
 
-    // Create or find Stripe customer
+      const { data: bookingRows, error: bookingErr } = await supabaseClient
+        .from("coach_slot_bookings" as any)
+        .insert(inserts)
+        .select("id, occurrence_id");
+      if (bookingErr) throw bookingErr;
+      bookingIds = (bookingRows || []).map((b) => b.id);
+    }
+
     let customerId: string | undefined;
     if (user?.email) {
       const customers = await stripe.customers.list({ email: user.email, limit: 1 });
@@ -470,14 +559,13 @@ serve(async (req) => {
       }
     }
 
-    // Build line items per occurrence
     const line_items = occurrences.map((occ) => ({
       price_data: {
         currency: "usd",
         unit_amount: Math.round(Number(occ.price || 0) * feeFactor * 100),
         product_data: {
-          name: capitalizeFirst(occ.session_name) || "Coaching Session",
-          description: `${capitalizeFirst(occ.session_type || "session")} on ${occ.occurrence_date}`,
+          name: occ.session_name || "Coaching Session",
+          description: `${occ.session_type || "session"} on ${occ.occurrence_date}`,
         },
       },
       quantity: 1,
@@ -488,10 +576,11 @@ serve(async (req) => {
       session = await stripe.checkout.sessions.create({
         customer: customerId,
         customer_email: customerId ? undefined : user.email || undefined,
+        payment_method_types: ["card"],
         line_items,
         mode: "payment",
         success_url: `${req.headers.get("origin")}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${req.headers.get("origin")}/`,
+        cancel_url: `${req.headers.get("origin")}/coach/${coachId}`,
         metadata: {
           occurrence_ids: occurrenceIds.join(","),
           booking_ids: bookingIds.join(","),
@@ -504,18 +593,17 @@ serve(async (req) => {
         },
       });
     } catch (err) {
-      if (bookingIds.length) {
+      if (!reusingPendingBookings && bookingIds.length) {
         await supabaseClient.from("coach_slot_bookings" as any).delete().in("id", bookingIds);
       }
       throw err;
     }
 
-    // Persist session id on bookings
     const { error: updErr } = await supabaseClient
       .from("coach_slot_bookings" as any)
       .update({
         stripe_session_id: session.id,
-        stripe_payment_intent: session.payment_intent || null,
+        stripe_payment_intent: extractPaymentIntentId(session),
       })
       .in("id", bookingIds);
     if (updErr) throw updErr;
