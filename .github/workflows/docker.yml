@@ -3,16 +3,48 @@ name: Docker
 on:
   push:
     branches: [main]
-    tags: ["v*"]
   pull_request:
     branches: [main]
 
 permissions:
-  contents: read
+  contents: write
   packages: write
 
 jobs:
+  # Bumps a semver git tag from Conventional Commit messages (feat -> minor,
+  # fix/other -> patch, "BREAKING CHANGE"/"!" -> major) on every merge to
+  # main. Skipped on PRs, which don't get a version.
+  version:
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      new_tag: ${{ steps.tag.outputs.new_tag }}
+      major_minor: ${{ steps.short.outputs.major_minor }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Bump semver tag
+        id: tag
+        uses: mathieudutour/github-tag-action@v6.2
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          default_bump: patch
+          release_branches: main
+
+      - name: Derive major.minor
+        id: short
+        env:
+          NEW_TAG: ${{ steps.tag.outputs.new_tag }}
+        run: echo "major_minor=${NEW_TAG%.*}" >> "$GITHUB_OUTPUT"
+
   build-push:
+    needs: [version]
+    # Tags pushed with GITHUB_TOKEN don't trigger their own workflow run, so
+    # this job consumes the version job's output directly instead of relying
+    # on a second, tag-triggered run.
+    if: always() && (github.event_name == 'pull_request' || needs.version.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -33,10 +65,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: |
-            type=raw,value=latest,enable={{is_default_branch}}
+            type=raw,value=latest,enable=${{ github.event_name == 'push' }}
             type=sha
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
+            type=raw,value=${{ needs.version.outputs.new_tag }},enable=${{ github.event_name == 'push' }}
+            type=raw,value=${{ needs.version.outputs.major_minor }},enable=${{ github.event_name == 'push' }}
 
       - name: Build and push
         uses: docker/build-push-action@v6
