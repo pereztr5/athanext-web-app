@@ -11,6 +11,7 @@ interface DateRangePickerProps {
   minStartDate?: Date;
   disabled?: boolean;
   className?: string;
+  variant?: "default" | "cream" | "modal";
   startLabel?: string;
   endLabel?: string;
   badgeText?: string;
@@ -24,10 +25,19 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   minStartDate,
   disabled = false,
   className,
+  variant = "default",
   startLabel,
   endLabel,
   badgeText,
 }) => {
+  const modal = variant === "modal";
+  const cream = variant === "cream";
+  const fieldClass = modal
+    ? "h-[38px] w-[150px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none focus-visible:ring-0"
+    : cream
+      ? "h-auto w-[148px] rounded-[8px] border-[#EAEADF] bg-[#F1F1E6] px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]"
+      : "w-32 md:w-40";
+
   const minEndDate = React.useMemo(() => {
     const minEnd = new Date(startDate);
     minEnd.setDate(minEnd.getDate() + minDays);
@@ -84,25 +94,31 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           type="date"
           value={formatDateForInput(startDate)}
           onChange={(e) => handleStartChange(e.target.value)}
-          className="w-32 md:w-40"
+          className={fieldClass}
           disabled={disabled}
           min={minStartDate ? formatDateForInput(minStartDate) : undefined}
         />
       </div>
-      <span className="text-gray-500">to</span>
+      <span className={modal ? "text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980]" : cream ? "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]" : "text-gray-500"}>to</span>
       <div className="flex items-center gap-2">
         {endLabel && <span className="text-sm text-gray-700">{endLabel}</span>}
         <Input
           type="date"
           value={formatDateForInput(endDate)}
           onChange={(e) => handleEndChange(e.target.value)}
-          className="w-32 md:w-40"
+          className={fieldClass}
           disabled={disabled}
           min={formatDateForInput(minEndDate)}
         />
       </div>
       {badgeText && (
-        <span className="text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full border border-blue-100">
+        <span
+          className={
+            modal
+              ? "rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]"
+              : "text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full border border-blue-100"
+          }
+        >
           {badgeText}
         </span>
       )}

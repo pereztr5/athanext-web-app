@@ -5,11 +5,11 @@ import { AppTopBar } from "@/components/app-shell/AppTopBar";
 
 export const AppLayout = () => {
   return (
-    <SidebarProvider>
+    <SidebarProvider className="bg-[#F1F1E6]">
       <AppSidebar />
-      <SidebarInset className="bg-app-background">
+      <SidebarInset className="min-w-0 overflow-x-hidden bg-[#F1F1E6]">
         <AppTopBar />
-        <main className="flex-1">
+        <main className="min-w-0 flex-1 overflow-x-hidden">
           <Outlet />
         </main>
       </SidebarInset>

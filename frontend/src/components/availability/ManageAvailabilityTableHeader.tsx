@@ -1,31 +1,23 @@
 /**
  * ManageAvailabilityTableHeader Component
- * Reusable header component for manage availability table
+ * Header for the add/edit availability slot editor.
  */
 
-interface ManageAvailabilityTableHeaderProps {
-  compact?: boolean;
-}
-
-export const ManageAvailabilityTableHeader = ({ compact = false }: ManageAvailabilityTableHeaderProps) => {
-  const verticalPadding = compact ? 'py-2' : 'py-3';
-  const cellClass = `${compact ? 'px-2' : 'px-4'} ${verticalPadding} text-left text-sm font-semibold text-gray-700`;
-  const priceClass = compact ? 'w-16' : 'w-20';
-  const locationClass = compact ? 'w-28' : '';
-
+export const ManageAvailabilityTableHeader = () => {
+  const cell = "px-0 py-3 text-left text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]";
   return (
-    <thead className="bg-gray-50 border-b sticky top-0 z-10">
-      <tr>
-        <th className={cellClass}>Day</th>
-        <th className={cellClass}>Session Name</th>
-        <th className={cellClass}>Pillar</th>
-        <th className={`${cellClass} ${priceClass}`}>Session Price</th>
-        <th className={cellClass}>Duration</th>
-        <th className={cellClass}>Start Time</th>
-        <th className={cellClass}>End Time</th>
-        <th className={cellClass}>Type</th>
-        <th className={`${cellClass} ${locationClass}`}>Location</th>
-        <th className={cellClass}>Actions</th>
+    <thead>
+      <tr className="border-b border-[#EAEADF]">
+        <th className={cell}>Day</th>
+        <th className={cell}>Session name</th>
+        <th className={cell}>Pillar</th>
+        <th className={cell}>Price</th>
+        <th className={cell}>Duration</th>
+        <th className={cell}>Start time</th>
+        <th className={cell}>End time</th>
+        <th className={cell}>Type</th>
+        <th className={cell}>Location</th>
+        <th className={cell}>Actions</th>
       </tr>
     </thead>
   );

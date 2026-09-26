@@ -20,14 +20,27 @@ export default {
 		},
 		extend: {
 			fontFamily: {
-				'inter': ['Inter', 'sans-serif'],
+				sans: ['"DM Sans"', 'Inter', 'system-ui', 'sans-serif'],
+				inter: ['Inter', 'sans-serif'],
+				dm: ['"DM Sans"', 'Inter', 'sans-serif'],
+			},
+			fontSize: {
+				'page-title': ['32px', { lineHeight: '38px', fontWeight: '700' }],
+				highlight: ['28px', { lineHeight: '30px', fontWeight: '700' }],
+				section: ['24px', { lineHeight: '30px', fontWeight: '600' }],
+				'card-title': ['20px', { lineHeight: '24px', fontWeight: '500' }],
+				subtitle: ['16px', { lineHeight: '18px', fontWeight: '500' }],
+				'body-l': ['16px', { lineHeight: '18px', fontWeight: '400' }],
+				'body-m': ['14px', { lineHeight: '18px', fontWeight: '400' }],
+				'body-sm': ['12px', { lineHeight: '14px', fontWeight: '400' }],
+				stat: ['32px', { lineHeight: '30px', fontWeight: '700' }],
 			},
 			colors: {
 				border: 'hsl(var(--border))',
 				input: 'hsl(var(--input))',
 				ring: 'hsl(var(--ring))',
 				background: 'hsl(var(--background))',
-				'app-background': 'hsl(var(--app-background))',
+				'app-background': '#F1F1E6',
 				'app-pill': {
 					DEFAULT: 'hsl(var(--app-pill))',
 					foreground: 'hsl(var(--app-pill-foreground))'

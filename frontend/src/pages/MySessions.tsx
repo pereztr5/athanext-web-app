@@ -4,26 +4,23 @@ import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
-  AlertTriangle,
-  ArrowLeft,
   Calendar,
-  CalendarClock,
+  CalendarCheck,
   ChevronDown,
   Clock,
-  Clock4,
   Filter,
+  History,
+  Info,
   MapPin,
   PlayCircle,
   Search,
   Users,
-  Home as HomeIcon,
 } from "lucide-react";
 
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import {
   Dialog,
   DialogContent,
@@ -31,7 +28,6 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
 import { capitalizeFirst, cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -82,15 +78,15 @@ const AthleteList = memo(({ athletes, totalAthletes }: { athletes: { id: string;
       {visibleAthletes.map((athlete) => (
         <div
           key={athlete.id}
-          className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-2 py-1 shadow-sm"
+          className="flex items-center gap-2 rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2"
         >
-          <Avatar className="h-8 w-8 border">
+          <Avatar className="h-[22px] w-[22px] rounded-[3px]">
             <AvatarImage src={athlete.avatar ?? getAvatarUrlFromName(athlete.name)} alt={athlete.name} />
-            <AvatarFallback className="bg-slate-100 text-slate-700 text-xs">
+            <AvatarFallback className="rounded-[3px] bg-[#C1C1B8] text-[10px] font-medium text-[#484D56]">
               {getInitialsFromName(athlete.name)}
             </AvatarFallback>
           </Avatar>
-          <span className="text-xs font-medium text-slate-700 pr-1">{athlete.name}</span>
+          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">{athlete.name}</span>
         </div>
       ))}
       {remainingCount > 0 && (
@@ -138,198 +134,133 @@ const SessionCard = ({
   stripeFeePerc?: number;
 }) => {
   const startMeta = session.computedStatus === "upcoming" ? getStartMeta(session.start, now) : null;
-  const isUrgent = Boolean(startMeta?.isUrgent && startMeta.countdown);
-  const isInProgress = session.computedStatus === "in-progress";
-  const statusBadge =
-    session.computedStatus === "in-progress"
-      ? { label: "Session in progress", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
-      : session.computedStatus === "completed"
-      ? { label: "Completed", color: "bg-emerald-50 text-emerald-700 border-emerald-200" }
-      : { label: "Upcoming", color: "bg-blue-50 text-blue-700 border-blue-200" };
+  const personLabel =
+    role === PROFILE_TYPE.coach
+      ? session.athleteNamesDisplay && session.athleteNamesDisplay !== "No athletes"
+        ? session.athleteNamesDisplay
+        : ""
+      : session.coachName || "";
+  const placeLabel = formatLocationDisplay(session.location);
+  const timingLabel = startMeta?.startsIn
+    ? `${placeLabel} · Starting in ${startMeta.startsIn}`
+    : placeLabel;
+  const price = formatSessionPrice(
+    role === PROFILE_TYPE.athlete
+      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate
+      : session.rate,
+    session.currency
+  );
+  const typeChipClass = cn(
+    "inline-flex h-7 items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
+    session.type === "group"
+      ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
+      : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
+  );
 
-  const palette = isInProgress
-    ? {
-        border: "border-emerald-300",
-        background: "bg-gradient-to-br from-emerald-50 via-white to-emerald-50/40",
-        bar: "bg-emerald-100/80 border-emerald-200 text-emerald-800",
-        icon: "text-emerald-600",
-        rateBg: "bg-white/70 border-emerald-200",
-        rateText: "text-emerald-700",
-        button: "bg-emerald-600 hover:bg-emerald-700 shadow-[0_8px_18px_rgba(16,185,129,0.25)]",
-      }
-    : {
-        border: isUrgent ? "border-rose-200" : "border-blue-100",
-        background: isUrgent
-          ? "bg-gradient-to-br from-rose-50 via-orange-50 to-white"
-          : "bg-gradient-to-br from-white via-slate-50 to-blue-50/50",
-        bar: isUrgent ? "bg-rose-50 border-rose-200 text-rose-700" : "bg-blue-50 border-blue-200 text-blue-700",
-        icon: isUrgent ? "text-rose-600" : "text-blue-600",
-        rateBg: "bg-blue-50 border-blue-100",
-        rateText: "text-blue-700",
-        button: isUrgent
-          ? "bg-rose-600 hover:bg-rose-700"
-          : "bg-blue-600 hover:bg-blue-700 shadow-[0_8px_18px_rgba(37,99,235,0.22)]",
-      };
+  if (role === PROFILE_TYPE.coach) {
+    const coachDate = new Intl.DateTimeFormat("en-US", {
+      month: "long",
+      day: "numeric",
+      year: "numeric",
+    }).format(new Date(`${session.dateOnly}T12:00:00`));
+    const athlete = session.athletes[0];
+    const photo = athlete?.avatar && !athlete.avatar.includes("dicebear.com") ? athlete.avatar : null;
 
-  const hasSubmittedFeedback = (session: UISession): boolean => {
-    // Server flags are source of truth: coach uses session-level, athlete uses slot-level
-    return role === PROFILE_TYPE.coach ? Boolean(session.hasSessionFeedback) : Boolean(session.hasSlotFeedback);
-  };
-  const feedbackSubmitted = hasSubmittedFeedback(session);
-  return (
-    <Card
-      className={cn(
-        "rounded-2xl border transition-all cursor-pointer shadow-none",
-        palette.border,
-        palette.background
-      )}
-      onClick={() => onSelect(session)}
-    >
-      <CardContent className="pt-5 space-y-4">
-        {isUrgent && (
-          <div className={cn("flex items-center gap-2 text-sm rounded-xl px-3 py-2", palette.bar)}>
-            <AlertTriangle className={cn("h-4 w-4", palette.icon)} />
-            <span className="font-medium">Urgent: Session starting soon!</span>
-            {startMeta?.countdown && (
-              <Badge className="ml-auto bg-white text-rose-700 border-rose-200">
-                {startMeta.countdown}
-              </Badge>
-            )}
-          </div>
-        )}
-        {isInProgress && (
-          <div className="rounded-xl bg-emerald-100/80 border border-emerald-200 text-emerald-800 px-4 py-2 flex items-center gap-2">
-            <span className="h-2 w-2 rounded-full bg-emerald-600" />
-            <span className="text-sm font-medium">Session in progress</span>
-          </div>
-        )}
-        <div className="flex flex-col lg:grid lg:grid-cols-[1.3fr_1.1fr_auto] lg:items-start lg:gap-6 gap-5">
-          <div className="space-y-3">
-            <div className="flex items-center flex-wrap gap-2">
-              <p className="text-lg font-semibold text-slate-900">{capitalizeFirst(session.title)}</p>
-              <Badge variant="outline" className="rounded-full bg-slate-100 text-slate-700">
-                {capitalizeFirst(session.type)}
-              </Badge>
-              {!isInProgress && (
-                <Badge className={cn("rounded-full border", statusBadge.color)}>{statusBadge.label}</Badge>
-              )}
-              {startMeta?.startsIn && !isUrgent && !isInProgress && (
-                <Badge className="rounded-full bg-amber-50 text-amber-700 border-amber-200 flex items-center gap-1">
-                  <Clock4 className="h-4 w-4" />
-                  Starting in {startMeta.startsIn}
-                </Badge>
-              )}
-            </div>
-            <div className="flex items-start gap-2 text-sm text-muted-foreground">
-              <CalendarClock className={cn("h-4 w-4", palette.icon)} />
-              <div className="space-y-0.5">
-                <span className="text-xs text-muted-foreground">Date &amp; Time</span>
-                <div className="text-sm text-slate-800">
-                  <div>{formatSessionDate(session.dateOnly)}</div>
-                  <div>{session.timeRange}</div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-start gap-2 text-sm text-muted-foreground">
-              <Users className={cn("h-4 w-4", palette.icon)} />
-              <div className="space-y-2 w-full">
-                {role === PROFILE_TYPE.coach ? (
-                  <>
-                    <div className="text-xs text-muted-foreground">
-                      Athletes ({session.totalAthletes})
-                    </div>
-                    <AthleteList athletes={session.athletes} totalAthletes={session.totalAthletes} />
-                  </>
-                ) : (
-                  <>
-                    <div className="text-xs text-muted-foreground">Coach</div>
-                    {session.coachName && (
-                      <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
-                        <Avatar className="h-6 w-6 border border-slate-200">
-                          <AvatarImage
-                            src={session.coachAvatar ?? getAvatarUrlFromName(session.coachName || "Coach")}
-                            alt={session.coachName}
-                          />
-                          <AvatarFallback className="bg-slate-100 text-slate-700 text-[10px]">
-                            {getInitialsFromName(session.coachName || "Coach")}
-                          </AvatarFallback>
-                        </Avatar>
-                        <span className="text-sm font-medium text-slate-900">{session.coachName}</span>
-                      </div>
-                    )}
-                  </>
-                )}
-              </div>
-            </div>
-          </div>
-
-          <div className="space-y-3">
-            <div className="flex items-start gap-2 text-sm text-muted-foreground">
-              <MapPin className={cn("h-4 w-4", palette.icon)} />
-              <div className="space-y-0.5">
-                <span className="text-xs text-muted-foreground">Location Type</span>
-                <div className="text-sm text-slate-800">{formatLocationDisplay(session.location)}</div>
-              </div>
-            </div>
-            {session.pillarSlot && (
-              <div className="flex items-start gap-2 text-sm text-muted-foreground">
-                {(() => {
-                  const PillarIcon = resolvePillarIcon(session.pillarSlot);
-                  return <PillarIcon className={cn("h-4 w-4", palette.icon)} />;
-                })()}
-                <div className="space-y-0.5">
-                  <span className="text-xs text-muted-foreground">Pillar</span>
-                  <div className="text-sm text-slate-800">{session.pillarSlot}</div>
-                </div>
-              </div>
-            )}
-          </div>
-
-          <div className="flex flex-col items-start lg:items-end gap-3 min-w-[180px]">
-            <div
-              className={cn(
-                "rounded-xl px-4 py-3 text-right border shadow-sm",
-                palette.rateBg
-              )}
-            >
-              {role === PROFILE_TYPE.athlete ? (
-                <div className="space-y-1">
-                  <p className={cn("text-xs", palette.rateText)}>Rate (per athlete)</p>
-                  <p className={cn("text-lg font-semibold", palette.rateText)}>
-                    {formatSessionPrice(calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate, session.currency)}
-                  </p>
-                </div>
-              ) : (
-                <>
-                  <p className={cn("text-xs", palette.rateText)}>
-                    Rate
-                  </p>
-                  <p className={cn("text-lg font-semibold", palette.rateText)}>
-                    {formatSessionPrice(session.rate, session.currency)}
-                  </p>
-                  <p className="text-[11px] text-muted-foreground">per Athlete</p>
-                </>
-              )}
-            </div>
-          <div className="flex flex-col gap-2">
-              <Button
-                className={cn(
-                  "rounded-full h-10 min-w-[160px] px-5 text-sm font-semibold flex items-center justify-center",
-                  palette.button
-                )}
-                onClick={(event) => {
-                  event.stopPropagation();
-                  onSelect(session);
-                }}
-            >
-              View Details
-            </Button>
-
-          </div>
+    return (
+      <button
+        type="button"
+        onClick={() => onSelect(session)}
+        className="flex w-full flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-6 text-left md:h-[136px] md:flex-row md:items-center md:gap-0 md:py-0"
+      >
+        <div className="flex w-full shrink-0 flex-col gap-2 md:w-[180px]">
+          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+            {capitalizeFirst(session.title)}
+          </p>
+          <span className={cn(typeChipClass, "w-fit")}>{session.type}</span>
         </div>
+        <div className="flex w-full shrink-0 flex-col gap-[5px] md:w-[266px]">
+          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.8px] text-[#1A202C]">{coachDate}</p>
+          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+            {session.timeRange.replace(" - ", " – ")}
+          </p>
+        </div>
+        <div className="w-full shrink-0 md:w-[145px]">
+          {athlete ? (
+            <span className="inline-flex items-center gap-[5px] rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
+              <span className="inline-flex size-[22px] items-center justify-center overflow-hidden rounded-[3px] bg-[#C1C1B8] text-[9px] font-medium text-[#484D56]">
+                {photo ? (
+                  <img src={photo} alt="" className="size-full object-cover" />
+                ) : (
+                  getInitialsFromName(athlete.name)
+                )}
+              </span>
+              <span className="truncate text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+                {athlete.name}
+              </span>
+            </span>
+          ) : null}
+        </div>
+        <div className="w-full shrink-0 md:w-[240px]">
+          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{timingLabel}</p>
+        </div>
+        <div className="flex shrink-0 flex-col items-start gap-[9px] md:ml-auto md:items-end">
+          <div className="md:text-right">
+            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
+            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
+          </div>
+          <span className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]">
+            View Details
+          </span>
+        </div>
+      </button>
+    );
+  }
+
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect(session)}
+      className="flex w-full flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px] text-left md:flex-row md:items-end md:justify-between"
+    >
+      <div className="flex min-w-0 flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-[5px]">
+          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+            {capitalizeFirst(session.title)}
+          </p>
+          <span
+            className={cn(
+              "inline-flex items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
+              session.type === "group"
+                ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
+                : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
+            )}
+          >
+            {session.type}
+          </span>
+        </div>
+        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+          {formatSessionDate(session.dateOnly)}
+        </p>
+        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+          {session.timeRange}
+        </p>
+        {personLabel ? (
+          <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+            {personLabel}
+          </p>
+        ) : null}
+        <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{timingLabel}</p>
       </div>
-      </CardContent>
-    </Card>
+      <div className="flex shrink-0 flex-col items-start gap-[10px] md:items-end">
+        <div className="md:text-right">
+          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
+          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
+        </div>
+        <span className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]">
+          View details
+        </span>
+      </div>
+    </button>
   );
 };
 
@@ -354,159 +285,111 @@ const PastDraftCard = ({
   platformFeePerc?: number;
   stripeFeePerc?: number;
 }) => {
-  const badgeColor = session.computedStatus === "completed"
-    ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-    : "bg-emerald-50 text-emerald-700 border-emerald-200";
+  const price = formatSessionPrice(
+    role === PROFILE_TYPE.athlete
+      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate
+      : session.rate,
+    session.currency
+  );
+  const openDetails = () => {
+    if (session.computedStatus === "past" || session.computedStatus === "completed") {
+      if (role === PROFILE_TYPE.coach) {
+        onPastNavigate(session);
+        return;
+      }
+    }
+    onSelect(session);
+  };
+
   return (
     <Card
-      className="border border-slate-200 rounded-2xl cursor-pointer shadow-none"
-      onClick={() => {
-        if (session.computedStatus === "past" || session.computedStatus === "completed") {
-          if (role === PROFILE_TYPE.coach) {
-            onPastNavigate(session);
-          } else {
-            onSelect(session);
-          }
-        } else {
-          onSelect(session);
-        }
-      }}
+      className="cursor-pointer rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none"
+      onClick={openDetails}
     >
-      <CardContent className="py-4 px-5">
-        <div className="flex flex-col md:flex-row md:justify-between gap-4">
-          <div className="space-y-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <p className="text-base font-semibold text-slate-900">{capitalizeFirst(session.title)}</p>
-              <Badge variant="outline" className="rounded-full bg-slate-100 text-slate-700">
-                {capitalizeFirst(session.type)}
-              </Badge>
-              <Badge className={cn("rounded-full border", badgeColor)}>
-                {session.computedStatus === "completed" ? "Completed" : "Past"}
-              </Badge>
+      <CardContent className="px-[25px] py-[30px]">
+        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <div className="flex flex-wrap items-center gap-[5px]">
+              <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+                {capitalizeFirst(session.title)}
+              </p>
+              <span
+                className={cn(
+                  "inline-flex items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
+                  session.type === "group"
+                    ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
+                    : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
+                )}
+              >
+                {session.type}
+              </span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <CalendarClock className="h-4 w-4" />
-                <span>
-                  {formatSessionDate(session.dateOnly)} • {session.timeRange}
+            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+              {formatSessionDate(session.dateOnly)}
+            </p>
+            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+              {session.timeRange}
+              {session.location ? ` · ${formatLocationDisplay(session.location)}` : ""}
+              {session.pillarSlot ? ` · ${session.pillarSlot}` : ""}
+            </p>
+            {role === PROFILE_TYPE.coach ? (
+              <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+                {session.totalAthletes} {session.totalAthletes === 1 ? "athlete" : "athletes"}
+              </p>
+            ) : null}
+            {role === PROFILE_TYPE.coach ? (
+              <AthleteList athletes={session.athletes} totalAthletes={session.totalAthletes} />
+            ) : null}
+            {role === PROFILE_TYPE.athlete && session.coachName ? (
+              <div className="inline-flex w-fit items-center gap-2 rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
+                <Avatar className="h-[22px] w-[22px] rounded-[3px]">
+                  <AvatarImage
+                    src={session.coachAvatar ?? getAvatarUrlFromName(session.coachName || "Coach")}
+                    alt={session.coachName}
+                  />
+                  <AvatarFallback className="rounded-[3px] bg-[#C1C1B8] text-[10px] font-medium text-[#484D56]">
+                    {getInitialsFromName(session.coachName || "Coach")}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+                  {session.coachName}
                 </span>
               </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="h-4 w-4" />
-                <span>{formatLocationDisplay(session.location)}</span>
-              </div>
-              {session.pillarSlot && (
-                <div className="flex items-center gap-2">
-                  {(() => {
-                    const PillarIcon = resolvePillarIcon(session.pillarSlot);
-                    return <PillarIcon className="h-4 w-4" />;
-                  })()}
-                  <span>{session.pillarSlot}</span>
-                </div>
-              )}
-              {role === PROFILE_TYPE.coach && (
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4" />
-                  <span>
-                    {session.totalAthletes} {session.totalAthletes === 1 ? "Athlete" : "Athletes"}
-                  </span>
-                </div>
-              )}
-            </div>
-            {role === PROFILE_TYPE.coach && (
-              <AthleteList athletes={session.athletes} totalAthletes={session.totalAthletes} />
-            )}
-            {role === PROFILE_TYPE.athlete && session.coachName && (
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-2">
-                  <Users className="h-4 w-4 text-slate-400" />
-                  <span className="text-xs text-muted-foreground">Coach</span>
-                </div>
-                <div className="inline-flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5 shadow-sm">
-                  <Avatar className="h-6 w-6 border border-slate-200">
-                    <AvatarImage
-                      src={session.coachAvatar ?? getAvatarUrlFromName(session.coachName || "Coach")}
-                      alt={session.coachName}
-                    />
-                    <AvatarFallback className="bg-slate-100 text-slate-700 text-[10px]">
-                      {getInitialsFromName(session.coachName || "Coach")}
-                    </AvatarFallback>
-                  </Avatar>
-                  <span className="text-sm font-medium text-slate-900">{session.coachName}</span>
-                </div>
-              </div>
-            )}
+            ) : null}
           </div>
-          <div className="flex flex-col items-start md:items-end gap-2 min-w-[140px]">
-            {role === PROFILE_TYPE.athlete ? (
-              <div className="text-right space-y-1">
-                <p className="text-xs text-muted-foreground">Total per Athlete</p>
-                <p className="text-sm font-semibold text-slate-800">
-                  {formatSessionPrice(calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate, session.currency)}
-                </p>
-              </div>
-            ) : (
-              <div className="text-right">
-                <p className="text-sm font-semibold text-slate-800">
-                  {formatSessionPrice(session.rate, session.currency)}
-                  <span className="text-xs text-muted-foreground">/Athlete</span>
-                </p>
-              </div>
-            )}
+          <div className="flex shrink-0 flex-col items-start gap-[10px] md:items-end">
+            <div className="md:text-right">
+              <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
+              <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
+            </div>
             <div className="flex flex-col gap-2">
+              <button
+                type="button"
+                className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]"
+                onClick={(event) => {
+                  event.stopPropagation();
+                  openDetails();
+                }}
+              >
+                View details
+              </button>
               {(session.computedStatus === "past" || session.computedStatus === "completed") ? (
-                <>
-                  <Button
-                    className="rounded-full h-10 min-w-[160px] px-4 flex items-center justify-center text-white gap-2 bg-primary"
-                    variant="outline"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (role === PROFILE_TYPE.coach) {
-                        onPastNavigate(session);
-                      } else {
-                        onSelect(session);
-                      }
-                    }}
-                  >
-                    View Details
-                  </Button>
-                  <Button
-                    className={cn(
-                      "rounded-full h-10 min-w-[160px] px-4 flex items-center justify-center gap-2",
-                      hasFeedbackSubmitted && "bg-green-50 border-green-200 text-green-700"
-                    )}
-                    variant="outline"
-                    onClick={(event) => {
-                      event.stopPropagation();
-                      if (session.id) {
-                        onFeedbackNavigate(session.id, session);
-                      }
-                    }}
-                  >
-                    {hasFeedbackSubmitted ? (
-                      <>
-                        <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                        </svg>
-                        View Feedback
-                      </>
-                    ) : (
-                      "Add Feedback"
-                    )}
-                  </Button>
-                </>
-              ) : (
-                <Button
-                  className="rounded-full h-10 min-w-[160px] px-4 flex items-center justify-center gap-2"
-                  variant="outline"
+                <button
+                  type="button"
+                  className={cn(
+                    "inline-flex items-center justify-center gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]",
+                    hasFeedbackSubmitted && "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
+                  )}
                   onClick={(event) => {
                     event.stopPropagation();
-                    onSelect(session);
+                    if (session.id) {
+                      onFeedbackNavigate(session.id, session);
+                    }
                   }}
                 >
-                  View Details
-                </Button>
-              )}
+                  {hasFeedbackSubmitted ? "View feedback" : "Add feedback"}
+                </button>
+              ) : null}
             </div>
           </div>
         </div>
@@ -514,6 +397,44 @@ const PastDraftCard = ({
     </Card>
   );
 };
+
+const EmptySessionNote = ({ children }: { children: string }) => (
+  <div className="flex items-center gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
+    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#F4F4EB] text-[#A3A6AB]">
+      <Info className="size-4" strokeWidth={1.75} />
+    </span>
+    <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#A3A6AB]">{children}</p>
+  </div>
+);
+
+const SessionGroup = ({
+  iconBg,
+  icon,
+  title,
+  titleClass,
+  count,
+  countClass,
+  empty,
+  children,
+}: {
+  iconBg: string;
+  icon: ReactNode;
+  title: string;
+  titleClass: string;
+  count: number;
+  countClass: string;
+  empty: string;
+  children: ReactNode;
+}) => (
+  <section className="flex flex-col gap-[14px]">
+    <div className="flex items-center gap-[10px]">
+      <span className={cn("inline-flex size-8 items-center justify-center rounded-[10px]", iconBg)}>{icon}</span>
+      <h2 className={cn("text-[20px] font-medium leading-[18px] tracking-[-1px]", titleClass)}>{title}</h2>
+      <p className={cn("text-[16px] font-medium leading-none tracking-[-0.8px]", countClass)}>{count}</p>
+    </div>
+    {count > 0 ? <div className="flex flex-col gap-[14px]">{children}</div> : <EmptySessionNote>{empty}</EmptySessionNote>}
+  </section>
+);
 
 const MySessions = () => {
   const navigate = useNavigate();
@@ -530,8 +451,6 @@ const MySessions = () => {
   });
   const [now, setNow] = useState(() => new Date());
   const [selectedSession, setSelectedSession] = useState<UISession | null>(null);
-  const [upcomingOpen, setUpcomingOpen] = useState(true);
-  const [pastOpen, setPastOpen] = useState(true);
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [rateSession, setRateSession] = useState<UISession | null>(null);
   const [rating, setRating] = useState(0);
@@ -826,9 +745,6 @@ const MySessions = () => {
   }, [role, sportPillars, uniquePillars]);
 
   const filteredSessions = useMemo(() => filterSessions(filters), [filterSessions, filters]);
-  const searchPlaceholder = role === PROFILE_TYPE.athlete
-    ? "Search Sessions or Coaches..."
-    : "Search Sessions or Athletes...";
 
   const filteredGrouped = useMemo(() => {
     return {
@@ -963,31 +879,6 @@ const MySessions = () => {
   }, [selectedSessionSafe, now]);
 
 
-  const SectionHeader = ({
-    icon,
-    title,
-    count,
-    color,
-  }: {
-    icon: ReactNode;
-    title: string;
-    count: number;
-    color: "emerald" | "blue" | "slate";
-  }) => {
-    const colorMap = {
-      emerald: "text-emerald-700",
-      blue: "text-blue-700",
-      slate: "text-slate-600",
-    };
-    return (
-      <div className="flex items-center gap-2">
-        <span className={cn("h-5 w-5", colorMap[color])}>{icon}</span>
-        <p className={cn("text-base font-semibold", colorMap[color])}>{title}</p>
-        <span className={cn("text-sm font-semibold", colorMap[color])}>{count}</span>
-      </div>
-    );
-  };
-
   const hasSubmittedFeedback = (session: UISession) => {
     // Server flags are source of truth: coach uses session-level, athlete uses slot-level
     return role === PROFILE_TYPE.coach ? Boolean(session.hasSessionFeedback) : Boolean(session.hasSlotFeedback);
@@ -1004,265 +895,216 @@ const MySessions = () => {
     return null;
   }
 
+  const fieldLabel = "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]";
+  const selectClass = (isPlaceholder: boolean) =>
+    cn(
+      "w-full appearance-none rounded-[8px] border-0 bg-[#F1F1E6] p-[10px] pr-8 text-[14px] font-normal leading-[18px] tracking-[-0.42px] outline-none",
+      isPlaceholder ? "text-[#A3A6AB]" : "text-[#1A202C]"
+    );
+  const dateLabel = filters.date
+    ? filters.date.split("-").reverse().join(".")
+    : "dd.mm.yyyy";
+
   return (
-    <div className="pt-6 pb-40 px-4 lg:px-6">
-      <div className="max-w-6xl mx-auto space-y-6">
-        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              className="rounded-full gap-2"
-              onClick={() => {
-                if (window.history.length > 2) {
-                  navigate(-1);
-                } else {
-                  navigate(ROUTES.HOME);
-                }
-              }}
-            >
-              <ArrowLeft className="h-4 w-4" />
-              <span>Back</span>
-            </Button>
-            <Button
-              variant="outline"
-              className="rounded-full gap-2"
-              onClick={() => navigate(ROUTES.HOME)}
-            >
-              <HomeIcon />
-              <span>Home</span>
-            </Button>
-          </div>
-          <div className="space-y-1 text-left sm:text-right">
-            <h1 className="text-3xl font-semibold text-slate-900">My Sessions</h1>
-            <p className="text-sm text-muted-foreground">
-              Review and provide feedback for your sessions.
-            </p>
-          </div>
+    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+        <div className="flex flex-col gap-[10px]">
+          <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
+            My sessions
+          </h1>
+          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+            Review and provide feedback for you sessions
+          </p>
         </div>
 
-        <Card className="shadow-[0_14px_40px_rgba(15,23,42,0.08)] border border-slate-200 rounded-2xl">
-          <CardHeader className="pb-3 flex-row items-center gap-2">
-            <Filter className="h-4 w-4 text-muted-foreground" />
-            <CardTitle className="text-base text-slate-700">Filters</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {/* Search Input - Full Width */}
-              <div className="w-full">
-                <label className="text-xs font-medium text-muted-foreground block mb-1">Search</label>
-                <div className="relative">
-                  <Search className="h-4 w-4 text-muted-foreground absolute left-3 top-1/2 -translate-y-1/2" />
-                  <Input
-                    placeholder={searchPlaceholder}
-                    className="pl-9 rounded-xl w-full"
-                    value={filters.search}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
-                  />
+        <div className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
+          <div className="flex items-center gap-[5px]">
+            <Filter className="size-4 text-[#1A202C]" strokeWidth={1.75} />
+            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Filters</h2>
+          </div>
+          <div className="flex items-center gap-[10px] rounded-[8px] bg-[#F1F1E6] p-[10px]">
+            <Search className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.75} />
+            <input
+              value={filters.search ?? ""}
+              onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
+              placeholder={
+                "Search sessions or coaches"
+              }
+              className="w-full bg-transparent text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C] outline-none placeholder:text-[#A3A6AB]"
+            />
+          </div>
+          <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-5">
+            <div className="flex min-w-0 flex-col gap-[5px]">
+              <label className={fieldLabel}>Date</label>
+              <div className="relative">
+                <div className={cn(selectClass(!filters.date), "flex items-center")}>
+                  <span className="truncate">{dateLabel}</span>
                 </div>
-              </div>
-
-              {/* Filter Row - All Other Filters */}
-              <div className="flex flex-wrap gap-4 items-end">
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Date</label>
-                  <Input
-                    type="date"
-                    className="rounded-xl w-full"
-                    value={filters.date}
-                    onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
-                  />
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Session Type</label>
-                  <select
-                    value={filters.type}
-                    onChange={(event) =>
-                      setFilters((prev) => ({ ...prev, type: event.target.value as SessionFilters["type"] }))
-                    }
-                    className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  >
-                    <option value="all">All Types</option>
-                    <option value="group">Group</option>
-                    <option value="individual">Individual</option>
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Session Status</label>
-                  <select
-                    value={filters.status}
-                    onChange={(event) =>
-                      setFilters((prev) => ({ ...prev, status: event.target.value as SessionFilters["status"] }))
-                    }
-                    className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  >
-                    <option value="all">All Sessions</option>
-                    <option value="in-progress">In Progress</option>
-                    <option value="upcoming">Upcoming</option>
-                    <option value="past">Past</option>
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Location Type</label>
-                  <select
-                    value={filters.locationType}
-                    onChange={(event) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        locationType: event.target.value as SessionFilters["locationType"],
-                      }))
-                    }
-                    className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  >
-                    <option value="all">All Locations</option>
-                    <option value="in-person">In Person</option>
-                    <option value="online">Online</option>
-                  </select>
-                </div>
-                <div className="flex-1 min-w-[150px]">
-                  <label className="text-xs font-medium text-muted-foreground block mb-1">Pillar</label>
-                  <select
-                    value={filters.pillar}
-                    onChange={(event) =>
-                      setFilters((prev) => ({
-                        ...prev,
-                        pillar: event.target.value,
-                      }))
-                    }
-                    className="w-full rounded-xl border border-input bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-200"
-                  >
-                    <option value="all">All Pillars</option>
-                    {pillarOptions.map((pillar) => (
-                      <option key={pillar} value={pillar}>
-                        {pillar}
-                      </option>
-                    ))}
-                  </select>
-                </div>
+                <input
+                  type="date"
+                  value={filters.date ?? ""}
+                  onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
+                  aria-label="Date"
+                  className="absolute inset-0 cursor-pointer opacity-0"
+                />
+                <Calendar className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]" strokeWidth={1.75} />
               </div>
             </div>
-          </CardContent>
-        </Card>
-
-        <div className="space-y-3">
-          <SectionHeader
-            icon={<PlayCircle className="h-5 w-5" />}
-            title="In-Progress Sessions"
-            count={inProgressSessions.length}
-            color="emerald"
-          />
-          <div className="space-y-3">
-                {inProgressSessions.length ? (
-                  inProgressSessions.map((session) => (
-                    <SessionCard
-                      key={session.id}
-                      session={session}
-                      now={now}
-                      onSelect={setSelectedSession}
-                      role={role}
-                      resolvePillarIcon={resolvePillarIconForSession}
-                      submittedSessionIds={submittedSessionIds}
-                      onFeedbackNavigate={handleFeedbackNavigate}
-                      platformFeePerc={platformFeePerc}
-                      stripeFeePerc={stripeFeePerc}
-                    />
-              ))
-            ) : (
-              <div className="text-sm text-muted-foreground flex items-center gap-2 bg-white p-4 rounded-xl border">
-                <AlertCircle className="h-4 w-4" />
-                No sessions in progress.
+            <div className="flex min-w-0 flex-col gap-[5px]">
+              <label className={fieldLabel}>Type</label>
+              <div className="relative">
+                <select
+                  value={filters.type}
+                  onChange={(event) =>
+                    setFilters((prev) => ({ ...prev, type: event.target.value as SessionFilters["type"] }))
+                  }
+                  className={selectClass(filters.type === "all")}
+                >
+                  <option value="all">All types</option>
+                  <option value="group">Group</option>
+                  <option value="individual">Individual</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
               </div>
-            )}
+            </div>
+            <div className="flex min-w-0 flex-col gap-[5px]">
+              <label className={fieldLabel}>Status</label>
+              <div className="relative">
+                <select
+                  value={filters.status}
+                  onChange={(event) =>
+                    setFilters((prev) => ({ ...prev, status: event.target.value as SessionFilters["status"] }))
+                  }
+                  className={selectClass(filters.status === "all")}
+                >
+                  <option value="all">All sessions</option>
+                  <option value="in-progress">In Progress</option>
+                  <option value="upcoming">Upcoming</option>
+                  <option value="past">Past</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+              </div>
+            </div>
+            <div className="flex min-w-0 flex-col gap-[5px]">
+              <label className={fieldLabel}>Location</label>
+              <div className="relative">
+                <select
+                  value={filters.locationType}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      locationType: event.target.value as SessionFilters["locationType"],
+                    }))
+                  }
+                  className={selectClass(filters.locationType === "all")}
+                >
+                  <option value="all">All locations</option>
+                  <option value="in-person">In Person</option>
+                  <option value="online">Online</option>
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+              </div>
+            </div>
+            <div className="flex min-w-0 flex-col gap-[5px]">
+              <label className={fieldLabel}>Pillar</label>
+              <div className="relative">
+                <select
+                  value={filters.pillar}
+                  onChange={(event) =>
+                    setFilters((prev) => ({
+                      ...prev,
+                      pillar: event.target.value,
+                    }))
+                  }
+                  className={selectClass(!filters.pillar || filters.pillar === "all")}
+                >
+                  <option value="all">All pillars</option>
+                  {pillarOptions.map((pillar) => (
+                    <option key={pillar} value={pillar}>
+                      {pillar}
+                    </option>
+                  ))}
+                </select>
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+              </div>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-3">
-          <Collapsible open={upcomingOpen} onOpenChange={setUpcomingOpen}>
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between group hover:opacity-80 transition-opacity">
-                <SectionHeader
-                  icon={<Clock4 className="h-5 w-5" />}
-                  title="Upcoming Sessions"
-                  count={upcomingSessions.length}
-                  color="blue"
-                />
-                <ChevronDown className={cn(
-                  "h-5 w-5 text-slate-600 transition-transform",
-                  upcomingOpen && "transform rotate-180"
-                )} />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="space-y-3 mt-3">
-                {upcomingSessions.length ? (
-                  upcomingSessions.map((session) => (
-                    <SessionCard
-                      key={session.id}
-                      session={session}
-                      now={now}
-                      onSelect={setSelectedSession}
-                      role={role}
-                      resolvePillarIcon={resolvePillarIconForSession}
-                      submittedSessionIds={submittedSessionIds}
-                      onFeedbackNavigate={handleFeedbackNavigate}
-                      platformFeePerc={platformFeePerc}
-                      stripeFeePerc={stripeFeePerc}
-                    />
-              ))
-            ) : (
-                  <div className="text-sm text-muted-foreground flex items-center gap-2 bg-white p-4 rounded-xl border">
-                    <AlertCircle className="h-4 w-4" />
-                    No upcoming sessions.
-                  </div>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
-        <div className="space-y-3">
-          <Collapsible open={pastOpen} onOpenChange={setPastOpen}>
-            <CollapsibleTrigger className="w-full">
-              <div className="flex items-center justify-between group hover:opacity-80 transition-opacity">
-                <SectionHeader
-                  icon={<AlertCircle className="h-5 w-5" />}
-                  title="Past & Completed Sessions"
-                  count={pastCompletedSessions.length}
-                  color="slate"
-                />
-                <ChevronDown className={cn(
-                  "h-5 w-5 text-slate-600 transition-transform",
-                  pastOpen && "transform rotate-180"
-                )} />
-              </div>
-            </CollapsibleTrigger>
-            <CollapsibleContent>
-              <div className="space-y-3 mt-3">
-                {pastCompletedSessions.length ? (
-                  pastCompletedSessions.map((session) => (
-                    <PastDraftCard
-                      key={session.id}
-                      session={session}
-                      onSelect={setSelectedSession}
-                      onPastNavigate={handlePastNavigate}
-                      onFeedbackNavigate={handleFeedbackNavigate}
-                      role={role}
-                      resolvePillarIcon={resolvePillarIconForSession}
-                      hasFeedbackSubmitted={hasSubmittedFeedback(session)}
-                      platformFeePerc={platformFeePerc}
-                      stripeFeePerc={stripeFeePerc}
-                    />
-                  ))
-                ) : (
-                  <div className="text-sm text-muted-foreground flex items-center gap-2 bg-white p-4 rounded-xl border">
-                    <AlertCircle className="h-4 w-4" />
-                    No past or draft sessions.
-                  </div>
-                )}
-              </div>
-            </CollapsibleContent>
-          </Collapsible>
-        </div>
+        <SessionGroup
+          iconBg="bg-[#CCDDF0] text-[#0054B4]"
+          icon={<PlayCircle className="size-4" strokeWidth={1.75} />}
+          title="In progress sessions"
+          titleClass="text-[#0054B4]"
+          count={inProgressSessions.length}
+          countClass="text-[#6698D2]"
+          empty="No sessions in progress"
+        >
+          {inProgressSessions.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              now={now}
+              onSelect={setSelectedSession}
+              role={role}
+              resolvePillarIcon={resolvePillarIconForSession}
+              submittedSessionIds={submittedSessionIds}
+              onFeedbackNavigate={handleFeedbackNavigate}
+              platformFeePerc={platformFeePerc}
+              stripeFeePerc={stripeFeePerc}
+            />
+          ))}
+        </SessionGroup>
 
-        <div className="h-12 lg:h-16" aria-hidden="true" />
+        <SessionGroup
+          iconBg="bg-[#D0EBF2] text-[#1599BC]"
+          icon={<CalendarCheck className="size-4" strokeWidth={1.75} />}
+          title="Upcoming sessions"
+          titleClass="text-[#1599BC]"
+          count={upcomingSessions.length}
+          countClass="text-[#73C2D7]"
+          empty="No upcoming sessions"
+        >
+          {upcomingSessions.map((session) => (
+            <SessionCard
+              key={session.id}
+              session={session}
+              now={now}
+              onSelect={setSelectedSession}
+              role={role}
+              resolvePillarIcon={resolvePillarIconForSession}
+              submittedSessionIds={submittedSessionIds}
+              onFeedbackNavigate={handleFeedbackNavigate}
+              platformFeePerc={platformFeePerc}
+              stripeFeePerc={stripeFeePerc}
+            />
+          ))}
+        </SessionGroup>
+
+        <SessionGroup
+          iconBg="bg-[#D1D2D5] text-[#767980]"
+          icon={<History className="size-4" strokeWidth={1.75} />}
+          title="Previous sessions"
+          titleClass="text-[#767980]"
+          count={pastCompletedSessions.length}
+          countClass="text-[#A3A6AB]"
+          empty="No sessions in progress"
+        >
+          {pastCompletedSessions.map((session) => (
+            <PastDraftCard
+              key={session.id}
+              session={session}
+              onSelect={setSelectedSession}
+              onPastNavigate={handlePastNavigate}
+              onFeedbackNavigate={handleFeedbackNavigate}
+              role={role}
+              resolvePillarIcon={resolvePillarIconForSession}
+              hasFeedbackSubmitted={hasSubmittedFeedback(session)}
+              platformFeePerc={platformFeePerc}
+              stripeFeePerc={stripeFeePerc}
+            />
+          ))}
+        </SessionGroup>
       </div>
 
       <Dialog

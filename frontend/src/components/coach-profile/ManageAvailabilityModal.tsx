@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { AlertCircle, X } from 'lucide-react';
+import { AlertCircle, Calendar, X } from 'lucide-react';
 import {
   validateAvailabilityForm,
   hasValidationErrors,
@@ -818,23 +818,26 @@ export const ManageAvailabilityModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="w-[98vw] max-w-[1400px] max-h-[90vh] overflow-hidden p-0 [&>button]:hidden gap-0 flex flex-col"
+        className="flex w-[min(1160px,calc(100vw-2rem))] max-w-none max-h-[90vh] flex-col gap-0 overflow-hidden border border-[#EAEADF] bg-[#F7F7F0] p-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] sm:rounded-[10px] [&>button]:hidden"
       >
-        {/* Blue Header */}
-        <div className="bg-blue-600 text-white p-3 md:p-4 flex items-center justify-between rounded-t-lg sticky top-0 z-20">
-          <h2 className="text-xl font-bold">{isEditMode ? 'Update Availability' : 'Add Availability'}</h2>
+        <div className="flex items-center justify-between border-b border-[#EAEADF] p-[25px]">
+          <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+            <Calendar className="size-5" strokeWidth={1.75} />
+            {isEditMode ? "Edit availability" : "Add availability"}
+          </h2>
           <button
+            type="button"
             onClick={() => onOpenChange(false)}
-            className="text-white hover:text-gray-200 text-2xl leading-none"
-            aria-label="Close modal"
+            className="text-[#767980]"
+            aria-label="Close"
           >
-            <X className="h-6 w-6" />
+            <X className="size-5" strokeWidth={1.75} />
           </button>
         </div>
 
         <div
           key={isEditMode ? 'edit' : `add-${addResetKey}`}
-          className="p-4 md:p-6 space-y-4 md:space-y-6 overflow-y-auto overflow-x-auto flex-1"
+          className="flex flex-1 flex-col gap-5 overflow-y-auto overflow-x-auto px-[25px] py-5"
         >
           <DateRangeHeader
             formData={formData}
@@ -923,21 +926,21 @@ export const ManageAvailabilityModal = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 p-4 md:p-6 border-t bg-gray-50 sticky bottom-0 z-20">
+        <div className="flex justify-end gap-3 border-t border-[#EAEADF] px-[25px] py-5">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="px-8"
+            className="h-auto rounded-[8px] border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] hover:bg-[#F4F4EB]"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || isOccurrencesBusy}
-            className="px-8 bg-blue-600 hover:bg-blue-700"
+            className="h-auto rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6] hover:bg-[#0054B4]"
           >
-            {isSubmitting ? 'Saving...' : 'Save'}
+            {isSubmitting ? 'Saving...' : 'Save availability'}
           </Button>
         </div>
       </DialogContent>

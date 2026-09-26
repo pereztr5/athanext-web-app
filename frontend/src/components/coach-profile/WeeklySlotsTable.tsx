@@ -5,10 +5,9 @@
  */
 
 import React, { useCallback, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
-import { AlertCircle, Clock } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import {
   calculateEndTime,
   normalizeTimeFormat,
@@ -439,54 +438,49 @@ export const WeeklySlotsTable = ({
 
   return (
     <div
-      className="flex flex-col min-h-[360px] max-h-[65vh]"
+      className="-mx-[25px] flex min-h-[360px] max-h-[65vh] flex-col border-t border-[#EAEADF] px-[25px] pt-5"
       ref={scrollRef}
     >
-      <div className="mb-4 flex-shrink-0 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Clock className="w-5 h-5 text-red-600" />
-          <h3 className="text-lg font-bold">Weekly Time Slots</h3>
-          <span className="inline-flex items-center whitespace-nowrap rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-xs font-medium text-slate-700">
+      <div className="mb-5 flex items-center gap-2">
+        <Calendar className="size-4 text-[#1A202C]" strokeWidth={1.75} />
+        <h3 className="text-[16px] font-medium leading-[18px] tracking-[-0.8px] text-[#1A202C]">Weekly time slots</h3>
+      </div>
+      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <button
+          type="button"
+          onClick={onPrevWeek}
+          disabled={currentWeekIndex === 0}
+          className={`inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] disabled:cursor-not-allowed ${
+            currentWeekIndex === 0 ? "bg-[#F7F7F0] text-[#A3A6AB]" : "bg-[#F1F1E6] text-[#484D56]"
+          }`}
+        >
+          <ChevronLeft className="size-4" />
+          Previous week
+        </button>
+        <div className="flex items-center justify-center gap-[5px]">
+          <span className="text-center text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+            Week {currentWeekIndex + 1} of {Math.max(weeks.length, 1)}
+            {currentWeek ? `: ${formatClampedWeekRange(currentWeek, formStartDate, formEndDate).replace(" - ", " – ")}` : ""}
+          </span>
+          <span className="rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]">
             EST
           </span>
-        </div>
-        <div className="flex flex-col gap-2 md:items-end">
-          {weeks.length > 1 && (
-            <div className="flex items-center gap-2">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onPrevWeek}
-                disabled={currentWeekIndex === 0}
-                className="text-gray-600 border border-slate-300 rounded-full px-3"
-              >
-                Previous
-              </Button>
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={onNextWeek}
-                disabled={currentWeekIndex >= weeks.length - 1}
-                className="text-gray-600 border border-slate-300 rounded-full px-3"
-              >
-                Next
-              </Button>
-            </div>
+          {currentWeekISO && weekErrorSet.has(currentWeekISO) && (
+            <span className="inline-flex size-2 rounded-full bg-[#FB4747]" title="Issues in this week" />
           )}
-          <span className="text-sm text-gray-600 flex items-center gap-2 text-left md:text-right">
-            Week {currentWeekIndex + 1} of {Math.max(weeks.length, 1)}{currentWeek ? `: ${formatClampedWeekRange(currentWeek, formStartDate, formEndDate)}` : ''}
-            {currentWeekISO && weekErrorSet.has(currentWeekISO) && (
-              <span
-                className="inline-flex h-2 w-2 rounded-full bg-red-500"
-                title="Issues in this week"
-              />
-            )}
-          </span>
         </div>
+        <button
+          type="button"
+          onClick={onNextWeek}
+          disabled={currentWeekIndex >= weeks.length - 1}
+          className="inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]"
+        >
+          Next week
+          <ChevronRight className="size-4" />
+        </button>
       </div>
 
-      {/* Scrollable Table */}
-      <div className="border rounded-lg overflow-x-auto overflow-y-auto flex-1 min-h-[420px] md:min-h-[460px]">
+      <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
         {isOccurrencesBusy ? (
           <div className="p-4">
             <div className="mb-3">
@@ -500,7 +494,7 @@ export const WeeklySlotsTable = ({
           </div>
         ) : (
           <table className="w-full min-w-[650px]">
-            <ManageAvailabilityTableHeader compact />
+            <ManageAvailabilityTableHeader />
             <tbody>
               {Object.entries(DAY_OF_WEEK_MAP).map(([dayNum, dayName]) => {
                 const day = parseInt(dayNum) as DayOfWeek;
@@ -547,6 +541,22 @@ export const WeeklySlotsTable = ({
           </table>
         )}
       </div>
+      <button
+        type="button"
+        onClick={() => {
+          if (!currentWeekISO) return;
+          const firstDay = (Object.keys(DAY_OF_WEEK_MAP).map(Number) as DayOfWeek[]).find((day) => {
+            const slots = occurrenceSlots[currentWeekISO]?.[day] || [];
+            return slots.some((slot) => isDateWithinRange(slot?.occurrence_date, formStartDate, formEndDate));
+          });
+          if (!firstDay) return;
+          const slots = occurrenceSlots[currentWeekISO]?.[firstDay] || [];
+          addSlotToDay(firstDay, currentWeekISO, slots[slots.length - 1]);
+        }}
+        className="mt-5 w-fit text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#0054B4]"
+      >
+        Add slot
+      </button>
 
       {currentWeekErrors.overlap && (
         <Alert

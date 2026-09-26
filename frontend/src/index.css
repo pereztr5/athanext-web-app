@@ -9,25 +9,27 @@ All colors MUST be HSL.
 @layer base {
   :root {
     --background: 0 0% 100%;
-    --foreground: 222.2 84% 4.9%;
+    /* Figma neutral #10131A */
+    --foreground: 225 21% 8%;
 
     --card: 0 0% 100%;
-    --card-foreground: 222.2 84% 4.9%;
+    --card-foreground: 225 21% 8%;
 
     --popover: 0 0% 100%;
-    --popover-foreground: 222.2 84% 4.9%;
+    --popover-foreground: 225 21% 8%;
 
-    --primary: 210 90% 50%;
+    /* Figma primary #0054B4 */
+    --primary: 212 100% 35%;
     --primary-foreground: 0 0% 100%;
 
-    --secondary: 210 40% 96.1%;
-    --secondary-foreground: 222.2 47.4% 11.2%;
+    --secondary: 60 14% 94%;
+    --secondary-foreground: 225 21% 8%;
 
-    --muted: 210 40% 96.1%;
-    --muted-foreground: 215.4 16.3% 46.9%;
+    --muted: 60 14% 94%;
+    --muted-foreground: 220 6% 40%;
 
-    --accent: 210 40% 96.1%;
-    --accent-foreground: 222.2 47.4% 11.2%;
+    --accent: 60 14% 94%;
+    --accent-foreground: 225 21% 8%;
 
     /* Friendly Pastel Colors for Partnership Cards */
     --pastel-blue: 210 100% 95%;
@@ -94,28 +96,40 @@ All colors MUST be HSL.
     --crew-shadow-medium: 0 8px 30px -4px hsl(0 70% 50% / 0.1);
     --crew-shadow-strong: 0 12px 40px -6px hsl(0 70% 50% / 0.08);
 
-    --sidebar-background: 49 24% 95%;
+    /* App shell gutter. The sidebar panel itself is #F7F7F0. */
+    --sidebar-background: 60 28.205% 92.353%;
 
-    --sidebar-foreground: 240 4% 26%;
+    --sidebar-foreground: 225 21% 8%;
 
-    --sidebar-primary: 221 79% 48%;
+    --sidebar-primary: 212 100% 35%;
 
     --sidebar-primary-foreground: 0 0% 100%;
 
-    --sidebar-accent: 47 22% 91%;
+    --sidebar-accent: 60 14% 88%;
 
-    --sidebar-accent-foreground: 240 6% 10%;
+    --sidebar-accent-foreground: 225 21% 8%;
 
-    --sidebar-border: 45 23% 89%;
+    --sidebar-border: 60 10% 85%;
 
-    --sidebar-ring: 221 79% 48%;
+    --sidebar-ring: 212 100% 35%;
 
-    /* App shell canvas + persona pill (see wave4 design doc) */
-    --app-background: 48 27% 96%;
+    /* Figma page fill #F1F1E6. Tailwind `bg-app-background` uses the hex directly. */
+    --app-background: 60 28.205% 92.353%;
 
     --app-pill: 137 39% 91%;
 
     --app-pill-foreground: 143 57% 30%;
+
+    /* Type scale (DM Sans, Figma text styles) */
+    --font-page-title: 32px;
+    --font-highlight: 28px;
+    --font-section: 24px;
+    --font-card-title: 20px;
+    --font-subtitle: 16px;
+    --font-body-l: 16px;
+    --font-body-m: 14px;
+    --font-body-sm: 12px;
+    --font-stat: 32px;
   }
 
   .dark {
@@ -163,7 +177,7 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background text-foreground font-sans antialiased;
   }
 }
 

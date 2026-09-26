@@ -17,7 +17,7 @@ export type ConversationWithParticipants = ConversationRow & {
   conversation_participants?:
     | Array<
         ConversationParticipantRow & {
-          user_profiles?: Pick<UserProfileRow, "name" | "coach_id"> | null;
+          user_profiles?: Pick<UserProfileRow, "name" | "coach_id" | "image_url" | "instagram_handle"> | null;
         }
       >
     | null;
@@ -95,7 +95,7 @@ export const chatAPI = {
                 user_id,
                 role,
                 last_read_at,
-                user_profiles ( name, coach_id )
+                user_profiles ( name, coach_id, image_url, instagram_handle )
               )
             `
           )

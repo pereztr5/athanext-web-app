@@ -11,9 +11,21 @@ export interface DashboardActivity {
 }
 
 export interface DashboardStats {
+  /** Athlete: all-time completed. Coach: completed this calendar month. */
   completedCount: number;
+  /** Athlete: hours trained. Coach: unused when revenue is shown. */
   hoursTotal: number;
+  /** Athlete: unique coaches. Coach: unique athletes on roster. */
   thirdStat: number;
+  /** Coach only — null when no revenue source is wired. */
+  revenueThisMonth: number | null;
+  sessionsThisMonth: number;
+  activeAthletes: number;
+}
+
+function isSameMonth(iso: string, now = new Date()) {
+  const d = new Date(iso);
+  return d.getFullYear() === now.getFullYear() && d.getMonth() === now.getMonth();
 }
 
 export function useDashboardData() {
@@ -49,18 +61,43 @@ export function useDashboardData() {
       if (s.coachId && !coachMap.has(s.coachId)) coachMap.set(s.coachId, s);
     }
 
+    const athleteMap = new Map<string, { name: string; type?: string }>();
+    for (const s of sessions) {
+      if (Array.isArray(s.athleteNames)) {
+        for (const name of s.athleteNames) {
+          if (name && !athleteMap.has(name)) {
+            athleteMap.set(name, { name, type: s.type });
+          }
+        }
+      }
+    }
+
+    const finishedThisMonth = finished.filter((s) => isSameMonth(s.end));
+    const sessionsThisMonth = finishedThisMonth.length;
+
     const activities: DashboardActivity[] = [];
     if (finished[0]) {
+      const withWhom =
+        role === "athlete"
+          ? finished[0].coachName
+          : finished[0].athleteNames?.[0];
       activities.push({
-        label:
-          role === "athlete"
-            ? `Completed session${finished[0].coachName ? ` with ${finished[0].coachName}` : ""}`
-            : "Completed session",
+        label: withWhom
+          ? `Completed session with ${withWhom}`
+          : "Completed session",
         when: finished[0].end,
       });
     }
     if (upcoming[0]) {
-      activities.push({ label: "Booked session", when: upcoming[0].start });
+      if (role === "coach") {
+        const who = upcoming[0].athleteNames?.[0];
+        activities.push({
+          label: who ? `New booking from ${who}` : "New booking",
+          when: upcoming[0].start,
+        });
+      } else {
+        activities.push({ label: "Booked session", when: upcoming[0].start });
+      }
     }
 
     const hoursTotal =
@@ -70,14 +107,18 @@ export function useDashboardData() {
       nextSession: upcoming[0] ?? null,
       upcoming: upcoming.slice(0, 2),
       stats: {
-        completedCount: finished.length,
+        completedCount: role === "coach" ? sessionsThisMonth : finished.length,
         hoursTotal,
-        thirdStat: role === "coach" ? upcoming.length : coachMap.size,
+        thirdStat: role === "coach" ? athleteMap.size : coachMap.size,
+        revenueThisMonth: null,
+        sessionsThisMonth,
+        activeAthletes: athleteMap.size,
       } satisfies DashboardStats,
       activities,
       coaches: Array.from(coachMap.values()).slice(0, 3),
+      athletes: Array.from(athleteMap.values()).slice(0, 4),
     };
   }, [sessions, role]);
 
-  return { isLoading: query.isLoading, error: query.error, ...derived };
+  return { isLoading: query.isLoading, error: query.error, sessions, ...derived };
 }

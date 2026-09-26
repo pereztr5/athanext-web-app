@@ -5,26 +5,22 @@ import {
   DropdownMenuLabel,
   DropdownMenuContent,
   DropdownMenuTrigger,
-  DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
 import strings from "@/config/strings";
-import { colors } from "@/config/colors";
 import { cn, getInitials } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { useRole } from "@/hooks/useRole";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { User as UserIcon, LogOut, Settings, CalendarClock, Search, MessageCircle, Sparkles, GraduationCap, Heart, UsersRound, BadgeCheck } from "lucide-react";
+import { LogOut, Settings } from "lucide-react";
 import { AvatarFallback } from "@radix-ui/react-avatar";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { chatAPI } from "@/api";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { Tooltip, TooltipTrigger, TooltipContent } from "@/components/ui/tooltip";
 
 type UserMenuProps = {
   name?: string | null;
@@ -33,6 +29,8 @@ type UserMenuProps = {
   fallbackImg?: string | null;
   useFallbackDelay?: boolean;
   avatarReady?: boolean;
+  /** Sidebar avatar matches the Figma 40px, 10px-radius mark. */
+  variant?: "default" | "sidebar";
 };
 
 export const UserMenu: React.FC<UserMenuProps> = ({
@@ -42,6 +40,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   fallbackImg = null,
   useFallbackDelay = false,
   avatarReady: avatarReadyProp,
+  variant = "default",
 }) => {
   const {
     signOut,
@@ -62,7 +61,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const subscriptionsRef = useRef<Array<{ unsubscribe: () => void }>>([]);
   const subscribedConversationIds = useRef<Set<string>>(new Set());
   const isMobile = useIsMobile();
-  const { role: personaType, isAthleteLike } = useRole();
   const loadedAvatarCacheRef = useRef<Set<string>>(new Set());
 
   const resolveSenderName = async (senderId: string) => {
@@ -244,8 +242,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const displayName = profileName || userProfile?.name || userName || name || "";
 
   const displayEmail = email ?? userProfile?.email ?? user?.email ?? "";
-  const authProvider = (user?.app_metadata as any)?.provider || user?.identities?.[0]?.provider || null;
-  const canChangePassword = authProvider === "email" || authProvider === "password";
   // Only use image if it's a valid string (not null, undefined, or empty)
   const platformSrc = img && img.trim() !== '' ? img : (userImg && userImg.trim() !== '' ? userImg : null);
   const fallbackSrc = fallbackImg && fallbackImg.trim() !== '' ? fallbackImg : null;
@@ -355,11 +351,17 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     const clampedCompletion = Math.min(Math.max(completionSource, 0), 100);
     const isComplete = clampedCompletion >= 100;
     const degrees = clampedCompletion * 3.6;
+    const sidebarMark = variant === "sidebar";
     const node = (
-      <Avatar className="h-full w-full bg-white rounded-full relative overflow-hidden">
+      <Avatar
+        className={cn(
+          "relative h-full w-full overflow-hidden",
+          sidebarMark ? "rounded-[10px] bg-[#1599BC]" : "rounded-full bg-white"
+        )}
+      >
         {shouldShowSkeleton ? (
           <div className="w-full h-full flex items-center justify-center">
-            <Skeleton className="h-full w-full rounded-full" />
+            <Skeleton className={cn("h-full w-full", sidebarMark ? "rounded-[10px]" : "rounded-full")} />
           </div>
         ) : displayAvatarUrl ? (
           <AvatarImage
@@ -369,7 +371,14 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             className="object-cover"
           />
         ) : (
-          <AvatarFallback className="w-full h-full flex items-center justify-center bg-gradient-to-br from-primary/20 via-primary/15 to-primary/10 text-primary font-semibold text-sm">
+          <AvatarFallback
+            className={cn(
+              "flex h-full w-full items-center justify-center",
+              sidebarMark
+                ? "rounded-[10px] bg-[#1599BC] text-[14px] font-medium text-[#F1F1E6]"
+                : "rounded-full bg-gradient-to-br from-primary/20 via-primary/15 to-primary/10 text-sm font-semibold text-primary"
+            )}
+          >
             {initials}
           </AvatarFallback>
         )}
@@ -382,30 +391,19 @@ export const UserMenu: React.FC<UserMenuProps> = ({
       ringDegrees: degrees,
       avatarNode: node,
     };
-  }, [shouldShowSkeleton, displayAvatarUrl, displayName, initials, profileProgress?.completion]);
-
-  const handleProfileNavigation = () => {
-    navigate(ROUTES.PROFILE);
-  };
-
-  const handleChatNavigation = async () => {
-    // Check actual unread state instead of blindly clearing
-    if (user?.id) {
-      const { data: hasUnread } = await chatAPI.hasUnreadMessages(user.id);
-      setHasNewMessage(hasUnread || false);
-    }
-    dismiss(); // close any open notification bars
-    navigate(ROUTES.CHAT);
-  };
+  }, [shouldShowSkeleton, displayAvatarUrl, displayName, initials, profileProgress?.completion, variant]);
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
-          className="relative h-10 w-10 p-0 rounded-full hover:bg-transparent"
+          className={cn(
+            "relative h-10 w-10 p-0 hover:bg-transparent",
+            variant === "sidebar" ? "rounded-[10px]" : "rounded-full"
+          )}
         >
-          {profileCompletion > 0 && profileCompletion < 100 ? (
+          {variant !== "sidebar" && profileCompletion > 0 && profileCompletion < 100 ? (
             <div
               className={cn(
                 "relative h-10 w-10 rounded-full p-[4px] transition-all duration-200",
@@ -419,71 +417,40 @@ export const UserMenu: React.FC<UserMenuProps> = ({
               {avatarNode}
             </div>
           ) : (
-            <div className="relative h-10 w-10 rounded-full">
+            <div className={cn("relative h-10 w-10", variant === "sidebar" ? "overflow-hidden rounded-[10px]" : "rounded-full")}>
               {avatarNode}
             </div>
           )}
           
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-64" align="end" forceMount>
-        <DropdownMenuLabel className="font-normal">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex flex-col space-y-1">
-              <p className="text-sm font-semibold leading-none text-slate-900">
-                {displayName}
-              </p>
-              <p className="text-xs leading-none text-muted-foreground">
-                {displayEmail}
-              </p>
-            </div>
-            {personaType && (
-              <Tooltip>
-                <TooltipTrigger asChild>
-                  <span className="inline-flex items-center justify-center p-1.5 bg-primary/10 text-primary rounded-md border border-primary/20">
-                    {personaType === "athlete" && <Sparkles className="h-3.5 w-3.5" />}
-                    {personaType === "coach" && <BadgeCheck className="h-3.5 w-3.5 fill-primary" />}
-                    {personaType === "parent" && <UsersRound className="h-3.5 w-3.5" />}
-                  </span>
-                </TooltipTrigger>
-                <TooltipContent side="left">
-                  {personaType.charAt(0).toUpperCase() + personaType.slice(1)}
-                </TooltipContent>
-              </Tooltip>
-            )}
-          </div>
+      <DropdownMenuContent
+        className="flex w-[227px] flex-col gap-[5px] rounded-[10px] border-[#EAEADF] bg-[#F4F4EB] p-[10px] shadow-[0px_0px_15px_0px_rgba(0,0,0,0.05)]"
+        align="start"
+        side="top"
+        sideOffset={12}
+        forceMount
+      >
+        <DropdownMenuLabel className="p-[5px] font-normal">
+          <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+            {displayEmail}
+          </p>
         </DropdownMenuLabel>
-        <DropdownMenuSeparator />
-        <DropdownMenuItem onClick={handleProfileNavigation} className="!cursor-pointer">
-          <UserIcon className="mr-2 h-4 w-4" />
-          <span>Profile</span>
+        <DropdownMenuItem
+          onClick={() => navigate(ROUTES.SETTINGS)}
+          className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
+        >
+          <Settings className="size-4" strokeWidth={1.75} />
+          <span>Settings</span>
         </DropdownMenuItem>
-        {isAthleteLike && (
-          <DropdownMenuItem onClick={() => navigate(ROUTES.COACHES)} className="!cursor-pointer">
-            <Search className="mr-2 h-4 w-4" />
-            <span>Find a Coach</span>
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuItem onClick={() => navigate(ROUTES.MY_SESSIONS)} className="!cursor-pointer">
-          <CalendarClock className="mr-2 h-4 w-4" />
-          <span>My Sessions</span>
-        </DropdownMenuItem>
-        {canChangePassword && (
-          <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)} className="!cursor-pointer">
-            <Settings className="mr-2 h-4 w-4" />
-            <span>{strings.profile.changePassword}</span>
-          </DropdownMenuItem>
-        )}
-        <DropdownMenuSeparator />
         <DropdownMenuItem
           onClick={async () => {
             await signOut();
             navigate(ROUTES.HOME);
           }}
-          style={{ color: colors.status.error }}
-          className="!cursor-pointer"
+          className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
         >
-          <LogOut className="mr-2 h-4 w-4" />
+          <LogOut className="size-4" strokeWidth={1.75} />
           <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

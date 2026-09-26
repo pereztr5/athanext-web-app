@@ -29,6 +29,7 @@ import {
   FAQSection,
   OtherTopCoaches
 } from "@/components/coach-profile";
+import { CoachProfileView } from "@/components/coach-profile/CoachProfileView";
 import { CoachAvailabilitySection } from "@/components/coach-profile/CoachAvailabilitySection";
 import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,7 +69,7 @@ const CoachProfile = () => {
   const [startingChat, setStartingChat] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [chatConversationId, setChatConversationId] = useState<string | null>(null);
-  const { role: personaType, isAthleteLike } = useRole();
+  const { role: personaType, isAthleteLike, isAuthenticated } = useRole();
   const canSendMessage = true;
   const canBookSlots = isAthleteLike;
   const availabilitySectionRef = useRef<HTMLDivElement | null>(null);
@@ -246,9 +247,63 @@ const CoachProfile = () => {
     throw new Error("Function not implemented.");
   }
 
+  if (isAuthenticated) {
+    return (
+      <div className="min-h-screen w-full overflow-x-hidden bg-app-background">
+        <CoachProfileView
+          readOnly
+          coach={coach as any}
+          packages={packages}
+          averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
+          totalReviews={totalReviews}
+          ratingDistribution={ratingDistribution}
+          reviews={reviews}
+          onEdit={() => undefined}
+          onEditPackages={() => undefined}
+          onEditCertifications={() => undefined}
+          availability={
+            <div ref={availabilitySectionRef}>
+              <CoachAvailabilitySection
+                coachId={coach.id}
+                allowEditing={false}
+                onBookSlot={canBookSlots ? handleBookSlot : !user ? handleGuestSignInRedirect : undefined}
+              />
+            </div>
+          }
+        />
+        {coach ? (
+          <>
+            <CoachSchedulingModal
+              isOpen={showSchedulingModal}
+              onClose={() => {
+                setShowSchedulingModal(false);
+                setSelectedSlotBooking(null);
+              }}
+              coach={coach}
+              serviceType={serviceType}
+              prefillSlot={selectedSlotBooking}
+            />
+            <ReviewModal
+              open={showReviewModal}
+              onOpenChange={setShowReviewModal}
+              coachName={coach.name}
+              onSubmit={submitReview}
+            />
+          </>
+        ) : null}
+      </div>
+    );
+  }
+
   return (
-    <div className={`min-h-screen w-full px-4 bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] mb-20`}>
-      <div className="max-w-8xl mx-auto flex flex-col gap-6 md:gap-8">
+    <div
+      className={`min-h-screen w-full overflow-x-hidden px-4 pb-20 md:px-0 ${
+        isAuthenticated
+          ? "bg-app-background pt-2"
+          : `bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] mb-20`
+      }`}
+    >
+      <div className="mx-auto flex max-w-[1000px] flex-col gap-6 md:gap-6">
 
         <section className="flex w-full">
           <CoachHeader

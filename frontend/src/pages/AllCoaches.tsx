@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Search } from "lucide-react";
+import { BadgeCheck, Search } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -45,10 +45,113 @@ type Coach = Omit<Tables<"coaches">, "email"> & {
   favourite_positions?: string[];
 };
 
+const AthleteBrowseCard = ({
+  coach,
+  sport,
+  onViewSessions,
+}: {
+  coach: Coach;
+  sport: string;
+  onViewSessions: () => void;
+}) => {
+  const photo = coach.profile_image_url || coach.image_url || "";
+  const initials = (coach.name || "Coach")
+    .split(" ")
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((part) => part.charAt(0).toUpperCase())
+    .join("");
+  const rawPosition = coach.coach_position || coach.positions?.[0] || "";
+  const position = normalizePosition(sport, rawPosition) || "Coach";
+  const location = coach.locations?.[0] || "";
+  const rating =
+    typeof coach.rating === "number" && coach.rating > 0
+      ? coach.rating.toFixed(1).replace(".", ",")
+      : null;
+  const price = coach.hourly_rate ? `$${Math.round(Number(coach.hourly_rate))}` : null;
+  const pillars = (coach.specialties || []).filter(Boolean);
+
+  return (
+    <article className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
+      <div className="relative h-[131px] shrink-0">
+        <div className="px-[7px] pt-[7px]">
+          <div className="relative h-[77px] overflow-hidden rounded-[6px] bg-[linear-gradient(103deg,#1599BC_0.25%,#0054B4_99.75%)]">
+            {photo ? (
+              <img
+                src={photo}
+                alt=""
+                className="absolute inset-0 size-full scale-125 object-cover opacity-80 blur-[5px]"
+              />
+            ) : null}
+          </div>
+        </div>
+        <div className="absolute left-[21px] top-[42px] size-[84px] overflow-hidden rounded-full border-[3px] border-[#FCFCFA] bg-[#C1C1B8]">
+          {photo ? (
+            <img src={photo} alt="" className="size-full object-cover" />
+          ) : (
+            <span className="flex size-full items-center justify-center text-[18px] font-medium text-[#484D56]">
+              {initials}
+            </span>
+          )}
+        </div>
+      </div>
+      <div className="flex min-w-0 flex-col gap-[5px] px-[17px] pt-[7px]">
+        <div className="flex min-w-0 items-end gap-[5px]">
+          <h2 className="truncate text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+            {coach.name}
+          </h2>
+          {coach.is_verified ? (
+            <BadgeCheck className="size-4 shrink-0 fill-[#0054B4] text-white" strokeWidth={2} />
+          ) : null}
+        </div>
+        <p className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]">{position}</p>
+        {location || rating ? (
+          <div className="flex items-center gap-[6px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
+            {location ? <span className="truncate">{location}</span> : null}
+            {location && rating ? <span className="text-[10px] leading-none text-[#E2A100]">★</span> : null}
+            {rating ? <span>{rating}</span> : null}
+          </div>
+        ) : null}
+        {pillars.length > 0 ? (
+          <div className="flex gap-[5px] overflow-hidden">
+            {pillars.map((pillar) => (
+              <span
+                key={pillar}
+                className="shrink-0 rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-1 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#0054B4]"
+              >
+                {pillar}
+              </span>
+            ))}
+          </div>
+        ) : null}
+      </div>
+      <div className="mt-auto flex items-center justify-end gap-3 pb-[15px] pl-[17px] pr-2 pt-[25px]">
+        {price ? (
+          <div className="text-right">
+            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">from</p>
+            <p className="text-[#1A202C]">
+              <span className="text-[16px] font-medium leading-[18px] tracking-[-0.48px]">{price}</span>
+              <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px]">/session</span>
+            </p>
+          </div>
+        ) : null}
+        <button
+          type="button"
+          onClick={onViewSessions}
+          className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
+        >
+          View sessions
+        </button>
+      </div>
+    </article>
+  );
+};
+
 const AllCoaches = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
   const { user } = useAuth();
+  const { isAuthenticated } = useRole();
   const { toast } = useToast();
 
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -724,7 +827,7 @@ const AllCoaches = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className={isAuthenticated ? "flex min-h-[50vh] items-center justify-center" : "min-h-screen bg-background flex items-center justify-center"}>
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
 
@@ -739,11 +842,22 @@ const AllCoaches = () => {
     );
   }
 
-  return (
-    <div className="min-h-screen bg-background mt-[3.8rem]">
-      {/* Hero Section */}
+  const filterTriggerClass =
+    "!h-auto w-full !rounded-[8px] !border-[#EAEADF] !bg-[#F7F7F0] !px-[10px] !py-[10px] !text-[12px] !font-normal !leading-[14px] !tracking-[-0.36px] shadow-none focus:!ring-0 focus:!ring-offset-0 [&>svg]:!size-4 [&>svg]:!opacity-100 [&>svg]:!text-[#767980]";
 
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 px-4 py-16 border-b border-primary/20">
+  return (
+    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-16 md:px-10" : "min-h-screen bg-app-background"}>
+      {isAuthenticated ? (
+        <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[10px]">
+          <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
+            Browse coaches
+          </h1>
+          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+            Find your perfect coaching match
+          </p>
+        </div>
+      ) : (
+      <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 px-4 py-16 border-b border-primary/20 mt-[3.8rem]">
         <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
 
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" />
@@ -819,24 +933,38 @@ const AllCoaches = () => {
           </p>
         </div>
       </div>
+      )}
 
       {/* Search and Filters Header */}
 
-      <div className="!bg-background px-4 py-8">
-        <div className="max-w-8xl mx-auto">
+      <div className={isAuthenticated ? "mx-auto mt-6 w-full max-w-[1000px]" : "bg-app-background px-4 py-8 md:px-0"}>
+        <div className={isAuthenticated ? "" : "mx-auto max-w-[1000px]"}>
+          {!isAuthenticated && (
           <div className="mb-6">
-            <h1 className="text-3xl font-bold text-foreground">
-              {strings.coach.allSportCoaches}
+            <h1 className="text-page-title text-foreground">
+              Browse coaches
             </h1>
 
             <p className="text-muted-foreground mt-1">
               {strings.coach.findYourPerfectMatch}
             </p>
           </div>
+          )}
 
           {/* Search and Filters */}
 
-          <div className="flex flex-col md:flex-row gap-4 items-start">
+          <div className={isAuthenticated ? "flex flex-col gap-[10px] lg:flex-row lg:items-center" : "flex flex-col md:flex-row gap-4 items-start"}>
+            {isAuthenticated ? (
+              <div className="flex min-w-0 flex-1 items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px]">
+                <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.75} />
+                <input
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  placeholder="Search coaches"
+                  className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
+                />
+              </div>
+            ) : (
             <div className="relative w-full md:w-80">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
 
@@ -847,8 +975,10 @@ const AllCoaches = () => {
                 className="pl-10 !rounded-[10px] focus-visible:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"
               />
             </div>
+            )}
 
-            <div className="flex gap-2 flex-wrap items-start w-full md:w-auto">
+            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-3" : "flex gap-2 flex-wrap items-start w-full md:w-auto"}>
+              {!isAuthenticated && (
               <Select value={selectedSport} onValueChange={setSelectedSport}>
                 <SelectTrigger className="w-[120px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0">
                   <SelectValue placeholder={strings.coach.sport} />
@@ -862,45 +992,48 @@ const AllCoaches = () => {
                   ))}
                 </SelectContent>
               </Select>
+              )}
 
               <Select value={selectedPillar} onValueChange={setSelectedPillar}>
-                <SelectTrigger className="w-[150px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0">
+                <SelectTrigger className={isAuthenticated ? `${filterTriggerClass} ${selectedPillar === "All Pillars" ? "!text-[#767980]" : "!text-[#1A202C]"}` : "w-[150px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"}>
                   <SelectValue />
                 </SelectTrigger>
 
-                <SelectContent className="bg-background border border-border shadow-lg z-50">
+                <SelectContent className={isAuthenticated ? "z-50 border border-[#EAEADF] bg-[#F7F7F0] shadow-lg" : "bg-background border border-border shadow-lg z-50"}>
                   {getAvailablePillars().map((pillar) => (
                     <SelectItem key={pillar} value={pillar}>
-                      {pillar}
+                      {isAuthenticated && pillar === "All Pillars" ? "All pillars" : pillar}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={selectedFavoritePosition} onValueChange={setSelectedFavoritePosition}>
-                <SelectTrigger className="w-[170px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0">
+                <SelectTrigger className={isAuthenticated ? `${filterTriggerClass} ${selectedFavoritePosition === "All Positions" ? "!text-[#767980]" : "!text-[#1A202C]"}` : "w-[170px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"}>
                   <SelectValue placeholder="Favorite Position" />
                 </SelectTrigger>
 
-                <SelectContent className="bg-background border border-border shadow-lg z-50">
+                <SelectContent className={isAuthenticated ? "z-50 border border-[#EAEADF] bg-[#F7F7F0] shadow-lg" : "bg-background border border-border shadow-lg z-50"}>
                   {getAvailableFavoritePositions().map((position) => (
                     <SelectItem key={position} value={position}>
-                      {position}
+                      {isAuthenticated && position === "All Positions" ? "All positions" : position}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className="w-[150px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0">
+                <SelectTrigger className={isAuthenticated ? `${filterTriggerClass} ${sortBy === "Highest Rated" ? "!text-[#767980]" : "!text-[#1A202C]"}` : "w-[150px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"}>
                   <SelectValue />
                 </SelectTrigger>
 
-                <SelectContent className="bg-background border border-border shadow-lg z-50">
+                <SelectContent className={isAuthenticated ? "z-50 border border-[#EAEADF] bg-[#F7F7F0] shadow-lg" : "bg-background border border-border shadow-lg z-50"}>
                   <SelectItem value="Highest Rated">
-                    {strings.coach.highestRated}
+                    {isAuthenticated ? "Highest rated" : strings.coach.highestRated}
                   </SelectItem>
+                  {!isAuthenticated && (
                   <SelectItem value="Lowest Rated">Lowest Rated</SelectItem>
+                  )}
                 </SelectContent>
               </Select>
             </div>
@@ -909,10 +1042,10 @@ const AllCoaches = () => {
       </div>
 
       {/* Results */}
-      <section className="w-full px-4">
-        <div className="max-w-8xl mx-auto py-8">
+      <section className={isAuthenticated ? "mx-auto mt-6 w-full max-w-[1000px]" : "w-full px-4"}>
+        <div className={isAuthenticated ? "" : "mx-auto py-8 max-w-8xl"}>
 
-          <p className="text-muted-foreground mb-6">
+          <p className={isAuthenticated ? "mb-6 text-[14px] font-normal tracking-[-0.7px] text-[#767980]" : "text-muted-foreground mb-6"}>
             {filteredCoaches.length} coaches found
           </p>
 
@@ -936,8 +1069,18 @@ const AllCoaches = () => {
               </Button>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            <div className={isAuthenticated ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" : "grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6"}>
               {filteredCoaches.map((coach) => {
+                if (isAuthenticated) {
+                  return (
+                    <AthleteBrowseCard
+                      key={coach.id}
+                      coach={coach}
+                      sport={getCoachSport(coach)}
+                      onViewSessions={() => onViewProfile(coach.id)}
+                    />
+                  );
+                }
                 return (
                   <CoachCard
                     key={coach.id}

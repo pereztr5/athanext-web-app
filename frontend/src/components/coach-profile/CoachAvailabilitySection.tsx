@@ -15,14 +15,12 @@ import { supabase } from '@/integrations/supabase/client';
 import { getDefaultGroupCapacity } from '@/api/configurations';
 import { CoachAvailability, CoachAvailabilitySlot, DayOfWeek, SlotBookingStatus } from '@/types/availability';
 import type { CoachAvailabilityWithOccurrences } from '@/types/availabilityWithOccurrences';
-import { Calendar, Clock, Trash2, Edit, ChevronLeft, ChevronRight, Eye } from 'lucide-react';
+import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { formatWeekRange, getWeekStart, parseISODateLocal, toLocalISODate } from '@/utils/dateHelpers';
 import { strings } from '@/config/strings';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { PROFILE_TYPE } from "@/utils/db";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
-import { PRIMARY } from '@/config/colors';
-
 const parseISODateUtc = (iso: string): Date => parseISODateLocal(iso);
 const toISODateUtc = (d: Date): string => toLocalISODate(d);
 const getWeekStartUtc = (date: Date): Date => getWeekStart(date);
@@ -277,6 +275,27 @@ export const CoachAvailabilitySection = ({
       .sort((a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time));
   }, [selectedPeriod, currentWeek]);
 
+  const bookingMix = useMemo(() => {
+    const groups: { label: string; type: 'individual' | 'group'; location: 'online' | 'in-person' }[] = [
+      { label: 'Individual · Virtual', type: 'individual', location: 'online' },
+      { label: 'Individual · In-person', type: 'individual', location: 'in-person' },
+      { label: 'Group · Virtual', type: 'group', location: 'online' },
+      { label: 'Group · In-person', type: 'group', location: 'in-person' },
+    ];
+    return groups
+      .map((group) => {
+        const slots = resolvedWeeklySlots.filter(
+          (slot) => slot.is_enabled && slot.session_type === group.type && slot.location === group.location
+        );
+        const booked = slots.filter((slot) => (slotStatusMap[slot.id]?.totalCount || 0) > 0).length;
+        return { label: group.label, total: slots.length, booked, open: Math.max(0, slots.length - booked) };
+      })
+      .filter((group) => group.total > 0);
+  }, [resolvedWeeklySlots, slotStatusMap]);
+
+  const bookedSlotCount = bookingMix.reduce((sum, group) => sum + group.booked, 0);
+  const weeklySlotCount = bookingMix.reduce((sum, group) => sum + group.total, 0);
+
   const currentWeekRangeLabel = useMemo(() => {
     if (!selectedPeriod || !currentWeek) return '';
     const inRangeDates = (resolvedWeeklySlots || [])
@@ -416,7 +435,45 @@ export const CoachAvailabilitySection = ({
     setDeleteConfirmOpen(true);
   };
 
+  const handleDeleteSlot = (slot: CoachAvailabilitySlot) => {
+    setDeleteTargetSlotId(slot.id);
+    setDeleteTargetType('slot');
+    setDeleteConfirmOpen(true);
+  };
+
   const handleConfirmDelete = async () => {
+    if (deleteTargetType === 'slot' && deleteTargetSlotId) {
+      try {
+        const booked = slotStatusMap[deleteTargetSlotId]?.totalCount ?? 0;
+        if (booked > 0) {
+          toast({
+            title: 'Cannot delete slot',
+            description: 'This slot already has a booking. Cancel it first.',
+            variant: 'destructive',
+          });
+          return;
+        }
+        const { error: slotError } = await supabase
+          .from('coach_availability_slot_occurrences' as any)
+          .delete()
+          .eq('id', deleteTargetSlotId);
+        if (slotError) throw slotError;
+        toast({ title: 'Slot deleted', description: 'The time slot was removed.' });
+        refetch();
+      } catch (err: any) {
+        toast({
+          title: 'Delete failed',
+          description: err?.message || 'Could not delete this slot',
+          variant: 'destructive',
+        });
+      } finally {
+        setDeleteConfirmOpen(false);
+        setDeleteTargetId(null);
+        setDeleteTargetSlotId(null);
+      }
+      return;
+    }
+
     if (deleteTargetType !== 'period' || !deleteTargetId) {
       setDeleteConfirmOpen(false);
       setDeleteTargetId(null);
@@ -584,26 +641,6 @@ export const CoachAvailabilitySection = ({
     }
   }, [selectedPeriod?.id, currentWeek]);
 
-  const renderHeader = () => (
-    <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
-      <div className="flex items-center gap-2">
-        <Calendar className={`w-6 h-6 ${resolvedIconClass}`} />
-        <h2 className="text-2xl font-medium">
-          Availability
-        </h2>
-      </div>
-      <div className="w-full flex justify-end gap-3 md:w-auto md:justify-start">
-        <Button
-          onClick={() => setIsModalOpen(true)}
-          className="hover:brightness-110"
-          style={{ backgroundColor: PRIMARY.main, color: PRIMARY.foreground }}
-        >
-          + Add Availability
-        </Button>
-      </div>
-    </div>
-  );
-
   if (error) {
     return (
       <div className="space-y-4">
@@ -648,7 +685,7 @@ export const CoachAvailabilitySection = ({
     <>
       <div className="space-y-6">
         {(!sortedAvailabilities || sortedAvailabilities.length === 0) ? (
-          <Card>
+          <Card className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none">
             <CardContent className="p-6">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
                 <div className="flex items-center gap-2">
@@ -656,213 +693,276 @@ export const CoachAvailabilitySection = ({
                   <h2 className="text-2xl font-medium">Availability</h2>
                 </div>
                 {canManage && (
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => setIsModalOpen(true)}
-                    className="w-full sm:w-auto bg-primary text-white rounded-full font-semibold shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                    className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
                   >
-                    + Add Availability
-                  </Button>
+                    Add availability
+                  </button>
                 )}
               </div>
               <div className="flex flex-col items-center justify-center space-y-4">
                 <Calendar className={`w-16 h-16 ${resolvedIconClass}`} />
                 <p className="text-gray-600 text-base">No availability set yet</p>
                 {canManage && (
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => setIsModalOpen(true)}
-                    className="bg-primary text-white rounded-full px-8 shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                    className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
                   >
-                    + Add Availability
-                  </Button>
+                    Add availability
+                  </button>
                 )}
               </div>
             </CardContent>
           </Card>
-        ) : (
-          <Card>
-            <CardContent className="p-6 space-y-6">
+        ) : canManage ? (
+          <div className="flex flex-col gap-6">
+            <section className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <div className="flex items-center gap-2">
-                  <Calendar className={`w-6 h-6 ${resolvedIconClass}`} />
-                  <h2 className="text-2xl font-medium">Availability</h2>
-                </div>
-                {canManage && (
-                  <Button
-                    onClick={() => setIsModalOpen(true)}
-                    className="w-full sm:w-auto bg-primary text-white rounded-full font-semibold shadow-md transition-all hover:shadow-lg hover:-translate-y-0.5 active:translate-y-0"
+                <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+                  <Calendar className="size-4" strokeWidth={1.75} />
+                  Booking period
+                </h2>
+                <div className="flex flex-wrap items-center gap-2">
+                  <button
+                    type="button"
+                    disabled={!selectedPeriod}
+                    onClick={() => selectedPeriod && handleEdit(selectedPeriod)}
+                    className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] disabled:opacity-40"
                   >
-                    + Add Availability
-                  </Button>
-                )}
+                    Edit
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!selectedPeriod}
+                    onClick={() => selectedPeriod && handleDeletePeriod(selectedPeriod.id)}
+                    className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] disabled:opacity-40"
+                  >
+                    Delete
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setIsModalOpen(true)}
+                    className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
+                  >
+                    Add availability
+                  </button>
+                </div>
               </div>
-              {/* Period Selector Pills */}
               {sortedAvailabilities.length > 1 && (
-                <div className="flex flex-col gap-3 mb-6 md:flex-row md:items-center md:justify-between">
-                  <span className="text-sm font-medium text-gray-700 flex-shrink-0">Availability Period:</span>
-                  <div className="flex-1  min-w-0 overflow-x-auto px-1 [-webkit-overflow-scrolling:touch] [scrollbar-width:thin] [scrollbar-color:#cbd5e1_transparent] [&::-webkit-scrollbar]:h-[2rem] [&::-webkit-scrollbar-track]:bg-transparent [&::-webkit-scrollbar-thumb]:bg-gray-300 [&::-webkit-scrollbar-thumb:hover][scrollbar-width:thin]:bg-gray-400 ">
-                    <div className="flex mb-2 gap-3">
-                      {sortedAvailabilities.map((period) => (
-                        <button
-                          key={period.id}
-                          onClick={() => {
-                            setSelectedPeriodId(period.id);
-                            setCurrentWeekIndex(0);
-                          }}
-                          className={`px-4 py-2 rounded-full text-sm font-medium transition flex-shrink-0 ${
-                            selectedPeriod?.id === period.id
-                              ? 'bg-primary text-white'
-                              : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
-                          }`}
-                        >
-                          {formatRangeWithYear(period.start_date, period.end_date)}
-                        </button>
-                      ))}
-                    </div>
+                <div className="flex flex-wrap gap-2">
+                  {sortedAvailabilities.map((period) => (
+                    <button
+                      key={period.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPeriodId(period.id);
+                        setCurrentWeekIndex(0);
+                      }}
+                      className={`rounded-[8px] border px-3 py-1.5 text-[12px] font-medium ${
+                        selectedPeriod?.id === period.id
+                          ? "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
+                          : "border-[#EAEADF] bg-[#F4F4EB] text-[#484D56]"
+                      }`}
+                    >
+                      {formatRangeWithYear(period.start_date, period.end_date)}
+                    </button>
+                  ))}
+                </div>
+              )}
+              {selectedPeriod && (
+                <div className="flex flex-col gap-3 rounded-[8px] border border-[#D9D9CF] bg-[#EAEADF] p-[10px] sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex flex-col gap-[5px]">
+                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Selected period</span>
+                    <span className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#1A202C]">
+                      {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
+                    </span>
                   </div>
+                  {weeklySlotCount > 0 && (
+                    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980]">
+                      {bookedSlotCount} of {weeklySlotCount} weekly slots booked
+                    </p>
+                  )}
+                </div>
+              )}
+            </section>
+
+            {bookingMix.length > 0 && (
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+                {bookingMix.map((group) => (
+                  <div
+                    key={group.label}
+                    className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]"
+                  >
+                    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980]">{group.label}</p>
+                    <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
+                      {group.booked} / {group.total}
+                    </p>
+                    <div className="h-[5px] w-full overflow-hidden rounded-[10px] bg-[#D9D9CF]">
+                      <div
+                        className="h-full rounded-[10px] bg-[#0054B4]"
+                        style={{ width: `${Math.round((group.booked / group.total) * 100)}%` }}
+                      />
+                    </div>
+                    <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
+                      {group.open} {group.open === 1 ? "slot" : "slots"} open
+                    </p>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {selectedPeriod && (
+              <section className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
+                <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+                  <Calendar className="size-4" strokeWidth={1.75} />
+                  Weekly time slots
+                </h2>
+                {currentWeek && (
+                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                    <button
+                      type="button"
+                      onClick={handlePreviousWeek}
+                      disabled={currentWeekIndex === 0}
+                      className={`inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] disabled:cursor-not-allowed ${
+                        currentWeekIndex === 0 ? "bg-[#F7F7F0] text-[#A3A6AB]" : "bg-[#F1F1E6] text-[#484D56]"
+                      }`}
+                    >
+                      <ChevronLeft className="size-4" />
+                      Previous week
+                    </button>
+                    <div className="flex items-center justify-center gap-[5px]">
+                      <p className="text-center text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+                        Week {currentWeekIndex + 1} of {weeks.length}: {currentWeekRangeLabel.replace(" - ", " – ")}
+                      </p>
+                      <span className="rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]">
+                        EST
+                      </span>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleNextWeek}
+                      disabled={currentWeekIndex === weeks.length - 1}
+                      className="inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]"
+                    >
+                      Next week
+                      <ChevronRight className="size-4" />
+                    </button>
+                  </div>
+                )}
+                <AvailabilityTable
+                  slots={resolvedWeeklySlots}
+                  onEdit={handleSlotEdit}
+                  onDelete={handleDeleteSlot}
+                  showActions
+                  slotStatusMap={slotStatusMap}
+                  slotStatusLoading={slotStatusLoading && !slotStatusError}
+                  platformFeePerc={platformFeePerc}
+                  appearance="coach"
+                />
+              </section>
+            )}
+          </div>
+        ) : (
+          <Card className="border border-[#EAEADF] bg-[#F7F7F0] shadow-none">
+            <CardContent className="flex flex-col gap-5 p-[25px] py-[30px]">
+              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+                  <Calendar className="size-4" strokeWidth={1.75} />
+                  Availability
+                </h2>
+              </div>
+
+              {sortedAvailabilities.length > 1 && (
+                <div className="flex flex-wrap gap-2">
+                  {sortedAvailabilities.map((period) => (
+                    <button
+                      key={period.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPeriodId(period.id);
+                        setCurrentWeekIndex(0);
+                      }}
+                      className={`rounded-lg px-3 py-1.5 text-body-sm ${
+                        selectedPeriod?.id === period.id
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-white text-foreground'
+                      }`}
+                    >
+                      {formatRangeWithYear(period.start_date, period.end_date)}
+                    </button>
+                  ))}
                 </div>
               )}
 
-              {/* Period Info and Actions */}
               {selectedPeriod && (
-                <>
-                  <div className="border rounded bg-gray-50 px-4 py-3 flex items-center justify-between gap-3">
-                    <div className="flex flex-col">
-                      <span className="text-xs text-gray-500 font-semibold">Selected Period</span>
-                      <div className="text-gray-800 font-semibold">
-                        {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
-                      </div>
-                    </div>
-                    {canManage && (
-                      <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => {
-                            setEditData(selectedPeriod);
-                            setIsModalOpen(true);
-                          }}
-                          className="text-blue-600 hover:text-blue-700 hover:bg-blue-50 flex items-center gap-1"
-                        >
-                          <Edit className="w-4 h-4" />
-                          Edit
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeletePeriod(selectedPeriod.id)}
-                          className="text-red-600 hover:text-red-700 hover:bg-red-50 flex items-center gap-1"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                          Delete
-                        </Button>
-                      </div>
-                    )}
+                <div className="flex flex-col gap-4">
+                  <div className="flex flex-col gap-[5px] rounded-[8px] border border-[#D9D9CF] bg-[#EAEADF] p-[10px]">
+                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Selected period</span>
+                    <span className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#1A202C]">
+                      {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
+                    </span>
                   </div>
 
-                  {/* Date Range Picker for Week Navigation */}
-                  <div className="flex flex-col md:flex-row md:items-center gap-3 pb-4 border-b">
-                    <span className="text-sm font-medium text-gray-700">Jump to date:</span>
+                  <div className="flex flex-col gap-5 md:flex-row md:items-center">
+                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Filter by date</span>
                     <DateRangePicker
                       startDate={dateRangeStart || new Date(selectedPeriod.start_date)}
                       endDate={dateRangeEnd || new Date(selectedPeriod.end_date)}
                       onChange={handleDateRangeChange}
                       minStartDate={new Date(selectedPeriod.start_date)}
-                      className="flex-1"
+                      variant="cream"
+                      className="gap-5"
                     />
                   </div>
-                </>
+                </div>
               )}
 
-              {/* Week Navigation */}
               {selectedPeriod && currentWeek && (
-                <>
-                  {/* Mobile: buttons in one row, weekly slots in full-width row below */}
-                  <div className="flex flex-col gap-2 md:hidden">
-                    <div className="flex items-center justify-center gap-2">
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handlePreviousWeek}
-                        disabled={currentWeekIndex === 0}
-                        className="text-gray-600 flex-shrink-0"
-                      >
-                        <ChevronLeft className="w-4 h-4 mr-1" />
-                        Previous
-                      </Button>
-                      <Button
-                        variant="ghost"
-                        size="sm"
-                        onClick={handleNextWeek}
-                        disabled={currentWeekIndex === weeks.length - 1}
-                        className="text-gray-600 flex-shrink-0"
-                      >
-                        Next
-                        <ChevronRight className="w-4 h-4 ml-1" />
-                      </Button>
-                    </div>
-                    <div className="w-full">
-                      <div className="flex items-center justify-center w-full">
-                        <div className="text-center w-full px-2">
-                          <div className="flex items-center justify-center gap-2">
-                            <div className="font-semibold">Weekly Time Slots</div>
-                            <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                              EST
-                            </span>
-                          </div>
-                        <div className="text-sm text-gray-600 truncate">Week {currentWeekIndex + 1} of {weeks.length}: {currentWeekRangeLabel}</div>
-                        </div>
-                      </div>
-                    </div>
+                <div className="flex flex-col items-stretch justify-between gap-3 border-t border-[#EAEADF] pt-5 md:flex-row md:items-center">
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handlePreviousWeek}
+                    disabled={currentWeekIndex === 0}
+                    className="h-auto rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] hover:bg-[#F1F1E6] disabled:text-[#A3A6AB]"
+                  >
+                    <ChevronLeft className="mr-1 h-4 w-4" />
+                    Previous week
+                  </Button>
+                  <div className="flex items-center justify-center gap-[5px]">
+                    <p className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+                      Weekly time slots
+                    </p>
+                    <span className="rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]">
+                      EST
+                    </span>
                   </div>
-
-                  {/* Desktop: original layout (buttons on sides, info center) */}
-                  <div className="hidden md:flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handlePreviousWeek}
-                      disabled={currentWeekIndex === 0}
-                      className="text-gray-600 border border-slate-300 rounded-full px-3"
-                    >
-                      <ChevronLeft className="w-4 h-4 mr-1" />
-                      Previous Week
-                    </Button>
-                    <div className="flex items-center gap-2">
-                      <Clock className={`w-6 h-6 -mt-0.5 ${resolvedIconClass}`} />
-                      <div className="text-left leading-tight">
-                        <div className="flex items-center justify-start gap-2">
-                          <div className="font-semibold">Weekly Time Slots</div>
-                          <span className="inline-flex items-center rounded-full border border-slate-300 bg-slate-50 px-2 py-0.5 text-[11px] font-medium text-slate-700">
-                            EST
-                          </span>
-                        </div>
-                        <div className="text-sm text-gray-600">Week {currentWeekIndex + 1} of {weeks.length}: {currentWeekRangeLabel}</div>
-                      </div>
-                    </div>
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={handleNextWeek}
-                      disabled={currentWeekIndex === weeks.length - 1}
-                      className="text-gray-600 border border-slate-300 rounded-full px-3"
-                    >
-                      Next Week
-                      <ChevronRight className="w-4 h-4 ml-1" />
-                    </Button>
-                  </div>
-                </>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={handleNextWeek}
+                    disabled={currentWeekIndex === weeks.length - 1}
+                    className="h-auto rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] hover:bg-[#F1F1E6] disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]"
+                  >
+                    Next week
+                    <ChevronRight className="ml-1 h-4 w-4" />
+                  </Button>
+                </div>
               )}
 
               {/* Table */}
               {selectedPeriod && (
               <AvailabilityTable
                 slots={resolvedWeeklySlots}
-                onEdit={canManage ? handleSlotEdit : undefined}
                 onBookSlot={onBookSlot ? handleBookSlot : undefined}
-                showActions={canManage || !!onBookSlot}
+                showActions={!!onBookSlot}
                 slotStatusMap={slotStatusMap}
                 slotStatusLoading={slotStatusLoading && !slotStatusError}
                 platformFeePerc={platformFeePerc}
+                appearance="athlete"
               />
             )}
             </CardContent>

@@ -7,8 +7,7 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { AlertCircle, Calendar, Info } from 'lucide-react';
-import { formatDateForInput } from '@/utils/helperFunctions';
+import { AlertCircle, Info } from 'lucide-react';
 import { SETUP_INSTRUCTIONS } from '@/utils/db';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import type { AvailabilityFormData } from '@/types/availability';
@@ -58,66 +57,64 @@ export const DateRangeHeader = ({
 
   return (
     <>
-      {/* Date Range Section */}
-      <div className="flex flex-wrap items-center gap-2 md:gap-3">
-        <div className="flex items-center gap-2">
-          <Calendar className="w-5 h-5 text-blue-600" />
-          <span className="font-semibold text-sm md:text-base">Availability Period:</span>
-          <span className="text-gray-600 text-sm md:text-base">
-            {formatDateForInput(formData.start_date)} - {formatDateForInput(formData.end_date)}
+      <div className="flex flex-col gap-3">
+        <div className="flex flex-wrap items-center gap-3">
+          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980]">
+            Availability period
           </span>
+          <DateRangePicker
+            startDate={formData.start_date}
+            endDate={formData.end_date}
+            onChange={onRangeChange}
+            minDays={minDays}
+            minStartDate={minStartDate}
+            disabled={isEditMode}
+            badgeText="Min 1 week"
+            variant="modal"
+          />
         </div>
-        <DateRangePicker
-          startDate={formData.start_date}
-          endDate={formData.end_date}
-          onChange={onRangeChange}
-          minDays={minDays}
-          minStartDate={minStartDate}
-          disabled={isEditMode}
-          badgeText="Min 1 week"
-        />
-        <div className="flex items-center gap-2 rounded-full border border-slate-200 bg-white px-3 py-1.5">
+        <div className="flex flex-wrap items-center gap-[10px]">
           <Switch
             checked={isRecurring}
             onCheckedChange={onRecurringToggle}
             id="recurring-toggle"
+            className="h-5 w-9 border-0 data-[state=checked]:bg-[#0054B4] data-[state=unchecked]:bg-[#D9D9CF] [&>span]:h-4 [&>span]:w-4 [&>span]:bg-white [&>span]:data-[state=checked]:translate-x-4"
           />
-          <label htmlFor="recurring-toggle" className="text-sm font-semibold text-slate-700">
+          <label htmlFor="recurring-toggle" className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C]">
             Recurring session
           </label>
-          <span className="text-xs text-slate-500">
-            {isRecurring ? 'Applies to all weeks' : 'Only this week'}
+          <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
+            {isRecurring ? "Applies to all weeks" : "Only this week"}
           </span>
-        </div>
-        {/* Info Button with Popover */}
-        <div className="relative ml-2">
           <div ref={infoPopoverRef} className="relative">
-          <button
-            onClick={() => setShowInfoPopover(!showInfoPopover)}
-            className="bg-blue-100 hover:bg-blue-200 rounded-full p-2 transition"
-            title="Setup instructions"
-          >
-            <Info className="h-5 w-5 text-blue-600" />
-          </button>
-          {showInfoPopover && (
-            <div className="absolute right-0 mt-2 w-80 bg-white text-gray-900 rounded-lg shadow-lg p-4 z-50 border border-gray-200">
-              <h3 className="font-semibold text-blue-900 mb-3">{SETUP_INSTRUCTIONS.title}</h3>
-              <ul className="space-y-2 text-sm text-gray-700">
-                {SETUP_INSTRUCTIONS.steps.map((step, idx) => (
-                  <li key={idx} className="flex gap-2">
-                    <span className="font-semibold text-blue-600">{idx + 1}.</span>
-                    <span>{step}</span>
-                  </li>
-                ))}
-              </ul>
-              {recurringInfo && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="font-semibold text-blue-900 mb-1">{recurringInfo.title}</p>
-                  <p className="text-sm text-blue-800">{recurringInfo.description}</p>
-                </div>
-              )}
-            </div>
-          )}
+            <button
+              type="button"
+              onClick={() => setShowInfoPopover(!showInfoPopover)}
+              className="text-[#767980]"
+              title="Setup instructions"
+              aria-label="Setup instructions"
+            >
+              <Info className="size-4" strokeWidth={1.75} />
+            </button>
+            {showInfoPopover && (
+              <div className="absolute left-0 z-50 mt-2 w-80 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)]">
+                <h3 className="mb-3 text-[14px] font-medium text-[#1A202C]">{SETUP_INSTRUCTIONS.title}</h3>
+                <ul className="space-y-2 text-[12px] leading-[14px] text-[#484D56]">
+                  {SETUP_INSTRUCTIONS.steps.map((step, idx) => (
+                    <li key={idx} className="flex gap-2">
+                      <span className="font-medium text-[#0054B4]">{idx + 1}.</span>
+                      <span>{step}</span>
+                    </li>
+                  ))}
+                </ul>
+                {recurringInfo && (
+                  <div className="mt-3 border-t border-[#EAEADF] pt-3">
+                    <p className="mb-1 text-[14px] font-medium text-[#1A202C]">{recurringInfo.title}</p>
+                    <p className="text-[12px] leading-[14px] text-[#767980]">{recurringInfo.description}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>

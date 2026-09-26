@@ -1,13 +1,15 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Calendar, ClipboardList, Clock, User, Users } from "lucide-react";
-import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { Activity, Calendar, CircleDollarSign, Clock, UserRound, Users } from "lucide-react";
+import { useMemo, type ReactNode } from "react";
 import { chatAPI, type ConversationWithParticipants } from "@/api/chat";
 import { useAuth } from "@/contexts/AuthContext";
+import { useAthleteAvatarsByNames } from "@/hooks/useAthleteAvatars";
+import { useCoachAvatarsByIds } from "@/hooks/useCoachAvatars";
 import { useRole } from "@/hooks/useRole";
 import { useDashboardData, type DashboardActivity } from "@/hooks/useDashboardData";
 import { ROUTES } from "@/routes";
+import { cn } from "@/lib/utils";
 
 const longDate = (iso: string) =>
   new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(
@@ -24,18 +26,28 @@ const timeRange12h = (startIso: string, endIso: string) => {
 
 const relativeDay = (iso: string) => {
   const diffMs = Date.now() - new Date(iso).getTime();
-  if (diffMs < 0) return longDate(iso);
+  if (diffMs < 0) {
+    return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
+      new Date(iso)
+    );
+  }
   const minutes = Math.floor(diffMs / 60_000);
   if (minutes < 60) return `${Math.max(minutes, 1)}m`;
   const hours = Math.floor(minutes / 60);
   if (hours < 24) return `${hours}h`;
   const days = Math.floor(hours / 24);
   if (days < 30) return `${days}d`;
-  return longDate(iso);
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
+    new Date(iso)
+  );
 };
 
 const initials = (name: string) =>
-  (name || "?").split(" ").map((w) => w[0]).join("").slice(0, 2);
+  (name || "?")
+    .split(" ")
+    .map((w) => w[0])
+    .join("")
+    .slice(0, 2);
 
 const activityLabel = (a: DashboardActivity) =>
   a.label === "Booked session" ? `Booked session for ${shortDate(a.when)}` : a.label;
@@ -51,61 +63,188 @@ const isConversationUnread = (conv: ConversationWithParticipants, userId?: strin
   return new Date(mine.last_read_at) < new Date(conv.last_message_at);
 };
 
+/** Figma card: #F7F7F0 on page #F1F1E6, 1px #EAEADF, 10px radius, 30×25 padding */
+const DashCard = ({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) => (
+  <div
+    className={cn(
+      "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]",
+      className
+    )}
+  >
+    {children}
+  </div>
+);
+
 const TypeChip = ({ type }: { type: string }) => {
   const isGroup = type === "group";
-  const Icon = isGroup ? Users : User;
   return (
     <span
-      className={`inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-xs font-medium capitalize ${
-        isGroup ? "bg-cyan-100 text-cyan-700" : "bg-sidebar-primary/10 text-sidebar-primary"
-      }`}
+      className={cn(
+        "inline-flex items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
+        isGroup
+          ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
+          : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
+      )}
     >
-      <Icon className="h-3 w-3" />
       {type}
     </span>
   );
 };
 
-const CoachChip = ({ name }: { name: string }) => (
-  <span className="inline-flex items-center gap-1 rounded-full bg-gray-100 px-2.5 py-0.5 text-xs font-medium text-gray-700">
-    <ClipboardList className="h-3 w-3" />
-    {name}
+const PhotoMark = ({
+  name,
+  photo,
+  className,
+}: {
+  name: string;
+  photo?: string | null;
+  className?: string;
+}) => (
+  <span
+    className={cn(
+      "inline-flex items-center justify-center overflow-hidden bg-[#C1C1B8] font-medium leading-none text-[#484D56]",
+      className
+    )}
+  >
+    {photo ? <img src={photo} alt="" className="size-full object-cover" /> : initials(name)}
   </span>
 );
 
-const SessionRow = ({ dateIso, endIso, type, coachName }: {
-  dateIso: string; endIso: string; type: string; coachName?: string | null;
+const AttendingChip = ({
+  names,
+  photos,
+  count,
+}: {
+  names: string[];
+  photos?: Record<string, string | null>;
+  count: number;
 }) => (
-  <div className="rounded-lg bg-app-background px-4 py-3">
-    <p className="font-semibold">{longDate(dateIso)}</p>
-    <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-      <span>{timeRange12h(dateIso, endIso)}</span>
+  <span className="inline-flex items-center gap-[5px] rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
+    {names.length > 0 ? (
+      <span className="flex items-center">
+        {names.slice(0, 3).map((name, index) => (
+          <PhotoMark
+            key={`${name}-${index}`}
+            name={name}
+            photo={photos?.[name]}
+            className={cn(
+              "size-[22px] rounded-[3px] border border-[#F1F1E6] text-[8px]",
+              index > 0 && "-ml-3"
+            )}
+          />
+        ))}
+      </span>
+    ) : null}
+    <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+      +{count} attending
+    </span>
+  </span>
+);
+
+const PersonChip = ({ name, photo }: { name: string; photo?: string | null }) => (
+  <span className="inline-flex items-center gap-[5px] rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
+    <PhotoMark name={name} photo={photo} className="size-[22px] rounded-[3px] text-[9px]" />
+    <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+      {name}
+    </span>
+  </span>
+);
+
+const StatTile = ({
+  icon,
+  value,
+  label,
+  sub,
+}: {
+  icon: ReactNode;
+  value: string | number;
+  label: string;
+  sub: string;
+}) => (
+  <DashCard>
+    <span className="inline-flex size-8 items-center justify-center rounded-[10px] bg-[#E5EDF7] text-[#0054B4]">
+      {icon}
+    </span>
+    <div className="flex flex-col gap-[3px]">
+      <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">{value}</p>
+      <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">{label}</p>
+      <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{sub}</p>
+    </div>
+  </DashCard>
+);
+
+const SessionRow = ({
+  dateIso,
+  endIso,
+  type,
+  personName,
+  personPhoto,
+  attendingNames = [],
+  attendingCount = 0,
+  namePhotos,
+}: {
+  dateIso: string;
+  endIso: string;
+  type: string;
+  personName?: string | null;
+  personPhoto?: string | null;
+  attendingNames?: string[];
+  attendingCount?: number;
+  namePhotos?: Record<string, string | null>;
+}) => (
+  <div className="flex items-end justify-between gap-3 rounded-[10px] bg-[#F1F1E6] px-[15px] py-3">
+    <div className="flex min-w-0 flex-col gap-[5px]">
+      <p className="text-[16px] font-medium leading-[18px] tracking-[-0.8px] text-[#1A202C]">
+        {longDate(dateIso)}
+      </p>
+      <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+        {timeRange12h(dateIso, endIso)}
+      </p>
+    </div>
+    <div className="flex shrink-0 items-center gap-[5px]">
+      {attendingCount > 1 ? (
+        <AttendingChip names={attendingNames} photos={namePhotos} count={attendingCount} />
+      ) : personName ? (
+        <PersonChip name={personName} photo={personPhoto} />
+      ) : null}
       <TypeChip type={type} />
-      {coachName && <CoachChip name={coachName} />}
     </div>
   </div>
 );
 
-const StatTile = ({ icon: Icon, value, label, sub }: {
-  icon: typeof Calendar; value: string | number; label: string; sub: string;
-}) => (
-  <Card className="rounded-xl border-sidebar-border shadow-none">
-    <CardContent className="p-6">
-      <span className="inline-flex rounded-lg bg-sidebar-primary/10 p-2.5">
-        <Icon className="h-5 w-5 text-sidebar-primary" />
-      </span>
-      <p className="mt-4 text-3xl font-bold">{value}</p>
-      <p className="font-medium">{label}</p>
-      <p className="text-sm text-muted-foreground">{sub}</p>
-    </CardContent>
-  </Card>
+const ViewAllLink = ({ to }: { to: string }) => (
+  <Link
+    to={to}
+    className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#0054B4]"
+  >
+    View all
+  </Link>
 );
+
+const cardTitleClass =
+  "text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]";
+
+const primaryButtonClass =
+  "inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]";
+
+const secondaryButtonClass =
+  "inline-flex items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]";
+
+const captionClass =
+  "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const { userName, userProfile, user } = useAuth();
+  const { userName, user } = useAuth();
   const { isCoach } = useRole();
-  const { isLoading, error, nextSession, upcoming, stats, activities, coaches } = useDashboardData();
+  const { isLoading, error, nextSession, upcoming, stats, activities, coaches, athletes } =
+    useDashboardData();
 
   const conversationsQuery = useQuery({
     queryKey: ["dashboard-conversations", user?.id],
@@ -116,200 +255,379 @@ const Dashboard = () => {
   const unreadCount = conversations.filter((c) => isConversationUnread(c, user?.id)).length;
 
   const firstName = (userName || "").split(" ")[0] || "there";
-  const sport = userProfile?.sport ? `${String(userProfile.sport).toLowerCase()} ` : "";
+  const attendingCount =
+    nextSession && Array.isArray(nextSession.athleteNames)
+      ? nextSession.athleteNames.length
+      : 0;
+
+  const athleteNames = useMemo(() => {
+    const names = new Set<string>();
+    const add = (list?: string[] | null) => list?.forEach((name) => name && names.add(name));
+    add(nextSession?.athleteNames);
+    upcoming.forEach((session) => add(session.athleteNames));
+    athletes.forEach((athlete) => names.add(athlete.name));
+    return Array.from(names).sort();
+  }, [nextSession, upcoming, athletes]);
+
+  const coachIds = useMemo(() => {
+    const ids = new Set<string>();
+    if (nextSession?.coachId) ids.add(nextSession.coachId);
+    upcoming.forEach((session) => session.coachId && ids.add(session.coachId));
+    coaches.forEach((coach) => coach.coachId && ids.add(coach.coachId));
+    return Array.from(ids).sort();
+  }, [nextSession, upcoming, coaches]);
+
+  const { data: athletePhotos = {} } = useAthleteAvatarsByNames(
+    isCoach && athleteNames.length ? athleteNames : undefined
+  );
+  const { data: coachPhotos = {} } = useCoachAvatarsByIds(
+    !isCoach && coachIds.length ? coachIds : undefined
+  );
 
   return (
-    <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 md:px-8">
-      <h1 className="text-3xl font-bold">Welcome back, {firstName}</h1>
-      <p className="mt-1 text-muted-foreground">
-        {isCoach
-          ? "Here's what's happening with your coaching."
-          : `Here's what's happening with your ${sport}training.`}
-      </p>
+    <div className="overflow-x-hidden px-4 md:px-10">
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6 pb-10">
+      <header className="flex flex-col gap-[10px]">
+        <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
+          Welcome back, {firstName} 👋
+        </h1>
+        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+          {isCoach ? "Keep growing your coaching business." : "Keep building on your game."}
+        </p>
+      </header>
 
-      <Card className="mt-6 rounded-xl border-sidebar-border shadow-none">
-        <CardContent className="flex flex-col gap-4 p-6 md:flex-row md:items-center md:justify-between">
+      <DashCard className="md:flex-row md:items-end md:justify-between">
+        <div className="flex min-w-0 flex-col gap-5">
+          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#767980]">
+            Your next session
+          </p>
+          {nextSession ? (
+            <div className="flex flex-col gap-[15px]">
+              <div className="flex flex-col gap-[10px]">
+                <p className="text-[28px] font-bold leading-[30px] tracking-[-1.4px] text-[#1A202C]">
+                  {longDate(nextSession.start)}
+                </p>
+                <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                  {timeRange12h(nextSession.start, nextSession.end)}
+                </p>
+              </div>
+              <div className="flex flex-wrap items-center gap-[5px]">
+                {isCoach && attendingCount > 1 ? (
+                  <AttendingChip
+                    names={nextSession.athleteNames || []}
+                    photos={athletePhotos}
+                    count={attendingCount}
+                  />
+                ) : null}
+                {isCoach && attendingCount === 1 && nextSession.athleteNames?.[0] ? (
+                  <PersonChip
+                    name={nextSession.athleteNames[0]}
+                    photo={athletePhotos[nextSession.athleteNames[0]]}
+                  />
+                ) : null}
+                {!isCoach && nextSession.coachName ? (
+                  <PersonChip
+                    name={nextSession.coachName}
+                    photo={coachPhotos[nextSession.coachId]}
+                  />
+                ) : null}
+                <TypeChip type={nextSession.type} />
+              </div>
+            </div>
+          ) : (
+            <p className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
+              {isLoading
+                ? "Loading…"
+                : error
+                  ? "Couldn't load your sessions"
+                  : "No upcoming sessions"}
+            </p>
+          )}
+        </div>
+
+        <div className="flex shrink-0 flex-col items-end gap-[10px]">
           {nextSession ? (
             <>
-              <div>
-                <p className="text-sm text-muted-foreground">Your next session</p>
-                <p className="mt-1 text-3xl font-bold">{longDate(nextSession.start)}</p>
-                <div className="mt-2 flex flex-wrap items-center gap-2 text-sm">
-                  <span>{timeRange12h(nextSession.start, nextSession.end)}</span>
-                  <TypeChip type={nextSession.type} />
-                  {!isCoach && nextSession.coachName && <CoachChip name={nextSession.coachName} />}
-                </div>
-              </div>
-              <div className="flex flex-col gap-2">
-                <Button onClick={() => navigate(ROUTES.MY_SESSIONS)}>View details</Button>
-                <Button variant="outline" onClick={() => navigate(ROUTES.CHAT)}>
-                  {isCoach ? "Messages" : "Message coach"}
-                </Button>
-              </div>
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.MY_SESSIONS)}
+                className={primaryButtonClass}
+              >
+                View details
+              </button>
+              <button
+                type="button"
+                onClick={() => navigate(ROUTES.CHAT)}
+                className={secondaryButtonClass}
+              >
+                {isCoach ? "Message athletes" : "Message coach"}
+              </button>
             </>
-          ) : (
-            <>
-              <div>
-                <p className="text-sm text-muted-foreground">Your next session</p>
-                <p className="mt-1 text-xl font-semibold">
-                  {isLoading ? "Loading…" : error ? "Couldn't load your sessions" : "No upcoming sessions"}
-                </p>
-              </div>
-              {!isCoach && !isLoading && !error && (
-                <Button onClick={() => navigate(ROUTES.COACHES)}>Find a coach</Button>
-              )}
-            </>
-          )}
-        </CardContent>
-      </Card>
+          ) : !isCoach && !isLoading && !error ? (
+            <button
+              type="button"
+              onClick={() => navigate(ROUTES.COACHES)}
+              className={primaryButtonClass}
+            >
+              Find a coach
+            </button>
+          ) : null}
+        </div>
+      </DashCard>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
-        <StatTile icon={Calendar} value={error ? "—" : stats.completedCount}
-          label={isCoach ? "Sessions taught" : "Sessions completed"} sub="All time" />
-        <StatTile icon={Clock} value={error ? "—" : stats.hoursTotal}
-          label={isCoach ? "Hours coached" : "Hours trained"} sub="Total training time" />
-        <StatTile icon={isCoach ? Calendar : User} value={error ? "—" : stats.thirdStat}
-          label={isCoach ? "Upcoming sessions" : "Coaches worked with"}
-          sub={isCoach ? "On the calendar" : "All time"} />
+      {/* Stats row */}
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
+        {isCoach ? (
+          <>
+            <StatTile
+              icon={<Calendar className="size-4" strokeWidth={1.75} />}
+              value={error ? "—" : stats.sessionsThisMonth}
+              label="Sessions this month"
+              sub="Completed"
+            />
+            <StatTile
+              icon={<CircleDollarSign className="size-4" strokeWidth={1.75} />}
+              value={
+                error
+                  ? "—"
+                  : stats.revenueThisMonth == null
+                    ? "—"
+                    : `$${stats.revenueThisMonth.toLocaleString()}`
+              }
+              label="Revenue this month"
+              sub={stats.revenueThisMonth == null ? "Not connected yet" : "Gross earnings"}
+            />
+            <StatTile
+              icon={<Users className="size-4" strokeWidth={1.75} />}
+              value={error ? "—" : stats.activeAthletes}
+              label="Active athletes"
+              sub="On your roster"
+            />
+          </>
+        ) : (
+          <>
+            <StatTile
+              icon={<Calendar className="size-4" strokeWidth={1.75} />}
+              value={error ? "—" : stats.completedCount}
+              label="Sessions completed"
+              sub="All time"
+            />
+            <StatTile
+              icon={<Clock className="size-4" strokeWidth={1.75} />}
+              value={error ? "—" : stats.hoursTotal}
+              label="Hours trained"
+              sub="Total training time"
+            />
+            <StatTile
+              icon={<UserRound className="size-4" strokeWidth={1.75} />}
+              value={error ? "—" : stats.thirdStat}
+              label="Coaches worked with"
+              sub="All time"
+            />
+          </>
+        )}
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className="rounded-xl border-sidebar-border shadow-none lg:col-span-2">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Upcoming sessions</h2>
-              <Link to={ROUTES.MY_SESSIONS} className="text-sm font-medium text-sidebar-primary">
-                View all
-              </Link>
-            </div>
-            <div className="mt-4 space-y-3">
-              {upcoming.length ? (
-                upcoming.map((s) => (
-                  <SessionRow key={s.id} dateIso={s.start} endIso={s.end} type={s.type}
-                    coachName={isCoach ? null : s.coachName} />
-                ))
-              ) : (
-                <p className="text-sm text-muted-foreground">
-                  {isLoading ? "Loading…" : error ? "Couldn't load sessions." : "Nothing scheduled yet."}
-                </p>
+      {/* Upcoming + Messages */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,573fr)_minmax(0,403fr)]">
+        <DashCard className="h-full">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className={cardTitleClass}>Upcoming sessions</h2>
+            <ViewAllLink to={ROUTES.MY_SESSIONS} />
+          </div>
+          <div className="flex flex-col gap-[10px]">
+            {upcoming.length ? (
+              upcoming.map((s) => (
+                <SessionRow
+                  key={s.id}
+                  dateIso={s.start}
+                  endIso={s.end}
+                  type={s.type}
+                  personName={
+                    isCoach
+                      ? s.athleteNames?.length === 1
+                        ? s.athleteNames[0]
+                        : null
+                      : s.coachName
+                  }
+                  personPhoto={
+                    isCoach
+                      ? s.athleteNames?.length === 1
+                        ? athletePhotos[s.athleteNames[0]]
+                        : null
+                      : coachPhotos[s.coachId]
+                  }
+                  attendingNames={isCoach ? s.athleteNames || [] : []}
+                  attendingCount={isCoach ? s.athleteNames?.length || 0 : 0}
+                  namePhotos={athletePhotos}
+                />
+              ))
+            ) : (
+              <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                {isLoading ? "Loading…" : error ? "Couldn't load sessions." : "Nothing scheduled yet."}
+              </p>
+            )}
+          </div>
+        </DashCard>
+
+        <DashCard className="h-full gap-[30px]">
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-[10px]">
+              <h2 className={cardTitleClass}>Messages</h2>
+              {unreadCount > 0 && (
+                <span className="rounded-[4px] bg-[#0054B4] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F1F1E6]">
+                  {unreadCount} new
+                </span>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-xl border-sidebar-border shadow-none">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <h2 className="text-lg font-semibold">Messages</h2>
-                {unreadCount > 0 && (
-                  <span className="rounded-full bg-sidebar-primary px-2 py-0.5 text-xs font-medium text-white">
-                    {unreadCount} new
-                  </span>
-                )}
-              </div>
-              <Link to={ROUTES.CHAT} className="text-sm font-medium text-sidebar-primary">
-                View all
-              </Link>
-            </div>
-            <div className="mt-4 space-y-4">
-              {conversations.length ? (
-                conversations.map((conv) => {
-                  const participants = Array.isArray(conv.conversation_participants)
-                    ? conv.conversation_participants
-                    : [];
-                  const other = participants.find((p) => p.user_id !== user?.id);
-                  const name = other?.user_profiles?.name || "Conversation";
-                  const unread = isConversationUnread(conv, user?.id);
-                  return (
-                    <div key={conv.id} className="flex items-start gap-3">
-                      <span className="relative flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-gray-200 text-sm font-semibold text-gray-700">
-                        {initials(name)}
-                        {unread && (
-                          <span className="absolute -right-0.5 -top-0.5 h-2.5 w-2.5 rounded-full bg-sidebar-primary" />
-                        )}
-                      </span>
-                      <div className="flex min-w-0 flex-1 items-start justify-between gap-2">
-                        <div className="min-w-0">
-                          <p className="truncate font-medium">{name}</p>
-                          <p className="truncate text-sm text-muted-foreground">
-                            {conv.last_message_text || "No messages yet"}
-                          </p>
-                        </div>
-                        {conv.last_message_at && (
-                          <span className="shrink-0 text-xs text-muted-foreground">
-                            {relativeDay(conv.last_message_at)}
+            <ViewAllLink to={ROUTES.CHAT} />
+          </div>
+          <div className="flex w-full flex-col gap-[10px]">
+            {conversations.length ? (
+              conversations.map((conv, index) => {
+                const participants = Array.isArray(conv.conversation_participants)
+                  ? conv.conversation_participants
+                  : [];
+                const other = participants.find((p) => p.user_id !== user?.id);
+                const name = other?.user_profiles?.name || "Conversation";
+                const unread = isConversationUnread(conv, user?.id);
+                return (
+                  <div key={conv.id} className="contents">
+                    {index > 0 && <div className="h-px w-full bg-[#EAEADF]" />}
+                    <button
+                      type="button"
+                      onClick={() => navigate(ROUTES.CHAT)}
+                      className="flex w-full items-center justify-between gap-[10px] text-left"
+                    >
+                      <span className="flex min-w-0 items-center gap-[10px]">
+                        <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-[#C1C1B8] text-[14px] font-medium text-[#484D56]">
+                          {other?.user_profiles?.image_url ? (
+                            <img src={other.user_profiles.image_url} alt="" className="size-full object-cover" />
+                          ) : (
+                            initials(name)
+                          )}
+                        </span>
+                        <span className="min-w-0">
+                          <span className="flex items-center gap-[6px]">
+                            <span className="truncate text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+                              {name}
+                            </span>
+                            {unread && (
+                              <span className="size-[7.5px] shrink-0 rounded-full bg-[#0054B4]" />
+                            )}
                           </span>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <p className="text-sm text-muted-foreground">No conversations yet.</p>
-              )}
-            </div>
-          </CardContent>
-        </Card>
+                          <span className={cn("block truncate", captionClass)}>
+                            {conv.last_message_text || "No messages yet"}
+                          </span>
+                        </span>
+                      </span>
+                      {conv.last_message_at && (
+                        <span className={cn("shrink-0", captionClass)}>
+                          {relativeDay(conv.last_message_at)}
+                        </span>
+                      )}
+                    </button>
+                  </div>
+                );
+              })
+            ) : (
+              <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                No conversations yet.
+              </p>
+            )}
+          </div>
+        </DashCard>
       </div>
 
-      <div className="mt-6 grid gap-4 lg:grid-cols-3">
-        <Card className={`rounded-xl border-sidebar-border shadow-none ${isCoach ? "lg:col-span-3" : "lg:col-span-2"}`}>
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <h2 className="text-lg font-semibold">Recent activities</h2>
-              <Link to={ROUTES.MY_SESSIONS} className="text-sm font-medium text-sidebar-primary">
-                View all
-              </Link>
-            </div>
-            <div className="mt-4 space-y-3">
-              {activities.length ? (
-                activities.map((a) => (
-                  <div key={`${a.label}-${a.when}`} className="flex items-center gap-3">
-                    <span className="inline-flex shrink-0 rounded-md bg-sidebar-primary/10 p-1.5">
-                      <Activity className="h-4 w-4 text-sidebar-primary" />
+      {/* Activities + coaches/athletes */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,659fr)_minmax(0,317fr)]">
+        <DashCard className="h-full">
+          <div className="flex items-end justify-between gap-3">
+            <h2 className={cardTitleClass}>Recent activities</h2>
+            <ViewAllLink to={ROUTES.MY_SESSIONS} />
+          </div>
+          <div className="flex flex-col gap-[10px]">
+            {activities.length ? (
+              activities.map((a) => (
+                <div key={`${a.label}-${a.when}`} className="flex items-center justify-between gap-[10px]">
+                  <span className="flex min-w-0 items-center gap-[10px]">
+                    <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-[#EAEADF] text-[#767980]">
+                      <Activity className="size-4" strokeWidth={1.75} />
                     </span>
-                    <p className="text-sm">{activityLabel(a)}</p>
-                    <span className="ml-auto shrink-0 text-xs text-muted-foreground">
-                      {relativeDay(a.when)}
-                    </span>
+                    <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
+                      {activityLabel(a)}
+                    </p>
+                  </span>
+                  <span className={cn("shrink-0", captionClass)}>{relativeDay(a.when)}</span>
+                </div>
+              ))
+            ) : (
+              <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                {error ? "Couldn't load activity." : "No activity yet."}
+              </p>
+            )}
+          </div>
+        </DashCard>
+
+        {isCoach ? (
+          <DashCard className="h-full">
+            <h2 className={cardTitleClass}>My athletes</h2>
+            <div className="flex flex-col gap-3">
+              {athletes.length ? (
+                athletes.map((a) => (
+                  <div key={a.name} className="flex items-center gap-[10px]">
+                    <PhotoMark
+                      name={a.name}
+                      photo={athletePhotos[a.name]}
+                      className="size-10 rounded-[8px] text-[14px]"
+                    />
+                    <div>
+                      <p className="text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#1A202C]">
+                        {a.name}
+                      </p>
+                      <p className={cn("capitalize", captionClass)}>{a.type || "Athlete"}</p>
+                    </div>
                   </div>
                 ))
               ) : (
-                <p className="text-sm text-muted-foreground">
-                  {error ? "Couldn't load activity." : "No activity yet."}
+                <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                  Athletes appear here after they book you.
                 </p>
               )}
             </div>
-          </CardContent>
-        </Card>
-
-        {!isCoach && (
-          <Card className="rounded-xl border-sidebar-border shadow-none">
-            <CardContent className="p-6">
-              <h2 className="text-lg font-semibold">Your coaches</h2>
-              <div className="mt-4 space-y-3">
-                {coaches.length ? (
-                  coaches.map((c) => (
-                    <div key={c.coachId} className="flex items-center gap-3">
-                      <span className="flex h-10 w-10 items-center justify-center rounded-full bg-sidebar-primary text-sm font-semibold text-white">
-                        {initials(c.coachName || "?")}
-                      </span>
-                      <div>
-                        <p className="font-medium">{c.coachName || "Coach"}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{c.type}</p>
-                      </div>
+          </DashCard>
+        ) : (
+          <DashCard className="h-full">
+            <h2 className={cardTitleClass}>Your coaches</h2>
+            <div className="flex flex-col gap-3">
+              {coaches.length ? (
+                coaches.map((c) => (
+                  <div key={c.coachId} className="flex items-center gap-[10px]">
+                    <PhotoMark
+                      name={c.coachName || "?"}
+                      photo={coachPhotos[c.coachId]}
+                      className="size-10 rounded-[8px] text-[14px]"
+                    />
+                    <div>
+                      <p className="text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#1A202C]">
+                        {c.coachName || "Coach"}
+                      </p>
+                      <p className={cn("capitalize", captionClass)}>{c.type || "Coach"}</p>
                     </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">
-                    <Link to={ROUTES.COACHES} className="text-sidebar-primary">Browse coaches</Link> to get started.
-                  </p>
-                )}
-              </div>
-            </CardContent>
-          </Card>
+                  </div>
+                ))
+              ) : (
+                <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                  <Link to={ROUTES.COACHES} className="text-[#0054B4]">
+                    Browse coaches
+                  </Link>{" "}
+                  to get started.
+                </p>
+              )}
+            </div>
+          </DashCard>
         )}
+      </div>
       </div>
     </div>
   );

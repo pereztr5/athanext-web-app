@@ -17,6 +17,8 @@ interface AvailabilityTableProps {
   slotStatusMap?: Record<string, SlotBookingStatus>;
   slotStatusLoading?: boolean;
   platformFeePerc?: number;
+  appearance: "athlete" | "coach";
+  onDelete?: (slot: CoachAvailabilitySlot) => void;
 }
 
 export const AvailabilityTable = ({
@@ -27,16 +29,19 @@ export const AvailabilityTable = ({
   slotStatusMap,
   slotStatusLoading = false,
   platformFeePerc = 0,
+  appearance,
+  onDelete,
 }: AvailabilityTableProps) => {
   const hasActions = showActions || !!onBookSlot;
+  const athlete = appearance === "athlete";
 
   const sortedSlots = [...slots].sort((a, b) => a.day_of_week - b.day_of_week);
 
   return (
-    <div className="border rounded-lg overflow-hidden">
+    <div className="overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F1F1E6]">
       <div className="overflow-x-auto">
         <Table className="min-w-[960px]">
-          <AvailabilityTableHeader showActions={hasActions} />
+          <AvailabilityTableHeader showActions={hasActions} appearance={appearance} />
           <TableBody>
             {sortedSlots.map((slot) => (
               <AvailabilityTableRow
@@ -48,12 +53,14 @@ export const AvailabilityTable = ({
                 slotStatus={slotStatusMap?.[slot.id]}
                 isStatusLoading={slotStatusLoading && slotStatusMap?.[slot.id] === undefined}
                 platformFeePerc={platformFeePerc}
+                appearance={appearance}
+                onDelete={onDelete}
               />
             ))}
 
             {sortedSlots.length === 0 && (
               <TableRow>
-                <TableCell colSpan={hasActions ? 10 : 9} className="py-8 text-center text-gray-500">
+                <TableCell colSpan={hasActions ? (athlete ? 9 : 10) : (athlete ? 8 : 9)} className="py-8 text-center text-[#A3A6AB]">
                   No time slots available for this period
                 </TableCell>
               </TableRow>

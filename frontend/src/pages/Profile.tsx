@@ -36,13 +36,15 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { PackagesModal } from "@/components/coach/PackagesModal";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useQueryClient } from "@tanstack/react-query";
 import { detectCoachSport } from "@/utils/coachSport";
 import { X } from "lucide-react";
 import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
+import { CoachProfileView } from "@/components/coach-profile/CoachProfileView";
 import { useSportPillars } from "@/hooks/useSportPillars";
+import { ROUTES } from "@/routes";
 
 const Profile = () => {
     const { toast } = useToast();
@@ -515,121 +517,12 @@ const Profile = () => {
         }
     }
 
-    return coach && Object.entries(coach).length && (
-        <div className="w-full px-4 pt-6 mb-20">
-            <div className="max-w-8xl mx-auto flex flex-col gap-6 md:gap-8">
-                <section className="flex w-full flex-col">
-                    <CoachHeader
-                        isCoachProfile
-                        className="pt-0"
-                        isEditMode={isEditMode}
-                        sportTheme={sportTheme}
-                        onSendMessage={handleSendMessage}
-                        onFieldChange={handleFieldChange}
-                        onImageSelect={handleImageSelect}
-                        sport={normalizedCoachSport ?? (profile?.userProfile?.sport || "")}
-                        onCoverImageRemove={handleCoverImageRemove}
-                        onCoverImagesSelect={handleCoverImagesSelect}
-                        onViewPackages={() => setShowPackagesModal(true)}
-                        coach={coach}
-                        coachPillarOptions={coachPillarOptions}
-                        editedCoach={isEditMode ? editedCoach : undefined}
-                        onBook={() => {
-                            toast({
-                                title: "Book Yourself?",
-                                description: "This is your own profile. Share your profile link with athletes!",
-                            });
-                        }}
-                        onEdit={handleEdit}
-                        onCancelEdit={handleCancelEdit}
-                        onSaveEdit={handleSaveEdit}
-                        isSaving={isSaving}
-                    />
-                </section>
+    if (!(coach && Object.entries(coach).length)) {
+        return null;
+    }
 
-                <div className="flex flex-col xl:flex-row gap-6 md:gap-8">
-                    {/* Main Content */}
-                    <div className="min-w-0 xl:flex-1 space-y-6">
-                        {/* Availability Section - Full width at top */}
-                        <ErrorBoundary>
-                            <CoachAvailabilitySection
-                                coachId={coach.id}
-                                iconColor={sportTheme.iconColor}
-                            />
-                        </ErrorBoundary>
-
-                        <ErrorBoundary>
-                            <CoachingPackages
-                                packages={packages}
-                                coachId={coach.id}
-                                coachName={coach.name}
-                                coachSport={coach.sport}
-                                iconColor={sportTheme.iconColor}
-                            />
-                        </ErrorBoundary>
-
-                        <AboutSection
-                            coachName={coach.name}
-                            bio={isEditMode && editedCoach ? editedCoach.bio : coach.bio}
-                            iconColor={sportTheme.iconColor}
-                            isEditMode={isEditMode}
-                            onBioChange={(bio) => handleFieldChange('bio', bio)}
-                        />
-
-                        <div className="space-y-2">
-                            {isEditMode && (
-                                <div className="flex justify-end">
-                                    <Button
-                                        size="sm"
-                                        variant="outline"
-                                        onClick={() => setCertDialogOpen(true)}
-                                    >
-                                        Edit certifications
-                                    </Button>
-                                </div>
-                            )}
-                            <CertificationsSection
-                                certifications={coach.certifications}
-                                iconColor={sportTheme.iconColor}
-                                certBg={sportTheme.certBg}
-                                certIcon={sportTheme.certIcon}
-                            />
-                        </div>
-
-                        <TrainingSpecialization
-                            specializations={coach.specialties}
-                            sessionTypes={coach.session_types}
-                            locations={coach.locations}
-                            iconColor={sportTheme.iconColor}
-                        />
-
-                        <ReviewsSection
-                            averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
-                            totalReviews={totalReviews}
-                            distribution={ratingDistribution}
-                            reviews={reviews}
-                            iconColor={sportTheme.iconColor}
-                            onLeaveReview={() => setShowReviewModal(true)}
-                        />
-                    </div>
-
-                    {/* Sidebar */}
-                    <div className="w-full xl:w-[22rem] flex-shrink-0 space-y-6 md:space-y-8">
-                        <QuickInfo
-                            responseTime={coach.response_time_hours}
-                            sessionTypes={coach.session_types}
-                            languages={coach.languages}
-                            locations={coach.locations}
-                            zipCode={coach.zip_code}
-                            cancellationPolicy={coach.cancellation_policy}
-                        />
-
-                        <FAQSection />
-                    </div>
-                </div>
-            </div>
-
-            {/* Modals */}
+    const modals = (
+        <>
             <ReviewModal
                 open={showReviewModal}
                 onOpenChange={setShowReviewModal}
@@ -724,6 +617,152 @@ const Profile = () => {
                     </DialogFooter>
                 </DialogContent>
             </Dialog>
+        </>
+    );
+
+    // Figma WIP view (default). Edit mode keeps the existing rich editor chrome.
+    if (!isEditMode) {
+        return (
+            <>
+                <ErrorBoundary>
+                    <CoachProfileView
+                        coach={coach}
+                        packages={packages}
+                        averageRating={averageRating}
+                        totalReviews={totalReviews}
+                        ratingDistribution={ratingDistribution}
+                        reviews={reviews}
+                        onEdit={handleEdit}
+                        onEditPackages={() => setShowPackagesModal(true)}
+                        onEditCertifications={() => setCertDialogOpen(true)}
+                        onLeaveReview={() => setShowReviewModal(true)}
+                    />
+                </ErrorBoundary>
+                {modals}
+            </>
+        );
+    }
+
+    return (
+        <div className="mx-auto w-full max-w-[1000px] overflow-x-hidden px-4 pb-20 pt-2 md:px-0">
+            <div className="flex w-full min-w-0 flex-col gap-6 md:gap-8">
+                <section className="flex w-full min-w-0 flex-col">
+                    <CoachHeader
+                        isCoachProfile
+                        className="pt-0"
+                        isEditMode={isEditMode}
+                        sportTheme={sportTheme}
+                        onSendMessage={handleSendMessage}
+                        onFieldChange={handleFieldChange}
+                        onImageSelect={handleImageSelect}
+                        sport={normalizedCoachSport ?? (profile?.userProfile?.sport || "")}
+                        onCoverImageRemove={handleCoverImageRemove}
+                        onCoverImagesSelect={handleCoverImagesSelect}
+                        onViewPackages={() => setShowPackagesModal(true)}
+                        coach={coach}
+                        coachPillarOptions={coachPillarOptions}
+                        editedCoach={isEditMode ? editedCoach : undefined}
+                        onBook={() => {
+                            toast({
+                                title: "Book Yourself?",
+                                description: "This is your own profile. Share your profile link with athletes!",
+                            });
+                        }}
+                        onEdit={handleEdit}
+                        onCancelEdit={handleCancelEdit}
+                        onSaveEdit={handleSaveEdit}
+                        isSaving={isSaving}
+                    />
+                </section>
+
+                <div className="flex min-w-0 flex-col gap-6 md:gap-8 xl:flex-row">
+                    <div className="min-w-0 flex-1 space-y-6">
+                        <ErrorBoundary>
+                            <div className="min-w-0 space-y-3">
+                                <div className="flex flex-wrap items-center justify-between gap-3">
+                                    <h2 className="text-card-title text-foreground">Availability</h2>
+                                    <Button variant="outline" size="sm" asChild>
+                                        <Link to={ROUTES.AVAILABILITY}>Manage availability</Link>
+                                    </Button>
+                                </div>
+                                <div className="min-w-0 overflow-x-auto">
+                                    <CoachAvailabilitySection
+                                        coachId={coach.id}
+                                        allowEditing={false}
+                                        iconColor={sportTheme.iconColor}
+                                    />
+                                </div>
+                            </div>
+                        </ErrorBoundary>
+
+                        <ErrorBoundary>
+                            <CoachingPackages
+                                packages={packages}
+                                coachId={coach.id}
+                                coachName={coach.name}
+                                coachSport={coach.sport}
+                                iconColor={sportTheme.iconColor}
+                            />
+                        </ErrorBoundary>
+
+                        <AboutSection
+                            coachName={coach.name}
+                            bio={editedCoach ? editedCoach.bio : coach.bio}
+                            iconColor={sportTheme.iconColor}
+                            isEditMode
+                            onBioChange={(bio) => handleFieldChange('bio', bio)}
+                        />
+
+                        <div className="space-y-2">
+                            <div className="flex justify-end">
+                                <Button
+                                    size="sm"
+                                    variant="outline"
+                                    onClick={() => setCertDialogOpen(true)}
+                                >
+                                    Edit certifications
+                                </Button>
+                            </div>
+                            <CertificationsSection
+                                certifications={coach.certifications}
+                                iconColor={sportTheme.iconColor}
+                                certBg={sportTheme.certBg}
+                                certIcon={sportTheme.certIcon}
+                            />
+                        </div>
+
+                        <TrainingSpecialization
+                            specializations={coach.specialties}
+                            sessionTypes={coach.session_types}
+                            locations={coach.locations}
+                            iconColor={sportTheme.iconColor}
+                        />
+
+                        <ReviewsSection
+                            averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
+                            totalReviews={totalReviews}
+                            distribution={ratingDistribution}
+                            reviews={reviews}
+                            iconColor={sportTheme.iconColor}
+                            onLeaveReview={() => setShowReviewModal(true)}
+                        />
+                    </div>
+
+                    <div className="w-full min-w-0 shrink-0 space-y-6 md:space-y-8 xl:w-[22rem]">
+                        <QuickInfo
+                            responseTime={coach.response_time_hours}
+                            sessionTypes={coach.session_types}
+                            languages={coach.languages}
+                            locations={coach.locations}
+                            zipCode={coach.zip_code}
+                            cancellationPolicy={coach.cancellation_policy}
+                        />
+
+                        <FAQSection />
+                    </div>
+                </div>
+            </div>
+            {modals}
         </div>
     );
 };

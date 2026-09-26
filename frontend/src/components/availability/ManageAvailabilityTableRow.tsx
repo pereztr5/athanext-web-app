@@ -75,8 +75,9 @@ export const ManageAvailabilityTableRow = ({
   registerFocusRef,
 }: ManageAvailabilityTableRowProps) => {
   const isEnabled = slot?.is_enabled ?? false;
-  const verticalPadding = compact ? 'py-2' : 'py-3';
-  const cellClass = `${compact ? 'px-2' : 'px-4'} ${verticalPadding} text-sm`;
+  const cellClass = "px-1 py-2 align-middle";
+  const fieldClass =
+    "h-[38px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C] shadow-none placeholder:text-[#A3A6AB] focus-visible:ring-0 disabled:opacity-100";
   const dateLabel = slot?.occurrence_date
     ? parseISODateLocal(slot.occurrence_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
@@ -85,7 +86,7 @@ export const ManageAvailabilityTableRow = ({
   const isPastDate = lockPastDates && slot?.occurrence_date ? slot.occurrence_date < todayISO : false;
   const isLocked = isPastDate || isBookingLocked;
   const inputDisabled = !isEnabled || isLocked;
-  const rowClass = `border-b ${isEnabled ? 'bg-green-50' : 'bg-white'} ${isLocked ? 'opacity-60' : ''}`;
+  const rowClass = `border-b border-[#EAEADF] ${isLocked ? "opacity-60" : ""}`;
 
   return (
     <tr className={rowClass}>
@@ -95,10 +96,11 @@ export const ManageAvailabilityTableRow = ({
             checked={isEnabled}
             onCheckedChange={() => onToggle(dayOfWeek, slotIndex)}
             disabled={isLocked}
+            className="size-4 rounded-[4px] border-[#D9D9CF] bg-[#FDFDFC] data-[state=checked]:border-[#6698D2] data-[state=checked]:bg-[#0054B4] data-[state=checked]:text-white"
           />
           <div className="flex flex-col leading-tight">
-            <span className="font-medium">{dayName}</span>
-            {dateLabel && <span className="text-xs text-gray-500">{dateLabel}</span>}
+            <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">{dayName}</span>
+            {dateLabel && <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">{dateLabel}</span>}
             {isPastDate && (
               <span className="text-[11px] font-semibold text-red-600">Unavailable</span>
             )}
@@ -116,7 +118,7 @@ export const ManageAvailabilityTableRow = ({
           onChange={(e) => onChange(dayOfWeek, 'session_name', e.target.value, slotIndex)}
           disabled={inputDisabled}
           id={`session-name-${dayOfWeek}`}
-          className={`h-9 w-full ${slotError?.session_name ? 'border-red-500' : ''}`}
+          className={`${fieldClass} w-[147px] ${slotError?.session_name ? "border border-[#FB4747]" : ""}`}
           data-week={weekISO}
           data-day={dayOfWeek}
           data-slot={slotIndex}
@@ -132,7 +134,7 @@ export const ManageAvailabilityTableRow = ({
           disabled={inputDisabled || pillars.length === 0}
         >
           <SelectTrigger
-            className={`h-9 w-40 text-left pl-2 ${slotError?.pillar_slot ? 'border-red-500' : ''}`}
+            className={`${fieldClass} w-[147px] text-left ${slotError?.pillar_slot ? "border border-[#FB4747]" : ""}`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -152,14 +154,14 @@ export const ManageAvailabilityTableRow = ({
       </td>
 
       <td className={`${cellClass}`}>
-        <div className="flex items-center gap-1">
-          <span className="text-gray-500">$</span>
+        <div className="relative">
+          <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-[14px] text-[#1A202C]">$</span>
           <Input
             type="number"
             value={slot?.price ?? 50}
             onChange={(e) => onChange(dayOfWeek, 'price', parseFloat(e.target.value), slotIndex)}
             disabled={inputDisabled}
-            className={`h-9 ${compact ? 'w-16' : 'w-20'} ${slotError?.price ? 'border-red-500' : ''}`}
+            className={`${fieldClass} w-[82px] pl-6 ${slotError?.price ? "border border-[#FB4747]" : ""}`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -178,7 +180,7 @@ export const ManageAvailabilityTableRow = ({
           disabled={inputDisabled}
         >
           <SelectTrigger
-            className="h-9 w-24"
+            className={`${fieldClass} w-[97px]`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -203,7 +205,7 @@ export const ManageAvailabilityTableRow = ({
           value={slot?.start_time || '10:00'}
           onChange={(e) => onChange(dayOfWeek, 'start_time', e.target.value, slotIndex)}
           disabled={inputDisabled}
-          className={`h-9 w-28 ${slotError?.start_time ? 'border-red-500' : ''}`}
+          className={`${fieldClass} w-[92px] ${slotError?.start_time ? "border border-[#FB4747]" : ""}`}
           data-week={weekISO}
           data-day={dayOfWeek}
           data-slot={slotIndex}
@@ -217,7 +219,7 @@ export const ManageAvailabilityTableRow = ({
           type="time"
           value={slot?.end_time || '11:00'}
           disabled
-          className="h-9 w-28 bg-gray-50"
+          className="h-[38px] w-[92px] rounded-[8px] border-0 bg-[#F4F4EB] px-[10px] text-[14px] text-[#A3A6AB] shadow-none"
         />
       </td>
 
@@ -230,7 +232,7 @@ export const ManageAvailabilityTableRow = ({
           disabled={inputDisabled}
         >
           <SelectTrigger
-            className="h-9 w-32"
+            className={`${fieldClass} w-[107px]`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -259,7 +261,7 @@ export const ManageAvailabilityTableRow = ({
           disabled={inputDisabled}
         >
           <SelectTrigger
-            className={`${compact ? 'h-9 w-28 text-left pl-2' : 'h-9 w-32 text-left pl-2'}`}
+            className={`${fieldClass} w-[117px] text-left`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -282,18 +284,18 @@ export const ManageAvailabilityTableRow = ({
         <div className="flex items-center gap-2">
           {onAddSlot && (
             <button
-              className="text-slate-600 hover:text-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-[#0054B4] disabled:cursor-not-allowed disabled:opacity-40"
               title="Duplicate this slot"
               onClick={() => onAddSlot(slot)}
               type="button"
               disabled={isLocked}
             >
-              <Plus className="w-3.5 h-3.5" strokeWidth={2.1} />
+              <Plus className="size-4" strokeWidth={1.75} />
             </button>
           )}
           {onDeleteSlot && canDelete && (
             <button
-              className="text-red-500 hover:text-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="text-[#767980] disabled:cursor-not-allowed disabled:opacity-40"
               title="Delete this slot"
               onClick={onDeleteSlot}
               type="button"

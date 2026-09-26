@@ -10,3 +10,6 @@ export { QuickInfo } from './QuickInfo';
 export { FAQSection } from './FAQSection';
 export { OtherTopCoaches } from './OtherTopCoaches';
 export { Carousel } from './Carousel';
+export { CoachProfileView } from './CoachProfileView';
+export { AvailabilitySummaryCard } from './AvailabilitySummaryCard';
+export { CoachProfileCard } from './CoachProfileCard';

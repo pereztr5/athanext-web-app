@@ -12,6 +12,9 @@ import SoccerPillars from "./pages/SoccerPillars";
 import RowingPillars from "./pages/RowingPillars";
 import CoachProfile from "./pages/CoachProfile";
 import ChangePassword from "./pages/ChangePassword";
+import AccountSettings from "./pages/AccountSettings";
+import Availability from "./pages/Availability";
+import Analytics from "./pages/Analytics";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
@@ -50,6 +53,9 @@ export const ROUTES = {
   MY_SESSIONS: "/my-sessions",
   CREATE_ATHLETE_PROFILE: "/athlete-profile/create",
   SETTINGS: "/settings",
+  CHANGE_PASSWORD: "/settings/password",
+  AVAILABILITY: "/availability",
+  ANALYTICS: "/analytics",
   ABOUT: "/about",
   PRIVACY_POLICY: "/privacy-policy",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",
@@ -97,7 +103,10 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
-  { path: ROUTES.SETTINGS, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
+  { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
+  { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
+  { path: ROUTES.AVAILABILITY, element: <ProtectedRoute><Availability /></ProtectedRoute> },
+  { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },
   { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><CoachSessionFeedback /></ProtectedRoute> },
   { path: ROUTES.BOOKING_CONFIRMATION, element: <ProtectedRoute><BookingConfirmation /></ProtectedRoute> },
