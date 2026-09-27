@@ -101,6 +101,8 @@ const CoachSessionFeedback = () => {
   const [sessionRating, setSessionRating] = useState<number | null>(null);
   const [sessionHoverRating, setSessionHoverRating] = useState<number | null>(null);
   const [athleteRatingMap, setAthleteRatingMap] = useState<Record<string, number | undefined>>({});
+  const [athleteScoreMap, setAthleteScoreMap] = useState<Record<string, number | undefined>>({});
+  const [athleteNoteMap, setAthleteNoteMap] = useState<Record<string, string>>({});
   const [athleteHoverRatingMap, setAthleteHoverRatingMap] = useState<Record<string, number | null>>({});
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [sessionFeedbackCompleted, setSessionFeedbackCompleted] = useState(false);
@@ -224,6 +226,8 @@ const CoachSessionFeedback = () => {
     let sessionRatingFromDB: number | null = null;
     let sessionSummaryFromDB: string | null = null;
     let coachNotesFromDB: string | null = null;
+    const scoresData: Record<string, number> = {};
+    const notesData: Record<string, string> = {};
 
     feedbackData.forEach((row) => {
       const athlete = mapRpcRowToAthlete(row);
@@ -237,8 +241,16 @@ const CoachSessionFeedback = () => {
         absentReasonsData[athlete.id] = row.reason_absent;
       }
 
+      if (row.coach_rating_of_athlete) {
+        ratingsData[athlete.id] = row.coach_rating_of_athlete;
+      }
+
       if (row.rating) {
-        ratingsData[athlete.id] = row.rating;
+        scoresData[athlete.id] = row.rating;
+      }
+
+      if (row.comment?.trim()) {
+        notesData[athlete.id] = row.comment;
       }
 
       if (row.feedback_to_athlete) {
@@ -250,7 +262,7 @@ const CoachSessionFeedback = () => {
       }
 
       if (
-        row.rating !== null ||
+        Boolean(row.coach_rating_of_athlete) ||
         (row.feedback_to_athlete && row.feedback_to_athlete.trim()) ||
         (row.coach_only_notes && row.coach_only_notes.trim())
       ) {
@@ -275,6 +287,8 @@ const CoachSessionFeedback = () => {
     setAttendance(attendanceData);
     setAbsentReasons(absentReasonsData);
     setAthleteRatingMap(ratingsData);
+    setAthleteScoreMap(scoresData);
+    setAthleteNoteMap(notesData);
     setAthleteFeedbackMap(feedbackData_);
     setPrivateFeedbackMap(privateFeedbackData);
     setAthleteFeedbackSubmitted(submittedMap);
@@ -753,7 +767,7 @@ const CoachSessionFeedback = () => {
                               openFeedbackDialog([athlete]);
                             }}
                           >
-                            {athleteFeedbackSubmitted[athlete.id] ? 'Feedback Submitted' : 'Add Feedback'}
+                            {athleteFeedbackSubmitted[athlete.id] ? 'Edit feedback' : 'Add feedback'}
                           </Button>
                           <Button
                             size="sm"
@@ -970,10 +984,22 @@ const CoachSessionFeedback = () => {
                       <Badge className="ml-auto">{index + 1} of {feedbackDialogAthletes.length}</Badge>
                     </div>
 
+                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
+                      <p className="text-sm font-medium text-slate-800">From the athlete</p>
+                      <p className="text-sm text-slate-700">
+                        {athleteScoreMap[athlete.id]
+                          ? `${athleteScoreMap[athlete.id]} of 5 stars`
+                          : "No rating yet"}
+                      </p>
+                      <p className="text-sm text-slate-700">
+                        {athleteNoteMap[athlete.id] || "No note yet"}
+                      </p>
+                    </div>
+
                     <div className="space-y-3">
                       <div className="space-y-1">
                         <p className="text-sm font-medium text-slate-800">
-                          Athlete rating <span className="text-muted-foreground">(optional)</span>
+                          Your rating of this athlete <span className="text-muted-foreground">(optional)</span>
                         </p>
                         <div className="flex items-center gap-3 flex-wrap">
                           <RatingStars
@@ -1062,21 +1088,14 @@ const CoachSessionFeedback = () => {
               <Button
                 className="rounded-full"
                 onClick={handleSubmitFeedback}
-                disabled={
-                  isSubmittingFeedback ||
-                  feedbackDialogAthletes.every((athlete) => athleteFeedbackSubmitted[athlete.id])
-                }
+                disabled={isSubmittingFeedback}
                 style={{
                   backgroundColor: "hsla(210,90%,50%,0.12)",
                   color: PRIMARY.main,
                   borderColor: PRIMARY.main,
                 }}
               >
-                {isSubmittingFeedback
-                  ? 'Submitting...'
-                  : feedbackDialogAthletes.every((athlete) => athleteFeedbackSubmitted[athlete.id])
-                    ? 'Feedback Submitted'
-                    : 'Submit Feedback'}
+                {isSubmittingFeedback ? 'Saving...' : 'Save feedback'}
               </Button>
             </div>
           </DialogFooter>

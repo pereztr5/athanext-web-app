@@ -884,6 +884,8 @@ export type Database = {
           coach_id: string | null
           coach_notes: string | null
           coach_only_notes: string | null
+          athlete_rated_at: string | null
+          coach_rating_of_athlete: number | null
           comment: string | null
           created_at: string
           created_by: string | null
@@ -898,10 +900,12 @@ export type Database = {
         }
         Insert: {
           athlete_id: string
+          athlete_rated_at?: string | null
           booking_id: string
           coach_id?: string | null
           coach_notes?: string | null
           coach_only_notes?: string | null
+          coach_rating_of_athlete?: number | null
           comment?: string | null
           created_at?: string
           created_by?: string | null
@@ -916,10 +920,12 @@ export type Database = {
         }
         Update: {
           athlete_id?: string
+          athlete_rated_at?: string | null
           booking_id?: string
           coach_id?: string | null
           coach_notes?: string | null
           coach_only_notes?: string | null
+          coach_rating_of_athlete?: number | null
           comment?: string | null
           created_at?: string
           created_by?: string | null

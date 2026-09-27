@@ -315,6 +315,7 @@ const PastDraftCard = ({
   role,
   resolvePillarIcon,
   hasFeedbackSubmitted,
+  showFeedbackAction,
   platformFeePerc = 0,
   stripeFeePerc = 0,
   canPay = false,
@@ -328,6 +329,7 @@ const PastDraftCard = ({
   role: 'coach' | 'athlete' | null;
   resolvePillarIcon: (pillarName?: string | null) => typeof AlertCircle;
   hasFeedbackSubmitted: boolean;
+  showFeedbackAction: boolean;
   platformFeePerc?: number;
   stripeFeePerc?: number;
   canPay?: boolean;
@@ -426,7 +428,7 @@ const PastDraftCard = ({
               >
                 View details
               </button>
-              {(session.computedStatus === "past" || session.computedStatus === "completed") ? (
+              {showFeedbackAction && (session.computedStatus === "past" || session.computedStatus === "completed") ? (
                 <button
                   type="button"
                   className={cn(
@@ -440,7 +442,7 @@ const PastDraftCard = ({
                     }
                   }}
                 >
-                  {hasFeedbackSubmitted ? "View feedback" : "Add feedback"}
+                  {hasFeedbackSubmitted ? "Edit feedback" : "Add feedback"}
                 </button>
               ) : null}
             </div>
@@ -511,7 +513,13 @@ const MySessions = () => {
   const [coachComment, setCoachComment] = useState("");
   const [feedbackSubmitted, setFeedbackSubmitted] = useState(false);
   const [submittedSessionIds, setSubmittedSessionIds] = useState<Set<string>>(new Set());
-  const [existingFeedback, setExistingFeedback] = useState<{ rating: number; comment: string | null; created_at: string } | null>(null);
+  const [existingFeedback, setExistingFeedback] = useState<{
+    rating: number | null;
+    comment: string | null;
+    created_at: string;
+    feedback_to_athlete: string | null;
+    athlete_rated_at: string | null;
+  } | null>(null);
   const [isLoadingExistingFeedback, setIsLoadingExistingFeedback] = useState(false);
   const { platformFeePerc, stripeFeePerc } = useFeeConfig();
 
@@ -566,18 +574,21 @@ const MySessions = () => {
         if (error) {
           console.error('Error fetching existing feedback:', error);
         } else if (data) {
-          // Pre-fill form with existing feedback
           setExistingFeedback(data);
-          setRating(data.rating);
-          setCoachComment(data.comment || "");
-          // Mark this session as already submitted
-          setSubmittedSessionIds((prev) => {
-            const next = new Set(prev);
-            if (rateSession.id) next.add(rateSession.id);
-            if (rateSession.slotId) next.add(rateSession.slotId);
-            if (rateSession.bookingId) next.add(rateSession.bookingId);
-            return next;
-          });
+          if (data.athlete_rated_at) {
+            setRating(data.rating ?? 0);
+            setCoachComment(data.comment || "");
+            setSubmittedSessionIds((prev) => {
+              const next = new Set(prev);
+              if (rateSession.id) next.add(rateSession.id);
+              if (rateSession.slotId) next.add(rateSession.slotId);
+              if (rateSession.bookingId) next.add(rateSession.bookingId);
+              return next;
+            });
+          } else {
+            setRating(0);
+            setCoachComment("");
+          }
         } else {
           // No existing feedback, reset form
           setRating(0);
@@ -598,7 +609,7 @@ const MySessions = () => {
   // Preload submitted feedback status so buttons show "Feedback Submitted" without opening dialog
   useEffect(() => {
     const fetchSubmittedFeedback = async () => {
-      if (role === PROFILE_TYPE.athlete) {
+      if (persona === PROFILE_TYPE.athlete) {
         if (!athleteProfileId) return;
         const result = await getSubmittedFeedbackIds(athleteProfileId);
         if (result.data) {
@@ -646,7 +657,7 @@ const MySessions = () => {
     };
 
     fetchSubmittedFeedback();
-  }, [role, athleteProfileId, userProfile?.coach_id]);
+  }, [role, persona, athleteProfileId, userProfile?.coach_id]);
 
   const { mutate: submitCoachFeedback, isPending: isSubmittingCoachFeedback } = useMutation({
     mutationFn: async () => {
@@ -757,7 +768,8 @@ const MySessions = () => {
   const handleFeedbackNavigate = (slotId: string, session?: UISession) => {
     
     if (!slotId) return;
-    if (role === PROFILE_TYPE.athlete && session) {
+    if (persona === PROFILE_TYPE.parent) return;
+    if (persona === PROFILE_TYPE.athlete && session) {
       setRateSession(session);
       setRating(0);
       setHoverRating(null);
@@ -1176,6 +1188,7 @@ const MySessions = () => {
               role={role}
               resolvePillarIcon={resolvePillarIconForSession}
               hasFeedbackSubmitted={hasSubmittedFeedback(session)}
+              showFeedbackAction={role === PROFILE_TYPE.coach || persona === PROFILE_TYPE.athlete}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
               canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}

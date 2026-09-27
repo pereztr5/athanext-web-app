@@ -67,7 +67,13 @@ type RateCoachDialogProps = {
   comment: string;
   isSubmitting: boolean;
   isSubmitted?: boolean;
-  existingFeedback?: { rating: number; comment: string | null; created_at: string } | null;
+  existingFeedback?: {
+    rating: number | null;
+    comment: string | null;
+    created_at: string;
+    feedback_to_athlete: string | null;
+    athlete_rated_at: string | null;
+  } | null;
   isLoadingFeedback?: boolean;
   onSubmit: () => void;
   onCancel: () => void;
@@ -99,7 +105,7 @@ export const RateCoachDialog = ({
   formatDate,
   formatTime,
 }: RateCoachDialogProps) => {
-  const hasExistingFeedback = Boolean(existingFeedback);
+  const hasExistingFeedback = Boolean(existingFeedback?.athlete_rated_at);
   const locationLabel = session?.locationType
     ? session.locationType === "In Person"
       ? "In-Person"
@@ -151,23 +157,24 @@ export const RateCoachDialog = ({
             </div>
           </div>
 
-          {hasExistingFeedback && existingFeedback && (
-            <div className="rounded-xl bg-green-50 border border-green-200 p-4 flex items-start gap-3">
-              <svg className="h-5 w-5 text-green-600 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-              </svg>
-              <div>
-                <p className="text-sm font-semibold text-green-900">Feedback Already Submitted</p>
-                <p className="text-sm text-green-700 mt-1">
-                  You submitted this feedback on {new Date(existingFeedback.created_at).toLocaleDateString('en-US', { 
-                    month: 'short', 
-                    day: 'numeric', 
-                    year: 'numeric' 
-                  })}
-                </p>
-              </div>
+          {existingFeedback?.feedback_to_athlete ? (
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <p className="text-sm font-semibold text-slate-900">From your coach</p>
+              <p className="mt-1 text-sm text-slate-700">{existingFeedback.feedback_to_athlete}</p>
             </div>
-          )}
+          ) : null}
+
+          {hasExistingFeedback && existingFeedback ? (
+            <p className="text-sm text-slate-600">
+              You can update the rating you sent on{" "}
+              {new Date(existingFeedback.athlete_rated_at || existingFeedback.created_at).toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+                year: "numeric",
+              })}
+              .
+            </p>
+          ) : null}
 
           {isLoadingFeedback ? (
             <RateCoachDialogSkeleton />
@@ -186,11 +193,10 @@ export const RateCoachDialog = ({
                 onChange={onRatingChange}
                 onHover={onHoverChange}
                 onLeave={onHoverLeave}
-                disabled={hasExistingFeedback}
               />
               <span className="text-lg font-semibold text-slate-900">{(hoverRating ?? rating).toFixed(1)}</span>
             </div>
-            {!hasExistingFeedback && rating < 1 && (
+              {rating < 1 && (
               <p className="text-xs text-amber-600 mt-1">Please select at least 1 star to submit.</p>
             )}
           </div>
@@ -208,17 +214,14 @@ export const RateCoachDialog = ({
               placeholder="Add optional feedback for your coach"
               className="bg-slate-50"
               maxLength={2000}
-              disabled={hasExistingFeedback}
-              readOnly={hasExistingFeedback}
             />
           </div>
 
           <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
             <Button variant="outline" className="rounded-full px-6" onClick={onCancel} disabled={isSubmitting || isSubmitted}>
               <X className="h-4 w-4 mr-2" />
-              {hasExistingFeedback ? "Close" : "Cancel"}
+              Cancel
             </Button>
-            {!hasExistingFeedback && (
               <Button 
                 className="rounded-full px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 disabled:hover:bg-green-600" 
                 onClick={onSubmit} 
@@ -239,11 +242,10 @@ export const RateCoachDialog = ({
                 ) : (
                   <>
                     <SendHorizontal className="h-4 w-4 mr-2" />
-                    Submit Rating
+                    {hasExistingFeedback ? "Update rating" : "Submit rating"}
                   </>
                 )}
               </Button>
-            )}
               </div>
             </>
           )}

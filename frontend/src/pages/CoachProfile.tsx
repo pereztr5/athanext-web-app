@@ -254,7 +254,7 @@ const CoachProfile = () => {
           readOnly
           coach={coach as any}
           packages={packages}
-          averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
+          averageRating={averageRating}
           totalReviews={totalReviews}
           ratingDistribution={ratingDistribution}
           reviews={reviews}
@@ -376,11 +376,12 @@ const CoachProfile = () => {
 
             {/* Reviews Section */}
             <ReviewsSection
-              averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
+              averageRating={averageRating}
               totalReviews={totalReviews}
               distribution={ratingDistribution}
               reviews={reviews}
               iconColor={sportTheme.iconColor}
+              publicDisplay
               onLeaveReview={() => setShowReviewModal(true)}
             />
           </div>

@@ -2,6 +2,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Star } from "lucide-react";
 import { RatingBreakdown } from "@/components/reviews/RatingBreakdown";
+import { isPublicCoachRatingVisible } from "@/utils/publicRating";
 
 interface Review {
   id: string;
@@ -19,6 +20,7 @@ interface ReviewsSectionProps {
   reviews: Review[];
   iconColor: string;
   onLeaveReview: () => void;
+  publicDisplay?: boolean;
 }
 
 export function ReviewsSection({ 
@@ -27,8 +29,31 @@ export function ReviewsSection({
   distribution,
   reviews,
   iconColor,
-  onLeaveReview 
+  onLeaveReview,
+  publicDisplay = false,
 }: ReviewsSectionProps) {
+  const showPublicRating = !publicDisplay || isPublicCoachRatingVisible(totalReviews, averageRating);
+  const publicReviews = showPublicRating ? reviews : [];
+
+  if (publicDisplay && !showPublicRating) {
+    return (
+      <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Star className={`h-5 w-5 ${iconColor}`} />
+            Reviews & Ratings
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <p className="text-5xl font-bold">New</p>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Ratings and comments appear after 3 athlete reviews.
+          </p>
+        </CardContent>
+      </Card>
+    );
+  }
+
   return (
     <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
       <CardHeader>
@@ -53,9 +78,9 @@ export function ReviewsSection({
         )}
         
         {/* Individual Reviews */}
-        {reviews.length > 0 && (
+        {publicReviews.length > 0 && (
           <div className="mt-6 space-y-4">
-            {reviews.slice(0, 3).map((review) => (
+            {publicReviews.slice(0, 3).map((review) => (
               <div key={review.id} className="border-t pt-4 first:border-t-0 first:pt-0">
                 <div className="flex items-start gap-3">
                   <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
@@ -90,7 +115,7 @@ export function ReviewsSection({
               </div>
             ))}
             
-            {reviews.length > 3 && (
+            {publicReviews.length > 3 && (
               <Button variant="outline" className="w-full mt-4">
                 Load More Reviews
               </Button>

@@ -28,6 +28,7 @@ import { ZipCodeInput } from "@/components/form/ZipCodeInput";
 import { COACH_PROFILE_THEMES, colors, COVER_BG_COLORS } from "@/config/colors";
 import { createCroppedPreview, fileToDataUrl, getCroppedFile } from "@/utils/imageUtils";
 import { detectCoachSport, normalizeCoachSport } from "@/utils/coachSport";
+import { publicCoachRatingLabel } from "@/utils/publicRating";
 import { getInitials } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -1354,7 +1355,7 @@ export function CoachHeader({
                         <div className={`flex flex-wrap gap-4 text-sm text-muted-foreground ${isEditMode ? "items-end" : "items-center"}`}>
                             <div className={`bg-[#FFFBEB] rounded-sm flex items-center justify-center gap-2 p-2 ${isEditMode ? "self-end" : ""}`}>
                                 <img src={starIcon} alt="Star" className="w-4 h-4" />
-                                <span className="font-semibold text-sm">{coach.rating ?? "New"}</span>
+                                <span className="font-semibold text-sm">{publicCoachRatingLabel(coach.rating, coach.total_reviews)}</span>
                             </div>
 
                             {/* Location Display */}

@@ -739,7 +739,7 @@ const Profile = () => {
                         />
 
                         <ReviewsSection
-                            averageRating={averageRating > 0 ? averageRating : coach.rating || 0}
+                            averageRating={averageRating}
                             totalReviews={totalReviews}
                             distribution={ratingDistribution}
                             reviews={reviews}

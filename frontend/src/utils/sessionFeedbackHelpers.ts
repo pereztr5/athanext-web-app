@@ -40,6 +40,8 @@ export type SessionFeedbackRPCRow = {
   attendance: 'present' | 'absent' | null;
   reason_absent: string | null;
   rating: number | null;
+  comment: string | null;
+  coach_rating_of_athlete: number | null;
   highlighted_skills: string[] | null;
   feedback_to_athlete: string | null;
   coach_only_notes: string | null;
@@ -125,7 +127,7 @@ export function buildFeedbackPayload(
     booking_id: bookingId,
     slot_id: slotId,
     athlete_id: athleteId,
-    rating: data.rating || null,
+    coach_rating_of_athlete: data.rating && data.rating >= 1 ? data.rating : null,
     ...(highlightedSkills !== undefined ? { highlighted_skills: highlightedSkills } : {}),
     feedback_to_athlete: data.feedbackToAthlete?.trim() || null,
     coach_only_notes: data.coachOnlyNotes?.trim() || null,

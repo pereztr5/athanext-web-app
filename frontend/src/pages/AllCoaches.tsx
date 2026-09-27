@@ -37,6 +37,7 @@ import { useSportPillars } from "@/hooks/useSportPillars";
 import type { Enums } from "@/integrations/supabase/types";
 import { useSlowLoading } from "@/hooks/useSlowLoading";
 import { stripRichTextToPlainText } from "@/utils/richText";
+import { publicCoachRatingLabel } from "@/utils/publicRating";
 
 // Public coach type without email for privacy
 
@@ -64,10 +65,8 @@ const AthleteBrowseCard = ({
   const rawPosition = coach.coach_position || coach.positions?.[0] || "";
   const position = normalizePosition(sport, rawPosition) || "Coach";
   const location = coach.locations?.[0] || "";
-  const rating =
-    typeof coach.rating === "number" && coach.rating > 0
-      ? coach.rating.toFixed(1).replace(".", ",")
-      : null;
+  const rating = publicCoachRatingLabel(coach.rating, coach.total_reviews).replace(".", ",");
+  const showScore = rating !== "New";
   const price = coach.hourly_rate ? `$${Math.round(Number(coach.hourly_rate))}` : null;
   const pillars = (coach.specialties || []).filter(Boolean);
 
@@ -108,8 +107,8 @@ const AthleteBrowseCard = ({
         {location || rating ? (
           <div className="flex items-center gap-[6px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
             {location ? <span className="truncate">{location}</span> : null}
-            {location && rating ? <span className="text-[10px] leading-none text-[#E2A100]">★</span> : null}
-            {rating ? <span>{rating}</span> : null}
+            {location && showScore ? <span className="text-[10px] leading-none text-[#E2A100]">★</span> : null}
+            <span>{rating}</span>
           </div>
         ) : null}
         {pillars.length > 0 ? (

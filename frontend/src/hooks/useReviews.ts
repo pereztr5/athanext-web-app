@@ -36,11 +36,25 @@ export const useReviews = (coachId: string | undefined) => {
       };
 
       try {
-        const statsResponse = await reviewsAPI.getCoachRatingStats(coachId as string);
+        const [statsResponse, reviewsResponse] = await Promise.all([
+          reviewsAPI.getCoachRatingStats(coachId as string),
+          reviewsAPI.getCoachReviews(coachId as string),
+        ]);
 
         if (!statsResponse.error && statsResponse.data) {
+          const reviews = reviewsResponse.error
+            ? []
+            : (reviewsResponse.data ?? []).map((review) => ({
+                id: review.id,
+                coach_id: review.coach_id,
+                rating: review.rating,
+                review_text: review.review_text,
+                created_at: review.created_at,
+                reviewer_name: review.reviewer_name,
+              }));
+
           return {
-            reviews: [], // No direct comments fetched
+            reviews,
             averageRating: statsResponse.data.averageRating ?? 0,
             totalReviews: statsResponse.data.totalReviews ?? 0,
             ratingDistribution: (statsResponse.data.distribution as RatingDistribution) ?? EMPTY_DISTRIBUTION,

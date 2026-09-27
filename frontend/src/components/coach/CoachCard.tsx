@@ -9,6 +9,7 @@ import { CoachVerificationBadge } from './CoachVerificationBadge';
 import { PRIMARY, colors } from '@/config/colors';
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import type { Coach } from '@/types/coachProfile'
+import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 interface CoachCardProps {
     coach: Coach;
     onViewProfile: (coachId: string) => void;
@@ -244,9 +245,11 @@ const CoachCard = ({
                     <div className="w-fit flex items-center justify-between gap-2">
                         <div className="flex items-center gap-1 bg-[#FFFBEB] px-3 py-2 rounded-[.8rem]">
                             <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="font-semibold text-sm">{coach?.rating || 0}</span>
+                            <span className="font-semibold text-sm">{publicCoachRatingLabel(coach?.rating, coach?.total_reviews)}</span>
                         </div>
-                        <span className="text-xs text-muted-foreground">({coach?.total_reviews || 0} {" "} reviews)</span>
+                        {isPublicCoachRatingVisible(coach?.total_reviews, coach?.rating) ? (
+                          <span className="text-xs text-muted-foreground">({coach?.total_reviews || 0} reviews)</span>
+                        ) : null}
                     </div>
                 </div>
 

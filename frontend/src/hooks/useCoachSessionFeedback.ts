@@ -84,7 +84,7 @@ export const useUpsertSlotFeedback = (slotId: string | undefined) => {
         booking_id: string;
         slot_id: string;
         athlete_id: string;
-        rating?: number | null;
+        coach_rating_of_athlete?: number | null;
         highlighted_skills?: string[] | null;
         feedback_to_athlete?: string | null;
         coach_only_notes?: string | null;

@@ -6,6 +6,7 @@ import { CoachVerificationBadge } from "./CoachVerificationBadge";
 import { Card } from "@/components/ui/card";
 import { colors } from "@/config/colors";
 import { stripRichTextToPlainText } from "@/utils/richText";
+import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 
 interface Coach {
   id: string;
@@ -97,13 +98,17 @@ export const CoachQuickPreviewModal = ({
           {/* Rating and Stats Bar */}
           <div className="flex items-center gap-4 flex-wrap">
             <div className="flex items-center gap-2">
-              <div className="flex">{renderStars(coach.rating || 4.8)}</div>
+              {isPublicCoachRatingVisible(coach.total_reviews, coach.rating) ? (
+                <div className="flex">{renderStars(coach.rating || 0)}</div>
+              ) : null}
               <span className="text-sm font-medium text-foreground">
-                {coach.rating || 4.8}
+                {publicCoachRatingLabel(coach.rating, coach.total_reviews)}
               </span>
-              <span className="text-sm text-muted-foreground">
-                ({coach.total_reviews || 0} reviews)
-              </span>
+              {isPublicCoachRatingVisible(coach.total_reviews, coach.rating) ? (
+                <span className="text-sm text-muted-foreground">
+                  ({coach.total_reviews || 0} reviews)
+                </span>
+              ) : null}
             </div>
             {coach.response_time_hours && (
               <div className="flex items-center gap-1 text-sm text-muted-foreground">

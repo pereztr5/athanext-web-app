@@ -561,6 +561,7 @@ export async function upsertSlotFeedback(
     coach_id?: string;
     rating?: number | null;
     comment?: string | null;
+    coach_rating_of_athlete?: number | null;
     highlighted_skills?: string[] | null;
     feedback_to_athlete?: string | null;
     coach_only_notes?: string | null;
@@ -602,11 +603,19 @@ export async function getExistingFeedback(
  bookingId: string,
  athleteId: string,
   coachId?: string
-): Promise<ApiResponse<{ rating: number; comment: string | null; created_at: string } | null>> {
+): Promise<
+  ApiResponse<{
+    rating: number | null;
+    comment: string | null;
+    created_at: string;
+    feedback_to_athlete: string | null;
+    athlete_rated_at: string | null;
+  } | null>
+> {
   try {
     let query = supabase
       .from('slot_feedback_v2' as any)
-      .select('rating, comment, created_at')
+      .select('rating, comment, created_at, feedback_to_athlete, athlete_rated_at')
       .eq('booking_id', bookingId)
       .eq('athlete_id', athleteId);
 
@@ -649,7 +658,8 @@ export async function getSubmittedFeedbackIds(
     const { data, error } = await supabase
       .from('slot_feedback_v2' as any)
       .select('slot_id, booking_id')
-      .eq('athlete_id', athleteId);
+      .eq('athlete_id', athleteId)
+      .not('athlete_rated_at', 'is', null);
 
     if (error) {
       return {

@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useNavigate } from "react-router-dom";
 import { Star } from "lucide-react";
 import { useCoaches } from "@/hooks/useCoaches";
+import { publicCoachRatingLabel } from "@/utils/publicRating";
 
 interface OtherTopCoachesProps {
     currentCoachId?: string;
@@ -50,7 +51,7 @@ export function OtherTopCoaches({ currentCoachId }: OtherTopCoachesProps) {
                                 </div>
                                 <div className="flex items-center gap-1 flex-shrink-0">
                                     <Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />
-                                    <span className="text-xs font-medium">{coach.rating?.toFixed(1) || 'New'}</span>
+                                    <span className="text-xs font-medium">{publicCoachRatingLabel(coach.rating, coach.total_reviews)}</span>
                                 </div>
                             </div>
                         ))

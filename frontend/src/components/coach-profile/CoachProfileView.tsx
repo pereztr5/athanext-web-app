@@ -16,6 +16,23 @@ import {
 import { AvailabilitySummaryCard } from "./AvailabilitySummaryCard";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
+import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
+
+function PublicReviewComments({ reviews }: { reviews: Review[] }) {
+  const withText = reviews.filter((review) => review.review_text?.trim());
+  if (withText.length === 0) return null;
+
+  return (
+    <div className="flex flex-col gap-3">
+      {withText.slice(0, 5).map((review) => (
+        <div key={review.id} className="rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] px-3 py-2">
+          <p className="text-[14px] font-medium text-[#1A202C]">{review.reviewer_name || "Athlete"}</p>
+          <p className="text-[14px] text-[#484D56]">{review.review_text}</p>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 interface Review {
   id: string;
@@ -83,10 +100,7 @@ export function CoachProfileView({
   const profileStrength = useMemo(() => calculateProfileProgress(coach), [coach]);
   const bioHtml = formatRichTextForRender(coach.bio);
   const position = coach.coach_position || coach.position || "Coach";
-  const hasRating = averageRating > 0 || Boolean(coach.rating);
-  const ratingDisplay = hasRating
-    ? `${(averageRating > 0 ? averageRating : Number(coach.rating)).toFixed(1).replace(".", ",")} (${totalReviews || 0})`
-    : "No reviews";
+  const showPublicRating = isPublicCoachRatingVisible(totalReviews, averageRating);
 
   const photoUrl = coach.profile_image_url || coach.image_url;
   const pillars = (coach.specialties || []).slice(0, 6);
@@ -160,11 +174,13 @@ export function CoachProfileView({
         ];
 
   const sectionTitle = "text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]";
-  const headerRating = hasRating
-    ? `${(averageRating > 0 ? averageRating : Number(coach.rating)).toFixed(1).replace(".", ",")} (${totalReviews || 0})`
-    : null;
-  const reviewScore = (averageRating > 0 ? averageRating : Number(coach.rating) || 0).toFixed(1).replace(".", ",");
-  const filledStars = Math.round(averageRating > 0 ? averageRating : Number(coach.rating) || 0);
+  const headerRating = showPublicRating
+    ? `${publicCoachRatingLabel(averageRating, totalReviews).replace(".", ",")} (${totalReviews})`
+    : "New";
+  const reviewScore = showPublicRating
+    ? publicCoachRatingLabel(averageRating, totalReviews).replace(".", ",")
+    : "New";
+  const filledStars = showPublicRating ? Math.round(averageRating) : 0;
 
   if (readOnly) {
     return (
@@ -364,40 +380,53 @@ export function CoachProfileView({
                   <span className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
                     {reviewScore}
                   </span>
-                  <span className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-                    ({totalReviews || 0} reviews)
-                  </span>
+                  {showPublicRating ? (
+                    <span className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+                      ({totalReviews} reviews)
+                    </span>
+                  ) : null}
                 </p>
-                <span className="inline-flex gap-0.5">
-                  {Array.from({ length: 5 }).map((_, i) => (
-                    <Star
-                      key={i}
-                      className={cn(
-                        "size-[12px]",
-                        i < filledStars ? "fill-[#F0B144] text-[#F0B144]" : "fill-[#D9D9CF] text-[#D9D9CF]"
-                      )}
-                    />
-                  ))}
-                </span>
+                {showPublicRating ? (
+                  <span className="inline-flex gap-0.5">
+                    {Array.from({ length: 5 }).map((_, i) => (
+                      <Star
+                        key={i}
+                        className={cn(
+                          "size-[12px]",
+                          i < filledStars ? "fill-[#F0B144] text-[#F0B144]" : "fill-[#D9D9CF] text-[#D9D9CF]"
+                        )}
+                      />
+                    ))}
+                  </span>
+                ) : null}
               </div>
-              <div className="h-px w-full bg-[#EAEADF]" />
-              <div className="flex flex-col gap-[10px]">
-                {[5, 4, 3, 2, 1].map((stars) => {
-                  const count = ratingDistribution[stars] || 0;
-                  const width = totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%";
-                  return (
-                    <div key={stars} className="flex items-center gap-[17px]">
-                      <span className="w-[50px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
-                        {stars} {stars === 1 ? "star" : "stars"}
-                      </span>
-                      <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
-                        <span className="block h-full rounded-[10px] bg-[#0054B4]" style={{ width }} />
-                      </span>
-                      <span className="w-5 text-right text-[12px] leading-[14px] text-[#1A202C]">{count}</span>
-                    </div>
-                  );
-                })}
-              </div>
+              {showPublicRating ? (
+                <>
+                  <div className="h-px w-full bg-[#EAEADF]" />
+                  <div className="flex flex-col gap-[10px]">
+                    {[5, 4, 3, 2, 1].map((stars) => {
+                      const count = ratingDistribution[stars] || 0;
+                      const width = totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%";
+                      return (
+                        <div key={stars} className="flex items-center gap-[17px]">
+                          <span className="w-[50px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
+                            {stars} {stars === 1 ? "star" : "stars"}
+                          </span>
+                          <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
+                            <span className="block h-full rounded-[10px] bg-[#0054B4]" style={{ width }} />
+                          </span>
+                          <span className="w-5 text-right text-[12px] leading-[14px] text-[#1A202C]">{count}</span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <PublicReviewComments reviews={reviews} />
+                </>
+              ) : (
+                <p className="text-[14px] leading-[18px] text-[#767980]">
+                  Ratings and comments appear after 3 athlete reviews.
+                </p>
+              )}
             </div>
           </CoachProfileCard>
         </div>
@@ -647,44 +676,51 @@ export function CoachProfileView({
               <div className="flex items-end justify-between gap-3">
                 <div className="flex items-end gap-[6px]">
                   <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
-                    {hasRating ? reviewScore : "—"}
+                    {reviewScore}
                   </p>
                   <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-                    {totalReviews > 0 ? `(${totalReviews} reviews)` : "No verified ratings yet"}
+                    {showPublicRating ? `(${totalReviews} reviews)` : "Ratings appear after 3 athlete reviews"}
                   </p>
                 </div>
-                <div className="flex items-center gap-[3px]" aria-hidden>
-                  {[1, 2, 3, 4, 5].map((star) => (
-                    <Star
-                      key={star}
-                      className="size-[11px]"
-                      strokeWidth={1.5}
-                      fill={star <= filledStars ? "#F0B144" : "none"}
-                      color={star <= filledStars ? "#F0B144" : "#D9D9CF"}
-                    />
-                  ))}
-                </div>
+                {showPublicRating ? (
+                  <div className="flex items-center gap-[3px]" aria-hidden>
+                    {[1, 2, 3, 4, 5].map((star) => (
+                      <Star
+                        key={star}
+                        className="size-[11px]"
+                        strokeWidth={1.5}
+                        fill={star <= filledStars ? "#F0B144" : "none"}
+                        color={star <= filledStars ? "#F0B144" : "#D9D9CF"}
+                      />
+                    ))}
+                  </div>
+                ) : null}
               </div>
-              <div className="h-px w-full bg-[#EAEADF]" />
-              <div className="flex flex-col gap-[10px]">
-                {[5, 4, 3, 2, 1].map((star) => {
-                  const count = ratingDistribution[star] ?? 0;
-                  const width = totalReviews > 0 ? Math.round((count / maxReviewCount) * 100) : 0;
-                  return (
-                    <div key={star} className="flex items-center gap-[17px]">
-                      <span className="w-[50px] shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
-                        {star} {star === 1 ? "star" : "stars"}
-                      </span>
-                      <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
-                        <span className="block h-[5px] rounded-[10px] bg-[#0054B4]" style={{ width: `${width}%` }} />
-                      </span>
-                      <span className="w-5 shrink-0 text-right text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
-                        {count}
-                      </span>
-                    </div>
-                  );
-                })}
-              </div>
+              {showPublicRating ? (
+                <>
+                  <div className="h-px w-full bg-[#EAEADF]" />
+                  <div className="flex flex-col gap-[10px]">
+                    {[5, 4, 3, 2, 1].map((star) => {
+                      const count = ratingDistribution[star] ?? 0;
+                      const width = totalReviews > 0 ? Math.round((count / maxReviewCount) * 100) : 0;
+                      return (
+                        <div key={star} className="flex items-center gap-[17px]">
+                          <span className="w-[50px] shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
+                            {star} {star === 1 ? "star" : "stars"}
+                          </span>
+                          <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
+                            <span className="block h-[5px] rounded-[10px] bg-[#0054B4]" style={{ width: `${width}%` }} />
+                          </span>
+                          <span className="w-5 shrink-0 text-right text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
+                            {count}
+                          </span>
+                        </div>
+                      );
+                    })}
+                  </div>
+                  <PublicReviewComments reviews={reviews} />
+                </>
+              ) : null}
             </div>
           </CoachProfileCard>
         </div>
