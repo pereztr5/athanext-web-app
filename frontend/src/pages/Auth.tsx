@@ -13,7 +13,7 @@ import { useToast } from "@/hooks/use-toast";
 import { set, z } from "zod";
 import { cn } from "@/lib/utils";
 import { strings } from "@/config/strings";
-import { DEFAULT_PERSONA, PERSONA_TYPES, SPORTS_OPTIONS, ATHLETE_SPORTS_OPTIONS, PROFILE_TYPE } from "@/utils/db";
+import { PERSONA_TYPES, SPORTS_OPTIONS, ATHLETE_SPORTS_OPTIONS, PROFILE_TYPE } from "@/utils/db";
 import { authSchema, signupSchema, profileCompletionSchema } from "@/utils/validations";
 import { Loader2, Eye, EyeOff } from "lucide-react";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
@@ -44,6 +44,9 @@ import FavoritePositionsField from "@/components/form/FavoritePositionsField";
 import { getTodayISODate } from "@/utils/dateHelpers";
 
 type PersonaType = typeof PERSONA_TYPES[number];
+
+const isPersonaType = (value: unknown): value is PersonaType =>
+  typeof value === "string" && PERSONA_TYPES.includes(value as PersonaType);
 
 const requiresDateOfBirth = (personaValue?: PersonaType | null) =>
   personaValue === PROFILE_TYPE.athlete || personaValue === PROFILE_TYPE.parent;
@@ -92,7 +95,7 @@ const Auth = () => {
   const [showSigninPassword, setShowSigninPassword] = useState(false);
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [name, setName] = useState("");
-  const [persona, setPersona] = useState<PersonaType>(DEFAULT_PERSONA);
+  const [persona, setPersona] = useState<PersonaType | null>(null);
   const [phone, setPhone] = useState("+");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [sport, setSport] = useState("");
@@ -361,10 +364,12 @@ const Auth = () => {
             navigate(`${ROUTES.AUTH}?mode=complete-profile`, { replace: true, state: location.state });
           }
 
+          const metadataPersona = user.user_metadata?.persona_type;
+          const queryPersona = searchParams.get("persona");
           const defaultPersona =
-            personaFromProfile ||
-            (user.user_metadata?.persona_type as PersonaType) ||
-            DEFAULT_PERSONA;
+            (isPersonaType(personaFromProfile) ? personaFromProfile : null) ||
+            (isPersonaType(metadataPersona) ? metadataPersona : null) ||
+            (isPersonaType(queryPersona) ? queryPersona : null);
           const defaultEmail = user.email || "";
           const defaultName = "";
           const defaultPhone =
@@ -515,6 +520,12 @@ const Auth = () => {
   };
 
   const validateStep1 = () => {
+    if (!persona) {
+      return {
+        isValid: false,
+        errors: { persona: "Please select who you are" } as Record<string, string>,
+      };
+    }
     return { isValid: true, errors: {} as Record<string, string> };
   };
 
@@ -664,6 +675,7 @@ const Auth = () => {
       setErrors(combinedErrors);
       return;
     }
+    if (!persona) return;
     setErrors({});
 
     setIsLoading(true);
@@ -751,6 +763,7 @@ const Auth = () => {
     e.preventDefault();
     if (!user) return;
     if (!validateProfileCompletion()) return;
+    if (!persona) return;
 
     setIsLoading(true);
 
@@ -994,6 +1007,7 @@ const Auth = () => {
                             : "border-border"
                         )}
                         role="button"
+                        aria-pressed={persona === type}
                         tabIndex={personaSelectionDisabled ? -1 : 0}
                         aria-disabled={personaSelectionDisabled}
                         onClick={() => {
@@ -1120,6 +1134,7 @@ const Auth = () => {
                   )}
                 </div>
 
+                {persona && (
                 <div className="space-y-2">
                   <Label htmlFor="complete-position">{getPositionLabel()}</Label>
                   {persona === PROFILE_TYPE.coach ? (
@@ -1192,9 +1207,10 @@ const Auth = () => {
                     <p className="text-sm text-destructive">{errors.position}</p>
                   )}
                 </div>
+                )}
 
                 <FavoritePositionsField
-                  persona={persona}
+                  persona={persona ?? ""}
                   sport={sport}
                   availablePositions={availablePositions as unknown as { value: string; label: string }[]}
                   selectedPositions={coachFavoritePositions}
@@ -1248,7 +1264,7 @@ const Auth = () => {
                   label={persona === PROFILE_TYPE.parent ? "Child's Gender" : strings.form.labels.gender}
                 />
 
-                {persona !== 'coach' && (
+                {(persona === PROFILE_TYPE.athlete || persona === PROFILE_TYPE.parent) && (
                   <div className="space-y-3">
                     <div className="flex items-center justify-between">
                       <Label htmlFor="complete-graduationYear">High School Grad Year (if applicable)</Label>
@@ -1482,9 +1498,19 @@ const Auth = () => {
                           {PERSONA_TYPES.map((type) => (
                             <div
                             key={type}
+                            role="button"
+                            aria-pressed={persona === type}
+                            tabIndex={0}
                             onClick={() => {
                               setPersona(type);
                               clearFieldError("persona");
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter" || e.key === " ") {
+                                e.preventDefault();
+                                setPersona(type);
+                                clearFieldError("persona");
+                              }
                             }}
                             className={`cursor-pointer rounded-lg border-2 p-4 text-center transition-all ${persona === type
                               ? 'border-primary bg-primary/10'
