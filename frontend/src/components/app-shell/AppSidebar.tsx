@@ -7,6 +7,7 @@ import {
   LayoutGrid,
   MessageCircle,
   Search,
+  Shield,
   User,
 } from "lucide-react";
 import {
@@ -19,6 +20,7 @@ import {
 import { UserMenu } from "@/components/common/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 import { cn } from "@/lib/utils";
@@ -46,9 +48,13 @@ const navItemClass =
 export const AppSidebar = () => {
   const location = useLocation();
   const { isCoach } = useRole();
+  const { isAdmin } = useIsAdmin();
   const { hasNewMessage, userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
-  const items = isCoach ? COACH_NAV : ATHLETE_NAV;
+  const items = [
+    ...(isCoach ? COACH_NAV : ATHLETE_NAV),
+    ...(isAdmin ? [{ title: "Accounts", url: ROUTES.ADMIN_ACCOUNTS, icon: Shield }] : []),
+  ];
 
   const displayName = userName || userProfile?.name || "Account";
   const firstName = displayName.split(" ")[0] || displayName;

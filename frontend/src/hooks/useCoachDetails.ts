@@ -42,6 +42,7 @@ export const useCoachDetails = (coachId: string | undefined) => {
           `
           *,
           user_profiles!user_profiles_coach_id_fkey (
+            id,
             sport,
             gender,
             zip_code
@@ -53,6 +54,15 @@ export const useCoachDetails = (coachId: string | undefined) => {
 
       if (coachError || !coachData) {
         throw new Error(coachError?.message || "Coach not found");
+      }
+
+      if (coachData.status === "hidden") {
+        const { data: authData } = await supabase.auth.getUser();
+        const profiles = Array.isArray(coachData.user_profiles) ? coachData.user_profiles : [];
+        const isOwner = profiles.some((profile) => profile.id === authData.user?.id);
+        if (!isOwner) {
+          throw new Error("Coach not found");
+        }
       }
 
       // Fetch certifications

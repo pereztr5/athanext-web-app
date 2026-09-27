@@ -30,6 +30,7 @@ import BookingConfirmation from "./pages/BookingConfirmation";
 import PackageConfirmation from "./pages/PackageConfirmation";
 import CreateAthleteProfile from "./pages/CreateAthleteProfile";
 import Dashboard from "./pages/Dashboard";
+import AdminAccounts from "./pages/AdminAccounts";
 import { HomeSwitch } from "./layouts/HomeSwitch";
 
 export const ROUTES = {
@@ -53,6 +54,7 @@ export const ROUTES = {
   MY_SESSIONS: "/my-sessions",
   CREATE_ATHLETE_PROFILE: "/athlete-profile/create",
   SETTINGS: "/settings",
+  ADMIN_ACCOUNTS: "/admin/accounts",
   CHANGE_PASSWORD: "/settings/password",
   AVAILABILITY: "/availability",
   ANALYTICS: "/analytics",
@@ -104,6 +106,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
+  { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
   { path: ROUTES.AVAILABILITY, element: <ProtectedRoute><Availability /></ProtectedRoute> },
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },

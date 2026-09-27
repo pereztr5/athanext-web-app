@@ -20,3 +20,6 @@ verify_jwt = false
 
 [functions.add-client-referral]
 verify_jwt = true
+
+[functions.admin-accounts]
+verify_jwt = true
