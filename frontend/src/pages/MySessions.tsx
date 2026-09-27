@@ -46,6 +46,7 @@ import {
   getSubmittedFeedbackIds,
   getCoachSubmittedSessionIds,
 } from "@/api/sessions";
+import { startOccurrenceCheckout } from "@/api/bookings";
 import { ERROR_CODES } from "@/constants/errorCodes";
 import type { SessionFilters, SessionUIModel } from "@/types/sessions-api";
 import type { UISession } from "@/types/my-sessions";
@@ -100,6 +101,38 @@ const AthleteList = memo(({ athletes, totalAthletes }: { athletes: { id: string;
 
 AthleteList.displayName = "AthleteList";
 
+const sessionNeedsPayment = (session: UISession) =>
+  session.dbStatus === "pending_payment" ||
+  session.paymentStatus === "unpaid" ||
+  session.paymentStatus === "requires_action";
+
+const PayNowAction = ({
+  paying,
+  onPay,
+}: {
+  paying: boolean;
+  onPay: () => void;
+}) => (
+  <span
+    role="button"
+    tabIndex={0}
+    aria-disabled={paying}
+    onClick={(event) => {
+      event.stopPropagation();
+      if (!paying) onPay();
+    }}
+    onKeyDown={(event) => {
+      if (event.key !== "Enter" && event.key !== " ") return;
+      event.preventDefault();
+      event.stopPropagation();
+      if (!paying) onPay();
+    }}
+    className="inline-flex cursor-pointer items-center justify-center rounded-[8px] border border-[#E4D7A2] bg-[#F8F1D8] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#7A5B00]"
+  >
+    {paying ? "Starting payment…" : "Pay now"}
+  </span>
+);
+
 const calculatePlatformFee = (
   rate: number | null | undefined,
   platformFeePerc = 0,
@@ -122,6 +155,9 @@ const SessionCard = ({
   onFeedbackNavigate,
   platformFeePerc = 0,
   stripeFeePerc = 0,
+  canPay = false,
+  paying = false,
+  onPay,
 }: {
   session: UISession;
   now: Date;
@@ -132,6 +168,9 @@ const SessionCard = ({
   onFeedbackNavigate: (slotId: string, session?: UISession) => void;
   platformFeePerc?: number;
   stripeFeePerc?: number;
+  canPay?: boolean;
+  paying?: boolean;
+  onPay?: () => void;
 }) => {
   const startMeta = session.computedStatus === "upcoming" ? getStartMeta(session.start, now) : null;
   const personLabel =
@@ -250,12 +289,16 @@ const SessionCard = ({
           </p>
         ) : null}
         <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{timingLabel}</p>
+        {sessionNeedsPayment(session) ? (
+          <p className="text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#7A5B00]">Awaiting payment</p>
+        ) : null}
       </div>
       <div className="flex shrink-0 flex-col items-start gap-[10px] md:items-end">
         <div className="md:text-right">
           <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
           <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
         </div>
+        {canPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
         <span className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]">
           View details
         </span>
@@ -274,6 +317,9 @@ const PastDraftCard = ({
   hasFeedbackSubmitted,
   platformFeePerc = 0,
   stripeFeePerc = 0,
+  canPay = false,
+  paying = false,
+  onPay,
 }: {
   session: UISession;
   onSelect: (session: UISession) => void;
@@ -284,6 +330,9 @@ const PastDraftCard = ({
   hasFeedbackSubmitted: boolean;
   platformFeePerc?: number;
   stripeFeePerc?: number;
+  canPay?: boolean;
+  paying?: boolean;
+  onPay?: () => void;
 }) => {
   const price = formatSessionPrice(
     role === PROFILE_TYPE.athlete
@@ -340,6 +389,9 @@ const PastDraftCard = ({
             {role === PROFILE_TYPE.coach ? (
               <AthleteList athletes={session.athletes} totalAthletes={session.totalAthletes} />
             ) : null}
+            {sessionNeedsPayment(session) ? (
+              <p className="text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#7A5B00]">Awaiting payment</p>
+            ) : null}
             {role === PROFILE_TYPE.athlete && session.coachName ? (
               <div className="inline-flex w-fit items-center gap-2 rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
                 <Avatar className="h-[22px] w-[22px] rounded-[3px]">
@@ -363,6 +415,7 @@ const PastDraftCard = ({
               <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
             </div>
             <div className="flex flex-col gap-2">
+              {canPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
               <button
                 type="button"
                 className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]"
@@ -463,6 +516,7 @@ const MySessions = () => {
   const { platformFeePerc, stripeFeePerc } = useFeeConfig();
 
   const { toast } = useToast();
+  const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
   const { role: persona } = useRole();
   const athleteProfileId = userProfile?.athlete_id || userProfile?.id || null;
@@ -684,6 +738,22 @@ const MySessions = () => {
   };
 
   // Navigation handler for feedback
+  const handlePay = async (session: UISession) => {
+    const occurrenceId = session.occurrenceId || session.id;
+    if (persona !== PROFILE_TYPE.athlete || !athleteProfileId || !occurrenceId) return;
+    setPayingBookingId(session.bookingId);
+    try {
+      await startOccurrenceCheckout(occurrenceId, athleteProfileId);
+    } catch (error) {
+      toast({
+        title: "Payment",
+        description: error instanceof Error ? error.message : "Could not start payment.",
+        variant: "destructive",
+      });
+      setPayingBookingId(null);
+    }
+  };
+
   const handleFeedbackNavigate = (slotId: string, session?: UISession) => {
     
     if (!slotId) return;
@@ -1052,6 +1122,9 @@ const MySessions = () => {
               onFeedbackNavigate={handleFeedbackNavigate}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
+              canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
+              paying={payingBookingId === session.bookingId}
+              onPay={() => void handlePay(session)}
             />
           ))}
         </SessionGroup>
@@ -1077,6 +1150,9 @@ const MySessions = () => {
               onFeedbackNavigate={handleFeedbackNavigate}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
+              canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
+              paying={payingBookingId === session.bookingId}
+              onPay={() => void handlePay(session)}
             />
           ))}
         </SessionGroup>
@@ -1102,6 +1178,9 @@ const MySessions = () => {
               hasFeedbackSubmitted={hasSubmittedFeedback(session)}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
+              canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
+              paying={payingBookingId === session.bookingId}
+              onPay={() => void handlePay(session)}
             />
           ))}
         </SessionGroup>

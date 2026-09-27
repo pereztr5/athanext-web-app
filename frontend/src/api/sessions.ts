@@ -251,6 +251,80 @@ function parseTimeFromString(str: string): string {
   return '12:00 PM'; // Ultimate fallback
 }
 
+const asSessionType = (value: unknown): SessionUIModel['type'] =>
+  value === 'group' ? 'group' : 'individual';
+
+const asLocation = (value: unknown): SessionUIModel['location'] =>
+  value === 'online' ? 'online' : 'in-person';
+
+/**
+ * The bookings RPC omits unpaid walk-ins. Load those separately so the athlete can pay later.
+ */
+async function getPendingAthleteSessions(athleteId: string, now: Date): Promise<SessionUIModel[]> {
+  const { data, error } = await supabase
+    .from('coach_slot_bookings' as any)
+    .select(
+      `id, coach_id, notes,
+       coach_availability_slot_occurrences (
+         id, weekly_slot_id, session_name, session_type, location, price,
+         duration_minutes, occurrence_date, start_time, end_time
+       )`
+    )
+    .eq('athlete_id', athleteId)
+    .eq('status', 'pending_payment');
+
+  if (error || !Array.isArray(data)) {
+    console.error('Failed to load unpaid sessions:', error);
+    return [];
+  }
+
+  const coachIds = [...new Set(data.map((row: any) => row.coach_id).filter(Boolean))];
+  const coachNames = new Map<string, string>();
+  if (coachIds.length) {
+    const { data: coaches } = await supabase.from('coaches').select('id, name').in('id', coachIds);
+    (coaches || []).forEach((coach) => {
+      if (coach.id && coach.name) coachNames.set(coach.id, coach.name);
+    });
+  }
+
+  return data.flatMap((row: any) => {
+    const occurrence = row.coach_availability_slot_occurrences;
+    if (!occurrence?.occurrence_date || !occurrence.start_time || !occurrence.end_time) return [];
+
+    const mapped = mapRPCResponseToSessionUI(
+      {
+        booking_id: row.id,
+        slot_id: occurrence.weekly_slot_id || occurrence.id,
+        occurrence_id: occurrence.id,
+        availability_id: '',
+        coach_id: row.coach_id,
+        coach_name: coachNames.get(row.coach_id) ?? null,
+        athlete_count: 1,
+        athletes_names: null,
+        session_date: occurrence.occurrence_date,
+        slot_start_time: occurrence.start_time,
+        slot_end_time: occurrence.end_time,
+        slot_duration: Number(occurrence.duration_minutes) || 0,
+        slot_session_type: asSessionType(occurrence.session_type),
+        slot_location: asLocation(occurrence.location),
+        slot_session_name: occurrence.session_name || 'Coaching Session',
+        slot_price: Number(occurrence.price) || 0,
+        pillar_slot: null,
+      },
+      now
+    );
+
+    return [
+      {
+        ...mapped,
+        dbStatus: 'pending_payment' as BookingStatus,
+        paymentStatus: 'unpaid' as PaymentStatus,
+        notes: row.notes ?? null,
+      },
+    ];
+  });
+}
+
 /**
  * Get sessions for current user using optimized RPC function
  * Calls get_bookings_by_user_id with either athlete_id or coach_id
@@ -316,9 +390,15 @@ export async function getMySessions(
     }
 
     // Map RPC response records to UI model
-    const sessions: SessionUIModel[] = records.map((record) =>
+    let sessions: SessionUIModel[] = records.map((record) =>
       mapRPCResponseToSessionUI(record, now)
     );
+
+    if (userRole === 'athlete') {
+      const pending = await getPendingAthleteSessions(personaId, now);
+      const seen = new Set(sessions.map((session) => session.bookingId));
+      sessions = [...sessions, ...pending.filter((session) => !seen.has(session.bookingId))];
+    }
 
     return { data: sessions, error: null };
   } catch (error) {

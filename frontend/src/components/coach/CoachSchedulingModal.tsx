@@ -21,7 +21,7 @@ import { strings } from "@/config/strings";
 import { BookingType } from "@/types/common";
 import { CoachAvailabilitySlot } from "@/types/availability";
 import { PROFILE_TYPE } from "@/utils/db";
-import { buildLocalDateTime, toLocalISODate } from "@/utils/dateHelpers";
+import { getZonedISODate, isBookingWindowClosed, toLocalISODate } from "@/utils/dateHelpers";
 import { formatLocationDisplay } from "@/utils/sessionFormatting";
 
 interface Coach {
@@ -222,13 +222,22 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
 
       const selectedDateISO = selectedDate ? toLocalISODate(selectedDate) : prefillSlot?.date || null;
       const normalizedStartTime = selectedTime ? normalizeTimeValue(selectedTime) : null;
+      const occurrenceDate = prefillSlot?.date || selectedDateISO;
+      const occurrenceStart = prefillSlot?.slot?.start_time || normalizedStartTime;
 
-      if (selectedDateISO && normalizedStartTime) {
-        const slotStart = buildLocalDateTime(selectedDateISO, normalizedStartTime);
-        if (slotStart.getTime() <= Date.now()) {
+      if (occurrenceDate && occurrenceStart && isBookingWindowClosed(occurrenceDate, occurrenceStart)) {
+        const { data: pendingBooking } = await supabase
+          .from("coach_slot_bookings" as any)
+          .select("id")
+          .eq("occurrence_id", prefillSlot?.occurrenceId || "")
+          .eq("athlete_id", athleteProfileId)
+          .eq("status", "pending_payment")
+          .maybeSingle();
+
+        if (!pendingBooking) {
           toast({
             title: "Slot unavailable",
-            description: "This session has already started. Please choose another slot.",
+            description: "Booking stays open until 10 minutes after the start time (Eastern).",
             variant: "destructive",
           });
           setIsBooking(false);
@@ -300,10 +309,6 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       const totalAmount = isFreeConsultation ? 0 : sessionCost;
 
       // Create payment session with appointment details
-      const occurrenceDate =
-        selectedDate
-          ? toLocalISODate(selectedDate)
-          : prefillSlot?.date;
 
       const { data: paymentData, error: paymentError } = await supabase.functions.invoke('create-booking-payment-v0', {
         body: {
@@ -530,7 +535,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                         mode="single"
                         selected={selectedDate}
                         onSelect={setSelectedDate}
-                        disabled={(date) => toLocalISODate(date) < toLocalISODate(new Date()) || date < new Date("1900-01-01")}
+                        disabled={(date) => toLocalISODate(date) < getZonedISODate(new Date()) || date < new Date("1900-01-01")}
                         initialFocus
                       />
                     </PopoverContent>

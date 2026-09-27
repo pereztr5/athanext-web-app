@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { CoachAvailabilitySlot, DAY_OF_WEEK_MAP, SlotBookingStatus } from '@/types/availability';
 import { Loader2, SquarePen, Trash2 } from 'lucide-react';
-import { getTodayISODate, hasSlotStarted, parseISODateLocal } from '@/utils/dateHelpers';
+import { getTodayISODate, isBookingWindowClosed, parseISODateLocal } from '@/utils/dateHelpers';
 
 interface AvailabilityTableRowProps {
   slot: CoachAvailabilitySlot;
@@ -41,24 +41,21 @@ export function AvailabilityTableRow({
   };
 
   const todayISO = getTodayISODate();
-  const isPastDate = slot?.occurrence_date ? slot.occurrence_date < todayISO : false;
-  const isSameDayStarted = slot?.occurrence_date === todayISO
-    ? hasSlotStarted(slot.occurrence_date, slot.start_time)
-    : false;
-  const isDateLocked = isPastDate || isSameDayStarted;
+  const isBookingClosed = isBookingWindowClosed(slot?.occurrence_date, slot?.start_time);
   const isEditDateLocked = slot?.occurrence_date ? slot.occurrence_date < todayISO : false;
   const isCoachDisabled = !slot.is_enabled;
-  const isDisabled = isCoachDisabled || (onBookSlot ? isDateLocked : isEditDateLocked);
   const isFull = slotStatus?.isFull;
   const bookedByMe = slotStatus?.bookedByMe;
   const hasPendingPayment = slotStatus?.hasPendingPayment;
   const myPendingPayment = slotStatus?.myPendingPayment;
+  const isDateLocked = Boolean(onBookSlot) && isBookingClosed && !myPendingPayment;
+  const isDisabled = isCoachDisabled || (onBookSlot ? isDateLocked : isEditDateLocked);
 
   const isChecking = isStatusLoading;
   const isPayNow = Boolean(myPendingPayment);
   const isReserved = Boolean(hasPendingPayment && isFull && !isPayNow && !bookedByMe);
   const isFullyBooked = Boolean(isFull && !isPayNow && !bookedByMe && !isReserved);
-  const showBookAction = Boolean(onBookSlot && !isDateLocked);
+  const showBookAction = Boolean(onBookSlot);
   const hasBookings = (slotStatus?.totalCount ?? 0) > 0;
   const isEditLockedByBooking = hasBookings;
   const isEditDisabled = isEditLockedByBooking || isEditDateLocked || isChecking;

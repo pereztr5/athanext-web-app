@@ -13,9 +13,12 @@ import {
   ShieldCheck,
   User,
   UserCheck2,
+  UserPlus,
   UserX,
   Users,
 } from "lucide-react";
+import { AddWalkInAthleteDialog } from "@/components/coach/AddWalkInAthleteDialog";
+import { listWalkInRoster } from "@/api/walkIn";
 
 import { useCoachSessionFeedback, useUpsertSlotAttendance, useUpsertSlotFeedback, useUpsertSessionFeedback } from "@/hooks/useCoachSessionFeedback";
 import { mapRpcRowToAthlete, buildAttendancePayload, buildFeedbackPayload, buildSessionFeedbackPayload } from "@/utils/sessionFeedbackHelpers";
@@ -102,6 +105,8 @@ const CoachSessionFeedback = () => {
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [sessionFeedbackCompleted, setSessionFeedbackCompleted] = useState(false);
   const [athleteFeedbackSubmitted, setAthleteFeedbackSubmitted] = useState<Record<string, boolean>>({});
+  const [walkInOpen, setWalkInOpen] = useState(false);
+  const [unpaidAthleteIds, setUnpaidAthleteIds] = useState<Set<string>>(new Set());
 
   const hasInitializedAttendance = useRef(false);
 
@@ -287,6 +292,71 @@ const CoachSessionFeedback = () => {
       setCoachNotes(coachNotesFromDB);
     }
   }, [feedbackData]);
+
+  useEffect(() => {
+    if (!slotId) return;
+    let cancelled = false;
+    listWalkInRoster(slotId, sessionHeader.sessionDate)
+      .then((result) => {
+        if (cancelled) return;
+        setUnpaidAthleteIds(new Set(result.athletes.filter((athlete) => athlete.requiresPayment).map((athlete) => athlete.id)));
+        setAthletes((current) => {
+          const known = new Set(current.map((athlete) => athlete.id));
+          const added = result.athletes
+            .filter((athlete) => !known.has(athlete.id))
+            .map((athlete) => ({
+              id: athlete.id,
+              name: athlete.name,
+              role: "Athlete",
+              age: "N/A",
+            }));
+          return added.length ? [...current, ...added] : current;
+        });
+        setBookingIdMap((current) => {
+          const next = { ...current };
+          result.athletes.forEach((athlete) => {
+            next[athlete.id] = athlete.bookingId;
+          });
+          return next;
+        });
+      })
+      .catch(() => {
+        // The public roster still loads when the walk-in list is unavailable.
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [slotId, sessionHeader.sessionDate, feedbackData]);
+
+  const handleWalkInAdded = (result: {
+    bookingId: string;
+    athlete: { id: string; name: string };
+    requiresPayment: boolean;
+    alreadyAdded: boolean;
+  }) => {
+    setAthletes((current) =>
+      current.some((athlete) => athlete.id === result.athlete.id)
+        ? current
+        : [...current, { id: result.athlete.id, name: result.athlete.name, role: "Athlete", age: "N/A" }]
+    );
+    setBookingIdMap((current) => ({ ...current, [result.athlete.id]: result.bookingId }));
+    if (result.requiresPayment) {
+      setUnpaidAthleteIds((current) => new Set(current).add(result.athlete.id));
+    }
+    if (slotId) {
+      upsertAttendance([buildAttendancePayload(result.bookingId, slotId, result.athlete.id, "present")], {
+        onSuccess: () => {
+          setAttendance((current) => ({ ...current, [result.athlete.id]: true }));
+        },
+      });
+    }
+    toast({
+      title: result.alreadyAdded ? "Already on this session" : "Athlete added",
+      description: result.requiresPayment
+        ? "They can pay from My Sessions. You can mark them present now."
+        : "This session has no charge.",
+    });
+  };
 
   // Initialize default attendance (all present) if no attendance records exist
   useEffect(() => {
@@ -613,6 +683,10 @@ const CoachSessionFeedback = () => {
                 <div className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
                   {attendedCount} selected
                 </div>
+                <Button type="button" size="sm" variant="outline" onClick={() => setWalkInOpen(true)}>
+                  <UserPlus className="mr-1.5 h-4 w-4" />
+                  Add athlete
+                </Button>
               </div>
               </CardHeader>
               <CardContent className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
@@ -654,9 +728,16 @@ const CoachSessionFeedback = () => {
                         )}
                       </Avatar>
                       <div className="flex-1 min-w-0 space-y-0.5">
-                        <p className="text-sm font-semibold text-slate-800 truncate">
-                          {athlete.name}
-                        </p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm font-semibold text-slate-800 truncate">
+                            {athlete.name}
+                          </p>
+                          {unpaidAthleteIds.has(athlete.id) ? (
+                            <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
+                              Awaiting payment
+                            </Badge>
+                          ) : null}
+                        </div>
                         <p className="text-sm text-muted-foreground">
                           {athlete.role} | {athlete.age}
                           {athlete.level ? ` | ${athlete.level}` : ""}
@@ -703,6 +784,14 @@ const CoachSessionFeedback = () => {
                 })}
               </CardContent>
             </Card>
+
+            <AddWalkInAthleteDialog
+              open={walkInOpen}
+              onOpenChange={setWalkInOpen}
+              slotId={slotId || ""}
+              sessionDate={sessionHeader.sessionDate}
+              onAdded={handleWalkInAdded}
+            />
 
             <Card>
               <CardHeader className="pb-3">

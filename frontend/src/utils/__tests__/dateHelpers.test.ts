@@ -7,6 +7,8 @@ import {
   parseLocalTimeParts,
   buildLocalDateTime,
   hasSlotStarted,
+  isBookingWindowClosed,
+  zonedWallTimeToUtc,
   toLocalISODate,
   formatDate,
 } from "@/utils/dateHelpers";
@@ -72,6 +74,27 @@ describe("hasSlotStarted", () => {
   it("is false for missing date or time", () => {
     expect(hasSlotStarted(null, "09:00")).toBe(false);
     expect(hasSlotStarted("2026-07-20", null)).toBe(false);
+  });
+});
+
+describe("booking window in US Eastern", () => {
+  it("treats a winter start as Eastern standard time", () => {
+    expect(zonedWallTimeToUtc("2026-01-15", "09:00")?.toISOString()).toBe("2026-01-15T14:00:00.000Z");
+  });
+
+  it("treats a summer start as Eastern daylight time", () => {
+    expect(zonedWallTimeToUtc("2026-07-20", "09:00")?.toISOString()).toBe("2026-07-20T13:00:00.000Z");
+  });
+
+  it("stays open before the start and through the 10 minute grace", () => {
+    expect(isBookingWindowClosed("2026-07-20", "09:00", new Date("2026-07-20T12:00:00.000Z"))).toBe(false);
+    expect(isBookingWindowClosed("2026-07-20", "09:00", new Date("2026-07-20T13:09:00.000Z"))).toBe(false);
+    expect(isBookingWindowClosed("2026-07-20", "09:00", new Date("2026-07-20T13:10:00.000Z"))).toBe(false);
+  });
+
+  it("closes after 10 minutes past the Eastern start", () => {
+    expect(isBookingWindowClosed("2026-07-20", "09:00", new Date("2026-07-20T13:10:01.000Z"))).toBe(true);
+    expect(isBookingWindowClosed("2026-07-19", "09:00", new Date("2026-07-20T13:00:00.000Z"))).toBe(true);
   });
 });
 

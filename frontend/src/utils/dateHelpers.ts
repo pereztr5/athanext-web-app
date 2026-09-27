@@ -72,6 +72,86 @@ export const hasSlotStarted = (
   return buildLocalDateTime(isoDate, startTime).getTime() <= now.getTime();
 };
 
+/** Sessions are scheduled in US Eastern. This zone covers both EST and EDT. */
+export const SESSION_TIME_ZONE = "America/New_York";
+
+/** Public booking stays open until this long after the session start. */
+export const BOOKING_GRACE_AFTER_START_MS = 10 * 60 * 1000;
+
+const readZonedParts = (date: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const value = (type: Intl.DateTimeFormatPartTypes) =>
+    parts.find((part) => part.type === type)?.value ?? "0";
+  return {
+    year: Number(value("year")),
+    month: Number(value("month")),
+    day: Number(value("day")),
+    hour: Number(value("hour")) % 24,
+    minute: Number(value("minute")),
+    second: Number(value("second")),
+  };
+};
+
+/**
+ * Interpret a calendar date and clock time as wall time in `timeZone`.
+ * The same helper is duplicated in the booking payment function.
+ */
+export const zonedWallTimeToUtc = (
+  isoDate: string,
+  time: string,
+  timeZone = SESSION_TIME_ZONE
+): Date | null => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const [hour, minute, second] = parseLocalTimeParts(time);
+  const desiredUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  let instant = desiredUtc;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const zoned = readZonedParts(new Date(instant), timeZone);
+    const zonedAsUtc = Date.UTC(
+      zoned.year,
+      zoned.month - 1,
+      zoned.day,
+      zoned.hour,
+      zoned.minute,
+      zoned.second
+    );
+    instant = desiredUtc - (zonedAsUtc - instant);
+  }
+  return new Date(instant);
+};
+
+export const getZonedISODate = (date: Date, timeZone = SESSION_TIME_ZONE): string => {
+  const zoned = readZonedParts(date, timeZone);
+  const month = String(zoned.month).padStart(2, "0");
+  const day = String(zoned.day).padStart(2, "0");
+  return `${zoned.year}-${month}-${day}`;
+};
+
+/**
+ * Public booking closes once Eastern start time plus the grace period has passed.
+ * A same-day slot that has not reached that point stays open.
+ */
+export const isBookingWindowClosed = (
+  isoDate?: string | null,
+  startTime?: string | null,
+  now = new Date()
+): boolean => {
+  if (!isoDate || !startTime) return false;
+  const start = zonedWallTimeToUtc(isoDate, startTime);
+  if (!start) return false;
+  return now.getTime() > start.getTime() + BOOKING_GRACE_AFTER_START_MS;
+};
+
 /**
  * Convert a Date to YYYY-MM-DD using local calendar values.
  */

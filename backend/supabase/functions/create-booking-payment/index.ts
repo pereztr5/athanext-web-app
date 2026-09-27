@@ -282,6 +282,257 @@ const updateBookingPaymentStatus = async (
   return { paid: true, newlyPaid: newlyPaidIds.length > 0, bookingIds: newlyPaidIds };
 };
 
+const SESSION_TIME_ZONE = "America/New_York";
+const BOOKING_GRACE_MS = 10 * 60 * 1000;
+
+const readZonedParts = (date: Date, timeZone: string) => {
+  const parts = new Intl.DateTimeFormat("en-US", {
+    timeZone,
+    hourCycle: "h23",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  }).formatToParts(date);
+  const value = (type: string) => parts.find((part) => part.type === type)?.value ?? "0";
+  return {
+    year: Number(value("year")),
+    month: Number(value("month")),
+    day: Number(value("day")),
+    hour: Number(value("hour")) % 24,
+    minute: Number(value("minute")),
+    second: Number(value("second")),
+  };
+};
+
+const zonedWallTimeToUtc = (isoDate: string, time: string): Date | null => {
+  const [year, month, day] = isoDate.split("-").map(Number);
+  if (!year || !month || !day) return null;
+  const [hourRaw = "0", minuteRaw = "0", secondRaw = "0"] = time.split(":");
+  const hour = Number.parseInt(hourRaw, 10) || 0;
+  const minute = Number.parseInt(minuteRaw, 10) || 0;
+  const second = Number.parseInt(secondRaw, 10) || 0;
+  const desiredUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  let instant = desiredUtc;
+  for (let pass = 0; pass < 2; pass += 1) {
+    const zoned = readZonedParts(new Date(instant), SESSION_TIME_ZONE);
+    const zonedAsUtc = Date.UTC(
+      zoned.year,
+      zoned.month - 1,
+      zoned.day,
+      zoned.hour,
+      zoned.minute,
+      zoned.second,
+    );
+    instant = desiredUtc - (zonedAsUtc - instant);
+  }
+  return new Date(instant);
+};
+
+const isBookingWindowClosed = (
+  isoDate?: string | null,
+  startTime?: string | null,
+  now = new Date(),
+) => {
+  if (!isoDate || !startTime) return false;
+  const start = zonedWallTimeToUtc(isoDate, startTime);
+  if (!start) return false;
+  return now.getTime() > start.getTime() + BOOKING_GRACE_MS;
+};
+
+const jsonResponse = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), {
+    status,
+    headers: { ...corsHeaders, "Content-Type": "application/json" },
+  });
+
+const resolveCoachOccurrence = async (
+  client: SupabaseClient,
+  coachId: string,
+  slotId: string,
+  sessionDate: string | null,
+) => {
+  if (!slotId) return null;
+  const columns =
+    "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, start_time";
+  const { data: byId } = await client
+    .from("coach_availability_slot_occurrences" as any)
+    .select(columns)
+    .eq("id", slotId)
+    .maybeSingle();
+  if (byId?.coach_id === coachId) return byId;
+  if (!sessionDate) return null;
+  const { data: bySlot } = await client
+    .from("coach_availability_slot_occurrences" as any)
+    .select(columns)
+    .eq("weekly_slot_id", slotId)
+    .eq("occurrence_date", sessionDate)
+    .eq("coach_id", coachId)
+    .maybeSingle();
+  return bySlot ?? null;
+};
+
+const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => {
+  const authHeader = req.headers.get("Authorization");
+  if (!authHeader) return jsonResponse({ error: "Authentication required" }, 401);
+  const token = authHeader.replace("Bearer ", "");
+  const { data: userData, error: authError } = await client.auth.getUser(token);
+  if (authError || !userData.user) return jsonResponse({ error: "Invalid authentication token" }, 401);
+
+  const { data: profile, error: profileError } = await client
+    .from("user_profiles" as any)
+    .select("coach_id")
+    .eq("id", userData.user.id)
+    .maybeSingle();
+  if (profileError) throw profileError;
+  const coachId = profile?.coach_id as string | null;
+  if (!coachId) return jsonResponse({ error: "Only a coach can add an athlete to a session." }, 403);
+
+  if (body.action === "walk_in_search") {
+    const query = String(body.query ?? "").trim();
+    if (query.length < 2) return jsonResponse({ athletes: [] });
+    const safe = query.replace(/[%_,]/g, "").slice(0, 80);
+    const pattern = `%${safe}%`;
+
+    const { data: byName, error: nameError } = await client
+      .from("athlete_profiles" as any)
+      .select("id, full_name, user_id")
+      .ilike("full_name", pattern)
+      .limit(8);
+    if (nameError) throw nameError;
+
+    const { data: byEmail, error: emailError } = await client
+      .from("user_profiles" as any)
+      .select("athlete_id, email, name")
+      .ilike("email", pattern)
+      .not("athlete_id", "is", null)
+      .limit(8);
+    if (emailError) throw emailError;
+
+    const userIds = (byName || []).map((row: any) => row.user_id).filter(Boolean);
+    const emailsByUser = new Map<string, string>();
+    if (userIds.length) {
+      const { data: emails } = await client
+        .from("user_profiles" as any)
+        .select("id, email")
+        .in("id", userIds);
+      (emails || []).forEach((row: any) => emailsByUser.set(row.id, row.email));
+    }
+
+    const athletes = new Map<string, { id: string; name: string; email: string | null }>();
+    for (const row of byName || []) {
+      athletes.set(row.id, {
+        id: row.id,
+        name: row.full_name,
+        email: emailsByUser.get(row.user_id) ?? null,
+      });
+    }
+
+    const emailAthleteIds = (byEmail || []).map((row: any) => row.athlete_id).filter(Boolean);
+    const { data: emailProfiles } = emailAthleteIds.length
+      ? await client.from("athlete_profiles" as any).select("id, full_name").in("id", emailAthleteIds)
+      : { data: [] };
+    const names = new Map((emailProfiles || []).map((row: any) => [row.id, row.full_name]));
+    for (const row of byEmail || []) {
+      if (!row.athlete_id) continue;
+      const current = athletes.get(row.athlete_id);
+      athletes.set(row.athlete_id, {
+        id: row.athlete_id,
+        name: current?.name || names.get(row.athlete_id) || row.name || "Athlete",
+        email: row.email ?? current?.email ?? null,
+      });
+    }
+
+    return jsonResponse({ athletes: [...athletes.values()].slice(0, 8) });
+  }
+
+  const slotId = typeof body.slot_id === "string" ? body.slot_id : "";
+  const sessionDate = typeof body.session_date === "string" ? body.session_date : null;
+  const occurrence = await resolveCoachOccurrence(client, coachId, slotId, sessionDate);
+  if (!occurrence) return jsonResponse({ error: "Session not found." }, 404);
+
+  if (body.action === "walk_in_list") {
+    const { data: bookings, error } = await client
+      .from("coach_slot_bookings" as any)
+      .select("id, athlete_id, status, payment_status")
+      .eq("occurrence_id", occurrence.id)
+      .in("status", ["pending_payment", "booked", "completed"]);
+    if (error) throw error;
+    const athleteIds = (bookings || []).map((row: any) => row.athlete_id).filter(Boolean);
+    const { data: profiles } = athleteIds.length
+      ? await client.from("athlete_profiles" as any).select("id, full_name").in("id", athleteIds)
+      : { data: [] };
+    const names = new Map((profiles || []).map((row: any) => [row.id, row.full_name]));
+    return jsonResponse({
+      athletes: (bookings || []).map((row: any) => ({
+        id: row.athlete_id,
+        name: names.get(row.athlete_id) || "Athlete",
+        bookingId: row.id,
+        requiresPayment: row.status === "pending_payment",
+      })),
+    });
+  }
+
+  if (body.action !== "walk_in_add") return jsonResponse({ error: "Unknown action." }, 400);
+
+  const athleteId = typeof body.athlete_id === "string" ? body.athlete_id.trim() : "";
+  if (!athleteId) return jsonResponse({ error: "Choose an athlete with an AthaNext account." }, 400);
+
+  const { data: athlete, error: athleteError } = await client
+    .from("athlete_profiles" as any)
+    .select("id, full_name")
+    .eq("id", athleteId)
+    .maybeSingle();
+  if (athleteError) throw athleteError;
+  if (!athlete) {
+    return jsonResponse({ error: "This person needs an AthaNext account before they can be added." }, 404);
+  }
+
+  const { data: existing, error: existingError } = await client
+    .from("coach_slot_bookings" as any)
+    .select("id, status")
+    .eq("occurrence_id", occurrence.id)
+    .eq("athlete_id", athleteId)
+    .in("status", ["pending_payment", "booked", "completed"])
+    .maybeSingle();
+  if (existingError) throw existingError;
+  if (existing) {
+    return jsonResponse({
+      bookingId: existing.id,
+      athlete: { id: athlete.id, name: athlete.full_name },
+      requiresPayment: existing.status === "pending_payment",
+      alreadyAdded: true,
+    });
+  }
+
+  const requiresPayment = Number(occurrence.price || 0) > 0;
+  const { data: inserted, error: insertError } = await client
+    .from("coach_slot_bookings" as any)
+    .insert({
+      occurrence_id: occurrence.id,
+      weekly_slot_id: occurrence.weekly_slot_id,
+      availability_id: occurrence.availability_id,
+      coach_id: occurrence.coach_id,
+      athlete_id: athleteId,
+      status: requiresPayment ? "pending_payment" : "booked",
+      payment_status: requiresPayment ? "unpaid" : "paid",
+      notes: "Added by coach after arrival",
+      created_by: userData.user.id,
+    })
+    .select("id")
+    .single();
+  if (insertError) throw insertError;
+
+  return jsonResponse({
+    bookingId: inserted.id,
+    athlete: { id: athlete.id, name: athlete.full_name },
+    requiresPayment,
+    alreadyAdded: false,
+  });
+};
+
 serve(async (req) => {
   if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
@@ -292,14 +543,18 @@ serve(async (req) => {
     Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? Deno.env.get("SUPABASE_ANON_KEY") ?? "",
   );
 
-  const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-    apiVersion: "2025-08-27.basil",
-  });
-
   try {
     const rawBody = await req.text();
     const stripeSignature = req.headers.get("stripe-signature");
     const parsedBody = rawBody && !stripeSignature ? JSON.parse(rawBody) : {};
+
+    if (typeof parsedBody.action === "string" && parsedBody.action.startsWith("walk_in_")) {
+      return await handleWalkIn(req, parsedBody, supabaseClient);
+    }
+
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+      apiVersion: "2025-08-27.basil",
+    });
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -498,6 +753,17 @@ serve(async (req) => {
       && occurrenceIds.every((id) => pendingOccSet.has(id))
       && pendingOccSet.size === occurrenceIds.length;
     let reusingPendingBookings = false;
+
+    if (!coversAllPending) {
+      const closed = occurrences.find((occ) =>
+        isBookingWindowClosed(occ.occurrence_date, occ.start_time)
+      );
+      if (closed) {
+        throw new Error(
+          "This session can no longer be booked. Booking stays open until 10 minutes after the start time (Eastern).",
+        );
+      }
+    }
 
     const { platformFeePerc: basePlatformFeePerc, stripeFeePerc } = await fetchFeePercents(supabaseClient);
 

@@ -252,6 +252,38 @@ export const fetchCompleteBookingConfirmation = async (
   }
 };
 
+const readFunctionError = async (error: unknown, fallback: string) => {
+  const candidate = error as { message?: string; context?: { json?: () => Promise<{ error?: string }> } };
+  try {
+    const body = await candidate.context?.json?.();
+    if (body?.error) return body.error;
+  } catch {
+    // The function response was not JSON.
+  }
+  return candidate.message || fallback;
+};
+
+export const startOccurrenceCheckout = async (occurrenceId: string, athleteId: string) => {
+  const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
+    body: {
+      occurrence_id: occurrenceId,
+      occurrence_ids: [occurrenceId],
+      athlete_id: athleteId,
+    },
+  });
+
+  if (error) {
+    throw new Error(await readFunctionError(error, "Could not start payment."));
+  }
+  if (data?.error) {
+    throw new Error(data.error);
+  }
+  if (!data?.url) {
+    throw new Error("Payment link was not created.");
+  }
+  window.location.href = data.url;
+};
+
 export const bookingsAPI = {
   fetchCompleteBookingConfirmation,
   fetchBookingConfirmation,
