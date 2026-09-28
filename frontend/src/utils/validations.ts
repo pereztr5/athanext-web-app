@@ -82,6 +82,7 @@ export const profileSchema = z.object({
     .array(z.string().trim().min(1, "Tag cannot be empty").max(INPUT_LIMITS?.MAX_TAG_LENGTH ?? 50, "Tag too long"))
     .max(MAX_TAGS, `You can only add up to ${MAX_TAGS} tags`)
     .default([]),
+  pathwayTags: z.array(z.string()).max(5).optional().default([]),
   profileImageUrl: z.string().nullable(),
   coverImageUrls: z
     .array(z.string().trim().min(1, "Cover image data cannot be empty"))

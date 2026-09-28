@@ -1,6 +1,7 @@
 import type { AthleteProfileFormData } from "@/types/athleteProfile";
 import type { AthleteProfileUpsertPayload, AthleteProfile as DbAthleteProfile } from "@/hooks/useProfile";
 import { deriveInitials } from "@/utils/helperFunctions";
+import { sanitizePathwayTags } from "@/constants/pathwayTags";
 
 export { deriveInitials };
 
@@ -17,6 +18,7 @@ export const emptyProfileData: AthleteProfileFormData = {
   phoneNumber: "",
   location: "",
   tags: [],
+  pathwayTags: [],
   profileImageUrl: null,
   coverImageUrls: [],
   graduationYear: null,
@@ -51,6 +53,7 @@ export const mapDbProfileToForm = (
     phoneNumber: profile.phone_number ?? "",
     location: profile.location ?? "",
     tags: Array.isArray(profile.tags) ? profile.tags.filter(Boolean) : [],
+    pathwayTags: sanitizePathwayTags(profile.pathway_tags),
     profileImageUrl: profile.profile_image_url ?? userProfile?.image_url ?? null,
     coverImageUrls: coverImages,
     graduationYear: profile.graduation_year ?? null,
@@ -78,6 +81,7 @@ export const mapFormToDbPayload = (profile: AthleteProfileFormData): AthleteProf
   phone_number: profile.phoneNumber.trim() || null,
   location: profile.location.trim() || null,
   tags: profile.tags.filter((tag) => Boolean(tag?.trim())),
+  pathway_tags: sanitizePathwayTags(profile.pathwayTags),
   profile_image_url: profile.profileImageUrl,
   cover_image_urls: profile.coverImageUrls.filter(Boolean).slice(0, 3),
   graduation_year: profile.graduationYear,

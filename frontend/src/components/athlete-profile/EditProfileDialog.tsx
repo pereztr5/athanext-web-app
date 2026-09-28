@@ -61,6 +61,8 @@ import {
   getAcademicYearGraduationOffset,
   normalizeAcademicYear,
 } from "@/utils/academicYear";
+import { PathwayTagChips } from "@/components/common/PathwayTagChips";
+import { suggestPathwayTags, sanitizePathwayTags } from "@/constants/pathwayTags";
 import type {
   AthleteProfileFormData,
   EditProfileDialogProps,
@@ -75,6 +77,7 @@ const emptyProfile: AthleteProfileFormData = {
   phoneNumber: "",
   location: "",
   tags: [],
+  pathwayTags: [],
   profileImageUrl: null,
   coverImageUrls: [],
   graduationYear: null,
@@ -121,6 +124,7 @@ const hydrateProfile = (profile: AthleteProfileFormData | null): AthleteProfileF
     phoneNumber: typeof profile.phoneNumber === 'string' ? profile.phoneNumber : '',
     location: typeof profile.location === 'string' ? profile.location : '',
     tags: Array.isArray(profile.tags) ? profile.tags.filter((tag) => typeof tag === 'string' && tag.trim() !== '') : [],
+    pathwayTags: sanitizePathwayTags(profile.pathwayTags),
     profileImageUrl: typeof profile.profileImageUrl === 'string' ? profile.profileImageUrl : null,
     coverImageUrls: sanitizeImages(Array.isArray(profile.coverImageUrls) ? profile.coverImageUrls : []),
     graduationYear: profile.graduationYear ?? null,
@@ -910,6 +914,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
     const payload: AthleteProfileFormData = {
       ...formData,
       tags: Array.isArray(formData.tags) ? formData.tags : [],
+      pathwayTags: sanitizePathwayTags(formData.pathwayTags),
       coverImageUrls: Array.isArray(coverImages) ? coverImages : [],
     };
 
@@ -940,6 +945,9 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
       const dataToSave = {
         ...formData,
         ...validation.data,
+        pathwayTags: sanitizePathwayTags(
+          formData.pathwayTags ?? validation.data.pathwayTags
+        ),
         coverImageUrls: Array.isArray(coverImages) ? coverImages : [],
         profileImageUrl: validation.data.profileImageUrl ?? null,
         location: (resolvedLocation || formData.location || "").trim(),
@@ -1387,6 +1395,24 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             </p>
             <FieldError message={errors?.tags} />
           </div> */}
+
+          <div className={fieldClass}>
+            <Label className={labelClass}>Pathway tags</Label>
+            <PathwayTagChips
+              selected={formData?.pathwayTags}
+              suggestions={suggestPathwayTags(
+                formData?.dateOfBirth,
+                typeof formData?.graduationYear === "number"
+                  ? formData.graduationYear
+                  : formData?.graduationYear
+                    ? Number(formData.graduationYear)
+                    : null
+              )}
+              onChange={(tags) =>
+                setFormData((prev) => ({ ...prev, pathwayTags: tags }))
+              }
+            />
+          </div>
         </div>
 
         <DialogFooter className="gap-[10px] sm:space-x-0">

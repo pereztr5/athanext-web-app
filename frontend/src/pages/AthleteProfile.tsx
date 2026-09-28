@@ -1035,11 +1035,16 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
               <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
                 Track your progress and manage your training sessions.
               </p>
-              {(activeProfile.position || academicYearDisplay || activeProfile.gender) && (
+              {(activeProfile.position || academicYearDisplay || activeProfile.gender || (activeProfile.pathwayTags?.length ?? 0) > 0) && (
                 <div className="flex flex-wrap items-center gap-2">
                   {activeProfile.position && <BrandPill tone="blue">{activeProfile.position}</BrandPill>}
                   {academicYearDisplay && <BrandPill tone="neutral">{academicYearDisplay}</BrandPill>}
                   {activeProfile.gender && <GenderPill gender={activeProfile.gender} showLabel={false} />}
+                  {(activeProfile.pathwayTags ?? []).map((tag) => (
+                    <BrandPill key={tag} tone="teal">
+                      {tag}
+                    </BrandPill>
+                  ))}
                 </div>
               )}
             </div>

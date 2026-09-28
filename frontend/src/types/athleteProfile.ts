@@ -7,6 +7,7 @@ export interface AthleteProfileFormData {
   phoneNumber: string;
   location: string;
   tags: string[];
+  pathwayTags: string[];
   profileImageUrl: string | null;
   coverImageUrls: string[];
   graduationYear: string | number | null;

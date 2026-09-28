@@ -38,12 +38,26 @@ import type { Enums } from "@/integrations/supabase/types";
 import { useSlowLoading } from "@/hooks/useSlowLoading";
 import { stripRichTextToPlainText } from "@/utils/richText";
 import { publicCoachRatingLabel } from "@/utils/publicRating";
+import {
+  PATHWAY_TAGS,
+  zipProximityRank,
+} from "@/constants/pathwayTags";
 
 // Public coach type without email for privacy
 
-type Coach = Omit<Tables<"coaches">, "email"> & {
+type Coach = Omit<
+  Tables<"coaches">,
+  "email" | "slug" | "profile_faqs" | "cover_image_urls" | "favourite_positions" | "is_verified" | "pathway_tags"
+> & {
   is_verified?: boolean;
   favourite_positions?: string[];
+  pathway_tags?: string[];
+  cover_image_urls?: string[] | null;
+  zip_code?: string | null;
+  slug?: string | null;
+  position?: string | null;
+  sport_type?: string | null;
+  profile_faqs?: Tables<"coaches">["profile_faqs"];
 };
 
 const AthleteBrowseCard = ({
@@ -168,6 +182,8 @@ const AllCoaches = () => {
 
   const [selectedPillar, setSelectedPillar] = useState("All Pillars");
   const [selectedFavoritePosition, setSelectedFavoritePosition] = useState("All Positions");
+  const [selectedPathway, setSelectedPathway] = useState("All Pathways");
+  const [zipQuery, setZipQuery] = useState("");
 
   const [sortBy, setSortBy] = useState("Highest Rated");
 
@@ -303,6 +319,7 @@ const AllCoaches = () => {
   useEffect(() => {
     setSelectedPillar("All Pillars");
     setSelectedFavoritePosition("All Positions");
+    setSelectedPathway("All Pathways");
   }, [selectedSport]);
 
   useEffect(() => {
@@ -352,6 +369,15 @@ const AllCoaches = () => {
             return true;
           }
         }
+
+        // Check pathway tags
+        if (Array.isArray(coach.pathway_tags) && coach.pathway_tags.length > 0) {
+          if (coach.pathway_tags.some((tag) =>
+            tag && typeof tag === "string" && tag.toLowerCase().includes(query)
+          )) {
+            return true;
+          }
+        }
         
         return false;
       });
@@ -369,6 +395,15 @@ const AllCoaches = () => {
         if (!coach) return false;
         return Array.isArray(coach.specialties) && 
                coach.specialties.includes(selectedPillar);
+      });
+    }
+
+    // Filter by pathway tag
+    if (selectedPathway && selectedPathway !== "All Pathways") {
+      filtered = filtered.filter((coach) => {
+        if (!coach) return false;
+        return Array.isArray(coach.pathway_tags) &&
+          coach.pathway_tags.includes(selectedPathway);
       });
     }
 
@@ -396,12 +431,22 @@ const AllCoaches = () => {
       });
     }
 
+    const trimmedZip = zipQuery.replace(/\D/g, "").trim();
+
     // Apply sorting with safety checks
     filtered.sort((a, b) => {
       // Safety check: ensure both coaches exist
       if (!a && !b) return 0;
       if (!a) return 1;
       if (!b) return -1;
+
+      // When zip is entered, soft-sort by proximity first
+      if (trimmedZip) {
+        const zipDiff =
+          zipProximityRank(a.zip_code, trimmedZip) -
+          zipProximityRank(b.zip_code, trimmedZip);
+        if (zipDiff !== 0) return zipDiff;
+      }
       
       const sportA = getCoachSport(a);
       const sportB = getCoachSport(b);
@@ -444,6 +489,10 @@ const AllCoaches = () => {
     selectedPillar,
 
     selectedFavoritePosition,
+
+    selectedPathway,
+
+    zipQuery,
 
     sortBy,
   ]);
@@ -804,6 +853,8 @@ const AllCoaches = () => {
         return "All pillars";
       case "All Positions":
         return "All positions";
+      case "All Pathways":
+        return "All pathways";
       case "Highest Rated":
         return "Highest rated";
       case "Lowest Rated":
@@ -813,7 +864,7 @@ const AllCoaches = () => {
     }
   };
   const isDefaultFilter = (value: string) =>
-    ["All Sports", "All Pillars", "All Positions", "Highest Rated"].includes(value);
+    ["All Sports", "All Pillars", "All Positions", "All Pathways", "Highest Rated"].includes(value);
   const triggerClass = (value: string, width: string) =>
     `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
   const coachCountLabel = `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found`;
@@ -900,7 +951,18 @@ const AllCoaches = () => {
               />
             </div>
 
-            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-3" : "grid min-w-0 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:flex lg:flex-none"}>
+            <div className="flex min-w-0 items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px] focus-within:ring-2 focus-within:ring-[#6698D2] lg:w-[140px]">
+              <input
+                value={zipQuery}
+                onChange={(e) => setZipQuery(e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
+                placeholder="ZIP"
+                inputMode="numeric"
+                aria-label="Filter by ZIP code"
+                className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
+              />
+            </div>
+
+            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-4" : "grid min-w-0 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:flex lg:flex-none"}>
               {!isAuthenticated && (
                 <Select value={selectedSport} onValueChange={setSelectedSport}>
                   <SelectTrigger className={triggerClass(selectedSport, "lg:!w-[130px]")} aria-label="Sport">
@@ -926,6 +988,20 @@ const AllCoaches = () => {
                   {getAvailablePillars().map((pillar) => (
                     <SelectItem key={pillar} value={pillar}>
                       {filterLabel(pillar)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
+              <Select value={selectedPathway} onValueChange={setSelectedPathway}>
+                <SelectTrigger className={triggerClass(selectedPathway, "lg:!w-[160px]")} aria-label="Pathway">
+                  <SelectValue>{filterLabel(selectedPathway)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  <SelectItem value="All Pathways">{filterLabel("All Pathways")}</SelectItem>
+                  {PATHWAY_TAGS.map((tag) => (
+                    <SelectItem key={tag} value={tag}>
+                      {tag}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -989,6 +1065,8 @@ const AllCoaches = () => {
                   setSelectedSport("All Sports");
                   setSelectedPillar("All Pillars");
                   setSelectedFavoritePosition("All Positions");
+                  setSelectedPathway("All Pathways");
+                  setZipQuery("");
                   setSortBy("Highest Rated");
                 }}
                 variant="outline"

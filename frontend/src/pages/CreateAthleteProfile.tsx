@@ -22,6 +22,8 @@ import { emptyProfileData, deriveInitials, mapFormToDbPayload } from "@/utils/at
 import type { AthleteProfileFormData } from "@/types/athleteProfile";
 import { ATHLETE_SPORTS_OPTIONS } from "@/utils/db";
 import { ROUTES } from "@/routes";
+import { PathwayTagChips } from "@/components/common/PathwayTagChips";
+import { suggestPathwayTags } from "@/constants/pathwayTags";
 
 const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
 const optionalClass = "font-normal text-[#A3A6AB]";
@@ -259,6 +261,24 @@ const CreateAthleteProfile = () => {
                 onChange={(event) => handleTagsChange(event.target.value)}
                 placeholder="Separate with commas, e.g. agility, shooting, leadership"
                 className="min-h-[90px]"
+              />
+            </div>
+
+            <div className={fieldClass}>
+              <Label className={labelClass}>
+                Pathway tags <span className={optionalClass}>(optional)</span>
+              </Label>
+              <PathwayTagChips
+                selected={form.pathwayTags}
+                suggestions={suggestPathwayTags(
+                  form.dateOfBirth,
+                  typeof form.graduationYear === "number"
+                    ? form.graduationYear
+                    : form.graduationYear
+                      ? Number(form.graduationYear)
+                      : null
+                )}
+                onChange={(tags) => setForm((prev) => ({ ...prev, pathwayTags: tags }))}
               />
             </div>
 

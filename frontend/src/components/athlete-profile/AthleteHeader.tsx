@@ -1,5 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { BrandPill } from "@/components/brand";
+import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import { Carousel } from "@/components/coach-profile";
 import { CoachVerificationBadge } from "@/components/coach/CoachVerificationBadge";
 import { Calendar, MapPin, MessageCircle } from "lucide-react";
@@ -11,6 +12,7 @@ interface AthleteHeaderProps {
     position: string;
     school: string;
     tags: string[];
+    pathwayTags?: string[];
     classOf: number;
     contact: { location: string };
     summary: string;
@@ -67,6 +69,7 @@ export const AthleteHeader = ({
               ))}
             </div>
           )}
+          <PathwayTagChips selected={athlete.pathwayTags} readOnly />
           <div className="flex flex-wrap gap-x-5 gap-y-2">
             <span className={metaClass}>
               <Calendar className="size-4" strokeWidth={1.5} aria-hidden="true" />
