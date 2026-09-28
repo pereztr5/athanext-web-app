@@ -31,6 +31,8 @@ import { chatAPI } from "@/api";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { buildId } from "@/utils/chatHelpers";
 import { detectCoachSport } from "@/utils/coachSport";
+import { coachPricingPath, coachProfilePath } from "@/utils/coachSlug";
+import { recordCoachShareEvent } from "@/api/coachShare";
 import { ROUTES } from "@/routes";
 
 const CoachProfile = () => {
@@ -39,14 +41,15 @@ const CoachProfile = () => {
   const location = useLocation();
   const { toast } = useToast();
   const { user, userProfile } = useAuth();
+  const isPricingPath = location.pathname.endsWith("/pricing");
 
-  const resolvedCoachId =
+  const resolvedCoachKey =
     id ||
     (typeof (userProfile as any)?.coach_id === "string" ? (userProfile as any).coach_id : "") ||
     (typeof (user?.user_metadata as any)?.coach_id === "string" ? (user?.user_metadata as any).coach_id : "");
 
-  const { coach, loading, error } = useCoachDetails(resolvedCoachId);
-  const { data: packages = [], isLoading: packagesLoading } = useCoachPackages(resolvedCoachId);
+  const { coach, loading, error } = useCoachDetails(resolvedCoachKey);
+  const { data: packages = [], isLoading: packagesLoading } = useCoachPackages(coach?.id);
   const [serviceType, setServiceType] = useState<BookingType>(BookingType.SingleSession);
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -58,7 +61,7 @@ const CoachProfile = () => {
     weekStart: string;
     occurrenceId: string;
   } | null>(null);
-  const { reviews = [], averageRating = 0, ratingDistribution = {}, totalReviews = 0 } = useReviews(id);
+  const { reviews = [], averageRating = 0, ratingDistribution = {}, totalReviews = 0 } = useReviews(coach?.id);
   const [startingChat, setStartingChat] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [chatConversationId, setChatConversationId] = useState<string | null>(null);
@@ -74,12 +77,27 @@ const CoachProfile = () => {
   }, []);
 
   useEffect(() => {
-    if (!loading && coach && location.state && ((location.state as any).scrollToAvailability || (location.state as any).scrollTo === "availability")) {
-      scrollToSection(availabilitySectionRef);
-    } else if (!loading && coach && location.state && ((location.state as any).scrollToPackages || (location.state as any).scrollTo === "packages")) {
-      scrollToSection(packagesSectionRef);
+    if (loading || !coach?.slug || !id) return;
+    const canonical = isPricingPath
+      ? coachPricingPath(coach.slug)
+      : coachProfilePath(coach.slug);
+    if (location.pathname !== canonical) {
+      navigate(canonical, { replace: true, state: location.state });
     }
-  }, [loading, coach, location.state, scrollToSection]);
+  }, [loading, coach?.slug, id, isPricingPath, location.pathname, location.state, navigate]);
+
+  useEffect(() => {
+    if (loading || !coach?.id || !isPricingPath) return;
+    void recordCoachShareEvent(coach.id, "pricing_view");
+  }, [loading, coach?.id, isPricingPath]);
+
+  useEffect(() => {
+    if (!loading && coach && (isPricingPath || (location.state as any)?.scrollToPackages || (location.state as any)?.scrollTo === "packages")) {
+      scrollToSection(packagesSectionRef);
+    } else if (!loading && coach && ((location.state as any)?.scrollToAvailability || (location.state as any)?.scrollTo === "availability")) {
+      scrollToSection(availabilitySectionRef);
+    }
+  }, [loading, coach, location.state, isPricingPath, scrollToSection]);
 
   // Only feeds CoachHeader's required sportTheme prop; colours come from the brand kit now
   const getSportTheme = () => {

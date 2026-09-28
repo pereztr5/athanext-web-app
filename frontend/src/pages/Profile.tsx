@@ -712,6 +712,7 @@ const Profile = () => {
                                 coachId={coach.id}
                                 coachName={coach.name}
                                 coachSport={coach.sport}
+                                showSharePricing
                             />
                         </ErrorBoundary>
 

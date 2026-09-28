@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
+import { resolveCoachId } from "@/api/coachShare";
 
 export interface CoachCertification {
   id: string;
@@ -18,7 +19,7 @@ export interface CoachAchievement {
 }
 
 // Public coach details without email for privacy
-export type PublicCoach = Omit<Tables<"coaches">, "email">;
+export type PublicCoach = Omit<Tables<"coaches">, "email"> & { slug?: string | null };
 
 export interface CoachDetails extends PublicCoach {
   certifications?: CoachCertification[];
@@ -29,12 +30,18 @@ export interface CoachDetails extends PublicCoach {
   sport?: string | null;
   gender?: string | null;
   zip_code?: string | null;
+  slug: string;
 }
 
-export const useCoachDetails = (coachId: string | undefined) => {
+export const useCoachDetails = (coachKey: string | undefined) => {
   const query = useQuery<CoachDetails>({
-    queryKey: ["coach-details", coachId],
+    queryKey: ["coach-details", coachKey],
     queryFn: async () => {
+      const resolvedId = await resolveCoachId(coachKey as string);
+      if (!resolvedId) {
+        throw new Error("Coach not found");
+      }
+
       // Fetch coach basic info with user_profiles join to get sport, gender, and zip_code
       const { data: coachData, error: coachError } = await supabase
         .from("coaches")
@@ -49,7 +56,7 @@ export const useCoachDetails = (coachId: string | undefined) => {
           )
         `
         )
-        .eq("id", coachId as string)
+        .eq("id", resolvedId)
         .single();
 
       if (coachError || !coachData) {
@@ -71,7 +78,7 @@ export const useCoachDetails = (coachId: string | undefined) => {
         .select(
           "id, certification_name, issuing_organization, issue_date, expiry_date"
         )
-        .eq("coach_id", coachId as string)
+        .eq("coach_id", resolvedId)
         .order("issue_date", { ascending: false });
 
       if (certError) throw certError;
@@ -80,7 +87,7 @@ export const useCoachDetails = (coachId: string | undefined) => {
       const { data: achievements, error: achieveError } = await supabase
         .from("coach_achievements")
         .select("id, title, description, year")
-        .eq("coach_id", coachId as string)
+        .eq("coach_id", resolvedId)
         .order("year", { ascending: false });
 
       if (achieveError) throw achieveError;
@@ -90,8 +97,14 @@ export const useCoachDetails = (coachId: string | undefined) => {
           ? (coachData.user_profiles[0] as any)
           : null;
 
+      const slug = (coachData as { slug?: string | null }).slug;
+      if (!slug) {
+        throw new Error("Coach not found");
+      }
+
       return {
         ...coachData,
+        slug,
         sport: userProfile?.sport ?? null,
         gender: userProfile?.gender ?? null,
         zip_code: userProfile?.zip_code ?? null,
@@ -99,7 +112,7 @@ export const useCoachDetails = (coachId: string | undefined) => {
         achievements: achievements || [],
       } as CoachDetails;
     },
-    enabled: !!coachId,
+    enabled: !!coachKey,
   });
 
   return {

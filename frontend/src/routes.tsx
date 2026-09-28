@@ -48,6 +48,7 @@ export const ROUTES = {
   SOCCER: "/soccer",
   ROWING: "/rowing",
   COACH_PROFILE: "/coach/:id",
+  COACH_PRICING: "/coach/:id/pricing",
   BOOKING_CONFIRMATION: "/booking-confirmation",
   PACKAGE_CONFIRMATION: "/package-confirmation",
   COACH_SESSION_FEEDBACK: "/coach-session-feedback",
@@ -89,6 +90,7 @@ export const PUBLIC_ROUTES: AppRoute[] = [
 // Public pages that render inside the app shell for signed-in users
 export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.COACHES, element: <AllCoaches /> },
+  { path: ROUTES.COACH_PRICING, element: <CoachProfile /> },
   { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
 ];
 

@@ -20,6 +20,10 @@ import { BrandStar } from "@/components/brand";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
+import { coachProfileUrl } from "@/utils/coachSlug";
+import { recordCoachShareEvent } from "@/api/coachShare";
+import { SharePricingDialog } from "./SharePricingDialog";
+import { useToast } from "@/hooks/use-toast";
 
 interface Review {
   id: string;
@@ -34,6 +38,7 @@ interface CoachProfileViewProps {
   coach: ProfileData & {
     id: string;
     name: string;
+    slug?: string;
     bio?: string;
     coach_position?: string;
     position?: string;
@@ -46,6 +51,7 @@ interface CoachProfileViewProps {
     response_time_hours?: number;
     company?: string;
     is_verified?: boolean;
+    hourly_rate?: number;
     certifications?: {
       id?: string;
       certification_name?: string;
@@ -79,10 +85,13 @@ export function CoachProfileView({
   readOnly = false,
   availability,
 }: CoachProfileViewProps) {
+  const { toast } = useToast();
   const [locationLabel, setLocationLabel] = useState<string>(
     coach.locations?.[0] || "Location not set"
   );
   const [openFaq, setOpenFaq] = useState<string | null>(null);
+  const [sharePricingOpen, setSharePricingOpen] = useState(false);
+  const [slug, setSlug] = useState(coach.slug || "");
   const { data: faqs = [] } = useFAQItems("general");
   const bioHtml = formatRichTextForRender(coach.bio);
   const position = coach.coach_position || coach.position || "Coach";
@@ -92,6 +101,10 @@ export function CoachProfileView({
   const pillars = (coach.specialties || []).slice(0, 6);
   const brands = coach.company ? [coach.company] : [];
   const verified = Boolean(coach.is_verified);
+
+  useEffect(() => {
+    setSlug(coach.slug || "");
+  }, [coach.slug]);
 
   useEffect(() => {
     let cancelled = false;
@@ -110,15 +123,16 @@ export function CoachProfileView({
   }, [coach.zip_code, coach.locations]);
 
   const handleShare = async () => {
-    const url = window.location.href;
+    const url = slug ? coachProfileUrl(slug) : window.location.href;
     try {
-      if (navigator.share) {
-        await navigator.share({ title: coach.name, url });
-      } else {
-        await navigator.clipboard.writeText(url);
-      }
+      await navigator.clipboard.writeText(url);
+      void recordCoachShareEvent(coach.id, "profile_share");
+      toast({ title: "Profile link copied" });
     } catch {
-      // cancelled
+      toast({
+        title: "Could not copy link",
+        variant: "destructive",
+      });
     }
   };
 
@@ -449,6 +463,11 @@ export function CoachProfileView({
               title="Coaching packages"
               actions={
                 <>
+                  {!readOnly && slug ? (
+                    <CoachProfileButton onClick={() => setSharePricingOpen(true)}>
+                      Share pricing
+                    </CoachProfileButton>
+                  ) : null}
                   <CoachProfileButton onClick={onEditPackages}>Edit</CoachProfileButton>
                   <CoachProfileButton variant="primary" onClick={onEditPackages}>
                     Add
@@ -640,6 +659,32 @@ export function CoachProfileView({
         </div>
       </div>
       </div>
+
+      {slug ? (
+        <SharePricingDialog
+          open={sharePricingOpen}
+          onOpenChange={setSharePricingOpen}
+          coach={{
+            id: coach.id,
+            name: coach.name,
+            slug,
+            sport: coach.sport,
+            coach_position: coach.coach_position,
+            position: coach.position,
+            specialties: coach.specialties,
+            session_types: coach.session_types,
+            hourly_rate: coach.hourly_rate,
+            profile_image_url: coach.profile_image_url,
+            image_url: coach.image_url,
+            is_verified: coach.is_verified,
+          }}
+          packages={packages}
+          averageRating={averageRating}
+          totalReviews={totalReviews}
+          canEditSlug={!readOnly}
+          onSlugUpdated={setSlug}
+        />
+      ) : null}
     </div>
   );
 }

@@ -485,6 +485,7 @@ export type Database = {
           rating: number | null
           response_time_hours: number | null
           session_types: string[] | null
+          slug: string
           specialties: string[]
           status: string | null
           total_reviews: number | null
@@ -511,6 +512,7 @@ export type Database = {
           rating?: number | null
           response_time_hours?: number | null
           session_types?: string[] | null
+          slug?: string
           specialties?: string[]
           status?: string | null
           total_reviews?: number | null
@@ -537,6 +539,7 @@ export type Database = {
           rating?: number | null
           response_time_hours?: number | null
           session_types?: string[] | null
+          slug?: string
           specialties?: string[]
           status?: string | null
           total_reviews?: number | null
@@ -1105,6 +1108,26 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      resolve_coach_by_slug_or_id: {
+        Args: { p_key: string }
+        Returns: string
+      }
+      rename_coach_slug: {
+        Args: { p_coach_id: string; p_new_slug: string }
+        Returns: string
+      }
+      record_coach_share_event: {
+        Args: { p_coach_id: string; p_event_type: string }
+        Returns: undefined
+      }
+      allocate_coach_slug: {
+        Args: { p_name: string; p_coach_id?: string }
+        Returns: string
+      }
+      slugify_coach_name: {
+        Args: { p_name: string }
+        Returns: string
+      }
       cleanup_old_partnership_inquiries: {
         Args: { retention_days?: number }
         Returns: number

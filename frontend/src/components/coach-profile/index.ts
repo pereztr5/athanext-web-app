@@ -13,3 +13,5 @@ export { Carousel } from './Carousel';
 export { CoachProfileView } from './CoachProfileView';
 export { AvailabilitySummaryCard } from './AvailabilitySummaryCard';
 export { CoachProfileCard } from './CoachProfileCard';
+export { SharePricingDialog } from './SharePricingDialog';
+export { PricingShareCard } from './PricingShareCard';

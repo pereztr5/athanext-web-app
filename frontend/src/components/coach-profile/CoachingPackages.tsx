@@ -11,6 +11,9 @@ import { BrandPill } from '@/components/brand';
 import { formatWholePrice } from '@/utils/sessionFormatting';
 import { packagesAPI } from "@/api/packages";
 import { apiClient } from "@/api/client";
+import { SharePricingDialog } from "./SharePricingDialog";
+import { useCoachDetails } from "@/hooks/useCoachDetails";
+import { useReviews } from "@/hooks/useReviews";
 
 interface CoachingPackagesProps {
   packages?: CoachPackage[];
@@ -18,17 +21,24 @@ interface CoachingPackagesProps {
   coachName?: string;
   iconColor?: string;
   coachSport?: string;
+  showSharePricing?: boolean;
 }
 
 export const CoachingPackages = ({
   packages,
   coachId,
+  showSharePricing = false,
 }: CoachingPackagesProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
   const [purchasing, setPurchasing] = useState<string | null>(null);
+  const [shareOpen, setShareOpen] = useState(false);
   const { userProfile } = useAuth();
   const { isCoach: isCoachPersona } = useRole();
+  const { coach } = useCoachDetails(showSharePricing ? coachId : undefined);
+  const { averageRating = 0, totalReviews = 0 } = useReviews(
+    showSharePricing ? coachId : undefined
+  );
 
   // Ordered by display order; the first package carries the section's one primary action.
   const resolvedPackages = useMemo(() => {
@@ -110,11 +120,22 @@ export const CoachingPackages = ({
 
   return (
     <section className="w-full rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] font-sans text-[#1A202C] tracking-[-0.03em]">
-      <div className="flex flex-col gap-2">
-        <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Coaching packages</h2>
-        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-          Choose the package that fits your journey. Every path to growth starts with a single step.
-        </p>
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex flex-col gap-2">
+          <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Coaching packages</h2>
+          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            Choose the package that fits your journey. Every path to growth starts with a single step.
+          </p>
+        </div>
+        {showSharePricing && coach?.slug ? (
+          <button
+            type="button"
+            onClick={() => setShareOpen(true)}
+            className="inline-flex h-[34px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C]"
+          >
+            Share pricing
+          </button>
+        ) : null}
       </div>
 
       {resolvedPackages.length === 0 ? (
@@ -178,6 +199,30 @@ export const CoachingPackages = ({
           })}
         </div>
       )}
+
+      {showSharePricing && coach?.slug ? (
+        <SharePricingDialog
+          open={shareOpen}
+          onOpenChange={setShareOpen}
+          coach={{
+            id: coach.id,
+            name: coach.name,
+            slug: coach.slug,
+            sport: coach.sport,
+            coach_position: coach.coach_position ?? coach.position,
+            position: coach.position,
+            specialties: coach.specialties,
+            session_types: coach.session_types,
+            hourly_rate: coach.hourly_rate,
+            profile_image_url: coach.profile_image_url,
+            image_url: coach.image_url,
+            is_verified: coach.is_verified,
+          }}
+          packages={packages || []}
+          averageRating={averageRating}
+          totalReviews={totalReviews}
+        />
+      ) : null}
     </section>
   );
 };
