@@ -4,8 +4,8 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle2, Info } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
-import { colors } from "@/config/colors";
-import { strings } from "@/config/strings";
+import { cn } from "@/lib/utils";
+import { formatWholePrice } from "@/utils/sessionFormatting";
 
 interface FreeConsultationInfoDialogProps {
   isOpen: boolean;
@@ -62,99 +62,86 @@ export function FreeConsultationInfoDialog({
   const remaining = 2 - totalUsed;
   const canBook = !usedWithThisCoach && remaining > 0;
 
+  const statusMessage = usedWithThisCoach
+    ? `You've already used your free consultation with ${coachName}.`
+    : remaining > 0
+    ? `You have ${remaining} free consultation${remaining !== 1 ? "s" : ""} left.`
+    : "You've used both of your free consultations.";
+  const nextStepMessage =
+    hourlyRate > 0
+      ? `After your free consultations, paid sessions with ${coachName} start at ${formatWholePrice(hourlyRate)} an hour.`
+      : `After your free consultations, you can book paid sessions with ${coachName}.`;
+
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-[500px]">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl">
-            <CheckCircle2 style={{ color: colors.status.success }} className="h-6 w-6" />
-            {strings.appointments.bookFreeConsultation}
+      <DialogContent className="max-w-[520px] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+        <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
+          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+            Book a free 15-minute consultation
           </DialogTitle>
-          <DialogDescription className="text-base pt-2">
-            {strings.appointments.complimentaryConsultation}
+          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            A short call to meet the coach and talk through your goals.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4 py-4">
-          {/* Platform Rules */}
-          <div 
-            className="rounded-lg p-4 border"
-            style={{
-              backgroundColor: colors.pastel.blue.main,
-              borderColor: colors.pastel.blue.foreground,
-            }}
-          >
-            <div className="flex items-start gap-3">
-              <Info style={{ color: colors.pastel.blue.foreground }} className="h-5 w-5 mt-0.5 flex-shrink-0" />
-              <div className="space-y-2">
-                <p className="text-sm font-medium" style={{ color: colors.pastel.blue.foreground }}>
-                  {strings.appointments.freeConsultationRules}
-                </p>
-                <ul className="text-sm space-y-1 list-disc list-inside" style={{ color: colors.pastel.blue.foreground }}>
-                  <li>2 free consultations total across AthaLink</li>
-                  <li>1 free consultation per coach</li>
-                  <li>15 minutes per consultation</li>
-                </ul>
-              </div>
+        <div className="h-px bg-[#EAEADF]" />
+
+        <div className="flex flex-col gap-[10px] px-[25px] py-5">
+          <div className="flex items-start gap-[10px] rounded-[8px] border border-[#CCDDF0] bg-[#E5EDF7] p-[15px]">
+            <Info className="mt-px size-4 shrink-0 text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[14px] font-medium leading-[18px] text-[#0054B4]">How free consultations work</p>
+              <ul className="flex list-disc flex-col gap-1 pl-4 text-[14px] leading-[18px] text-[#484D56]">
+                <li>2 free consultations in total on AthaNext</li>
+                <li>1 free consultation per coach</li>
+                <li>15 minutes each</li>
+              </ul>
             </div>
           </div>
 
-          {/* User Status */}
           {!loading && user && (
-            <div 
-              className="border rounded-lg p-4"
-              style={{
-                backgroundColor: canBook ? colors.pastel.green.main : colors.pastel.yellow.main,
-                borderColor: canBook ? colors.pastel.green.foreground : colors.pastel.yellow.foreground,
-              }}
+            <div
+              className={cn(
+                "flex items-start gap-[10px] rounded-[8px] border p-[15px]",
+                canBook ? "border-[#CBE7D1] bg-[#CBE7D1]/40" : "border-[#F3E4C6] bg-[#FDF7EC]"
+              )}
             >
-              <div className="flex items-start gap-3">
-                {canBook ? (
-                  <CheckCircle2 style={{ color: colors.status.success }} className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                ) : (
-                  <AlertCircle style={{ color: colors.status.warning }} className="h-5 w-5 mt-0.5 flex-shrink-0" />
-                )}
-                <div className="space-y-1">
-                  <p className="text-sm font-medium">
-                    {canBook ? strings.appointments.youAreEligible : strings.appointments.limitReached}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {usedWithThisCoach ? (
-                      strings.appointments.youveAlreadyUsedWithCoach(coachName)
-                    ) : remaining > 0 ? (
-                      strings.appointments.youHaveRemaining(remaining)
-                    ) : (
-                      strings.appointments.youveUsedBoth
-                    )}
-                  </p>
-                </div>
+              {canBook ? (
+                <CheckCircle2 className="mt-px size-4 shrink-0 text-[#1E7431]" strokeWidth={1.5} aria-hidden="true" />
+              ) : (
+                <AlertCircle className="mt-px size-4 shrink-0 text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
+              )}
+              <div className="flex flex-col gap-1">
+                <p className={cn("text-[14px] font-medium leading-[18px]", canBook ? "text-[#1E7431]" : "text-[#906A29]")}>
+                  {canBook ? "You're eligible" : "Limit reached"}
+                </p>
+                <p className="text-[14px] leading-[18px] text-[#484D56]">{statusMessage}</p>
               </div>
             </div>
           )}
 
-          {/* Next Steps */}
-          <div className="bg-muted/50 rounded-lg p-4">
-            <p className="text-sm text-muted-foreground">
-              💡 <strong>{strings.appointments.whatNext}</strong> {strings.appointments.afterConsultations(coachName, hourlyRate)}
-            </p>
+          <div className="rounded-[8px] bg-[#F4F4EB] p-[15px]">
+            <p className="text-[14px] leading-[18px] text-[#767980]">{nextStepMessage}</p>
           </div>
         </div>
 
-        <DialogFooter className="flex-col sm:flex-row gap-2">
+        <div className="h-px bg-[#EAEADF]" />
+
+        <DialogFooter className="flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:space-x-0">
           <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
-            {strings.buttons.cancel}
+            Cancel
           </Button>
           {user && canBook ? (
             <Button onClick={onContinue} className="w-full sm:w-auto">
-              {strings.appointments.continueToBook}
+              Continue to book
             </Button>
           ) : user && !canBook ? (
-            <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
-              {strings.appointments.viewPaidOptions}
+            <Button onClick={onClose} className="w-full sm:w-auto">
+              View paid options
             </Button>
           ) : (
             <Button onClick={onContinue} className="w-full sm:w-auto">
-              {strings.appointments.signInToBook}
+              Sign in to book
             </Button>
           )}
         </DialogFooter>

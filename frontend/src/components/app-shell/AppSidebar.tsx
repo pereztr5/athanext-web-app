@@ -43,7 +43,7 @@ const COACH_NAV = [
 ];
 
 const navItemClass =
-  "!h-7 !gap-[5px] !rounded-[5px] !border-0 !py-0 !pl-[5px] !pr-[10px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none hover:!bg-transparent hover:!text-[#767980] focus-visible:!ring-0 data-[active=true]:!h-[38px] data-[active=true]:!border data-[active=true]:!border-[#EAEADF] data-[active=true]:!bg-[#F9F9F5] data-[active=true]:!px-[10px] data-[active=true]:font-medium data-[active=true]:!text-[#0054B4] data-[active=true]:shadow-none data-[active=true]:hover:!bg-[#F9F9F5] data-[active=true]:hover:!text-[#0054B4] [&>svg]:!size-4 [&>svg]:shrink-0";
+  "!h-8 !gap-[5px] !rounded-[5px] !border !border-transparent !px-[10px] !py-0 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none transition-colors hover:!bg-transparent hover:!text-[#1A202C] focus-visible:!ring-2 focus-visible:!ring-[#6698D2] data-[active=true]:!border-[#EAEADF] data-[active=true]:!bg-[#F9F9F5] data-[active=true]:font-medium data-[active=true]:!text-[#0054B4] data-[active=true]:shadow-none data-[active=true]:hover:!bg-[#F9F9F5] data-[active=true]:hover:!text-[#0054B4] [&>svg]:!size-4 [&>svg]:shrink-0";
 
 export const AppSidebar = () => {
   const location = useLocation();
@@ -85,7 +85,7 @@ export const AppSidebar = () => {
               );
               const label = (
                 <>
-                  <item.icon className="size-4" />
+                  <item.icon className="size-4" strokeWidth={1.5} />
                   <span>{item.title}</span>
                   {item.url === ROUTES.CHAT && hasNewMessage && (
                     <span
@@ -104,7 +104,7 @@ export const AppSidebar = () => {
                       </Link>
                     </SidebarMenuButton>
                   ) : (
-                    <SidebarMenuButton type="button" className={cn(navItemClass, "cursor-default")} tabIndex={-1}>
+                    <SidebarMenuButton type="button" className={cn(navItemClass, "cursor-default hover:!text-[#767980]")} tabIndex={-1}>
                       {label}
                     </SidebarMenuButton>
                   )}

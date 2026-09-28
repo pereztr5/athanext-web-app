@@ -7,8 +7,9 @@ import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
- AlertDialogContent,
+  AlertDialogContent,
   AlertDialogDescription,
+  AlertDialogFooter,
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
@@ -31,20 +32,25 @@ export const DeleteConfirmationDialog = ({
 }: DeleteConfirmationDialogProps) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent>
-        <AlertDialogHeader className="text-center space-y-2">
-          <AlertDialogTitle>{title}</AlertDialogTitle>
-          <AlertDialogDescription className="text-center">{description}</AlertDialogDescription>
+      <AlertDialogContent className="max-w-[480px] gap-0 p-0 font-sans tracking-[-0.03em] text-[#1A202C]">
+        <AlertDialogHeader className="space-y-2.5 px-[25px] pb-5 pt-[30px] text-left">
+          <AlertDialogTitle className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+            {title}
+          </AlertDialogTitle>
+          <AlertDialogDescription asChild>
+            <div className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">{description}</div>
+          </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="flex justify-end gap-3">
-          <AlertDialogCancel>Cancel</AlertDialogCancel>
+        <div className="h-px bg-[#EAEADF]" />
+        <AlertDialogFooter className="gap-[10px] px-[25px] py-5 sm:space-x-0">
+          <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="bg-red-600 hover:bg-red-700"
+            className="border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90"
           >
             Delete
           </AlertDialogAction>
-        </div>
+        </AlertDialogFooter>
       </AlertDialogContent>
     </AlertDialog>
   );

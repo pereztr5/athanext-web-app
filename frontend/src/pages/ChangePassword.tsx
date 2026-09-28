@@ -79,7 +79,7 @@ const ChangePassword = () => {
     setCurrentPassword("");
     setNewPassword("");
     setConfirmPassword("");
-    setSuccessMessage("Password updated successfully. You will be logged out shortly—please sign in with your new password.");
+    setSuccessMessage("Password updated. We'll sign you out in a few seconds so you can sign in with your new password.");
     setIsSubmitting(false);
 
     if (logoutTimerRef.current) {
@@ -95,154 +95,149 @@ const ChangePassword = () => {
   const sellingPoints = [
     {
       icon: ShieldCheck,
-      title: "Multi-layer Protection",
-      body: "Your password updates are sealed with modern hashing algorithms and session revalidation for peace of mind.",
+      title: "Stored securely",
+      body: "Your new password is hashed before it's saved. We never store it in plain text.",
     },
     {
       icon: KeyRound,
-      title: "Strong Password Guidance",
-      body: "A live checklist keeps you aligned with our security baseline while you type.",
+      title: "Live requirements",
+      body: "A checklist shows which password rules you've met as you type.",
     },
     {
       icon: Lock,
-      title: "Automatic Sign-out",
-      body: "Once updated, we re-authenticate the session so your data stays in the right hands.",
+      title: "Signed out after the change",
+      body: "Once your password is updated, we sign you out so you can sign in again with the new one.",
     },
   ];
 
+  const eyeButtonClass =
+    "absolute inset-y-0 right-3 flex items-center text-[#767980] transition-colors hover:text-[#1A202C]";
+  const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+
   return (
-    <div className="pt-6 pb-16 relative overflow-hidden">
-      <div className="absolute inset-0">
-        <div className="h-[40vh] bg-gradient-to-b from-blue-200/40 to-transparent" aria-hidden="true" />
-        <div className="absolute bottom-[-120px] right-[-80px] h-[320px] w-[320px] rounded-full bg-blue-200/50 blur-[130px]" aria-hidden="true" />
-        <div className="absolute top-[-150px] left-[-100px] h-[280px] w-[280px] rounded-full bg-emerald-200/50 blur-[140px]" aria-hidden="true" />
-      </div>
-      <div className="container mx-auto px-4">
-        <div className="max-w-5xl mx-auto">
-          <div className="relative overflow-hidden rounded-[32px] border border-white/60 bg-white/85 shadow-[0_35px_120px_rgba(15,23,42,0.12)] backdrop-blur">
-            <div className="absolute -right-24 top-16 h-56 w-56 rounded-full bg-blue-200/50 blur-3xl" aria-hidden="true" />
-            <div className="absolute -left-16 -bottom-10 h-48 w-48 rounded-full bg-emerald-200/40 blur-2xl" aria-hidden="true" />
+    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+        <header className="flex flex-col gap-[10px]">
+          <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Change password</h1>
+          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+            Choose a new password to keep your account secure.
+          </p>
+        </header>
 
-            <div className="relative grid gap-10 lg:grid-cols-[1.05fr_minmax(0,1fr)] p-6 sm:p-10 lg:p-12">
-              <div className="space-y-6">
-                <div className="space-y-3">
-                  <p className="text-sm font-semibold uppercase tracking-[0.3em] text-blue-600">Security</p>
-                  <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
-                    {strings.profile.changePassword}
-                  </h1>
-                  <p className="text-base sm:text-lg text-slate-600">
-                    Keep your account secure by refreshing your password and ensuring only you have access.
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <Card>
+            <CardHeader className="gap-[6px] space-y-0">
+              <CardTitle className="tracking-[-0.05em]">New password</CardTitle>
+              <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                Enter your current password, then choose a new one.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handlePasswordChange} className="flex flex-col gap-5">
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="current-password" className={labelClass}>Current password</Label>
+                  <div className="relative">
+                    <Input
+                      id="current-password"
+                      type={showCurrentPassword ? "text" : "password"}
+                      placeholder="Enter your current password"
+                      value={currentPassword}
+                      onChange={(event) => setCurrentPassword(event.target.value)}
+                      disabled={isSubmitting}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowCurrentPassword((prev) => !prev)}
+                      className={eyeButtonClass}
+                      aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
+                    >
+                      {showCurrentPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+                    </button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="new-password" className={labelClass}>New password</Label>
+                  <div className="relative">
+                    <Input
+                      id="new-password"
+                      type={showNewPassword ? "text" : "password"}
+                      placeholder="Enter a new password"
+                      value={newPassword}
+                      onChange={(event) => setNewPassword(event.target.value)}
+                      onFocus={() => setIsNewPasswordFocused(true)}
+                      onBlur={() => setIsNewPasswordFocused(false)}
+                      disabled={isSubmitting}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowNewPassword((prev) => !prev)}
+                      className={eyeButtonClass}
+                      aria-label={showNewPassword ? "Hide new password" : "Show new password"}
+                    >
+                      {showNewPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+                    </button>
+                  </div>
+                  {isNewPasswordFocused && (
+                    <PasswordRequirements items={passwordValidationItems} className="mt-2" />
+                  )}
+                </div>
+                <div className="flex flex-col gap-2">
+                  <Label htmlFor="confirm-password" className={labelClass}>Confirm new password</Label>
+                  <div className="relative">
+                    <Input
+                      id="confirm-password"
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your new password"
+                      value={confirmPassword}
+                      onChange={(event) => setConfirmPassword(event.target.value)}
+                      disabled={isSubmitting}
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowConfirmPassword((prev) => !prev)}
+                      className={eyeButtonClass}
+                      aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+                    </button>
+                  </div>
+                </div>
+                {formError && (
+                  <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">{formError}</p>
+                )}
+                {successMessage && (
+                  <p className="rounded-[8px] bg-[#CBE7D1] px-3 py-[10px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#1E7431]">
+                    {successMessage}
                   </p>
-                </div>
-                <div className="space-y-4">
-                  {sellingPoints.map(({ icon: Icon, title, body }) => (
-                    <div key={title} className="flex items-start gap-3 rounded-2xl border border-slate-100 bg-white/70 p-4 shadow-sm">
-                      <div className="rounded-full bg-blue-50 p-2">
-                        <Icon className="h-5 w-5 text-blue-600" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-900">{title}</p>
-                        <p className="text-sm text-slate-600">{body}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
+                )}
+                <Button type="submit" disabled={isSubmitting} className="w-full sm:w-auto sm:self-start">
+                  {isSubmitting ? "Updating..." : "Change password"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
 
-              <Card className="shadow-xl border border-slate-200/70">
-                <CardHeader className="space-y-1">
-                  <CardTitle className="text-xl">{strings.profile.changePassword}</CardTitle>
-                  <CardDescription>
-                    Update your password and we&apos;ll refresh your session for you.
-                  </CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <form onSubmit={handlePasswordChange} className="space-y-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="current-password">Current Password</Label>
-                      <div className="relative">
-                        <Input
-                          id="current-password"
-                          type={showCurrentPassword ? "text" : "password"}
-                          placeholder="Enter your current password"
-                          value={currentPassword}
-                          onChange={(event) => setCurrentPassword(event.target.value)}
-                          disabled={isSubmitting}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowCurrentPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-2 flex items-center text-muted-foreground"
-                          aria-label={showCurrentPassword ? "Hide current password" : "Show current password"}
-                        >
-                          {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="new-password">{strings.form.labels.password}</Label>
-                      <div className="relative">
-                        <Input
-                          id="new-password"
-                          type={showNewPassword ? "text" : "password"}
-                          placeholder="Enter a new password"
-                          value={newPassword}
-                          onChange={(event) => setNewPassword(event.target.value)}
-                          onFocus={() => setIsNewPasswordFocused(true)}
-                          onBlur={() => setIsNewPasswordFocused(false)}
-                          disabled={isSubmitting}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowNewPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-2 flex items-center text-muted-foreground"
-                          aria-label={showNewPassword ? "Hide new password" : "Show new password"}
-                        >
-                          {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      {isNewPasswordFocused && (
-                        <PasswordRequirements items={passwordValidationItems} className="mt-2" />
-                      )}
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="confirm-password">{strings.form.labels.confirmPassword}</Label>
-                      <div className="relative">
-                        <Input
-                          id="confirm-password"
-                          type={showConfirmPassword ? "text" : "password"}
-                          placeholder="Confirm your new password"
-                          value={confirmPassword}
-                          onChange={(event) => setConfirmPassword(event.target.value)}
-                          disabled={isSubmitting}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowConfirmPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-2 flex items-center text-muted-foreground"
-                          aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
-                        >
-                          {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                        </button>
-                      </div>
-                    </div>
-                    {formError && (
-                      <p className="text-sm text-destructive">{formError}</p>
-                    )}
-                    {successMessage && (
-                      <p className="text-sm text-emerald-600">{successMessage}</p>
-                    )}
-                    <Button type="submit" disabled={isSubmitting} className="w-full">
-                      {isSubmitting ? "Updating..." : strings.profile.changePassword}
-                    </Button>
-                  </form>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
+          <Card className="h-fit">
+            <CardHeader>
+              <CardTitle className="tracking-[-0.05em]">How it works</CardTitle>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-[10px]">
+              {sellingPoints.map(({ icon: Icon, title, body }) => (
+                <div key={title} className="flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] p-3">
+                  <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#F7F7F0] text-[#767980]" aria-hidden="true">
+                    <Icon className="size-4" strokeWidth={1.5} />
+                  </span>
+                  <div className="flex flex-col gap-1">
+                    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{title}</p>
+                    <p className="text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">{body}</p>
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

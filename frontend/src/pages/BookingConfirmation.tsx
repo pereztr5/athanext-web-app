@@ -7,11 +7,16 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/routes";
 import { bookingsAPI, type BookingConfirmationData } from "@/api/bookings";
-import { formatSlotTime } from "@/utils/sessionFormatting";
+import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
 import { parseISODateLocal } from "@/utils/dateHelpers";
 import { formatDateToUSA } from "@/utils/helperFunctions";
 import BookingReceipt from "@/components/receipts/BookingReceipt";
+import { BrandPill } from "@/components/brand";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
+import { FALLBACK_CONTACT_METHODS } from "@/utils/db";
+
+// Support address shown in the receipt footer (same source the Contact page falls back to).
+const RECEIPT_SUPPORT_EMAIL = FALLBACK_CONTACT_METHODS.find((method) => method.icon === "email")?.value;
 
 interface CoachInfo {
   name?: string | null;
@@ -48,6 +53,8 @@ const BookingConfirmation = () => {
         import("jspdf"),
       ]);
       const element = receiptRef.current;
+      // Make sure DM Sans is loaded so the capture doesn't fall back to a system font.
+      await document.fonts?.ready;
       const canvas = await html2canvas(element, { scale: 2, useCORS: true });
       const imgData = canvas.toDataURL("image/png");
       const pdf = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
@@ -118,9 +125,8 @@ const BookingConfirmation = () => {
   }, [sessionId]);
 
   const slot = bookingDetails?.slot;
-  const sessionName = slot?.session_name || "Coaching Session";
+  const sessionName = slot?.session_name || "Coaching session";
   const sessionType = slot?.session_type === "group" ? "Group" : "Individual";
-  const location = slot?.location === "in-person" ? "In-Person" : slot?.location === "online" ? "Online" : "-";
   const feeAdjustedPriceValue =
     typeof slot?.price === "number"
       ? Number(
@@ -131,10 +137,14 @@ const BookingConfirmation = () => {
         )
       : 0;
   const price = feeAdjustedPriceValue ? formatCurrency(feeAdjustedPriceValue) : "-";
-  const duration = slot?.duration_minutes != null ? `${slot.duration_minutes} minutes` : "-";
   const occurrenceDate = slot?.occurrence_date || null;
-  const basePriceValue = feeAdjustedPriceValue;
-  const totalPaidValue = basePriceValue;
+  // Receipt breakdown: slot base price + everything added on top (platform + processing fees) = fee-inclusive total.
+  const receiptSessionPriceValue = typeof slot?.price === "number" ? slot.price : null;
+  const receiptTotalPaidValue = receiptSessionPriceValue != null ? feeAdjustedPriceValue : null;
+  const receiptFeeValue =
+    receiptSessionPriceValue != null && receiptTotalPaidValue != null
+      ? Number((receiptTotalPaidValue - receiptSessionPriceValue).toFixed(2))
+      : null;
 
   const { formattedDate, dayOfWeek } = useMemo(() => {
     if (!occurrenceDate) {
@@ -165,243 +175,183 @@ const BookingConfirmation = () => {
     return parts.slice(0, 2).map((p) => p[0]?.toUpperCase()).join("") || "C";
   }, [coachName]);
 
-  const sessionTimeLabel = useMemo(() => {
-    const start = formatSlotTime(slot?.start_time);
-    const end = formatSlotTime(slot?.end_time);
-    if (!start && !end) return "-";
-    return `${start} - ${end}`.trim();
-  }, [slot?.start_time, slot?.end_time]);
+  const receiptTimeLabel = useMemo(() => {
+    const span = slot?.start_time && slot?.end_time ? formatTimeSpan(slot.start_time, slot.end_time) : "";
+    const minutes = slot?.duration_minutes != null ? `${slot.duration_minutes} min` : "";
+    return [span, minutes].filter(Boolean).join(", ") || "—";
+  }, [slot?.start_time, slot?.end_time, slot?.duration_minutes]);
 
-  const issueDateLabel = useMemo(() => {
-    const formatted = bookingDetails?.createdAt
-      ? formatDateToUSA(bookingDetails.createdAt)
-      : "";
-    return formatted || "-";
+  const receiptIssuedLabel = useMemo(() => {
+    if (!bookingDetails?.createdAt) return "—";
+    const created = new Date(bookingDetails.createdAt);
+    if (isNaN(created.getTime())) return formatDateToUSA(bookingDetails.createdAt) || "—";
+    return created.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
   }, [bookingDetails?.createdAt]);
 
   const receiptData = useMemo(() => {
     if (!bookingDetails) return null;
 
+    const hasDate = formattedDate !== "-" && dayOfWeek !== "-";
+    const formatReceiptAmount = (value: number | null) => (value != null ? formatCurrency(value) : "—");
+
     return {
-      bookingId: bookingDetails.bookingId || "—",
-      issueDateLabel,
+      bookingRef: bookingDetails.bookingId ? `#${bookingDetails.bookingId.slice(0, 8).toUpperCase()}` : "",
+      issueDateLabel: receiptIssuedLabel,
       sessionName,
-      sessionDate: formattedDate,
-      sessionDay: dayOfWeek,
-      sessionTime: sessionTimeLabel,
-      duration,
+      coachName,
       type: sessionType,
-      location,
-      coachName: coachName || "Your Coach",
-      coachTitle: coachTitle || undefined,
-      coachInitials,
-      basePriceLabel: formatCurrency(basePriceValue),
-      totalPaidLabel: formatCurrency(totalPaidValue),
+      dateLabel: hasDate ? `${dayOfWeek}, ${formattedDate}` : "—",
+      timeLabel: receiptTimeLabel,
+      locationLabel: formatLocationSentence(slot?.location) || "—",
+      sessionPriceLabel: formatReceiptAmount(receiptSessionPriceValue),
+      feeLabel: formatReceiptAmount(receiptFeeValue),
+      totalPaidLabel: formatReceiptAmount(receiptTotalPaidValue),
+      isPaid: bookingDetails.paymentStatus === "paid",
+      supportEmail: RECEIPT_SUPPORT_EMAIL,
     };
   }, [
-    basePriceValue,
     bookingDetails,
-    coachInitials,
     coachName,
-    coachTitle,
     dayOfWeek,
-    duration,
     formatCurrency,
     formattedDate,
-    issueDateLabel,
-    location,
+    receiptFeeValue,
+    receiptIssuedLabel,
+    receiptSessionPriceValue,
+    receiptTimeLabel,
+    receiptTotalPaidValue,
     sessionName,
-    sessionTimeLabel,
     sessionType,
-    totalPaidValue,
+    slot?.location,
   ]);
 
+  const isPaid = bookingDetails?.paymentStatus === "paid";
+  const detailItems = [
+    { label: "Date", value: formattedDate !== "-" && dayOfWeek !== "-" ? `${dayOfWeek}, ${formattedDate}` : "-", skeleton: "w-36" },
+    { label: "Time", value: receiptTimeLabel, skeleton: "w-40" },
+    { label: "Location", value: formatLocationSentence(slot?.location) || "-", skeleton: "w-24" },
+    { label: "Type", value: sessionType, skeleton: "w-20" },
+  ];
+
   return (
-    <div className="flex items-start justify-center px-4 py-8 sm:py-12 lg:py-16">
-      <div className="w-full max-w-6xl space-y-8 lg:space-y-10">
-        {/* Header Section */}
-        <div className="bg-blue-50 rounded-3xl px-6 py-12 sm:px-10 sm:py-14 lg:px-12 lg:py-16 text-center flex flex-col items-center gap-5">
-          <div className="h-16 w-16 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
-            <CheckCircle className="h-8 w-8 text-white" strokeWidth={2.5} />
+    <div className="flex items-start justify-center px-4 py-8 font-sans tracking-[-0.03em] text-[#1A202C] sm:py-12 lg:py-16">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
+        {/* Success header */}
+        <div className="flex flex-col items-start gap-4 px-[25px] pb-5 pt-[30px]">
+          <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#CBE7D1]">
+            <CheckCircle className="h-5 w-5 text-[#1E7431]" strokeWidth={1.5} />
           </div>
-          <div className="space-y-3 max-w-2xl">
-            <h1 className="text-3xl sm:text-4xl font-bold text-gray-900">
-              {bookingDetails?.paymentStatus === "paid" ? "Booking Confirmed!" : "Booking Created"}
-            </h1>
-            <p className="text-base sm:text-lg text-gray-600 leading-relaxed">
-              Great! Your training session{coachName ? ` with ${coachName}` : ""} has been successfully booked.<br className="hidden sm:inline" />
-              Get ready to elevate your game!
+          <div className="flex flex-col gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em]">
+                {isPaid ? "Booking confirmed" : "Booking created"}
+              </h1>
+              {bookingDetails && (
+                <BrandPill tone={isPaid ? "green" : "amber"}>{isPaid ? "Paid" : "Payment pending"}</BrandPill>
+              )}
+            </div>
+            <p className="text-[14px] leading-[18px] text-[#484D56]">
+              Your session{coachName ? ` with ${coachName}` : ""} is booked. We’ll email you the details.
             </p>
           </div>
           {loadError && (
-            <p className="text-sm flex items-center justify-center gap-2 bg-red-50 px-4 py-2 rounded-lg text-red-600">
-              <AlertCircle className="h-4 w-4" /> {loadError}
+            <p className="flex items-center gap-2 text-[14px] leading-[18px] text-destructive">
+              <AlertCircle strokeWidth={1.5} className="h-4 w-4 flex-none" /> {loadError}
             </p>
           )}
         </div>
+        <div className="h-px bg-[#EAEADF]" />
 
-        {/* Content Section */}
-        <div className="grid gap-6 lg:gap-8 lg:grid-cols-[1.4fr_1fr] items-start">
-          {/* Left: Booking Details Card */}
-          <div className="bg-blue-50 shadow-sm rounded-3xl p-6 sm:p-8 lg:p-9 border border-blue-100">
-            <div className="space-y-1 mb-6">
-              <p className="text-lg font-bold text-gray-900">Your Booking Details</p>
-              <p className="text-sm text-gray-500">Session Information</p>
-            </div>
-
-            {/* Inner White Card */}
-            <div className="bg-white rounded-2xl p-6 sm:p-7 space-y-6 shadow-sm">
-              {/* Session & Price Row */}
-              <div className="flex items-start justify-between gap-4">
-                <div className="space-y-1.5 flex-1">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Session</p>
-                  {loading ? (
-                    <Skeleton className="h-7 w-48" />
-                  ) : (
-                    <p className="text-xl font-bold text-gray-900">{sessionName}</p>
-                  )}
-                </div>
-                <div className="text-right space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Price</p>
-                  {loading ? (
-                    <Skeleton className="h-7 w-16 ml-auto" />
-                  ) : (
-                    <p className="text-xl font-bold text-blue-600">{price}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Details Grid */}
-              <div className="grid grid-cols-2 gap-y-5 gap-x-4 text-sm">
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Date</p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-28" />
-                  ) : (
-                    <p className="font-semibold text-gray-900">{formattedDate}</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Day</p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-24" />
-                  ) : (
-                    <p className="font-semibold text-gray-900">{dayOfWeek}</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Time</p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-32" />
-                  ) : (
-                    <p className="font-semibold text-gray-900">
-                      {formatSlotTime(slot?.start_time)} - {formatSlotTime(slot?.end_time)}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Duration</p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-20" />
-                  ) : (
-                    <p className="font-semibold text-gray-900">{duration}</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Type</p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-20" />
-                  ) : (
-                    <p className="font-semibold text-gray-900">{sessionType}</p>
-                  )}
-                </div>
-                <div className="space-y-1.5">
-                  <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Location</p>
-                  {loading ? (
-                    <Skeleton className="h-5 w-24" />
-                  ) : (
-                    <p className="font-semibold text-gray-900">{location}</p>
-                  )}
-                </div>
-              </div>
-
-              {/* Coach Info */}
+        {/* Booking details */}
+        <div className="flex flex-col gap-5 px-[25px] py-5">
+          <div className="flex items-start justify-between gap-5">
+            <div className="flex min-w-0 flex-col gap-2.5">
               {loading ? (
-                <div className="flex items-center gap-3.5 pt-5 border-t border-gray-200">
-                  <Skeleton className="h-12 w-12 rounded-full" />
-                  <div className="space-y-2 flex-1">
-                    <Skeleton className="h-3 w-12" />
-                    <Skeleton className="h-4 w-32" />
-                    <Skeleton className="h-3 w-20" />
-                  </div>
-                </div>
+                <Skeleton className="h-6 w-48" />
               ) : (
-                coachName && (
-                  <div className="flex items-center gap-3.5 pt-5 border-t border-gray-200">
-                    <Avatar className="h-12 w-12 text-white bg-blue-600">
-                      <AvatarFallback className="font-semibold text-base bg-blue-600">{coachInitials}</AvatarFallback>
-                    </Avatar>
-                    <div className="space-y-0.5">
-                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wide">Coach</p>
-                      <p className="text-base font-bold text-gray-900">{coachName}</p>
-                      {coachTitle && <p className="text-sm text-gray-600">{coachTitle}</p>}
-                    </div>
-                  </div>
-                )
+                <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em]">{sessionName}</p>
               )}
+              {!loading && slot && (
+                <div className="flex flex-wrap gap-1.5">
+                  <BrandPill tone={slot.session_type === "group" ? "teal" : "blue"}>{sessionType}</BrandPill>
+                </div>
+              )}
+            </div>
+            <div className="flex flex-none flex-col items-end gap-1.5 text-right">
+              {loading ? (
+                <Skeleton className="h-[30px] w-20" />
+              ) : (
+                <p className="text-[32px] font-bold leading-[30px]">{price}</p>
+              )}
+              <p className="text-[12px] leading-[14px] text-[#767980]">Total, fees included</p>
             </div>
           </div>
 
-          {/* Right: What's Next & Actions */}
-          <div className="space-y-5">
-            {/* What's Next Card */}
-            <div className="bg-blue-50 shadow-sm rounded-3xl p-6 sm:p-8 space-y-5 border border-blue-100">
-              <p className="text-lg font-bold text-gray-900">What's Next?</p>
-              <ul className="space-y-3.5 text-sm text-gray-700">
-                <li className="flex gap-3">
-                  <span className="text-blue-600 font-bold mt-0.5">•</span>
-                  <span className="leading-relaxed">Your coach will contact you with any prep details</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-blue-600 font-bold mt-0.5">•</span>
-                  <span className="leading-relaxed">You'll receive a confirmation email with booking info</span>
-                </li>
-                <li className="flex gap-3">
-                  <span className="text-blue-600 font-bold mt-0.5">•</span>
-                  <span className="leading-relaxed">Add the session to your calendar and prepare your goals</span>
-                </li>
-              </ul>
-            </div>
+          <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-[8px] bg-[#F4F4EB] px-5 py-4 sm:grid-cols-2">
+            {detailItems.map((item) => (
+              <div key={item.label} className="flex flex-col gap-1.5">
+                <dt className="text-[12px] font-medium leading-[13px] text-[#767980]">{item.label}</dt>
+                <dd className="text-[14px] leading-[18px]">
+                  {loading ? <Skeleton className={`h-[18px] ${item.skeleton}`} /> : item.value}
+                </dd>
+              </div>
+            ))}
+          </dl>
 
-            {/* Action Buttons */}
-            <div className="space-y-3.5">
-              <Button 
-                onClick={handleDownloadReceipt}
-                disabled={loading}
-                className="w-full h-14 text-base font-semibold rounded-full bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-md hover:shadow-lg transition-all hover:scale-[1.02]"
-              >
-                Download Receipt
-              </Button>
-              <Button
-                onClick={handleNavigateToProfile}
-                disabled={loading}
-                variant="outline"
-                className="w-full h-14 text-base font-semibold rounded-full border-2 border-blue-500 text-blue-600 bg-white hover:bg-blue-50 transition-colors"
-              >
-                Back to Profile
-              </Button>
+          {loading ? (
+            <div className="flex items-center gap-3">
+              <Skeleton className="h-10 w-10 rounded-full" />
+              <div className="flex flex-1 flex-col gap-1.5">
+                <Skeleton className="h-4 w-32" />
+                <Skeleton className="h-3 w-20" />
+              </div>
             </div>
+          ) : (
+            coachName && (
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10">
+                  <AvatarFallback className="bg-[#E5EDF7] text-[14px] font-medium text-[#0054B4]">
+                    {coachInitials}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-col gap-1">
+                  <p className="text-[16px] font-medium leading-[18px]">{coachName}</p>
+                  <p className="text-[12px] leading-[14px] text-[#767980]">{coachTitle || "Coach"}</p>
+                </div>
+              </div>
+            )
+          )}
 
-            {/* Support Link */}
-            <div className="text-center text-sm text-gray-600 pt-2">
-              Need help?{" "}
-              <button 
-                onClick={handleNavigateToContact}
-                className="font-semibold text-blue-600 hover:underline transition-colors"
-              >
-                Contact Support
-              </button>
-            </div>
+          <div className="flex flex-col gap-2.5">
+            <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">What happens next</p>
+            <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-[18px] text-[#484D56] marker:text-[#A3A6AB]">
+              <li>Your coach will reach out with any prep details.</li>
+              <li>You’ll get a confirmation email with your booking.</li>
+              <li>Add the session to your calendar and note your goals.</li>
+            </ul>
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="h-px bg-[#EAEADF]" />
+        <div className="flex flex-col-reverse gap-4 px-[25px] py-5 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-[14px] leading-[18px] text-[#767980]">
+            Need help?{" "}
+            <button
+              type="button"
+              onClick={handleNavigateToContact}
+              className="font-medium text-[#0054B4] underline-offset-2 hover:underline"
+            >
+              Contact support
+            </button>
+          </p>
+          <div className="flex flex-col-reverse gap-[10px] sm:flex-row">
+            <Button onClick={handleNavigateToProfile} disabled={loading} variant="outline">
+              Back to profile
+            </Button>
+            <Button onClick={handleDownloadReceipt} disabled={loading}>
+              Download receipt
+            </Button>
           </div>
         </div>
       </div>

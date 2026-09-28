@@ -26,14 +26,14 @@ export const MarketingLayout = () => {
       ) : (
         onCompleteProfile && (
           <header
-            className="fixed w-full z-50 bg-white border-b border-border h-[3.8rem] px-4 flex items-center"
+            className="fixed w-full z-50 bg-[#F7F7F0] border-b border-[#EAEADF] h-[3.8rem] px-5 flex items-center"
             style={{ top: "var(--network-banner-height, 0px)" }}
           >
             <div className="mx-auto flex items-center gap-3">
               <img
                 src={completeProfileLogoSrc}
                 alt="AthaNext"
-                className="h-8 w-auto"
+                className="h-7 w-auto"
                 onError={() => {
                   if (logoFallbackTried) return;
                   setLogoFallbackTried(true);

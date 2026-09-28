@@ -12,7 +12,7 @@ const AvailabilityPage = () => {
   if (!ready) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
       </div>
     );
   }
@@ -24,8 +24,8 @@ const AvailabilityPage = () => {
   if (!coachId) {
     return (
       <div className="mx-auto max-w-[1000px] px-4 py-10 md:px-0">
-        <h1 className="text-page-title text-foreground">Availability</h1>
-        <p className="mt-2 text-body-l text-muted-foreground">
+        <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Availability</h1>
+        <p className="mt-[10px] text-[16px] leading-[18px] tracking-[-0.48px] text-[#767980]">
           Your coach profile is still being set up. Finish onboarding to manage availability.
         </p>
       </div>

@@ -2,13 +2,13 @@ import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { CheckCircle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
 
-import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
 import { packagesAPI, type Package } from "@/api/packages";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { ROUTES } from "@/routes";
+import { BrandPill } from "@/components/brand";
 
 type VerificationStatus = "verifying" | "pending" | "success" | "error";
 
@@ -23,7 +23,7 @@ const PackageConfirmation = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [status, setStatus] = useState<VerificationStatus>("verifying");
-  const [statusMessage, setStatusMessage] = useState("Verifying your payment...");
+  const [statusMessage, setStatusMessage] = useState("Verifying your payment…");
   const [attemptKey, setAttemptKey] = useState(0);
 
   const coachId = pkg?.coach_id || coachIdParam || "";
@@ -60,7 +60,7 @@ const PackageConfirmation = () => {
 
         if (state === "reconciled") {
           setStatus("success");
-          setStatusMessage("Payment confirmed! Your package is ready.");
+          setStatusMessage("Payment confirmed. Your package is ready.");
           setError(null);
           return;
         }
@@ -68,13 +68,13 @@ const PackageConfirmation = () => {
         if (state === "pending" && attempts < 4) {
           attempts += 1;
           setStatus("pending");
-          setStatusMessage("Payment is still processing. We'll retry automatically...");
+          setStatusMessage("Payment is still processing. We’ll check again automatically…");
           retryTimeout = setTimeout(verifyPayment, 1500);
           return;
         }
 
         setStatus("error");
-        setStatusMessage("Payment is still processing. You can retry verification shortly.");
+        setStatusMessage("Payment is still processing. Try checking again in a moment.");
       } catch (err) {
         if (cancelled) return;
         console.error("Verification failed:", err);
@@ -114,7 +114,7 @@ const PackageConfirmation = () => {
     loadPackage();
   }, [packageId, status]);
 
-  const coachName = coach?.name || "Your Coach";
+  const coachName = coach?.name || "Your coach";
   const priceLabel = useMemo(() => {
     if (!pkg) return "-";
     // platformFeePerc/stripeFeePerc fetched via hook for consistency with other screens
@@ -136,144 +136,128 @@ const PackageConfirmation = () => {
     status !== "success" ||
     (!pkg && !error);
 
+  const title =
+    status === "success" ? "Package confirmed" : status === "error" ? "We couldn’t confirm your package" : "Finishing up";
+  const statusIcon =
+    status === "error" ? (
+      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#FDF7EC]">
+        <AlertCircle strokeWidth={1.5} className="h-5 w-5 text-[#906A29]" />
+      </div>
+    ) : status === "success" ? (
+      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#CBE7D1]">
+        <CheckCircle strokeWidth={1.5} className="h-5 w-5 text-[#1E7431]" />
+      </div>
+    ) : (
+      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F4F4EB]">
+        <Loader2 strokeWidth={1.5} className="h-5 w-5 animate-spin text-[#767980]" />
+      </div>
+    );
+  const detailLabel = "text-[12px] font-medium leading-[13px] text-[#767980]";
+
   return (
-    <div className="flex items-start justify-center px-4 py-8 sm:py-12 lg:py-16">
-      <div className="max-w-5xl w-full space-y-6">
-        <div className="rounded-xl border border-blue-100 bg-blue-50 px-6 sm:px-10 py-10 text-center shadow-sm">
-          <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-white shadow">
-            {status === "error" ? (
-              <div className="h-16 w-16 rounded-full bg-red-500 flex items-center justify-center shadow-lg">
-                <AlertCircle className="h-8 w-8 text-white" strokeWidth={2.5} />
-              </div>
-            ) : status === "success" ? (
-              <div className="h-16 w-16 rounded-full bg-green-500 flex items-center justify-center shadow-lg">
-                <CheckCircle className="h-8 w-8 text-white" strokeWidth={2.5} />
-              </div>
-            ) : (
-              <Loader2 className="h-8 w-8 text-primary animate-spin" />
-            )}
-          </div>
-          <div className="mt-4 space-y-2">
-            <p className="text-2xl sm:text-3xl font-bold text-slate-900">
-              {status === "success"
-                ? "Package Confirmed"
-                : status === "error"
-                  ? "Package Confirmation"
-                  : "Finishing Up"}
-            </p>
-            <p className="text-sm sm:text-base text-slate-600">
-              {statusMessage}
-            </p>
+    <div className="flex items-start justify-center px-4 py-8 font-sans tracking-[-0.03em] text-[#1A202C] sm:py-12 lg:py-16">
+      <div className="w-full max-w-2xl overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
+        {/* Status header */}
+        <div className="flex flex-col items-start gap-4 px-[25px] pb-5 pt-[30px]" aria-live="polite">
+          {statusIcon}
+          <div className="flex flex-col gap-2.5">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em]">{title}</h1>
+              {status === "success" && <BrandPill tone="green">Paid</BrandPill>}
+            </div>
+            <p className="text-[14px] leading-[18px] text-[#484D56]">{statusMessage}</p>
           </div>
         </div>
+        {/* Package details (hidden when verification failed and there's nothing to show) */}
+        {(status !== "error" || error) && (
+        <>
+        <div className="h-px bg-[#EAEADF]" />
+        <div className="flex flex-col gap-5 px-[25px] py-5">
+          {showPackageSkeleton && status !== "error" && (
+            <>
+              <div className="flex items-start justify-between gap-5">
+                <div className="flex flex-col gap-2.5">
+                  <Skeleton className="h-6 w-56" />
+                  <Skeleton className="h-4 w-40" />
+                </div>
+                <Skeleton className="h-[30px] w-24" />
+              </div>
+              <Skeleton className="h-[84px] w-full rounded-[8px]" />
+            </>
+          )}
 
-        <Card className="shadow-sm border rounded-xl border-blue-200 bg-blue-50">
-          <CardContent className="p-6 sm:p-8 space-y-6">
-            {showPackageSkeleton && (
-              <div className="space-y-6">
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="space-y-3">
-                    <Skeleton className="h-4 w-24" />
-                    <Skeleton className="h-7 w-64" />
-                    <Skeleton className="h-4 w-72" />
-                    <Skeleton className="h-4 w-16" />
-                    <Skeleton className="h-7 w-40" />
+          {!showPackageSkeleton && pkg && status === "success" && (
+            <>
+              <div className="flex items-start justify-between gap-5">
+                <div className="flex min-w-0 flex-col gap-2.5">
+                  <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em]">
+                    {pkg.package_name} with {coachName}
+                  </p>
+                  <div className="flex flex-wrap gap-1.5">
+                    <BrandPill tone="blue">Package</BrandPill>
                   </div>
-                  <div className="sm:min-w-[160px] space-y-2">
-                    <Skeleton className="h-3 w-20" />
-                    <Skeleton className="h-8 w-24" />
-                  </div>
+                  {pkg.description && (
+                    <p className="text-[14px] leading-[18px] text-[#484D56]">{pkg.description}</p>
+                  )}
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                  <Skeleton className="h-20 w-full" />
-                </div>
-                <div className="space-y-2">
-                  <Skeleton className="h-3 w-32" />
-                  <Skeleton className="h-4 w-72" />
-                  <Skeleton className="h-4 w-64" />
+                <div className="flex flex-none flex-col items-end gap-1.5 text-right">
+                  <p className="text-[32px] font-bold leading-[30px]">{priceLabel}</p>
+                  <p className="text-[12px] leading-[14px] text-[#767980]">Total paid</p>
                 </div>
               </div>
-            )}
 
-            {!showPackageSkeleton && pkg && status === "success" && (
-              <>
-                <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4">
-                  <div className="space-y-2">
-                    <p className="text-sm uppercase text-slate-600">Package</p>
-                    <h2 className="text-xl font-semibold text-slate-900">{pkg.package_name}</h2>
-                    {pkg.description && (
-                      <p className="text-sm text-slate-600">{pkg.description}</p>
-                    )}
-                    <p className="text-sm text-slate-600">
-                      Coach:
-                    </p>
-                    <h2 className="text-xl font-semibold text-slate-900">{coachName}</h2>
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-[8px] bg-[#F4F4EB] px-5 py-4 sm:grid-cols-3">
+                {[
+                  { label: "Sessions", value: pkg.session_count },
+                  { label: "Duration", value: `${pkg.duration_minutes} min each` },
+                  { label: "Valid for", value: `${pkg.validity_days} days` },
+                ].map((item) => (
+                  <div key={item.label} className="flex flex-col gap-1.5">
+                    <dt className={detailLabel}>{item.label}</dt>
+                    <dd className="text-[14px] leading-[18px]">{item.value}</dd>
                   </div>
-                  <div className="text-right sm:text-left sm:min-w-[160px]">
-                    <p className="text-xs uppercase text-slate-500">Total Paid</p>
-                    <p className="text-3xl font-bold text-slate-900">{priceLabel}</p>
-                  </div>
+                ))}
+              </dl>
+
+              {pkg.features && pkg.features.length > 0 && (
+                <div className="flex flex-col gap-2.5">
+                  <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">What’s included</p>
+                  <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-[18px] text-[#484D56] marker:text-[#A3A6AB]">
+                    {pkg.features.map((feature, idx) => (
+                      <li key={`${feature}-${idx}`}>{feature}</li>
+                    ))}
+                  </ul>
                 </div>
+              )}
+            </>
+          )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs text-slate-500">Sessions</p>
-                    <p className="text-lg font-semibold text-slate-900">{pkg.session_count}</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs text-slate-500">Duration</p>
-                    <p className="text-lg font-semibold text-slate-900">{pkg.duration_minutes} minutes</p>
-                  </div>
-                  <div className="rounded-xl border border-slate-200 bg-slate-50 p-4">
-                    <p className="text-xs text-slate-500">Validity</p>
-                    <p className="text-lg font-semibold text-slate-900">{pkg.validity_days} days</p>
-                  </div>
-                </div>
-
-                {pkg.features && pkg.features.length > 0 && (
-                  <div className="space-y-2">
-                    <p className="text-xs font-semibold text-slate-600 uppercase tracking-wide">
-                      What’s Included
-                    </p>
-                    <ul className="space-y-1 text-sm text-slate-700 list-disc list-inside">
-                      {pkg.features.map((feature, idx) => (
-                        <li key={`${feature}-${idx}`}>{feature}</li>
-                      ))}
-                    </ul>
-                  </div>
-                )}
-              </>
-            )}
-
-            {!showPackageSkeleton && !pkg && !error && null}
-
-            {error && (
-              <div className="text-sm text-red-600 bg-red-50 border border-red-200 rounded-xl p-4">
-                {error}
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {status === "error" && (
-          <div className="flex flex-col sm:flex-row gap-3">
-            <Button
-              variant="outline"
-              onClick={() => setAttemptKey((key) => key + 1)}
-              className="w-full sm:w-auto"
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Retry verification
-            </Button>
-          </div>
+          {error && (
+            <p className="flex items-center gap-2 text-[14px] leading-[18px] text-destructive">
+              <AlertCircle strokeWidth={1.5} className="h-4 w-4 flex-none" />
+              {error}
+            </p>
+          )}
+        </div>
+        </>
         )}
 
-        <div className="flex flex-col sm:flex-row gap-3">
-          <Button onClick={() => navigate(ROUTES.PROFILE)} disabled={isLoading}>
-            Go to Profile
+        {/* Actions */}
+        <div className="h-px bg-[#EAEADF]" />
+        <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
+          <Button
+            variant={status === "error" ? "outline" : "default"}
+            onClick={() => navigate(ROUTES.PROFILE)}
+            disabled={isLoading}
+          >
+            Go to profile
           </Button>
+          {status === "error" && (
+            <Button onClick={() => setAttemptKey((key) => key + 1)}>
+              <RefreshCw strokeWidth={1.5} className="h-4 w-4" />
+              Check again
+            </Button>
+          )}
         </div>
       </div>
     </div>

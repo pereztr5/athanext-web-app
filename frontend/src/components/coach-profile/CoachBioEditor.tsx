@@ -50,7 +50,12 @@ export function CoachBioEditor({
   };
 
   return (
-    <div className={cn("coach-bio-editor", className)}>
+    <div
+      className={cn(
+        "coach-bio-editor [&_.ql-container]:font-sans [&_.ql-editor]:text-[14px] [&_.ql-editor]:leading-[18px] [&_.ql-editor]:tracking-[-0.03em] [&_.ql-editor]:text-[#484D56] [&_.ql-editor.ql-blank::before]:text-[#A3A6AB]",
+        className
+      )}
+    >
       <ReactQuill
         theme="snow"
         value={editorValue}

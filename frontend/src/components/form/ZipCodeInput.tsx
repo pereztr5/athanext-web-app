@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { MapPin } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fetchLocationFromZipCode, formatLocationDisplay, hasValidLocationData, type LocationInfo } from "@/utils/geolocation";
@@ -23,7 +24,7 @@ export const ZipCodeInput = ({
   error,
   id = "zipCode",
   showLabel = true,
-  label = "Zip Code",
+  label = "Zip code",
   placeholder = "Enter your zip code",
   required = false,
   onLocationResolved,
@@ -84,9 +85,12 @@ export const ZipCodeInput = ({
   }, [value]);
 
   return (
-    <div className="grid gap-2">
+    <div className="grid gap-1.5">
       {showLabel && (
-        <Label htmlFor={id}>
+        <Label
+          htmlFor={id}
+          className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]"
+        >
           {label}
           {required && <span className="text-destructive ml-1">*</span>}
         </Label>
@@ -107,23 +111,24 @@ export const ZipCodeInput = ({
         required={required}
       />
       {isLoadingLocation && (
-        <p className="text-xs text-muted-foreground">Loading location...</p>
+        <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">Finding location…</p>
       )}
       {!isLoadingLocation && hasAttemptedFetch && value && typeof value === 'string' && value.length >= 3 && locationInfo && typeof hasValidLocationData === 'function' && hasValidLocationData(locationInfo) && (
-        <div className="mt-2 p-3 bg-blue-50 rounded-md border border-blue-200">
-          <p className="text-xs text-slate-700">
+        <div className="flex items-center gap-2 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
+          <MapPin strokeWidth={1.5} className="h-4 w-4 flex-none text-[#767980]" aria-hidden="true" />
+          <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#484D56]">
             {typeof formatLocationDisplay === 'function' ? formatLocationDisplay(locationInfo) : 'Location found'}
           </p>
         </div>
       )}
       {!isLoadingLocation && hasAttemptedFetch && value && typeof value === 'string' && value.length >= 3 && (!locationInfo || (typeof hasValidLocationData === 'function' && !hasValidLocationData(locationInfo))) && (
-        <div className="mt-2 p-3 bg-amber-50 rounded-md border border-amber-200">
-          <p className="text-xs text-amber-700">
-            Location not found for this zip code. Please verify the code is correct.
+        <div className="rounded-[8px] bg-[#FDF7EC] px-3 py-2.5">
+          <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#906A29]">
+            We couldn't find a location for this zip code. Check it and try again.
           </p>
         </div>
       )}
-      {error && <p className="text-xs text-destructive">{error}</p>}
+      {error && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p>}
     </div>
   );
 };

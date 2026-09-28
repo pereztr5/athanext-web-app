@@ -40,7 +40,7 @@ import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useQueryClient } from "@tanstack/react-query";
 import { detectCoachSport } from "@/utils/coachSport";
-import { X } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
 import { CoachProfileView } from "@/components/coach-profile/CoachProfileView";
 import { useSportPillars } from "@/hooks/useSportPillars";
@@ -169,7 +169,7 @@ const Profile = () => {
 
         if (editedCoach.name.trim().length < 3) {
             toast({
-                title: 'Invalid Name',
+                title: 'Invalid name',
                 description: 'Coach name must be at least 3 characters long.',
                 variant: 'destructive',
                 duration: 2000,
@@ -179,7 +179,7 @@ const Profile = () => {
 
         if (!editedCoach.specialties || editedCoach.specialties.length === 0) {
             toast({
-                title: 'Development Pillars Required',
+                title: 'Development pillars required',
                 description: 'Please select at least one development pillar.',
                 variant: 'destructive',
                 duration: 2000,
@@ -345,8 +345,8 @@ const Profile = () => {
             }
 
             toast({
-                title: "Profile Updated",
-                description: "Your coach profile has been successfully updated.",
+                title: "Profile updated",
+                description: "Your coach profile is saved.",
             });
 
             setIsEditMode(false);
@@ -365,7 +365,7 @@ const Profile = () => {
         } catch (error) {
             console.error('Error updating profile:', error);
             toast({
-                title: 'Update Failed',
+                title: 'Update failed',
                 description: error instanceof Error ? error.message : 'Failed to update profile. Please try again.',
                 variant: 'destructive',
             });
@@ -492,8 +492,8 @@ const Profile = () => {
 
     const handleSendMessage = () => {
         toast({
-            title: "Send Message",
-            description: "Messaging feature coming soon!",
+            title: "Messaging",
+            description: "Messaging is coming soon.",
         });
     };
 
@@ -504,12 +504,12 @@ const Profile = () => {
     if (!profileLoading && profile?.type === PROFILE_TYPE.coach) {
         if (!coach) {
             return (
-                <div className="min-h-[50vh] flex items-center justify-center">
-                    <div className="text-center space-y-4">
-                        <h1 className="text-2xl font-bold text-foreground">No Coach Profile Found</h1>
-                        <p className="text-muted-foreground">Create your coach profile to get started</p>
-                        <Button onClick={() => navigate("/become-a-coach")} className="bg-blue-600 hover:bg-blue-700">
-                            Become a Coach
+                <div className="flex min-h-[50vh] items-center justify-center px-4">
+                    <div className="flex max-w-[420px] flex-col items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px] text-center">
+                        <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">No coach profile yet</h1>
+                        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">Create your coach profile to get started.</p>
+                        <Button onClick={() => navigate("/become-a-coach")}>
+                            Become a coach
                         </Button>
                     </div>
                 </div>
@@ -538,47 +538,61 @@ const Profile = () => {
             />
 
             <Dialog open={certDialogOpen} onOpenChange={setCertDialogOpen}>
-                <DialogContent className="max-w-2xl">
-                    <DialogHeader>
-                        <DialogTitle>Edit certifications</DialogTitle>
-                        <DialogDescription>
+                <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+                    <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
+                        <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+                            Edit certifications
+                        </DialogTitle>
+                        <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
                             Update the certifications that appear on your profile.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="space-y-4">
+                    <div className="h-px bg-[#EAEADF]" />
+
+                    <div className="flex max-h-[60vh] flex-col gap-[10px] overflow-y-auto px-[25px] py-5">
                         {certificationsDraft.length === 0 && (
-                            <div className="text-sm text-muted-foreground">
-                                Add your first certification to showcase your credentials.
+                            <div className="rounded-[8px] bg-[#F4F4EB] p-[15px] text-[14px] leading-[18px] text-[#767980]">
+                                Add your first certification to show your credentials.
                             </div>
                         )}
 
                         {certificationsDraft.map((cert, index) => (
                             <div
                                 key={cert.id ?? `new-${index}`}
-                                className="rounded-lg border border-slate-200 p-4 space-y-3"
+                                className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]"
                             >
                                 <div className="grid gap-3 md:grid-cols-2">
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor={`cert-name-${index}`}>Certification name</Label>
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label
+                                            htmlFor={`cert-name-${index}`}
+                                            className="text-[12px] font-medium leading-[13px] text-[#767980]"
+                                        >
+                                            Certification name
+                                        </Label>
                                         <Input
                                             id={`cert-name-${index}`}
                                             value={cert.certification_name}
                                             onChange={(event) =>
                                                 handleUpdateCertification(index, "certification_name", event.target.value)
                                             }
-                                            placeholder="e.g., UEFA B License"
+                                            placeholder="e.g. UEFA B License"
                                         />
                                     </div>
-                                    <div className="space-y-1.5">
-                                        <Label htmlFor={`cert-org-${index}`}>Issuing organization</Label>
+                                    <div className="flex flex-col gap-1.5">
+                                        <Label
+                                            htmlFor={`cert-org-${index}`}
+                                            className="text-[12px] font-medium leading-[13px] text-[#767980]"
+                                        >
+                                            Issuing organization
+                                        </Label>
                                         <Input
                                             id={`cert-org-${index}`}
                                             value={cert.issuing_organization || ""}
                                             onChange={(event) =>
                                                 handleUpdateCertification(index, "issuing_organization", event.target.value)
                                             }
-                                            placeholder="e.g., U.S. Soccer"
+                                            placeholder="e.g. U.S. Soccer"
                                         />
                                     </div>
                                 </div>
@@ -588,24 +602,27 @@ const Profile = () => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleRemoveCertification(index)}
-                                        className="text-red-600 hover:text-red-700"
+                                        className="text-destructive hover:text-destructive"
                                     >
-                                        <X className="h-4 w-4 mr-1" />
+                                        <X strokeWidth={1.5} aria-hidden="true" />
                                         Remove
                                     </Button>
                                 </div>
                             </div>
                         ))}
 
-                        <Button type="button" variant="outline" onClick={handleAddCertificationRow}>
-                            + Add certification
+                        <Button type="button" variant="outline" className="w-fit" onClick={handleAddCertificationRow}>
+                            <Plus strokeWidth={1.5} aria-hidden="true" />
+                            Add certification
                         </Button>
                     </div>
 
-                    <DialogFooter className="pt-2">
+                    <div className="h-px bg-[#EAEADF]" />
+
+                    <DialogFooter className="flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:space-x-0">
                         <Button
                             type="button"
-                            variant="ghost"
+                            variant="outline"
                             onClick={() => setCertDialogOpen(false)}
                             disabled={savingCerts}
                         >
@@ -644,12 +661,11 @@ const Profile = () => {
     }
 
     return (
-        <div className="mx-auto w-full max-w-[1000px] overflow-x-hidden px-4 pb-20 pt-2 md:px-0">
-            <div className="flex w-full min-w-0 flex-col gap-6 md:gap-8">
+        <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+            <div className="mx-auto flex w-full max-w-[1000px] min-w-0 flex-col gap-6">
                 <section className="flex w-full min-w-0 flex-col">
                     <CoachHeader
                         isCoachProfile
-                        className="pt-0"
                         isEditMode={isEditMode}
                         sportTheme={sportTheme}
                         onSendMessage={handleSendMessage}
@@ -664,8 +680,8 @@ const Profile = () => {
                         editedCoach={isEditMode ? editedCoach : undefined}
                         onBook={() => {
                             toast({
-                                title: "Book Yourself?",
-                                description: "This is your own profile. Share your profile link with athletes!",
+                                title: "This is your profile",
+                                description: "Share your profile link with athletes so they can book you.",
                             });
                         }}
                         onEdit={handleEdit}
@@ -675,67 +691,50 @@ const Profile = () => {
                     />
                 </section>
 
-                <div className="flex min-w-0 flex-col gap-6 md:gap-8 xl:flex-row">
-                    <div className="min-w-0 flex-1 space-y-6">
-                        <ErrorBoundary>
-                            <div className="min-w-0 space-y-3">
-                                <div className="flex flex-wrap items-center justify-between gap-3">
-                                    <h2 className="text-card-title text-foreground">Availability</h2>
-                                    <Button variant="outline" size="sm" asChild>
-                                        <Link to={ROUTES.AVAILABILITY}>Manage availability</Link>
-                                    </Button>
-                                </div>
-                                <div className="min-w-0 overflow-x-auto">
-                                    <CoachAvailabilitySection
-                                        coachId={coach.id}
-                                        allowEditing={false}
-                                        iconColor={sportTheme.iconColor}
-                                    />
-                                </div>
-                            </div>
-                        </ErrorBoundary>
+                <ErrorBoundary>
+                    <div className="flex min-w-0 flex-col gap-[10px]">
+                        <div className="flex justify-end">
+                            <Button variant="outline" size="sm" asChild>
+                                <Link to={ROUTES.AVAILABILITY}>Manage availability</Link>
+                            </Button>
+                        </div>
+                        <div className="min-w-0 overflow-x-auto">
+                            <CoachAvailabilitySection coachId={coach.id} allowEditing={false} />
+                        </div>
+                    </div>
+                </ErrorBoundary>
 
+                <div className="grid w-full min-w-0 grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
+                    <div className="flex min-w-0 flex-col gap-6">
                         <ErrorBoundary>
                             <CoachingPackages
                                 packages={packages}
                                 coachId={coach.id}
                                 coachName={coach.name}
                                 coachSport={coach.sport}
-                                iconColor={sportTheme.iconColor}
                             />
                         </ErrorBoundary>
 
                         <AboutSection
                             coachName={coach.name}
                             bio={editedCoach ? editedCoach.bio : coach.bio}
-                            iconColor={sportTheme.iconColor}
                             isEditMode
                             onBioChange={(bio) => handleFieldChange('bio', bio)}
                         />
 
-                        <div className="space-y-2">
-                            <div className="flex justify-end">
-                                <Button
-                                    size="sm"
-                                    variant="outline"
-                                    onClick={() => setCertDialogOpen(true)}
-                                >
-                                    Edit certifications
+                        <CertificationsSection
+                            certifications={coach.certifications}
+                            actions={
+                                <Button size="sm" variant="outline" onClick={() => setCertDialogOpen(true)}>
+                                    Edit
                                 </Button>
-                            </div>
-                            <CertificationsSection
-                                certifications={coach.certifications}
-                                iconColor={sportTheme.iconColor}
-                                certBg={sportTheme.certBg}
-                                certIcon={sportTheme.certIcon}
-                            />
-                        </div>
+                            }
+                        />
 
                         <TrainingSpecialization
                             specializations={coach.specialties}
                             sessionTypes={coach.session_types}
                             locations={coach.locations}
-                            iconColor={sportTheme.iconColor}
                         />
 
                         <ReviewsSection
@@ -748,7 +747,7 @@ const Profile = () => {
                         />
                     </div>
 
-                    <div className="w-full min-w-0 shrink-0 space-y-6 md:space-y-8 xl:w-[22rem]">
+                    <div className="flex min-w-0 flex-col gap-6">
                         <QuickInfo
                             responseTime={coach.response_time_hours}
                             sessionTypes={coach.session_types}

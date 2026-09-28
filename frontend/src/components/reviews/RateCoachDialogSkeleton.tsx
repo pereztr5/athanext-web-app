@@ -5,25 +5,20 @@ type RateCoachDialogSkeletonProps = {
   className?: string;
 };
 
+/** Placeholder for the rating and comment fields while existing feedback loads. */
 export const RateCoachDialogSkeleton = ({ className }: RateCoachDialogSkeletonProps) => (
-  <div className={cn("space-y-6", className)}>
-    <div className="space-y-2">
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-4 w-full" />
+  <div className={cn("flex flex-col gap-5", className)} aria-hidden="true">
+    <div className="flex flex-col gap-[10px]">
+      <Skeleton className="h-[18px] w-32 rounded-[4px] bg-[#EAEADF]" />
+      <div className="flex items-center gap-1.5">
+        {[1, 2, 3, 4, 5].map((i) => (
+          <Skeleton key={i} className="h-6 w-6 rounded-[4px] bg-[#EAEADF]" />
+        ))}
+      </div>
     </div>
-    <div className="flex items-center gap-3">
-      {[1, 2, 3, 4, 5].map((i) => (
-        <Skeleton key={i} className="h-8 w-8 rounded-full" />
-      ))}
-    </div>
-    <div className="space-y-2">
-      <Skeleton className="h-6 w-40" />
-      <Skeleton className="h-4 w-full" />
-      <Skeleton className="h-24 w-full rounded-lg" />
-    </div>
-    <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-      <Skeleton className="h-10 w-24 rounded-full" />
-      <Skeleton className="h-10 w-32 rounded-full" />
+    <div className="flex flex-col gap-[10px]">
+      <Skeleton className="h-[18px] w-32 rounded-[4px] bg-[#EAEADF]" />
+      <Skeleton className="h-[90px] w-full rounded-[8px] bg-[#F1F1E6]" />
     </div>
   </div>
 );

@@ -1,75 +1,64 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dumbbell, CheckCircle, MapPin, Video, Users } from "lucide-react";
+import { MapPin, Video } from "lucide-react";
+import { CoachProfileCard, CoachProfileCardHeader, CoachProfileChip } from "./CoachProfileCard";
 
 interface TrainingSpecializationProps {
   specializations?: string[];
   sessionTypes?: string[];
   locations?: string[];
-  iconColor: string;
+  /** @deprecated no longer used by the brand-kit card */
+  iconColor?: string;
 }
+
+/** "in-person" -> "In person" */
+const formatSessionType = (value: string) => {
+  const spaced = value.replace(/-/g, " ").trim().toLowerCase();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};
+
+const subheading = "text-[16px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
 
 export function TrainingSpecialization({
   specializations = [],
   sessionTypes = [],
   locations = [],
-  iconColor
 }: TrainingSpecializationProps) {
-  // Default specializations based on image
-  const defaultSpecializations = [
-    "Shot Stopping & Positioning",
-    "Distribution & Footwork",
-    "Collegiate Preparation",
-    "Advanced Shot Stopping"
-  ];
-
-  const specs = specializations.length > 0 ? specializations : defaultSpecializations;
-
   return (
-    <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Dumbbell className={`h-5 w-5 ${iconColor}`} />
-          Training Specialization + Format
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="space-y-6">
-          {/* Specializations */}
-          <div>
-            <h4 className="text-sm font-semibold mb-3">Specializations</h4>
-            <div className="grid md:grid-cols-2 gap-2">
-              {specs.map((spec, index) => (
-                <div key={index} className="flex items-center gap-2">
-                  <CheckCircle className={`h-4 w-4 ${iconColor} flex-shrink-0`} />
-                  <span className="text-sm">{spec}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+    <CoachProfileCard>
+      <CoachProfileCardHeader title="Training specialization and format" />
 
-          {/* Training Format */}
-          {sessionTypes.length > 0 && (
-            <div>
-              <h4 className="text-sm font-semibold mb-3">Training Format</h4>
-              <div className="space-y-2">
-                {sessionTypes.map((type, index) => (
-                  <div key={index} className="flex items-start gap-2">
-                    {type.toLowerCase().includes('virtual') ? (
-                      <Video className={`h-4 w-4 ${iconColor} mt-0.5 flex-shrink-0`} />
-                    ) : (
-                      <MapPin className={`h-4 w-4 ${iconColor} mt-0.5 flex-shrink-0`} />
-                    )}
-                    <span className="text-sm font-medium">{type}</span>
-                    {type.toLowerCase().includes('person') && locations.length > 0 && (
-                      <span className="text-sm text-muted-foreground">: {locations[0]}</span>
-                    )}
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
+      <div className="flex flex-col gap-[10px]">
+        <h3 className={subheading}>Specializations</h3>
+        {specializations.length > 0 ? (
+          <div className="flex flex-wrap gap-2">
+            {specializations.map((spec, index) => (
+              <CoachProfileChip key={`${spec}-${index}`} label={spec} />
+            ))}
+          </div>
+        ) : (
+          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">None set</p>
+        )}
+      </div>
+
+      {sessionTypes.length > 0 && (
+        <div className="flex flex-col gap-[10px]">
+          <h3 className={subheading}>Training format</h3>
+          <ul className="flex flex-col gap-2">
+            {sessionTypes.map((type, index) => {
+              const isVirtual = type.toLowerCase().includes("virtual") || type.toLowerCase().includes("online");
+              const Icon = isVirtual ? Video : MapPin;
+              return (
+                <li key={`${type}-${index}`} className="flex items-start gap-2 text-[14px] leading-[18px] tracking-[-0.03em]">
+                  <Icon className="mt-px size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="font-medium text-[#1A202C]">{formatSessionType(type)}</span>
+                  {type.toLowerCase().includes("person") && locations.length > 0 && (
+                    <span className="text-[#767980]">{locations[0]}</span>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
         </div>
-      </CardContent>
-    </Card>
+      )}
+    </CoachProfileCard>
   );
 }

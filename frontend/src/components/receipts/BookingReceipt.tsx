@@ -1,108 +1,107 @@
 import React from 'react';
-import logo from '@/assets/athaLink-logo.png';
+import logo from '@/assets/AthaNext-Logo.svg';
 import { strings } from "@/config/strings";
+import { BrandPill } from "@/components/brand";
 
 interface BookingReceiptProps {
   data: {
-    bookingId: string;
+    /** Short booking reference ("#1A2B3C4D"); empty when there is no booking ID. */
+    bookingRef: string;
     issueDateLabel: string;
     sessionName: string;
-    sessionDate: string;
-    sessionDay: string;
-    sessionTime: string;
-    duration: string;
-    type: string;
-    location: string;
     coachName: string;
-    coachTitle?: string;
-    coachInitials: string;
-    basePriceLabel: string;
+    type: string;
+    /** "Monday, Mar 9, 2026" */
+    dateLabel: string;
+    /** "4:00 to 5:00 PM, 60 min" */
+    timeLabel: string;
+    /** "In person" / "Online" */
+    locationLabel: string;
+    /** Slot base price. */
+    sessionPriceLabel: string;
+    /** Everything added on top of the base price (platform + processing fees). */
+    feeLabel: string;
+    /** Fee-inclusive total. */
     totalPaidLabel: string;
+    isPaid: boolean;
+    supportEmail?: string;
   };
 }
 
+const labelClass = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+const valueClass = "text-[14px] leading-[18px] tracking-[-0.03em]";
+
 export const BookingReceipt: React.FC<BookingReceiptProps> = ({ data }) => {
+  const title = data.coachName ? `${data.sessionName} with ${data.coachName}` : data.sessionName;
+
   return (
-    <div className="bg-white text-gray-900 rounded-2xl border border-gray-200 shadow-md px-6 py-6 sm:px-10 sm:py-8 max-w-4xl mx-auto">
+    <div className="mx-auto flex max-w-4xl flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] font-sans tracking-[-0.03em] text-[#1A202C]">
       {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pb-5 border-b border-gray-200">
-        <div className="flex items-center" aria-label={strings.brand.name}>
-          <span className="sr-only">{strings.brand.name}</span>
-          <img src={logo} alt="" className="h-12 w-auto" />
-        </div>
-        <div className="text-right text-sm text-gray-600 leading-tight flex flex-col justify-center">
-          <p className="text-lg font-bold uppercase tracking-tight text-gray-900">Receipt</p>
-          {/* <p>Booking ID: {data.bookingId || '—'}</p> */}
-          <p>Date Issued: {data.issueDateLabel || '—'}</p>
+      <div className="flex items-center justify-between">
+        <img src={logo} alt={strings.brand.name} className="h-7 w-auto" />
+        <div className="flex flex-col items-end gap-1.5">
+          <span className="text-[20px] font-medium leading-[18px] tracking-[-0.05em]">Receipt</span>
+          <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+            Issued {data.issueDateLabel}
+            {data.bookingRef ? ` · ${data.bookingRef}` : ''}
+          </span>
         </div>
       </div>
 
-      {/* Session Information */}
-      <div className="py-5 border-b border-gray-200 space-y-4">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Session Information</div>
-        <div className="space-y-1">
-          <p className="text-base font-semibold text-gray-900">{data.sessionName || 'Training Session'}</p>
+      <div className="h-px bg-[#EAEADF]" />
+
+      {/* Session */}
+      <div className="flex flex-col gap-3.5">
+        <span className="text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#A3A6AB]">Session</span>
+        <div className="flex items-center gap-2">
+          <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{title}</span>
+          <BrandPill tone="blue">{data.type}</BrandPill>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-sm text-gray-700">
-          <div className="space-y-1">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">Date</p>
-            <p className="font-semibold text-gray-900">{data.sessionDate || '—'}</p>
+        <div className="grid grid-cols-3 gap-x-6 gap-y-3.5">
+          <div className="flex flex-col gap-1.5">
+            <span className={labelClass}>Date</span>
+            <span className={valueClass}>{data.dateLabel}</span>
           </div>
-          <div className="space-y-1">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">Day</p>
-            <p className="font-semibold text-gray-900">{data.sessionDay || '—'}</p>
+          <div className="flex flex-col gap-1.5">
+            <span className={labelClass}>Time</span>
+            <span className={valueClass}>{data.timeLabel}</span>
           </div>
-          <div className="space-y-1">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">Time</p>
-            <p className="font-semibold text-gray-900">{data.sessionTime || '—'}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">Duration</p>
-            <p className="font-semibold text-gray-900">{data.duration || '—'}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">Type</p>
-            <p className="font-semibold text-gray-900">{data.type || '—'}</p>
-          </div>
-          <div className="space-y-1">
-            <p className="text-gray-500 text-xs uppercase tracking-wide">Location</p>
-            <p className="font-semibold text-gray-900">{data.location || '—'}</p>
+          <div className="flex flex-col gap-1.5">
+            <span className={labelClass}>Location</span>
+            <span className={valueClass}>{data.locationLabel}</span>
           </div>
         </div>
       </div>
 
-      {/* Coach */} 
-      <div className="py-5 border-b border-gray-200"> 
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Coach</div> 
-        <div className="flex items-center gap-3"> 
-          <div className="flex flex-col justify-center leading-tight">
-            <p className="font-semibold text-gray-900">{data.coachName || 'Your Coach'}</p> 
-            {data.coachTitle && <p className="text-sm text-gray-600">{data.coachTitle}</p>} 
-          </div>
-        </div>
-      </div>
+      <div className="h-px bg-[#EAEADF]" />
 
-      {/* Payment Summary */}
-      <div className="py-5 space-y-3">
-        <div className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Payment Summary</div>
-        <div className="border border-blue-300 rounded-xl p-4 sm:p-5 space-y-3 shadow-[0_8px_24px_rgba(37,99,235,0.05)]">
-          <div className="flex items-center justify-between text-sm text-gray-800">
-            <span>Base Session Price</span>
-            <span className="font-semibold text-gray-900">{data.basePriceLabel}</span>
-          </div>
-          <div className="pt-3 border-t border-blue-200 flex items-center justify-between text-base">
-            <span className="font-semibold text-gray-900">Total Paid</span>
-            <span className="font-bold text-blue-700">{data.totalPaidLabel}</span>
-          </div>
+      {/* Payment */}
+      <div className="flex flex-col gap-3 rounded-[8px] bg-[#F4F4EB] px-5 py-4">
+        <div className={`flex justify-between ${valueClass}`}>
+          <span className="text-[#484D56]">Session</span>
+          <span>{data.sessionPriceLabel}</span>
         </div>
+        <div className={`flex justify-between ${valueClass}`}>
+          <span className="text-[#484D56]">Platform fee</span>
+          <span>{data.feeLabel}</span>
+        </div>
+        <div className="h-px bg-[#EAEADF]" />
+        <div className="flex items-baseline justify-between">
+          <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">Total paid</span>
+          <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{data.totalPaidLabel}</span>
+        </div>
+        {data.isPaid && (
+          <div className="flex justify-end">
+            <BrandPill tone="green">Paid</BrandPill>
+          </div>
+        )}
       </div>
 
       {/* Footer */}
-      <div className="pt-4 text-center text-xs text-gray-600 space-y-1 leading-relaxed">
-        <p className="font-semibold text-gray-800">Thank you for booking with {strings.brand.name}!</p>
-        <p>Questions about your booking? Contact us at support@athanext.com</p>
-        <p className="text-gray-500">This is an official receipt for your training session booking.</p>
-      </div>
+      <span className="text-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+        Thanks for booking with {strings.brand.name}.
+        {data.supportEmail ? ` Questions go to ${data.supportEmail}` : ''}
+      </span>
     </div>
   );
 };

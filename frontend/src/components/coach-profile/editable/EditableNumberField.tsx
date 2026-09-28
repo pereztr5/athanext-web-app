@@ -69,8 +69,8 @@ export const EditableNumberField: React.FC<EditableNumberFieldProps> = ({
                 <div className="flex items-center">
                     {icon}
                 </div>
-                <div className="">
-                    <label className="text-sm font-medium">{label}</label>
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{label}</label>
                     {inputElement}
                 </div>
             </div>

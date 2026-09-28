@@ -33,18 +33,19 @@ class ErrorBoundary extends Component<Props, State> {
       }
 
       return (
-        <div className="flex flex-col items-center justify-center min-h-[200px] p-6 text-center">
-          <AlertTriangle className="h-12 w-12 text-destructive mb-4" />
-          <h2 className="text-lg font-semibold mb-2">Something went wrong</h2>
-          <p className="text-muted-foreground mb-4">
-            We apologize for the inconvenience. Please try refreshing the page.
-          </p>
-          <Button 
-            onClick={() => window.location.reload()}
-            variant="outline"
-          >
-            Refresh Page
-          </Button>
+        <div className="flex min-h-[200px] items-center justify-center p-6 font-sans tracking-[-0.03em]">
+          <div className="flex w-full max-w-md flex-col items-center gap-2.5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center">
+            <AlertTriangle strokeWidth={1.5} className="h-8 w-8 text-destructive" />
+            <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+              Something went wrong
+            </h2>
+            <p className="text-[14px] leading-[18px] text-[#767980]">
+              Refreshing the page usually fixes this.
+            </p>
+            <Button className="mt-2.5" onClick={() => window.location.reload()}>
+              Refresh page
+            </Button>
+          </div>
         </div>
       );
     }

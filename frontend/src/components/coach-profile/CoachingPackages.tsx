@@ -1,5 +1,4 @@
 import { useState, useMemo } from 'react';
-import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import type { CoachPackage } from '@/hooks/useCoachPackages';
 import { useToast } from '@/hooks/use-toast';
@@ -7,10 +6,11 @@ import { useNavigate } from 'react-router-dom';
 import { strings } from '@/config/strings';
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
-import { Package } from 'lucide-react';
+import { Check } from 'lucide-react';
+import { BrandPill } from '@/components/brand';
+import { formatWholePrice } from '@/utils/sessionFormatting';
 import { packagesAPI } from "@/api/packages";
 import { apiClient } from "@/api/client";
-import { COACH_PROFILE_THEMES } from "@/config/colors";
 
 interface CoachingPackagesProps {
   packages?: CoachPackage[];
@@ -23,9 +23,6 @@ interface CoachingPackagesProps {
 export const CoachingPackages = ({
   packages,
   coachId,
-  coachName,
-  iconColor,
-  coachSport,
 }: CoachingPackagesProps) => {
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -33,27 +30,20 @@ export const CoachingPackages = ({
   const { userProfile } = useAuth();
   const { isCoach: isCoachPersona } = useRole();
 
-  const derivedIconColor = useMemo(() => {
-    if (iconColor) return iconColor;
-    const sport = (coachSport || "").toLowerCase();
-    const isSoccer = ["soccer", "football", "scoccer"].some((s) => sport.includes(s));
-    const isRowing = sport.includes("row");
-    if (isSoccer) return COACH_PROFILE_THEMES.soccer.iconColor;
-    if (isRowing) return COACH_PROFILE_THEMES.rowing.iconColor;
-    return COACH_PROFILE_THEMES.default.iconColor;
-  }, [iconColor, coachSport]);
-
+  // Ordered by display order; the first package carries the section's one primary action.
   const resolvedPackages = useMemo(() => {
-    return (packages || []).map((pkg) => ({
-      id: pkg.id,
-      title: pkg.package_name,
-      description: pkg.description || '',
-      price: `$${(pkg.total_price / 100).toFixed(2)}`,
-      sessions: `${pkg.session_count} sessions`,
-      duration: `${pkg.validity_days} days`,
-      highlighted: pkg.display_order === 1 || pkg.is_active,
-      source: pkg,
-    }));
+    return [...(packages || [])]
+      .sort(
+        (a, b) => (a.display_order ?? Number.MAX_SAFE_INTEGER) - (b.display_order ?? Number.MAX_SAFE_INTEGER)
+      )
+      .map((pkg) => ({
+        id: pkg.id,
+        title: pkg.package_name,
+        description: pkg.description || '',
+        price: formatWholePrice(pkg.total_price / 100),
+        perSession: formatWholePrice(pkg.price_per_session / 100),
+        source: pkg,
+      }));
   }, [packages]);
 
   const handlePurchase = async (pkgId: string, sourcePkg?: CoachPackage) => {
@@ -119,70 +109,76 @@ export const CoachingPackages = ({
   };
 
   return (
-    <div className="w-full rounded-2xl bg-white shadow-sm border border-slate-200 p-6 space-y-4">
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <Package className={`h-5 w-5 ${derivedIconColor}`} />
-          <h2 className="text-2xl font-semibold text-slate-900">Coaching Packages</h2>
-        </div>
-        <p className="text-sm text-slate-600">
+    <section className="w-full rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] font-sans text-[#1A202C] tracking-[-0.03em]">
+      <div className="flex flex-col gap-2">
+        <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Coaching packages</h2>
+        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
           Choose the package that fits your journey. Every path to growth starts with a single step.
         </p>
       </div>
 
       {resolvedPackages.length === 0 ? (
-        <div className="text-sm text-slate-600 p-4 text-center font-bold">
-          * No packages are currently provided by this coach.
+        <div className="mt-5 rounded-[8px] bg-[#F4F4EB] px-5 py-6 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          No packages are currently provided by this coach.
         </div>
       ) : (
-      <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
-        {resolvedPackages.map((pkg) => (
-          <div
-            key={pkg.id}
-            className={cn(
-              'relative rounded-2xl border bg-slate-50 p-5 flex flex-col gap-3 shadow-sm',
-              pkg.highlighted
-                ? 'border-blue-400 shadow-[0_10px_30px_rgba(37,99,235,0.15)] bg-white'
-                : 'border-slate-200'
-            )}
-          >
-            {'badge' in pkg && pkg.badge && (
-              <span className="absolute -top-3 left-1/2 -translate-x-1/2 rounded-full bg-blue-100 text-blue-700 text-xs font-semibold px-3 py-1 shadow-sm">
-                {String(pkg.badge)}
-              </span>
-            )}
-            <div className="space-y-1 pt-2">
-              <h3 className="text-lg font-semibold text-slate-900">{pkg.title}</h3>
-              <p className="text-sm text-slate-600">{pkg.description}</p>
-            </div>
-            <div className="space-y-1">
-              <p className="text-3xl font-semibold text-slate-900">{pkg.price}</p>
-              <div className="flex items-center gap-3 text-sm text-slate-600">
-                <span>• {pkg.sessions}</span>
-                <span>• {pkg.duration}</span>
-              </div>
-            </div>
-            {!isCoachPersona && (
-              <div className="mt-auto">
-                <Button
-                  className={cn(
-                    'w-full rounded-full text-sm font-semibold',
-                    pkg.highlighted
-                      ? 'bg-blue-600 hover:bg-blue-700 text-white'
-                      : 'bg-white hover:bg-slate-100 text-slate-900 border border-slate-200'
+        <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {resolvedPackages.map((pkg, index) => {
+            const isPrimary = index === 0;
+            const isPurchasing = purchasing === pkg.id;
+            const features = Array.isArray(pkg.source.features) ? pkg.source.features : [];
+            return (
+              <div
+                key={pkg.id}
+                className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[25px]"
+              >
+                <div className="flex flex-col gap-2">
+                  <h3 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">{pkg.title}</h3>
+                  {pkg.description && (
+                    <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{pkg.description}</p>
                   )}
-                  onClick={() => handlePurchase(pkg.id, (pkg as any).source)}
-                  disabled={purchasing === pkg.id}
-                >
-                  {purchasing === pkg.id ? strings.packages.processing : 'Select Package'}
-                </Button>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{pkg.price}</span>
+                  <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                    {pkg.perSession} per session
+                  </span>
+                </div>
+                <div className="flex flex-wrap gap-1.5">
+                  <BrandPill tone="neutral">
+                    {pkg.source.session_count} × {pkg.source.duration_minutes} min
+                  </BrandPill>
+                  <BrandPill tone="neutral">Valid {pkg.source.validity_days} days</BrandPill>
+                </div>
+                <div className="flex flex-1 flex-col gap-2 text-[14px] leading-[18px] tracking-[-0.03em]">
+                  {features.map((feature, idx) => (
+                    <div key={idx} className="flex items-center gap-2">
+                      <Check strokeWidth={1.5} className="h-4 w-4 flex-none text-[#0054B4]" aria-hidden="true" />
+                      <span>{feature}</span>
+                    </div>
+                  ))}
+                </div>
+                {!isCoachPersona && (
+                  <button
+                    type="button"
+                    onClick={() => handlePurchase(pkg.id, pkg.source)}
+                    disabled={isPurchasing}
+                    className={cn(
+                      'flex h-[34px] w-full items-center justify-center rounded-[8px] border px-4 text-[16px] font-medium tracking-[-0.03em] transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F4EB]',
+                      isPrimary
+                        ? 'border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#004390]'
+                        : 'border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] hover:bg-[#F1F1E6]'
+                    )}
+                  >
+                    {isPurchasing ? strings.packages.processing : `Choose ${pkg.title}`}
+                  </button>
+                )}
               </div>
-            )}
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
       )}
-    </div>
+    </section>
   );
 };
 

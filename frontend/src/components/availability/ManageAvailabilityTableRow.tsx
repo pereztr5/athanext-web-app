@@ -12,7 +12,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { BrandPill } from '@/components/brand';
+import { formatSlotTime } from '@/utils/sessionFormatting';
 import {
   DURATION_OPTIONS,
   SESSION_TYPE_OPTIONS,
@@ -77,7 +79,7 @@ export const ManageAvailabilityTableRow = ({
   const isEnabled = slot?.is_enabled ?? false;
   const cellClass = "px-1 py-2 align-middle";
   const fieldClass =
-    "h-[38px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C] shadow-none placeholder:text-[#A3A6AB] focus-visible:ring-0 disabled:opacity-100";
+    "h-[38px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C] shadow-none placeholder:text-[#A3A6AB] focus-visible:ring-0 disabled:opacity-100";
   const dateLabel = slot?.occurrence_date
     ? parseISODateLocal(slot.occurrence_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
@@ -99,13 +101,13 @@ export const ManageAvailabilityTableRow = ({
             className="size-4 rounded-[4px] border-[#D9D9CF] bg-[#FDFDFC] data-[state=checked]:border-[#6698D2] data-[state=checked]:bg-[#0054B4] data-[state=checked]:text-white"
           />
           <div className="flex flex-col leading-tight">
-            <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">{dayName}</span>
-            {dateLabel && <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">{dateLabel}</span>}
+            <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{dayName}</span>
+            {dateLabel && <span className="mt-[2px] text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">{dateLabel}</span>}
             {isPastDate && (
-              <span className="text-[11px] font-semibold text-red-600">Unavailable</span>
+              <BrandPill tone="neutral" className="mt-1 w-fit">Unavailable</BrandPill>
             )}
             {isBookingLocked && (
-              <span className="text-[11px] font-semibold text-amber-700">Booked/Reserved</span>
+              <BrandPill tone="neutral" className="mt-1 w-fit">Booked or reserved</BrandPill>
             )}
           </div>
         </div>
@@ -200,27 +202,24 @@ export const ManageAvailabilityTableRow = ({
       </td>
 
       <td className={`${cellClass}`}>
-        <Input
-          type="time"
-          value={slot?.start_time || '10:00'}
-          onChange={(e) => onChange(dayOfWeek, 'start_time', e.target.value, slotIndex)}
-          disabled={inputDisabled}
-          className={`${fieldClass} w-[92px] ${slotError?.start_time ? "border border-[#FB4747]" : ""}`}
-          data-week={weekISO}
-          data-day={dayOfWeek}
-          data-slot={slotIndex}
-          data-field="start_time"
-          ref={(el) => registerFocusRef?.(weekISO, dayOfWeek, slotIndex, 'start_time', el)}
-        />
-      </td>
-
-      <td className={`${cellClass}`}>
-        <Input
-          type="time"
-          value={slot?.end_time || '11:00'}
-          disabled
-          className="h-[38px] w-[92px] rounded-[8px] border-0 bg-[#F4F4EB] px-[10px] text-[14px] text-[#A3A6AB] shadow-none"
-        />
+        <div className="flex items-center gap-2">
+          <Input
+            type="time"
+            aria-label="Start time"
+            value={slot?.start_time || '10:00'}
+            onChange={(e) => onChange(dayOfWeek, 'start_time', e.target.value, slotIndex)}
+            disabled={inputDisabled}
+            className={`${fieldClass} w-[92px] ${slotError?.start_time ? "border border-[#FB4747]" : ""}`}
+            data-week={weekISO}
+            data-day={dayOfWeek}
+            data-slot={slotIndex}
+            data-field="start_time"
+            ref={(el) => registerFocusRef?.(weekISO, dayOfWeek, slotIndex, 'start_time', el)}
+          />
+          <span className="whitespace-nowrap text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            to {formatSlotTime(slot?.end_time || '11:00')}
+          </span>
+        </div>
       </td>
 
       <td className={`${cellClass}`}>
@@ -281,29 +280,29 @@ export const ManageAvailabilityTableRow = ({
       </td>
 
       <td className={`${cellClass}`}>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center justify-end gap-3">
           {onAddSlot && (
             <button
-              className="text-[#0054B4] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
               title="Duplicate this slot"
+              aria-label="Duplicate this slot"
               onClick={() => onAddSlot(slot)}
               type="button"
               disabled={isLocked}
             >
-              <Plus className="size-4" strokeWidth={1.75} />
+              <Plus className="size-4" strokeWidth={1.5} />
             </button>
           )}
           {onDeleteSlot && canDelete && (
             <button
-              className="text-[#767980] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
               title="Delete this slot"
+              aria-label="Delete this slot"
               onClick={onDeleteSlot}
               type="button"
               disabled={isLocked}
             >
-              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 6h18M9 6V4h6v2m-8 0v12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2V6" />
-              </svg>
+              <Trash2 className="size-4" strokeWidth={1.5} />
             </button>
           )}
         </div>

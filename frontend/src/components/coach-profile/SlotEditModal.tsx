@@ -4,7 +4,7 @@
  */
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogClose } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -188,161 +188,179 @@ export function SlotEditModal({
     }
   };
 
+  const labelClass = 'text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]';
+  const dateLabel = (() => {
+    if (!overrideDate) return null;
+    const parsed = new Date(`${overrideDate}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return overrideDate;
+    return parsed.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric', year: 'numeric' });
+  })();
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-xl md:max-w-2xl rounded-2xl p-6 md:p-7">
-        <DialogHeader className="space-y-2">
-          <div className="flex items-start justify-between gap-4">
-            <DialogTitle className="text-xl md:text-2xl font-bold text-slate-900">
-              Edit Time Slot{overrideDate ? ` — ${overrideDate}` : ''}
-            </DialogTitle>
-            <DialogClose className="text-slate-500 hover:text-slate-700 transition" />
-          </div>
-          
+      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] sm:max-w-xl md:max-w-2xl [&>button]:right-[17px] [&>button]:top-[19px]">
+        <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
+          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+            Edit time slot
+          </DialogTitle>
+          <DialogDescription className={dateLabel ? 'text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]' : 'sr-only'}>
+            {dateLabel ?? 'Change this slot for one date'}
+          </DialogDescription>
         </DialogHeader>
-        {!slot ? (
-          <div className="text-sm text-muted-foreground">No slot selected.</div>
-        ) : (
-          <div className="space-y-6 max-h-[65vh] overflow-y-auto pr-1">
-            <div
-              className="grid grid-cols-1 sm:grid-cols-2 gap-4 md:gap-5 rounded-xl border border-slate-100 bg-slate-50/60 p-4"
-              style={{ opacity: !isEnabled ? 0.6 : 1 }}
-            >
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Session name</Label>
-                <Input
-                  value={sessionName}
-                  onChange={(e) => setSessionName(e.target.value)}
-                  disabled={!isEnabled}
-                  className="rounded-full h-11"
-                  placeholder="Enter session name"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Price</Label>
-                <Input
-                  type="number"
-                  min={0}
-                  step="1"
-                  value={price}
-                  onChange={(e) => {
-                    const raw = e.target.value;
-                    if (raw === '') {
-                      setPrice('');
-                      return;
-                    }
-                    const next = Number(raw);
-                    if (Number.isFinite(next)) {
-                      setPrice(Number(next.toFixed(0)));
-                    }
-                  }}
-                  disabled={!isEnabled}
-                  className="rounded-full h-11"
-                  placeholder="0"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Duration</Label>
-                <Select
-                  value={duration === '' ? '' : String(duration)}
-                  onValueChange={(v) => {
-                    const nextDuration = Number(v);
-                    setDuration(nextDuration);
-                    updateEndTime(startTime, nextDuration);
-                  }}
-                  disabled={!isEnabled}
-                >
-                  <SelectTrigger className="rounded-full h-11">
-                    <SelectValue placeholder="Select duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {DURATION_OPTIONS.map((d) => (
-                      <SelectItem key={d} value={String(d)}>{d} min</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Start time</Label>
-                <Input
-                  type="time"
-                  value={startTime}
-                  onChange={(e) => {
-                    const nextStart = normalizeTimeFormat(e.target.value);
-                    setStartTime(nextStart);
-                    updateEndTime(nextStart, duration);
-                  }}
-                  disabled={!isEnabled}
-                  className="rounded-full h-11"
-                />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">End time</Label>
-                <Input type="time" value={endTime} disabled className="rounded-full h-11 bg-gray-50" />
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Session type</Label>
-                <Select value={sessionType || ''} onValueChange={(v) => setSessionType(v as any)} disabled={!isEnabled}>
-                  <SelectTrigger className="rounded-full h-11">
-                    <SelectValue placeholder="Select type" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {SESSION_TYPE_OPTIONS.map((t) => (
-                      <SelectItem key={t} value={t}>{t === 'individual' ? 'Individual' : 'Group'}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Pillar</Label>
-                <Select value={pillarSlot} onValueChange={(v) => setPillarSlot(v)} disabled={!isEnabled || sportPillars.length === 0}>
-                  <SelectTrigger className="rounded-full h-11">
-                    <SelectValue placeholder={sportPillars.length ? 'Select pillar' : 'No pillars'} />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {sportPillars.map((p) => (
-                      <SelectItem key={p.id} value={p.title || ''}>
-                        {p.title || 'Untitled'}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label className="text-sm font-semibold text-slate-800">Location</Label>
-                <Select value={location || ''} onValueChange={(v) => setLocation(v as any)} disabled={!isEnabled}>
-                  <SelectTrigger className="rounded-full h-11">
-                    <SelectValue placeholder="Select location" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {LOCATION_OPTIONS.map((option) => (
-                      <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-              
-            </div>
-            
 
-            <div className="flex flex-col sm:flex-row justify-end gap-3 pt-2">
-              <div className="flex items-center gap-3 sm:mr-auto mb-2 sm:mb-0">
-            <div className="flex items-center gap-2 text-sm font-semibold text-slate-800 bg-blue-50 border border-blue-100 rounded-full px-3 py-2">
-              <Checkbox id="slotEnabled" checked={isEnabled} onCheckedChange={(checked) => setIsEnabled(checked === true)} />
-              <Label className="cursor-pointer" htmlFor="slotEnabled">
-                Enable this slot
-              </Label>
+        <div className="h-px bg-[#EAEADF]" />
+
+        {!slot ? (
+          <p className="px-[25px] py-5 text-[14px] leading-[18px] text-[#767980]">No slot selected.</p>
+        ) : (
+          <>
+            <div className="max-h-[60vh] overflow-y-auto px-[25px] py-5">
+              <div
+                className="grid grid-cols-1 gap-4 sm:grid-cols-2"
+                style={{ opacity: !isEnabled ? 0.6 : 1 }}
+              >
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="slot-session-name" className={labelClass}>Session name</Label>
+                  <Input
+                    id="slot-session-name"
+                    value={sessionName}
+                    onChange={(e) => setSessionName(e.target.value)}
+                    disabled={!isEnabled}
+                    placeholder="Enter session name"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="slot-price" className={labelClass}>Price</Label>
+                  <Input
+                    id="slot-price"
+                    type="number"
+                    min={0}
+                    step="1"
+                    value={price}
+                    onChange={(e) => {
+                      const raw = e.target.value;
+                      if (raw === '') {
+                        setPrice('');
+                        return;
+                      }
+                      const next = Number(raw);
+                      if (Number.isFinite(next)) {
+                        setPrice(Number(next.toFixed(0)));
+                      }
+                    }}
+                    disabled={!isEnabled}
+                    placeholder="0"
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className={labelClass}>Duration</Label>
+                  <Select
+                    value={duration === '' ? '' : String(duration)}
+                    onValueChange={(v) => {
+                      const nextDuration = Number(v);
+                      setDuration(nextDuration);
+                      updateEndTime(startTime, nextDuration);
+                    }}
+                    disabled={!isEnabled}
+                  >
+                    <SelectTrigger aria-label="Duration">
+                      <SelectValue placeholder="Select duration" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {DURATION_OPTIONS.map((d) => (
+                        <SelectItem key={d} value={String(d)}>{d} min</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="slot-start-time" className={labelClass}>Start time</Label>
+                  <Input
+                    id="slot-start-time"
+                    type="time"
+                    value={startTime}
+                    onChange={(e) => {
+                      const nextStart = normalizeTimeFormat(e.target.value);
+                      setStartTime(nextStart);
+                      updateEndTime(nextStart, duration);
+                    }}
+                    disabled={!isEnabled}
+                  />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="slot-end-time" className={labelClass}>End time</Label>
+                  <Input id="slot-end-time" type="time" value={endTime} disabled className="bg-[#F4F4EB]" />
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className={labelClass}>Session type</Label>
+                  <Select value={sessionType || ''} onValueChange={(v) => setSessionType(v as any)} disabled={!isEnabled}>
+                    <SelectTrigger aria-label="Session type">
+                      <SelectValue placeholder="Select type" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {SESSION_TYPE_OPTIONS.map((t) => (
+                        <SelectItem key={t} value={t}>{t === 'individual' ? 'Individual' : 'Group'}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className={labelClass}>Pillar</Label>
+                  <Select value={pillarSlot} onValueChange={(v) => setPillarSlot(v)} disabled={!isEnabled || sportPillars.length === 0}>
+                    <SelectTrigger aria-label="Pillar">
+                      <SelectValue placeholder={sportPillars.length ? 'Select pillar' : 'No pillars'} />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {sportPillars.map((p) => (
+                        <SelectItem key={p.id} value={p.title || ''}>
+                          {p.title || 'Untitled'}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex flex-col gap-1.5">
+                  <Label className={labelClass}>Location</Label>
+                  <Select value={location || ''} onValueChange={(v) => setLocation(v as any)} disabled={!isEnabled}>
+                    <SelectTrigger aria-label="Location">
+                      <SelectValue placeholder="Select location" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {LOCATION_OPTIONS.map((option) => (
+                        <SelectItem key={option.value} value={option.value}>{option.label}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="mt-5 flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] p-3">
+                <Checkbox
+                  id="slotEnabled"
+                  checked={isEnabled}
+                  onCheckedChange={(checked) => setIsEnabled(checked === true)}
+                  className="mt-px"
+                />
+                <div className="flex flex-col gap-1">
+                  <Label className="cursor-pointer text-[14px] font-medium leading-[18px] text-[#1A202C]" htmlFor="slotEnabled">
+                    Enable this slot
+                  </Label>
+                  <p className="text-[12px] leading-[14px] text-[#767980]">Disabled slots stay hidden from booking until you turn them back on.</p>
+                </div>
+              </div>
             </div>
-            <p className="text-xs text-slate-500">Disabled slots stay hidden from booking until enabled.</p>
-          </div>
-              <Button variant="ghost" onClick={() => onOpenChange(false)} className="rounded-full px-4">
+
+            <div className="h-px bg-[#EAEADF]" />
+
+            <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
+              <Button variant="outline" onClick={() => onOpenChange(false)}>
                 Cancel
               </Button>
-              <Button onClick={handleSave} disabled={!canSubmit()} className="rounded-full px-5">
+              <Button onClick={handleSave} disabled={!canSubmit()}>
                 Save
               </Button>
             </div>
-          </div>
+          </>
         )}
       </DialogContent>
     </Dialog>

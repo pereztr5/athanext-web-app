@@ -16,6 +16,16 @@ import { ROUTES } from "@/routes";
 
 const PERSONAS = ["athlete", "parent", "coach"] as const;
 
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+
+const EmptyNote = ({ children }: { children: string }) => (
+  <p className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+    {children}
+  </p>
+);
+
 export default function AdminAccounts() {
   const { isAdmin, ready: adminReady } = useIsAdmin();
   const { user, initialCheckComplete, profileReady, loading } = useAuth();
@@ -100,7 +110,7 @@ export default function AdminAccounts() {
   if (!initialCheckComplete || !profileReady || loading || !adminReady) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-primary" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
       </div>
     );
   }
@@ -117,16 +127,17 @@ export default function AdminAccounts() {
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[880px] flex-col gap-6 px-4 py-8">
-      <div>
-        <h1 className="text-[28px] font-medium tracking-[-1px] text-[#1A202C]">Accounts</h1>
-        <p className="mt-1 text-[14px] text-[#767980]">
+    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+      <header className="flex flex-col gap-[10px]">
+        <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Accounts</h1>
+        <p className="max-w-[720px] text-[16px] font-normal leading-[20px] tracking-[-0.48px] text-[#767980]">
           Search for a person, then change their name, email, or persona. Deactivate keeps their sessions. Delete removes the login and does not refund payments.
         </p>
-      </div>
+      </header>
 
       <form
-        className="flex gap-2"
+        className="flex gap-[10px]"
         onSubmit={(event) => {
           event.preventDefault();
           search.mutate();
@@ -136,33 +147,33 @@ export default function AdminAccounts() {
           value={query}
           onChange={(event) => setQuery(event.target.value)}
           placeholder="Name or email"
-          className="h-auto rounded-[8px] border-[#EAEADF] bg-[#F7F7F0] px-3 py-2"
+          aria-label="Search accounts by name or email"
         />
         <Button type="submit" disabled={query.trim().length < 2 || search.isPending}>
           {search.isPending ? "Searching..." : "Search"}
         </Button>
       </form>
 
-      <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
-        <div className="flex flex-col gap-2">
+      <div className="grid gap-6 md:grid-cols-[260px_minmax(0,1fr)]">
+        <div className="flex flex-col gap-[10px]">
           {results.length === 0 ? (
-            <p className="text-[14px] text-[#A3A6AB]">No accounts shown yet.</p>
+            <EmptyNote>Search to see accounts here.</EmptyNote>
           ) : (
             results.map((account) => (
               <button
                 key={account.id}
                 type="button"
                 onClick={() => choose(account)}
-                className={`rounded-[10px] border px-3 py-2 text-left ${
+                className={`flex flex-col gap-1 rounded-[10px] border px-[15px] py-3 text-left transition-colors ${
                   selected?.id === account.id
-                    ? "border-[#0054B4] bg-[#E5EDF7]"
-                    : "border-[#EAEADF] bg-[#F7F7F0]"
+                    ? "border-[#6698D2] bg-[#E5EDF7]"
+                    : "border-[#EAEADF] bg-[#F7F7F0] hover:bg-[#F4F4EB]"
                 }`}
               >
-                <p className="text-[14px] font-medium text-[#1A202C]">{account.name}</p>
-                <p className="truncate text-[12px] text-[#767980]">{account.email}</p>
-                <p className="text-[12px] text-[#A3A6AB]">
-                  {account.persona_type || "No persona"}
+                <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{account.name}</p>
+                <p className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{account.email}</p>
+                <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+                  {account.persona_type ? capitalize(account.persona_type) : "No persona"}
                   {account.is_active ? "" : " · Deactivated"}
                 </p>
               </button>
@@ -172,36 +183,36 @@ export default function AdminAccounts() {
 
         {selected ? (
           <form
-            className="flex flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-5"
+            className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]"
             onSubmit={(event) => {
               event.preventDefault();
               save.mutate();
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="account-name">Name</Label>
+              <Label htmlFor="account-name" className={labelClass}>Name</Label>
               <Input id="account-name" value={name} onChange={(event) => setName(event.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="account-email">Email</Label>
+              <Label htmlFor="account-email" className={labelClass}>Email</Label>
               <Input id="account-email" type="email" value={email} onChange={(event) => setEmail(event.target.value)} />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="account-persona">Persona</Label>
+              <Label htmlFor="account-persona" className={labelClass}>Persona</Label>
               <select
                 id="account-persona"
                 value={persona}
                 onChange={(event) => setPersona(event.target.value as (typeof PERSONAS)[number])}
-                className="h-10 w-full rounded-[8px] border border-[#EAEADF] bg-white px-3 text-[14px]"
+                className="h-[38px] w-full rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-3 text-[14px] tracking-[-0.03em] text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
               >
                 {PERSONAS.map((option) => (
                   <option key={option} value={option}>
-                    {option}
+                    {capitalize(option)}
                   </option>
                 ))}
               </select>
             </div>
-            <div className="flex flex-wrap gap-2">
+            <div className="flex flex-wrap gap-[10px]">
               <Button type="submit" disabled={save.isPending || !name.trim() || !email.trim()}>
                 {save.isPending ? "Saving..." : "Save changes"}
               </Button>
@@ -214,10 +225,11 @@ export default function AdminAccounts() {
                 {selected.is_active ? "Deactivate" : "Reactivate"}
               </Button>
             </div>
-            <div className="space-y-2 border-t border-[#EAEADF] pt-4">
-              <Label htmlFor="confirm-email">Type {selected.email} to delete this login</Label>
+            <div className="flex flex-col items-start gap-2 border-t border-[#EAEADF] pt-5">
+              <Label htmlFor="confirm-email" className={labelClass}>Type {selected.email} to delete this login</Label>
               <Input
                 id="confirm-email"
+                className="w-full"
                 value={confirmEmail}
                 onChange={(event) => setConfirmEmail(event.target.value)}
               />
@@ -229,15 +241,16 @@ export default function AdminAccounts() {
               >
                 {remove.isPending ? "Deleting..." : "Delete account"}
               </Button>
-              <p className="text-[12px] text-[#767980]">
+              <p className="text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
                 Upcoming sessions are cancelled. Past sessions stay, without a refund. The login is removed.
               </p>
             </div>
           </form>
         ) : (
-          <p className="text-[14px] text-[#A3A6AB]">Choose an account to edit it.</p>
+          <EmptyNote>Choose an account to edit it.</EmptyNote>
         )}
       </div>
+    </div>
     </div>
   );
 }

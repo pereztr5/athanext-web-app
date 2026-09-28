@@ -588,16 +588,16 @@ const ChatPage = () => {
   const getConversationName = useCallback(
     (conversation: ChatConversation | null) => {
       if (!conversation) return "Conversation";
-      if (conversation.is_group) return conversation.title || "Group Chat";
+      if (conversation.is_group) return conversation.title || "Group chat";
       const other = getOtherParticipant(conversation);
       const rawNameOrId =
         other?.user_profiles?.name ??
         other?.user_id ??
         conversation.otherUserName ??
         conversation.otherUserId ??
-        "Unknown User";
+        "Unknown user";
       const nameOrId =
-        typeof rawNameOrId === "string" ? rawNameOrId : String(rawNameOrId ?? "Unknown User");
+        typeof rawNameOrId === "string" ? rawNameOrId : String(rawNameOrId ?? "Unknown user");
       return formatDisplayName(nameOrId);
     },
     [getOtherParticipant]
@@ -800,7 +800,7 @@ const ChatPage = () => {
           <div className="flex flex-col gap-5 border-b border-[#EAEADF] px-[25px] py-[30px]">
             <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Messages</h2>
             <div className="flex items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px]">
-              <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.75} />
+              <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} />
               <input
                 type="text"
                 placeholder="Search conversations"
@@ -819,10 +819,10 @@ const ChatPage = () => {
                     key={index}
                     className="flex gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-4 py-3 animate-pulse"
                   >
-                    <div className="h-10 w-10 rounded-full bg-slate-200" />
+                    <div className="size-10 rounded-[8px] bg-[#EAEADF]" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 w-2/3 rounded-full bg-slate-200" />
-                      <div className="h-3 w-1/2 rounded-full bg-slate-100" />
+                      <div className="h-3 w-2/3 rounded-[4px] bg-[#EAEADF]" />
+                      <div className="h-3 w-1/2 rounded-[4px] bg-[#F1F1E6]" />
                     </div>
                   </div>
                 ))}
@@ -831,12 +831,12 @@ const ChatPage = () => {
               <div className="px-6 py-10">
                 <div className="rounded-[10px] border border-dashed border-[#EAEADF] bg-[#F9F9F5] p-6 text-center">
                   <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0]">
-                    <MessageCircle className="h-5 w-5 text-[#0054B4]" />
+                    <MessageCircle className="size-5 text-[#767980]" strokeWidth={1.5} />
                   </div>
-                  <p className="mt-4 text-sm font-medium text-[#1A202C]">
+                  <p className="mt-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
                     {hasConversations ? "No matching conversations" : "No conversations yet"}
                   </p>
-                  <p className="mt-1 text-xs text-[#767980]">
+                  <p className="mt-1 text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
                     {hasConversations
                       ? "Try a different search or clear filters."
                       : "Start a chat from any coach profile and your messages will appear here."}
@@ -846,7 +846,7 @@ const ChatPage = () => {
                       type="button"
                       onClick={() => void loadMoreConversations()}
                       disabled={isLoadingMoreConversations}
-                      className="mt-4 inline-flex items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-2 text-xs font-medium text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="mt-4 inline-flex h-[30px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoadingMoreConversations ? "Loading..." : "Load more conversations"}
                     </button>
@@ -855,7 +855,7 @@ const ChatPage = () => {
                     <button
                       type="button"
                       onClick={() => navigate(ROUTES.COACHES)}
-                      className="mt-4 inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-xs font-medium text-[#F1F1E6]"
+                      className="mt-4 inline-flex h-[30px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#0054B4]/90"
                     >
                       Browse coaches
                     </button>
@@ -919,14 +919,14 @@ const ChatPage = () => {
                       type="button"
                       onClick={() => void loadMoreConversations()}
                       disabled={isLoadingMoreConversations}
-                      className="inline-flex w-full items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-2 text-xs font-medium text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-60"
+                      className="inline-flex h-[30px] w-full items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:opacity-60"
                     >
                       {isLoadingMoreConversations ? "Loading..." : "Load more conversations"}
                     </button>
                   </div>
                 )}
                 {isSearchingConversations && (
-                  <div className="px-6 pb-4 text-center text-xs text-[#767980]">
+                  <div className="px-6 pb-4 text-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
                     Searching all conversations...
                   </div>
                 )}
@@ -949,32 +949,32 @@ const ChatPage = () => {
               <div className="flex-1 flex items-center justify-center px-10 py-12">
                 <div className="flex flex-col items-center gap-3 text-center">
                   <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
-                  <p className="text-sm font-medium text-[#1A202C]">Loading your chat</p>
-                  <p className="text-xs text-[#767980]">Hold on while we pull your conversations.</p>
+                  <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Loading your messages</p>
+                  <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">This only takes a moment.</p>
                 </div>
               </div>
             ) : !hasConversations ? (
               <div className="flex-1 flex items-center justify-center px-10 py-12">
-                <div className="w-full max-w-xl rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-10 text-center">
+                <div className="w-full max-w-xl rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center sm:px-10 sm:pb-10">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
-                    <MessageCircle className="h-6 w-6" />
+                    <MessageCircle className="size-6" strokeWidth={1.5} />
                   </div>
-                  <h3 className="mt-4 text-lg font-medium text-[#1A202C]">No conversations yet</h3>
-                  <p className="mt-2 text-sm text-[#767980]">
-                    Open a coach profile and send a message to kick off a private 1:1 chat.
+                  <h3 className="mt-4 text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">No conversations yet</h3>
+                  <p className="mt-2 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                    Open a coach profile and send a message to start a private chat.
                   </p>
                   <div className="mt-6 flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => navigate(ROUTES.COACHES)}
-                      className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-5 py-2.5 text-xs font-medium text-[#F1F1E6]"
+                      className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#0054B4]/90"
                     >
                       Browse coaches
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate(ROUTES.HOME)}
-                      className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-5 py-2.5 text-xs font-medium text-[#1A202C]"
+                      className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
                     >
                       Go home
                     </button>
@@ -994,7 +994,7 @@ const ChatPage = () => {
                           className="flex size-8 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#484D56]"
                           aria-label="Open conversations"
                         >
-                          <Menu className="h-4 w-4" />
+                          <Menu className="size-4" strokeWidth={1.5} />
                         </button>
                         <button
                           type="button"
@@ -1002,7 +1002,7 @@ const ChatPage = () => {
                           className="flex size-8 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#484D56]"
                           aria-label="Go back"
                         >
-                          <ArrowLeft className="h-4 w-4" />
+                          <ArrowLeft className="size-4" strokeWidth={1.5} />
                         </button>
                       </>
                     )}
@@ -1027,7 +1027,7 @@ const ChatPage = () => {
                   {selectedConversation?.otherCoachId ? (
                     <button
                       type="button"
-                      className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C]"
+                      className="inline-flex h-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
                       onClick={() => navigate(`/coach/${selectedConversation.otherCoachId}`)}
                     >
                       View profile
@@ -1048,11 +1048,11 @@ const ChatPage = () => {
                           key={idx}
                           className="flex items-start gap-3"
                         >
-                          <div className="h-9 w-9 rounded-full bg-slate-200" />
+                          <div className="size-9 rounded-[8px] bg-[#EAEADF]" />
                           <div className="flex-1 space-y-2">
-                            <div className="h-3 w-24 rounded-full bg-slate-200" />
-                            <div className="h-3 w-4/5 rounded-full bg-slate-100" />
-                            <div className="h-3 w-2/3 rounded-full bg-slate-100" />
+                            <div className="h-3 w-24 rounded-[4px] bg-[#EAEADF]" />
+                            <div className="h-3 w-4/5 rounded-[4px] bg-[#F1F1E6]" />
+                            <div className="h-3 w-2/3 rounded-[4px] bg-[#F1F1E6]" />
                           </div>
                         </div>
                       ))}
@@ -1083,7 +1083,7 @@ const ChatPage = () => {
                     </div>
                   )}
                   {!isMessagesLoading && messages.length === 0 && (
-                    <div className="mt-auto text-[14px] text-[#A3A6AB]">No messages yet. Say hello!</div>
+                    <div className="mt-auto text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">No messages yet. Send the first one below.</div>
                   )}
                 </div>
 
@@ -1112,7 +1112,7 @@ const ChatPage = () => {
                         !messageInput.trim() || isSending ? "cursor-not-allowed opacity-40" : "hover:text-[#1A202C]"
                       )}
                     >
-                      <MessageCircleMore className="size-6" strokeWidth={1.75} />
+                      <MessageCircleMore className="size-6" strokeWidth={1.5} />
                     </button>
                   </div>
                 </div>

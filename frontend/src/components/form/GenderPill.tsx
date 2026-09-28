@@ -1,4 +1,4 @@
-import React from "react";
+import { cn } from "@/lib/utils";
 
 interface GenderPillProps {
     gender: string;
@@ -7,17 +7,16 @@ interface GenderPillProps {
     className?: string;
 }
 
-const GENDER_COLORS: Record<string, string> = {
-    male: "bg-blue-50 text-blue-500 border border-blue-300",
-    female: "bg-pink-50 text-pink-500 border border-pink-300",
-    other: "bg-gray-50 text-gray-500 border border-gray-300",
-    "prefer-not-to-say": "bg-gray-50 text-gray-400 border border-gray-300",
+const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
+    sm: "px-1.5 py-[2px] text-[11px] leading-[12px]",
+    md: "px-2 py-[3px] text-[12px] leading-[13px]",
+    lg: "px-2.5 py-1 text-[14px] leading-[16px]",
 };
 
-const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
-    sm: "px-2 py-0.5 text-xs",
-    md: "px-3 py-1 text-xs",
-    lg: "px-4 py-2 text-sm",
+/** "prefer-not-to-say" -> "Prefer not to say" */
+const formatGender = (gender: string) => {
+    const words = gender.replace(/[-_]+/g, " ").trim().toLowerCase();
+    return words.charAt(0).toUpperCase() + words.slice(1);
 };
 
 export function GenderPill({ 
@@ -28,19 +27,21 @@ export function GenderPill({
 }: GenderPillProps) {
     if (!gender) return null;
 
-    const colorClass = GENDER_COLORS[gender.toLowerCase()] || "bg-gray-400";
     const sizeClass = SIZE_CLASSES[size];
 
     return (
         <div className={className}>
             {showLabel && (
-                <p className="text-xs font-medium text-muted-foreground mb-1">Gender</p>
+                <p className="mb-1 text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">Gender</p>
             )}
-            <div
-                className={`inline-flex items-center ${sizeClass} rounded-full font-semibold capitalize ${colorClass}`}
+            <span
+                className={cn(
+                    "inline-flex items-center whitespace-nowrap rounded-[4px] bg-[#F1F1E6] font-medium tracking-[-0.03em] text-[#484D56]",
+                    sizeClass
+                )}
             >
-                {gender}
-            </div>
+                {formatGender(gender)}
+            </span>
         </div>
     );
 }

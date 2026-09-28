@@ -58,14 +58,14 @@ export const NetworkStatusBanner = () => {
     return (
       <div
         ref={bannerRef}
-        className="fixed top-0 left-0 right-0 z-[60] w-full bg-amber-50 border-b border-amber-200 text-amber-900"
+        className="fixed top-0 left-0 right-0 z-[60] w-full border-b border-[#EAEADF] bg-[#FDF7EC] text-[#906A29]"
       >
-        <div className="max-w-8xl mx-auto px-4 py-2 flex items-center gap-2 text-sm">
-          <WifiOff className="h-4 w-4" />
+        <div className="max-w-8xl mx-auto flex items-center gap-2 px-4 py-2 text-[14px] font-medium leading-[18px] tracking-[-0.03em]">
+          <WifiOff strokeWidth={1.5} className="h-4 w-4 flex-none" />
           <span>
             {isCompact
-              ? "Offline. Reconnecting…"
-              : "You appear offline. We’ll reconnect when your network returns."}
+              ? "Offline, reconnecting…"
+              : "You’re offline. We’ll reconnect when your network is back."}
           </span>
         </div>
       </div>
@@ -76,13 +76,13 @@ export const NetworkStatusBanner = () => {
     return (
       <div
         ref={bannerRef}
-        className="fixed top-0 left-0 right-0 z-[60] w-full bg-blue-50 border-b border-blue-200 text-blue-900"
+        className="fixed top-0 left-0 right-0 z-[60] w-full border-b border-[#EAEADF] bg-[#F4F4EB] text-[#484D56]"
       >
-        <div className="max-w-8xl mx-auto px-4 py-2 flex items-center gap-2 text-sm">
-          <Wifi className="h-4 w-4" />
+        <div className="max-w-8xl mx-auto flex items-center gap-2 px-4 py-2 text-[14px] font-medium leading-[18px] tracking-[-0.03em]">
+          <Wifi strokeWidth={1.5} className="h-4 w-4 flex-none text-[#767980]" />
           <span>
             {isCompact
-              ? "Slow connection. Loading…"
+              ? "Slow connection, loading…"
               : "Your connection seems slow. Loading may take longer."}
           </span>
         </div>

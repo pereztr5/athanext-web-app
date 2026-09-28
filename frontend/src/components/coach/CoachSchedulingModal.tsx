@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, MapPin, DollarSign, Lock, AlertCircle } from "lucide-react";
+import { CalendarIcon, Clock, MapPin, Lock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -16,13 +16,14 @@ import { useProfile } from "@/contexts/ProfileContext";
 import { useNavigate } from "react-router-dom";
 import { z } from "zod";
 import { SecurityAudit } from "@/utils/securityAudit";
-import { colors, GRADIENTS } from "@/config/colors";
 import { strings } from "@/config/strings";
 import { BookingType } from "@/types/common";
 import { CoachAvailabilitySlot } from "@/types/availability";
 import { PROFILE_TYPE } from "@/utils/db";
 import { getZonedISODate, isBookingWindowClosed, toLocalISODate } from "@/utils/dateHelpers";
-import { formatLocationDisplay } from "@/utils/sessionFormatting";
+import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
+import { BrandPill } from "@/components/brand";
+import { cn } from "@/lib/utils";
 
 interface Coach {
   id?: string;
@@ -32,6 +33,8 @@ interface Coach {
   specialties?: string[];
   hourly_rate?: number;
   bio?: string;
+  /** Optional sport name; renders a teal pill in the summary when provided. */
+  sport?: string;
 }
 
 interface CoachSchedulingModalProps {
@@ -108,7 +111,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     const base = new Date();
     base.setHours(Number(hours), Number(minutes), 0, 0);
     base.setMinutes(base.getMinutes() + minutesToAdd);
-    return format(base, "h:mm aa");
+    return format(base, "HH:mm");
   };
 
   useEffect(() => {
@@ -156,7 +159,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     (coach?.locations || []).forEach((loc) => opts.set(loc, loc));
     if (prefillSlot) {
       const v = prefillSlot.slot.location;
-      const label = v === 'online' ? 'Online' : v === 'in-person' ? 'In-Person' : v;
+      const label = v === 'online' ? 'Online' : v === 'in-person' ? 'In person' : v;
       opts.set(v, label);
     }
     return Array.from(opts.entries()).map(([value, label]) => ({ value, label }));
@@ -275,7 +278,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
 
         if (totalUsed >= MAX_FREE_CONSULTATIONS) {
           setLimitAlertConfig({
-            title: strings.appointments.freeConsultationLimitReached,
+            title: "Free consultation limit reached",
             description: `You've used all ${MAX_FREE_CONSULTATIONS} of your free consultations across AthaLink. Ready to take the next step? Book a paid session to continue your growth journey with ${coach.name}.`,
             type: 'global'
           });
@@ -296,7 +299,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
         if (perCoachConsultation) {
           const remaining = MAX_FREE_CONSULTATIONS - totalUsed;
           setLimitAlertConfig({
-            title: "Free Consultation Already Used With This Coach",
+            title: "Free consultation already used with this coach",
             description: `You've already had a free consultation with ${coach.name}. You have ${remaining} free consultation${remaining !== 1 ? 's' : ''} remaining with other coaches, or you can book a paid session to continue working with ${coach.name}.`,
             type: 'per-coach'
           });
@@ -375,24 +378,27 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     ? 0
     : Number((sessionCost * (stripeFeePerc / 100)).toFixed(2));
 
-  const displayDate = selectedDate
-    ? format(selectedDate, "PPP")
+  const displayDateValue = selectedDate
+    ? selectedDate
     : prefillSlot?.date
-    ? format(new Date(`${prefillSlot.date}T00:00:00`), "PPP")
-    : "--";
-  const displayStart = selectedTime
-    ? format(new Date(`1970-01-01T${normalizeTimeValue(selectedTime)}:00`), "h:mm aa")
+    ? new Date(`${prefillSlot.date}T00:00:00`)
+    : null;
+  const displayDate = displayDateValue ? format(displayDateValue, "EEEE, MMM d") : "--";
+  const startTimeValue = selectedTime
+    ? normalizeTimeValue(selectedTime)
     : prefillSlot?.slot?.start_time
-    ? format(new Date(`1970-01-01T${normalizeTimeValue(prefillSlot.slot.start_time)}:00`), "h:mm aa")
-    : "--";
-  const displayEnd = selectedTime
+    ? normalizeTimeValue(prefillSlot.slot.start_time)
+    : "";
+  const endTimeValue = selectedTime
     ? addMinutes(normalizeTimeValue(selectedTime), parseInt(duration))
     : prefillSlot?.slot?.end_time
-    ? format(new Date(`1970-01-01T${normalizeTimeValue(prefillSlot.slot.end_time)}:00`), "h:mm aa")
-    : "--";
-  const durationLabel = `${duration} minutes`;
+    ? normalizeTimeValue(prefillSlot.slot.end_time)
+    : "";
+  const timeSpan = startTimeValue && endTimeValue ? formatTimeSpan(startTimeValue, endTimeValue) : "";
+  const displayTime = timeSpan ? `${timeSpan}, ${duration} min` : "--";
+  const rawLocation = selectedLocation || prefillSlot?.slot?.location || "";
   const locationLabel = safeText(
-    formatLocationDisplay(selectedLocation || prefillSlot?.slot?.location),
+    rawLocation === "online" || rawLocation === "in-person" ? formatLocationSentence(rawLocation) : rawLocation,
     strings.appointments.chooseLocation
   );
   const sessionTitle = safeText(
@@ -403,134 +409,150 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       (typeof serviceType === "string" ? serviceType : strings.appointments.bookSession),
     "Session"
   );
+  const isGroupSession = prefillSlot?.slot?.session_type === "group";
   const typeLabel =
-    prefillSlot?.slot?.session_type === "group"
-      ? "Group Session"
+    isGroupSession
+      ? "Group"
       : prefillSlot?.slot?.session_type === "individual"
       ? "Individual"
       : toTitleCase(serviceType?.toString()) || "Session";
-  const priceBadgeLabel =
-    isFreeConsultation
-      ? undefined
-      : hourlyRate
-      ? `$${hourlyRate}/hr`
-      : sessionCost > 0
-      ? `${formatCurrency(sessionCost)} session`
-      : undefined;
+  const sportLabel = coach.sport?.trim();
+  // Break the total down so the parts always add up to the charged total:
+  // the last fee shown absorbs any rounding cent.
+  const roundCents = (value: number) => Math.round(value * 100) / 100;
+  const hasProcessingFee = stripeFeePerc > 0;
+  const platformFeeDisplay = hasProcessingFee ? platformFeeAmount : roundCents(totalWithFees - sessionCost);
+  const processingFeeDisplay = roundCents(totalWithFees - sessionCost - platformFeeAmount);
+  const priceBreakdown = isFreeConsultation
+    ? "Free"
+    : `${formatCurrency(sessionCost)} session + ${formatCurrency(platformFeeDisplay)} platform fee${
+        hasProcessingFee ? ` + ${formatCurrency(processingFeeDisplay)} processing fee` : ""
+      }`;
   const hideSelectionFields = Boolean(prefillSlot);
+
+  const modalSurface =
+    "bg-[#F7F7F0] border border-[#EAEADF] rounded-[10px] sm:rounded-[10px] shadow-[0_0_15px_rgba(0,0,0,0.05)] font-sans text-[#1A202C] tracking-[-0.03em]";
+  const closeButtonOverride =
+    "[&>button]:text-[#767980] [&>button]:opacity-100 [&>button:hover]:text-[#1A202C] [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]";
+  const primaryButton =
+    "h-[34px] px-4 rounded-[8px] border border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] text-[16px] font-medium tracking-[-0.03em] hover:bg-[#004390]";
+  const secondaryButton =
+    "h-[34px] px-4 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] text-[16px] font-medium tracking-[-0.03em] hover:bg-[#EAEADF] hover:text-[#1A202C]";
+  const fieldLabel = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+  const fieldInput =
+    "h-[34px] w-full rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-3 text-[14px] font-normal tracking-[-0.03em] text-[#1A202C] hover:bg-[#F1F1E6] hover:text-[#1A202C]";
+  const menuSurface = "rounded-[8px] border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]";
+  const menuIcon = "mr-2 h-4 w-4 text-[#767980]";
 
   return (
     <>
       <AlertDialog open={showLimitAlert} onOpenChange={setShowLimitAlert}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
+        <AlertDialogContent className={cn(modalSurface, "gap-0 p-0")}>
+          <AlertDialogHeader className="space-y-2.5 px-[25px] pb-5 pt-[30px] text-left">
             <div className="flex items-center gap-2">
-              <AlertCircle style={{ color: colors.status.error }} className="h-5 w-5" />
-              <AlertDialogTitle>{limitAlertConfig.title}</AlertDialogTitle>
+              <AlertCircle strokeWidth={1.5} className="h-5 w-5 flex-none text-[#906A29]" />
+              <AlertDialogTitle className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                {limitAlertConfig.title}
+              </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-base pt-2">
+            <AlertDialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
               {limitAlertConfig.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel onClick={() => {
-              setShowLimitAlert(false);
-              onClose();
-            }}>
+          <div className="h-px bg-[#EAEADF]" />
+          <AlertDialogFooter className="gap-[10px] px-[25px] py-5 sm:space-x-0">
+            <AlertDialogCancel
+              className={cn(secondaryButton, "mt-0")}
+              onClick={() => {
+                setShowLimitAlert(false);
+                onClose();
+              }}
+            >
               Close
             </AlertDialogCancel>
-            <AlertDialogAction onClick={() => {
-              setShowLimitAlert(false);
-              // Optionally stay in modal to book paid session
-            }}>
-              View Paid Options
+            <AlertDialogAction
+              className={primaryButton}
+              onClick={() => {
+                setShowLimitAlert(false);
+                // Optionally stay in modal to book paid session
+              }}
+            >
+              View paid options
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-slate-50">
-          <DialogHeader className="pb-4">
-            <DialogTitle className="text-2xl font-bold text-slate-900">Confirm Your Booking</DialogTitle>
+        <DialogContent className={cn("max-w-2xl max-h-[90vh] overflow-y-auto gap-0 p-0", modalSurface, closeButtonOverride)}>
+          <DialogHeader className="px-[25px] py-5 pr-14 text-left">
+            <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+              Confirm your booking
+            </DialogTitle>
           </DialogHeader>
-          <div className="space-y-6">
-            {/* Session Summary */}
-            <div className="rounded-2xl border border-slate-200 bg-white shadow-sm p-5 space-y-4">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <p className="text-lg font-semibold text-slate-900">{sessionTitle}</p>
-                  <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                    <span className="inline-flex items-center gap-1 rounded-full bg-orange-50 px-3 py-1 text-orange-600 border border-orange-100">
-                      {typeLabel}
-                    </span>
-                  </div>
-                </div>
-                <div className="text-right text-sm text-muted-foreground">
-                  <p className="font-semibold" style={{ color: colors.primary.main }}>{isFreeConsultation ? "Free" : formatCurrency(totalWithFees)}</p>
-                  <p className="text-xs">Total</p>
+          <div className="h-px bg-[#EAEADF]" />
+
+          <div className="flex flex-col gap-5 px-[25px] py-5">
+            {/* Session summary */}
+            <div className="flex items-start justify-between gap-5">
+              <div className="flex min-w-0 flex-col gap-2.5">
+                <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                  {sessionTitle} with {coach.name}
+                </p>
+                <div className="flex flex-wrap gap-1.5">
+                  <BrandPill tone={isGroupSession ? "teal" : "blue"}>{typeLabel}</BrandPill>
+                  {sportLabel && <BrandPill tone="teal">{sportLabel}</BrandPill>}
                 </div>
               </div>
-
-              <div className="grid grid-cols-2 gap-4 text-sm text-slate-800">
-                <div className="flex items-start gap-2">
-                  <CalendarIcon className="h-4 w-4 mt-0.5" style={{ color: colors.primary.main }} />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Date &amp; Time</p>
-                    <p className="font-semibold">{displayDate}</p>
-                    <p className="text-xs text-muted-foreground">{displayStart !== "--" && displayEnd !== "--" ? `${displayStart} - ${displayEnd}` : "--"}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <MapPin className="h-4 w-4 mt-0.5" style={{ color: colors.primary.main }} />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Location</p>
-                    <p className="font-semibold">{locationLabel}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Clock className="h-4 w-4 mt-0.5" style={{ color: colors.primary.main }} />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Start Time</p>
-                    <p className="font-semibold">{displayStart}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Clock className="h-4 w-4 mt-0.5" style={{ color: colors.primary.main }} />
-                  <div>
-                    <p className="text-xs text-muted-foreground">End Time</p>
-                    <p className="font-semibold">{displayEnd}</p>
-                  </div>
-                </div>
-                <div className="flex items-start gap-2">
-                  <Clock className="h-4 w-4 mt-0.5" style={{ color: colors.primary.main }} />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Duration</p>
-                    <p className="font-semibold">{durationLabel}</p>
-                  </div>
-                </div>
+              <div className="flex flex-none flex-col items-end gap-1.5 text-right">
+                <p className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
+                  {isFreeConsultation ? "Free" : formatCurrency(totalWithFees)}
+                </p>
+                <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                  {isFreeConsultation ? "Total" : "Total, fees included"}
+                </p>
               </div>
             </div>
 
+            {/* Details */}
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-[8px] bg-[#F4F4EB] px-5 py-4 sm:grid-cols-2">
+              {[
+                { label: "Date", value: displayDate },
+                { label: "Time", value: displayTime },
+                { label: "Location", value: locationLabel },
+                { label: "Price", value: priceBreakdown },
+              ].map((item) => (
+                <div key={item.label} className="flex flex-col gap-1.5">
+                  <dt className={fieldLabel}>{item.label}</dt>
+                  <dd className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C]">{item.value}</dd>
+                </div>
+              ))}
+            </dl>
+
             {/* Editable selections (hidden when prefilled) */}
             {!hideSelectionFields && (
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <Label htmlFor="date" className="text-sm font-medium text-slate-800">
-                    {strings.appointments.selectDate} *
+              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="date" className={fieldLabel}>
+                    Date *
                   </Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
+                        id="date"
                         variant="outline"
-                        className="w-full justify-start text-left font-normal rounded-xl"
+                        className={cn(fieldInput, "justify-start text-left")}
                         disabled={isPrefilled}
                       >
-                        <CalendarIcon className="mr-2 h-4 w-4" />
-                        {selectedDate ? format(selectedDate, "PPP") : "Pick a date"}
+                        <CalendarIcon strokeWidth={1.5} className="mr-2 h-4 w-4 text-[#767980]" />
+                        {selectedDate ? (
+                          format(selectedDate, "EEEE, MMM d")
+                        ) : (
+                          <span className="text-[#A3A6AB]">Pick a date</span>
+                        )}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="w-auto p-0" align="start">
+                    <PopoverContent className={cn(menuSurface, "w-auto p-0")} align="start">
                       <Calendar
                         mode="single"
                         selected={selectedDate}
@@ -542,19 +564,19 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                   </Popover>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="time" className="text-sm font-medium text-slate-800">
-                    {strings.appointments.selectTime} *
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="time" className={fieldLabel}>
+                    Time *
                   </Label>
                   <Select value={selectedTime} onValueChange={setSelectedTime} disabled={isPrefilled}>
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger id="time" className={fieldInput}>
                       <SelectValue placeholder={strings.appointments.chooseTimeSlot} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className={menuSurface}>
                       {timeSlots.map((time) => (
                         <SelectItem key={time} value={time}>
                           <div className="flex items-center">
-                            <Clock className="mr-2 h-4 w-4" />
+                            <Clock strokeWidth={1.5} className={menuIcon} />
                             {time}
                           </div>
                         </SelectItem>
@@ -563,43 +585,43 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="duration" className="text-sm font-medium text-slate-800">
-                    {strings.appointments.sessionDuration}
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="duration" className={fieldLabel}>
+                    Duration
                   </Label>
                   <Select value={duration} onValueChange={setDuration} disabled={isFreeConsultation || isPrefilled}>
-                    <SelectTrigger className="rounded-xl">
-                      <SelectValue placeholder={strings.appointments.sessionDuration} />
+                    <SelectTrigger id="duration" className={fieldInput}>
+                      <SelectValue placeholder="Duration" />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className={menuSurface}>
                       {isFreeConsultation ? (
-                        <SelectItem value="15">15 minutes - FREE</SelectItem>
+                        <SelectItem value="15">15 min, free</SelectItem>
                       ) : (
                         <>
-                          <SelectItem value="30">30 minutes - ${Math.round((hourlyRate / 60) * 30)}</SelectItem>
-                          <SelectItem value="45">45 minutes - ${Math.round((hourlyRate / 60) * 45)}</SelectItem>
-                          <SelectItem value="60">60 minutes - ${Math.round((hourlyRate / 60) * 60)}</SelectItem>
-                          <SelectItem value="90">90 minutes - ${Math.round((hourlyRate / 60) * 90)}</SelectItem>
-                          <SelectItem value="120">120 minutes - ${Math.round((hourlyRate / 60) * 120)}</SelectItem>
+                          <SelectItem value="30">30 min, ${Math.round((hourlyRate / 60) * 30)}</SelectItem>
+                          <SelectItem value="45">45 min, ${Math.round((hourlyRate / 60) * 45)}</SelectItem>
+                          <SelectItem value="60">60 min, ${Math.round((hourlyRate / 60) * 60)}</SelectItem>
+                          <SelectItem value="90">90 min, ${Math.round((hourlyRate / 60) * 90)}</SelectItem>
+                          <SelectItem value="120">120 min, ${Math.round((hourlyRate / 60) * 120)}</SelectItem>
                         </>
                       )}
                     </SelectContent>
                   </Select>
                 </div>
 
-                <div className="space-y-2">
-                  <Label htmlFor="location" className="text-sm font-medium text-slate-800">
+                <div className="flex flex-col gap-1.5">
+                  <Label htmlFor="location" className={fieldLabel}>
                     Location *
                   </Label>
                   <Select value={selectedLocation} onValueChange={setSelectedLocation} disabled={isPrefilled}>
-                    <SelectTrigger className="rounded-xl">
+                    <SelectTrigger id="location" className={fieldInput}>
                       <SelectValue placeholder={strings.appointments.chooseLocation} />
                     </SelectTrigger>
-                    <SelectContent>
+                    <SelectContent className={menuSurface}>
                       {locationOptions.map((location) => (
                         <SelectItem key={location.value} value={location.value}>
                           <div className="flex items-center">
-                            <MapPin className="mr-2 h-4 w-4" />
+                            <MapPin strokeWidth={1.5} className={menuIcon} />
                             {location.label}
                           </div>
                         </SelectItem>
@@ -620,53 +642,40 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                 placeholder={strings.appointments.anySpecificGoals}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[90px] rounded-2xl border-slate-200 bg-white"
+                className="min-h-[90px] rounded-[8px] border-0 bg-[#F1F1E6] p-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:ring-[#6698D2]"
               />
             </div> */}
+          </div>
 
-            {/* Cost Summary */}
-            {/* Cost Summary hidden per request */}
-
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-3 pt-2">
+          {/* Action buttons */}
+          <div className="h-px bg-[#EAEADF]" />
+          <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
+            <Button variant="outline" onClick={onClose} className={secondaryButton} disabled={isBooking}>
+              {strings.buttons.cancel}
+            </Button>
+            {!user ? (
               <Button
-                variant="outline"
-                onClick={onClose}
-                className="flex-1 rounded-full bg-white"
-                disabled={isBooking}
+                onClick={() => {
+                  toast({
+                    title: strings.appointments.authenticationRequired,
+                    description: strings.appointments.pleaseSignInToBook,
+                  });
+                  navigate("/auth");
+                }}
+                className={primaryButton}
               >
-                {strings.buttons.cancel}
+                <Lock strokeWidth={1.5} className="h-4 w-4" />
+                Sign in to book
               </Button>
-              {!user ? (
-                <Button
-                  onClick={() => {
-                    toast({
-                      title: strings.appointments.authenticationRequired,
-                      description: strings.appointments.pleaseSignInToBook,
-                    });
-                    navigate("/auth");
-                  }}
-                  className="flex-1 rounded-full text-white"
-                  style={{ backgroundImage: GRADIENTS.primaryGradient }}
-                >
-                  <Lock className="mr-2 h-4 w-4" />
-                  {strings.appointments.signInToBook}
-                </Button>
-              ) : (
-                <Button
-                  onClick={handleBookSession}
-                  className="flex-1 rounded-full text-white hover:opacity-90"
-                  style={{ backgroundColor: colors.primary.main }}
-                  disabled={isBooking}
-                >
-                  {isBooking
-                    ? strings.appointments.processing
-                    : isFreeConsultation
-                    ? strings.appointments.bookFreeConsultationButton
-                    : `Book & Pay Now - ${formatCurrency(totalWithFees)}`}
-                </Button>
-              )}
-            </div>
+            ) : (
+              <Button onClick={handleBookSession} className={primaryButton} disabled={isBooking}>
+                {isBooking
+                  ? strings.appointments.processing
+                  : isFreeConsultation
+                  ? "Book free consultation"
+                  : `Book and pay ${formatCurrency(totalWithFees)}`}
+              </Button>
+            )}
           </div>
         </DialogContent>
       </Dialog>

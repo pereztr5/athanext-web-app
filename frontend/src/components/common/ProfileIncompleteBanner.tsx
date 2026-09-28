@@ -33,27 +33,27 @@ export function ProfileIncompleteBanner({
     return (
         <div
             onClick={handleClick}
-            className="fixed top-[3.7rem] left-0 right-0 z-40 w-full bg-yellow-50 border-b border-yellow-200 px-4 py-3 cursor-pointer hover:bg-yellow-100 transition-colors"
+            className="fixed top-[3.7rem] left-0 right-0 z-40 w-full cursor-pointer border-b border-[#EAEADF] bg-[#FDF7EC] px-4 py-3 font-sans tracking-[-0.03em] transition-colors hover:bg-[#FAF0DE]"
         >
             <div className="max-w-8xl mx-auto flex items-center justify-between gap-3">
-                <div className="flex items-center gap-3 flex-1">
-                    <AlertCircle className="h-5 w-5 text-yellow-600 flex-shrink-0" />
+                <div className="flex flex-1 items-center gap-3">
+                    <AlertCircle strokeWidth={1.5} className="h-5 w-5 flex-shrink-0 text-[#906A29]" />
                     <div className="flex-1">
-                        <p className="text-sm font-medium text-yellow-800">
-                            Your profile is incomplete ({profileCompletion}% complete)
+                        <p className="text-[14px] font-medium leading-[18px] text-[#1A202C]">
+                            Your profile is {profileCompletion}% complete
                         </p>
-                        <p className="text-xs text-yellow-700 mt-0.5">
-                            Click here to complete your profile and increase your visibility
+                        <p className="mt-0.5 text-[12px] leading-[14px] text-[#906A29]">
+                            Finish it so more athletes can find you
                         </p>
                     </div>
                 </div>
 
                 <button
                     onClick={handleDismiss}
-                    className="p-1 hover:bg-yellow-200 rounded-full transition-colors flex-shrink-0"
+                    className="flex-shrink-0 rounded-[5px] p-1 text-[#906A29] transition-colors hover:bg-[#F4E6CB]"
                     aria-label="Dismiss notification"
                 >
-                    <X className="h-4 w-4 text-yellow-600" />
+                    <X strokeWidth={1.5} className="h-4 w-4" />
                 </button>
             </div>
         </div>

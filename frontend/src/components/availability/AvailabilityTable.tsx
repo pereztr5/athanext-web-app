@@ -33,41 +33,41 @@ export const AvailabilityTable = ({
   onDelete,
 }: AvailabilityTableProps) => {
   const hasActions = showActions || !!onBookSlot;
-  const athlete = appearance === "athlete";
 
   const sortedSlots = [...slots].sort((a, b) => a.day_of_week - b.day_of_week);
 
   return (
-    <div className="overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F1F1E6]">
-      <div className="overflow-x-auto">
-        <Table className="min-w-[960px]">
-          <AvailabilityTableHeader showActions={hasActions} appearance={appearance} />
-          <TableBody>
-            {sortedSlots.map((slot) => (
-              <AvailabilityTableRow
-                key={slot.id}
-                slot={slot}
-                onEdit={onEdit}
-                onBookSlot={onBookSlot}
-                showActions={hasActions}
-                slotStatus={slotStatusMap?.[slot.id]}
-                isStatusLoading={slotStatusLoading && slotStatusMap?.[slot.id] === undefined}
-                platformFeePerc={platformFeePerc}
-                appearance={appearance}
-                onDelete={onDelete}
-              />
-            ))}
+    <div className="overflow-x-auto">
+      <Table className="min-w-[860px] border-collapse">
+        <AvailabilityTableHeader showActions={hasActions} appearance={appearance} />
+        <TableBody>
+          {sortedSlots.map((slot) => (
+            <AvailabilityTableRow
+              key={slot.id}
+              slot={slot}
+              onEdit={onEdit}
+              onBookSlot={onBookSlot}
+              showActions={hasActions}
+              slotStatus={slotStatusMap?.[slot.id]}
+              isStatusLoading={slotStatusLoading && slotStatusMap?.[slot.id] === undefined}
+              platformFeePerc={platformFeePerc}
+              appearance={appearance}
+              onDelete={onDelete}
+            />
+          ))}
 
-            {sortedSlots.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={hasActions ? (athlete ? 9 : 10) : (athlete ? 8 : 9)} className="py-8 text-center text-[#A3A6AB]">
-                  No time slots available for this period
-                </TableCell>
-              </TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </div>
+          {sortedSlots.length === 0 && (
+            <TableRow className="border-0 hover:bg-transparent">
+              <TableCell
+                colSpan={hasActions ? 8 : 7}
+                className="border-t border-[#EAEADF] px-0 py-8 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]"
+              >
+                No time slots available for this period
+              </TableCell>
+            </TableRow>
+          )}
+        </TableBody>
+      </Table>
     </div>
   );
 };

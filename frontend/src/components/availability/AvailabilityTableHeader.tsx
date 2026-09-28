@@ -4,29 +4,32 @@
  */
 
 import { TableHeader, TableRow, TableHead } from '@/components/ui/table';
-import { strings } from '@/config/strings';
 
 interface AvailabilityTableHeaderProps {
   showActions?: boolean;
   appearance: "athlete" | "coach";
 }
 
-export function AvailabilityTableHeader({ showActions = true, appearance }: AvailabilityTableHeaderProps) {
-  const athlete = appearance === "athlete";
-  const head = "h-[54px] bg-[#F4F4EB] px-0 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]";
+const head =
+  "h-auto px-0 py-3 text-left text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+
+// `appearance` is kept for API compatibility; both views now share the same columns.
+export function AvailabilityTableHeader({ showActions = true }: AvailabilityTableHeaderProps) {
   return (
-    <TableHeader>
-      <TableRow className="border-[#EAEADF] hover:bg-transparent">
-        <TableHead className={head}>{strings.availability.table.day}</TableHead>
-        <TableHead className={head}>{strings.availability.table.sessionName}</TableHead>
-        <TableHead className={head}>{strings.availability.table.pillar}</TableHead>
-        <TableHead className={head}>{strings.availability.table.price}</TableHead>
-        {!athlete && <TableHead className={head}>{strings.availability.table.duration}</TableHead>}
-        <TableHead className={head}>{strings.availability.table.startTime}</TableHead>
-        <TableHead className={head}>{strings.availability.table.endTime}</TableHead>
-        <TableHead className={head}>{strings.availability.table.type}</TableHead>
-        <TableHead className={head}>{strings.availability.table.location}</TableHead>
-        {showActions && <TableHead className={head}>{strings.availability.table.actions}</TableHead>}
+    <TableHeader className="[&_tr]:border-b-0">
+      <TableRow className="border-0 hover:bg-transparent">
+        <TableHead className={`${head} w-[110px]`}>Day</TableHead>
+        <TableHead className={`${head} w-[150px]`}>Session</TableHead>
+        <TableHead className={`${head} w-[100px]`}>Pillar</TableHead>
+        <TableHead className={`${head} w-[80px]`}>Price</TableHead>
+        <TableHead className={`${head} w-[130px]`}>Time</TableHead>
+        <TableHead className={`${head} w-[100px]`}>Type</TableHead>
+        <TableHead className={`${head} w-[90px]`}>Location</TableHead>
+        {showActions && (
+          <TableHead className={head}>
+            <span className="sr-only">Actions</span>
+          </TableHead>
+        )}
       </TableRow>
     </TableHeader>
   );

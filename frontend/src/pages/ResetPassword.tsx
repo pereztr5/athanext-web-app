@@ -8,6 +8,7 @@ import { strings } from "@/config/strings";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import logo from "@/assets/AthaNext-Logo.svg";
 
 type ResetState = "checking" | "ready" | "error";
 
@@ -16,7 +17,7 @@ const ResetPassword = () => {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [formError, setFormError] = useState<string | null>(null);
   const [status, setStatus] = useState<ResetState>("checking");
-  const [statusMessage, setStatusMessage] = useState("Validating your reset link...");
+  const [statusMessage, setStatusMessage] = useState("Checking your reset link…");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { updatePassword } = useAuth();
   const navigate = useNavigate();
@@ -104,7 +105,7 @@ const ResetPassword = () => {
 
         if (error || !data.session) {
           setStatus("error");
-          setStatusMessage("We couldn't verify your session. Please request a new reset email.");
+          setStatusMessage("We couldn't verify this link. Request a new reset email.");
           return;
         }
 
@@ -115,7 +116,7 @@ const ResetPassword = () => {
         if (!isMounted) return;
         console.error("Unexpected error verifying recovery token", error);
         setStatus("error");
-        setStatusMessage("Something went wrong while verifying your link. Please request a new reset email.");
+        setStatusMessage("Something went wrong while checking your link. Request a new reset email.");
       }
     };
 
@@ -168,8 +169,8 @@ const ResetPassword = () => {
     if (status === "checking") {
       return (
         <div className="flex flex-col items-center gap-4 py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-primary" />
-          <p className="text-sm text-muted-foreground">{statusMessage}</p>
+          <Loader2 strokeWidth={1.5} className="h-6 w-6 animate-spin text-[#0054B4]" />
+          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{statusMessage}</p>
         </div>
       );
     }
@@ -177,13 +178,14 @@ const ResetPassword = () => {
     if (status === "error") {
       return (
         <div className="space-y-4">
-          <p className="text-center text-sm text-destructive">{statusMessage}</p>
+          <p className="text-center text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">{statusMessage}</p>
           <Button
             type="button"
+            size="lg"
             className="w-full"
             onClick={() => navigate("/forgot-password")}
           >
-            {strings.buttons.forgotPassword}
+            Request a new link
           </Button>
         </div>
       );
@@ -191,43 +193,50 @@ const ResetPassword = () => {
 
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="new-password">{strings.form.labels.password}</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="new-password" className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
+            New password
+          </Label>
           <Input
             id="new-password"
             type="password"
-            placeholder={strings.form.labels.password}
+            placeholder="Enter a new password"
             value={newPassword}
             onChange={(event) => setNewPassword(event.target.value)}
             disabled={isSubmitting}
           />
         </div>
-        <div className="space-y-2">
-          <Label htmlFor="confirm-password">{strings.form.labels.confirmPassword}</Label>
+        <div className="space-y-1.5">
+          <Label htmlFor="confirm-password" className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
+            Confirm password
+          </Label>
           <Input
             id="confirm-password"
             type="password"
-            placeholder={strings.form.labels.confirmPassword}
+            placeholder="Enter it again"
             value={confirmPassword}
             onChange={(event) => setConfirmPassword(event.target.value)}
             disabled={isSubmitting}
           />
         </div>
-        {formError && <p className="text-sm text-destructive">{formError}</p>}
-        <Button type="submit" className="w-full" disabled={isSubmitting}>
-          {isSubmitting ? "Updating password..." : strings.buttons.resetPassword}
+        {formError && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{formError}</p>}
+        <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
+          {isSubmitting ? "Updating password…" : "Reset password"}
         </Button>
       </form>
     );
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted pt-20">
-      <div className="flex items-center justify-center min-h-[calc(100vh-80px)] p-4">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <CardTitle className="text-2xl font-bold">{strings.buttons.resetPassword}</CardTitle>
-            <CardDescription>
+    <div className="min-h-screen bg-background pt-20">
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-10">
+        <Card className="w-full max-w-[440px]">
+          <CardHeader className="items-center gap-2.5 space-y-0 text-center">
+            <img src={logo} alt="AthaNext" className="h-7 w-auto" />
+            <CardTitle className="pt-2 text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+              Reset password
+            </CardTitle>
+            <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
               Choose a new password for your account.
             </CardDescription>
           </CardHeader>

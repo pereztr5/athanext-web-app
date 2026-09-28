@@ -8,28 +8,28 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    --background: 0 0% 100%;
+    --background: 60 28.2% 92.4%; /* #F1F1E6 */
     /* Figma neutral #10131A */
-    --foreground: 225 21% 8%;
+    --foreground: 220 25.7% 13.7%; /* #1A202C */
 
-    --card: 0 0% 100%;
-    --card-foreground: 225 21% 8%;
+    --card: 60 30.4% 95.5%; /* #F7F7F0 */
+    --card-foreground: 220 25.7% 13.7%;
 
-    --popover: 0 0% 100%;
-    --popover-foreground: 225 21% 8%;
+    --popover: 60 30.4% 95.5%;
+    --popover-foreground: 220 25.7% 13.7%;
 
     /* Figma primary #0054B4 */
-    --primary: 212 100% 35%;
-    --primary-foreground: 0 0% 100%;
+    --primary: 212 100% 35.3%;
+    --primary-foreground: 60 28.2% 92.4%; /* #F1F1E6 */
 
-    --secondary: 60 14% 94%;
-    --secondary-foreground: 225 21% 8%;
+    --secondary: 60 29% 93.9%; /* #F4F4EB */
+    --secondary-foreground: 220 25.7% 13.7%;
 
-    --muted: 60 14% 94%;
-    --muted-foreground: 220 6% 40%;
+    --muted: 60 29% 93.9%;
+    --muted-foreground: 222 4.1% 48.2%; /* #767980 */
 
-    --accent: 60 14% 94%;
-    --accent-foreground: 225 21% 8%;
+    --accent: 60 20.8% 89.6%; /* #EAEADF */
+    --accent-foreground: 220 25.7% 13.7%;
 
     /* Friendly Pastel Colors for Partnership Cards */
     --pastel-blue: 210 100% 95%;
@@ -46,11 +46,11 @@ All colors MUST be HSL.
     --destructive: 0 84.2% 60.2%;
     --destructive-foreground: 210 40% 98%;
 
-    --border: 214.3 31.8% 91.4%;
-    --input: 214.3 31.8% 91.4%;
-    --ring: 222.2 84% 4.9%;
+    --border: 60 20.8% 89.6%; /* #EAEADF */
+    --input: 60 20.8% 89.6%;
+    --ring: 212 54.5% 61.2%; /* #6698D2 */
 
-    --radius: 1.5rem;
+    --radius: 10px;
 
     /* Athlete Development Theme - Exact Color Match */
     --athlete-title: 218 89% 60%;
@@ -101,7 +101,7 @@ All colors MUST be HSL.
 
     --sidebar-foreground: 225 21% 8%;
 
-    --sidebar-primary: 212 100% 35%;
+    --sidebar-primary: 212 100% 35.3%;
 
     --sidebar-primary-foreground: 0 0% 100%;
 

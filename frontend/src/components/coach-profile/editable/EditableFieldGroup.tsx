@@ -21,5 +21,5 @@ export const EditableFieldGroup: React.FC<EditableFieldGroupProps> = ({
     if (!isEditMode) {
         return <>{children}</>;
     }
-    return <div className="space-y-3">{children}</div>;
+    return <div className="flex flex-col gap-4">{children}</div>;
 };

@@ -6,6 +6,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { cn } from "@/lib/utils";
 
 export type GenderValue = 'male' | 'female' | 'other' | 'prefer-not-to-say';
 
@@ -30,9 +31,9 @@ const GENDER_OPTIONS: { value: GenderValue; label: string }[] = [
 ];
 
 const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
-  sm: "h-8 text-xs",
-  md: "h-9 text-sm",
-  lg: "h-10 text-base",
+  sm: "h-[34px] text-[14px]",
+  md: "h-[38px] text-[14px]",
+  lg: "h-10 text-[16px]",
 };
 
 /**
@@ -57,13 +58,20 @@ export const GenderSelect = ({
   return (
     <div>
       {showLabel && (
-        <Label className="mb-2" htmlFor={id}>
+        <Label
+          className="mb-1.5 block text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]"
+          htmlFor={id}
+        >
           {label}
           {required && <span className="ml-1 text-destructive">*</span>}
         </Label>
       )}
       <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
-        <SelectTrigger id={id} className={`${sizeClass} ${className}`}>
+        <SelectTrigger
+          id={id}
+          className={cn("tracking-[-0.03em]", sizeClass, className)}
+          aria-invalid={Boolean(error)}
+        >
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -74,7 +82,9 @@ export const GenderSelect = ({
           ))}
         </SelectContent>
       </Select>
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && (
+        <p className="mt-1.5 text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p>
+      )}
     </div>
   );
 };

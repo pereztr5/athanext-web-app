@@ -1,24 +1,18 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { useParams, useNavigate, useLocation } from "react-router-dom";
+import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
-import { Home } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Skeleton } from "@/components/ui/skeleton";
 import CoachSchedulingModal from "@/components/coach/CoachSchedulingModal";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { FreeConsultationInfoDialog } from "@/components/coach/FreeConsultationInfoDialog";
 import { useReviews } from "@/hooks/useReviews";
 import { BookingType } from "@/types/common";
 import { CoachAvailabilitySlot } from "@/types/availability";
-import {
-  Breadcrumb,
-  BreadcrumbItem,
-  BreadcrumbLink,
-  BreadcrumbList,
-  BreadcrumbPage,
-  BreadcrumbSeparator
-} from "@/components/ui/breadcrumb";
 import {
   CoachHeader,
   AboutSection,
@@ -27,7 +21,6 @@ import {
   ReviewsSection,
   QuickInfo,
   FAQSection,
-  OtherTopCoaches
 } from "@/components/coach-profile";
 import { CoachProfileView } from "@/components/coach-profile/CoachProfileView";
 import { CoachAvailabilitySection } from "@/components/coach-profile/CoachAvailabilitySection";
@@ -88,7 +81,7 @@ const CoachProfile = () => {
     }
   }, [loading, coach, location.state, scrollToSection]);
 
-  // Sport detection for dynamic theming
+  // Only feeds CoachHeader's required sportTheme prop; colours come from the brand kit now
   const getSportTheme = () => {
     if (normalizedCoachSport === "soccer") {
       return COACH_PROFILE_THEMES.soccer;
@@ -136,7 +129,7 @@ const CoachProfile = () => {
     if (!coach?.id) return;
     if (personaType === "coach") {
       toast({
-        title: "Coach to Coach messaging is not currently available.",
+        title: "Coach-to-coach messaging isn't available yet.",
       });
       return;
     }
@@ -211,21 +204,25 @@ const CoachProfile = () => {
   };
 
   if (loading) {
-    const loadingTheme = getSportTheme();
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${loadingTheme.gradientFrom} via-slate-50/30 ${loadingTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem]`}>
-        <div className="max-w-6xl mx-auto px-4 py-8">
-          <div className="animate-pulse">
-            <div className="h-8 bg-slate-200 dark:bg-slate-700 rounded-lg mb-8 w-48"></div>
-            <div className="grid lg:grid-cols-3 gap-8">
-              <div className="lg:col-span-2 space-y-6">
-                <div className="h-64 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-                <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-              </div>
-              <div className="space-y-6">
-                <div className="h-32 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-                <div className="h-48 bg-slate-200 dark:bg-slate-700 rounded-lg"></div>
-              </div>
+      <div className="min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-16 pt-[3.8rem] md:px-10">
+        <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6 pt-6" aria-busy="true" aria-label="Loading coach profile">
+          <Skeleton className="h-4 w-28 rounded-[4px]" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px]">
+            <Skeleton className="h-[165px] rounded-[10px]" />
+            <Skeleton className="h-[165px] rounded-[10px]" />
+            <Skeleton className="h-[165px] rounded-[10px]" />
+            <Skeleton className="h-[165px] rounded-[10px]" />
+          </div>
+          <Skeleton className="h-[260px] rounded-[10px]" />
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
+            <div className="flex flex-col gap-6">
+              <Skeleton className="h-[200px] rounded-[10px]" />
+              <Skeleton className="h-[160px] rounded-[10px]" />
+            </div>
+            <div className="flex flex-col gap-6">
+              <Skeleton className="h-[180px] rounded-[10px]" />
+              <Skeleton className="h-[160px] rounded-[10px]" />
             </div>
           </div>
         </div>
@@ -235,9 +232,15 @@ const CoachProfile = () => {
 
   if (!coach) {
     return (
-      <div className={`min-h-screen bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 flex items-center justify-center`}>
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-foreground mb-4">Coach Not Found</h1>
+      <div className="flex min-h-screen w-full items-center justify-center bg-app-background px-4">
+        <div className="flex max-w-[420px] flex-col items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px] text-center">
+          <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Coach not found</h1>
+          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            This profile may have been removed or the link is wrong.
+          </p>
+          <Button variant="outline" onClick={() => navigate(ROUTES.COACHES)}>
+            Browse coaches
+          </Button>
         </div>
       </div>
     );
@@ -296,14 +299,15 @@ const CoachProfile = () => {
   }
 
   return (
-    <div
-      className={`min-h-screen w-full overflow-x-hidden px-4 pb-20 md:px-0 ${
-        isAuthenticated
-          ? "bg-app-background pt-2"
-          : `bg-gradient-to-br ${sportTheme.gradientFrom} via-slate-50/30 ${sportTheme.gradientTo} dark:from-slate-900 dark:via-slate-950/30 dark:to-slate-950/20 mt-[3.8rem] mb-20`
-      }`}
-    >
-      <div className="mx-auto flex max-w-[1000px] flex-col gap-6 md:gap-6">
+    <div className="mt-[3.8rem] min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10">
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+        <Link
+          to={ROUTES.COACHES}
+          className="inline-flex w-fit items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980] hover:text-[#1A202C]"
+        >
+          <ArrowLeft className="size-[15px]" strokeWidth={1.5} aria-hidden="true" />
+          All coaches
+        </Link>
 
         <section className="flex w-full">
           <CoachHeader
@@ -323,58 +327,35 @@ const CoachProfile = () => {
           />
         </section>
 
-        <section className="w-full" ref={availabilitySectionRef}>
+        <section className="w-full scroll-mt-24" ref={availabilitySectionRef}>
           <CoachAvailabilitySection
             coachId={coach.id}
             allowEditing={false}
-            iconColor={sportTheme.iconColor}
             onBookSlot={canBookSlots ? handleBookSlot : !user ? handleGuestSignInRedirect : undefined}
           />
         </section>
 
-        <div className="flex flex-col lg:flex-row gap-6 md:gap-8">
-          {/* Main Content */}
-
-          <div className="min-w-0 lg:flex-1 space-y-6">
-            <section className="w-full" ref={packagesSectionRef}>
+        <div className="grid w-full grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <section className="w-full scroll-mt-24" ref={packagesSectionRef}>
               <CoachingPackages
                 packages={packages}
                 coachId={coach.id}
                 coachName={coach.name}
                 coachSport={(coach as any)?.sport_type || coach.sport}
-                iconColor={sportTheme.iconColor}
               />
             </section>
 
-            {/* About Section */}
-            <AboutSection
-              coachName={coach.name}
-              bio={coach.bio}
-              iconColor={sportTheme.iconColor}
-            />
+            <AboutSection coachName={coach.name} bio={coach.bio} />
 
-            {/* Certifications & Credentials */}
-            <CertificationsSection
-              certifications={coach.certifications}
-              iconColor={sportTheme.iconColor}
-              certBg={sportTheme.certBg}
-              certIcon={sportTheme.certIcon}
-            />
+            <CertificationsSection certifications={coach.certifications} />
 
-            {/* Training Specialization + Format */}
             <TrainingSpecialization
               specializations={coach.specialties}
-              trainingFormats={{
-                inPerson: true,
-                virtual: true,
-                individualSessions: true,
-                groupSessions: true
-              }}
+              sessionTypes={coach.session_types}
               locations={coach.locations}
-              iconColor={sportTheme.iconColor}
             />
 
-            {/* Reviews Section */}
             <ReviewsSection
               averageRating={averageRating}
               totalReviews={totalReviews}
@@ -386,9 +367,7 @@ const CoachProfile = () => {
             />
           </div>
 
-          {/* Sidebar */}
-          <div className="w-full lg:w-[22rem] flex-shrink-0 space-y-6 md:space-y-8">
-            {/* Quick Info */}
+          <div className="flex min-w-0 flex-col gap-6">
             <QuickInfo
               responseTime={coach.response_time_hours}
               sessionTypes={coach.session_types}
@@ -398,11 +377,9 @@ const CoachProfile = () => {
               cancellationPolicy={coach.cancellation_policy}
             />
 
-            {/* FAQ Section */}
             <FAQSection />
           </div>
         </div>
-
       </div>
 
       {/* Modals */}

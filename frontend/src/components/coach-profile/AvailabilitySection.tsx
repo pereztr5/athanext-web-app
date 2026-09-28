@@ -70,34 +70,43 @@ export function AvailabilitySection({
     onDeleteSlot?.(slotId);
   };
 
+  const labelClass = "text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]";
+  const fieldClass =
+    "h-[38px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] shadow-none focus-visible:ring-0";
+  const primaryClass =
+    "h-[34px] rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] hover:bg-[#004390]";
+  const secondaryClass =
+    "h-[34px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]";
+
   return (
-    <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-      <CardHeader className="pb-4">
-        <div className="flex items-center justify-between">
-          <CardTitle className="text-xl font-bold">Availability</CardTitle>
+    <Card className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none">
+      <CardHeader className="px-[25px] pb-5 pt-[30px]">
+        <div className="flex items-center justify-between gap-3">
+          <CardTitle className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+            <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+            Availability
+          </CardTitle>
           {isEditMode && (
             <Button
               onClick={() => setIsAdding(!isAdding)}
               size="sm"
               variant="outline"
-              className="gap-1"
+              className={`${secondaryClass} gap-[5px]`}
             >
-              <Plus className="h-4 w-4" />
+              <Plus className="size-4" strokeWidth={1.5} />
               Add
             </Button>
           )}
         </div>
       </CardHeader>
-      <CardContent className="space-y-3">
+      <CardContent className="flex flex-col gap-3 px-[25px] pb-[25px]">
         {isAdding && isEditMode && (
-          <div className="border rounded-lg p-4 space-y-3 bg-muted/50">
-            <div className="space-y-2">
-              <Label className="flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Select Date
-              </Label>
+          <div className="flex flex-col gap-3 rounded-[8px] bg-[#F4F4EB] p-[15px]">
+            <div className="flex flex-col gap-[5px]">
+              <Label className={labelClass}>Select date</Label>
               <Input
                 type="date"
+                className={fieldClass}
                 value={selectedDate}
                 onChange={(e) => {
                   setSelectedDate(e.target.value);
@@ -110,13 +119,13 @@ export function AvailabilitySection({
               />
             </div>
 
-            <div className="space-y-2">
-              <Label>Day of Week</Label>
+            <div className="flex flex-col gap-[5px]">
+              <Label className={labelClass}>Day of week</Label>
               <Select
                 value={newSlot.day_of_week.toString()}
                 onValueChange={(value) => setNewSlot({ ...newSlot, day_of_week: parseInt(value) })}
               >
-                <SelectTrigger>
+                <SelectTrigger className={fieldClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -129,32 +138,34 @@ export function AvailabilitySection({
               </Select>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-2">
-                <Label>Start Time</Label>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="flex flex-col gap-[5px]">
+                <Label className={labelClass}>Start time</Label>
                 <Input
                   type="time"
+                  className={fieldClass}
                   value={newSlot.start_time}
                   onChange={(e) => setNewSlot({ ...newSlot, start_time: e.target.value })}
                 />
               </div>
-              <div className="space-y-2">
-                <Label>End Time</Label>
+              <div className="flex flex-col gap-[5px]">
+                <Label className={labelClass}>End time</Label>
                 <Input
                   type="time"
+                  className={fieldClass}
                   value={newSlot.end_time}
                   onChange={(e) => setNewSlot({ ...newSlot, end_time: e.target.value })}
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Timezone</Label>
+            <div className="flex flex-col gap-[5px]">
+              <Label className={labelClass}>Timezone</Label>
               <Select
                 value={newSlot.timezone}
                 onValueChange={(value) => setNewSlot({ ...newSlot, timezone: value })}
               >
-                <SelectTrigger>
+                <SelectTrigger className={fieldClass}>
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -167,20 +178,21 @@ export function AvailabilitySection({
               </Select>
             </div>
 
-            <div className="flex gap-2">
-              <Button
-                onClick={handleAddSlot}
-                className="flex-1"
-                size="sm"
-              >
-                Add Slot
-              </Button>
+            <div className="flex justify-end gap-2">
               <Button
                 onClick={() => setIsAdding(false)}
                 variant="outline"
                 size="sm"
+                className={secondaryClass}
               >
                 Cancel
+              </Button>
+              <Button
+                onClick={handleAddSlot}
+                size="sm"
+                className={primaryClass}
+              >
+                Add slot
               </Button>
             </div>
           </div>
@@ -198,48 +210,37 @@ export function AvailabilitySection({
               }).format(date);
             };
 
-            // Debug logging
-            // console.log('Slot data:', slot);
-
             return (
-              <div key={slot.id} className="flex justify-between items-center group">
-                <div className="flex-1">
-                  {slot.date ? (
-                    <>
-                      <span className="text-sm font-semibold text-foreground">
-                        {formatDate(slot.date)} ({dayName}):
-                      </span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                      </span>
-                    </>
-                  ) : (
-                    <>
-                      <span className="text-sm font-semibold text-foreground">{dayName}:</span>
-                      <span className="text-sm text-muted-foreground ml-2">
-                        {formatTime(slot.start_time)} - {formatTime(slot.end_time)}
-                      </span>
-                    </>
-                  )}
+              <div
+                key={slot.id}
+                className="group flex items-center justify-between gap-3 border-t border-[#EAEADF] py-3 first:border-t-0 first:pt-0"
+              >
+                <div className="flex-1 text-[14px] leading-[18px] tracking-[-0.03em]">
+                  <span className="font-medium text-[#1A202C]">
+                    {slot.date ? `${formatDate(slot.date)} (${dayName})` : dayName}
+                  </span>
+                  <span className="ml-2 text-[#767980]">
+                    {formatTime(slot.start_time)} to {formatTime(slot.end_time)}
+                  </span>
                 </div>
                 {isEditMode && (
-                  <Button
+                  <button
+                    type="button"
                     onClick={() => handleDeleteSlot(slot.id)}
-                    size="sm"
-                    variant="ghost"
-                    className="opacity-0 group-hover:opacity-100 transition-opacity"
+                    aria-label="Delete slot"
+                    className="inline-flex size-4 items-center justify-center text-[#767980] opacity-0 transition-opacity hover:text-[#1A202C] focus-visible:opacity-100 group-hover:opacity-100"
                   >
-                    <Trash2 className="h-4 w-4 text-destructive" />
-                  </Button>
+                    <Trash2 className="size-4" strokeWidth={1.5} />
+                  </button>
                 )}
               </div>
             );
           })
         ) : (
-          <div className="text-center py-4">
-            <p className="text-sm text-muted-foreground">
+          <div className="rounded-[8px] bg-[#F4F4EB] px-5 py-6 text-center">
+            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
               {isEditMode
-                ? 'No availability slots. Click "Add" to create one.'
+                ? 'No availability slots. Select "Add" to create one.'
                 : 'The coach has no available slots at this time.'}
             </p>
           </div>

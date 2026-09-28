@@ -60,6 +60,9 @@ interface ManageAvailabilityModalProps {
 }
 
 
+const errorAlertClass =
+  "flex min-h-[50px] items-center gap-2 rounded-[8px] border-0 bg-[#FDF1F1] px-[15px] py-2 [&>svg]:static [&>svg]:text-[#FB4747] [&>svg~*]:pl-0 [&>svg+div]:translate-y-0";
+
 export const ManageAvailabilityModal = ({
   open,
   onOpenChange,
@@ -821,17 +824,17 @@ export const ManageAvailabilityModal = ({
         className="flex w-[min(1160px,calc(100vw-2rem))] max-w-none max-h-[90vh] flex-col gap-0 overflow-hidden border border-[#EAEADF] bg-[#F7F7F0] p-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] sm:rounded-[10px] [&>button]:hidden"
       >
         <div className="flex items-center justify-between border-b border-[#EAEADF] p-[25px]">
-          <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-            <Calendar className="size-5" strokeWidth={1.75} />
+          <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+            <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
             {isEditMode ? "Edit availability" : "Add availability"}
           </h2>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="text-[#767980]"
+            className="inline-flex size-[30px] items-center justify-center rounded-[8px] text-[#767980] transition-colors hover:bg-[#F1F1E6] hover:text-[#1A202C]"
             aria-label="Close"
           >
-            <X className="size-5" strokeWidth={1.75} />
+            <X className="size-5" strokeWidth={1.5} />
           </button>
         </div>
 
@@ -867,35 +870,36 @@ export const ManageAvailabilityModal = ({
           />
 
           {hasAnyErrors && (
-            <Alert variant="destructive" className="bg-red-50 border py-2 border-red-200 flex items-center gap-3 min-h-[55px]">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <div className="flex items-center justify-between gap-3 w-full">
-                <p className="text-sm text-red-800 font-medium">
-                  Availability incomplete - finish the highlighted days before saving.
+            <Alert variant="destructive" className={errorAlertClass}>
+              <AlertCircle className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
+              <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
+                <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#B42318]">
+                  Availability incomplete. Finish the highlighted days before saving.
                 </p>
-                <Button variant="outline" size="sm" onClick={goToFirstIssue}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={goToFirstIssue}
+                  className="h-[30px] w-fit rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]"
+                >
                   Review
                 </Button>
               </div>
             </Alert>
           )}
-          {/* Duplicate Error */}
-        {duplicateError && (
-            <Alert variant="destructive" className="bg-red-50 border py-2 border-red-200 flex items-center gap-3 min-h-[55px]">
-              <AlertCircle className="w-5 h-5 text-red-600" />
-              <div className="flex items-center justify-between gap-3 w-full">
-              <AlertDescription className="text-sm text-red-800 font-medium">
-                
-                <p>{duplicateError} </p>
-                </AlertDescription>
-                </div>
+          {duplicateError && (
+            <Alert variant="destructive" className={errorAlertClass}>
+              <AlertCircle className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
+              <AlertDescription className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#B42318]">
+                {duplicateError}
+              </AlertDescription>
             </Alert>
-        )}
+          )}
           {errors.dateRange && (
-            <p className="text-xs text-red-600">{errors.dateRange}</p>
+            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#FB4747]">{errors.dateRange}</p>
           )}
           {errors.general && (
-            <p className="text-xs text-red-600">{errors.general}</p>
+            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#FB4747]">{errors.general}</p>
           )}
           {/* Weekly Time Slots Section - with scrollable table */}
           <WeeklySlotsTable
@@ -931,16 +935,16 @@ export const ManageAvailabilityModal = ({
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="h-auto rounded-[8px] border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] hover:bg-[#F4F4EB]"
+            className="h-[34px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || isOccurrencesBusy}
-            className="h-auto rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6] hover:bg-[#0054B4]"
+            className="h-[34px] rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] hover:bg-[#004390] disabled:opacity-60"
           >
-            {isSubmitting ? 'Saving...' : 'Save availability'}
+            {isSubmitting ? 'Saving…' : 'Save availability'}
           </Button>
         </div>
       </DialogContent>
@@ -949,7 +953,7 @@ export const ManageAvailabilityModal = ({
         onOpenChange={setShowRecurringConfirm}
         title="Turn on recurring?"
         description="Changes made in the current week will be applied to all future and past weeks. Existing slots with values will remain unchanged."
-        confirmLabel="Apply Recurring"
+        confirmLabel="Apply recurring"
         contentClassName="max-w-md"
         onConfirm={() => {
           setShowRecurringConfirm(false);

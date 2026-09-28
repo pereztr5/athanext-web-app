@@ -1,5 +1,4 @@
-import { Star } from "lucide-react";
-import { cn } from "@/lib/utils";
+import { BrandStar } from "@/components/brand";
 
 export type RatingStarsProps = {
   value: number;
@@ -18,23 +17,18 @@ const RatingStars = ({
   label,
   size = "md",
 }: RatingStarsProps) => (
-  <div className="flex items-center gap-2" aria-label={label}>
+  <div className="flex items-center gap-1.5" role="group" aria-label={label}>
     {[1, 2, 3, 4, 5].map((star) => (
       <button
         key={star}
         type="button"
-        className="p-0.5"
+        className="rounded-[4px] p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
         onClick={() => onChange(star)}
         onMouseEnter={() => onHover(star)}
         onMouseLeave={onLeave}
         aria-label={`${star} star${star > 1 ? "s" : ""}`}
       >
-        <Star
-          className={cn(
-            size === "sm" ? "h-5 w-5" : "h-7 w-7",
-            star <= value ? "fill-yellow-400 text-yellow-400" : "text-slate-300"
-          )}
-        />
+        <BrandStar filled={star <= value} size={size === "sm" ? 20 : 24} />
       </button>
     ))}
   </div>

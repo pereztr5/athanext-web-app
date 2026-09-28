@@ -187,3 +187,53 @@ export const getInitialsFromName = (name: string): string => {
 export const getAvatarUrlFromName = (name: string): string => {
   return `https://api.dicebear.com/7.x/initials/svg?seed=${encodeURIComponent(name)}&backgroundColor=edf2ff,ffe4e6,e0f2fe,fef3c7`;
 };
+
+const timeParts = (date: Date) => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes().toString().padStart(2, '0');
+  return { clock: `${hours % 12 || 12}:${minutes}`, period: hours < 12 ? 'AM' : 'PM' };
+};
+
+/**
+ * Format a start/end pair as "4:00 to 5:00 PM", keeping one AM/PM when both
+ * times share it ("11:30 AM to 12:30 PM" otherwise).
+ * Accepts Date objects, ISO datetimes, or "HH:mm[:ss]" time strings.
+ */
+export const formatTimeSpan = (start: Date | string, end: Date | string): string => {
+  const toDate = (value: Date | string) =>
+    value instanceof Date
+      ? value
+      : /^\d{1,2}:\d{2}/.test(value)
+        ? new Date(`2000-01-01T${value.length === 5 ? `${value}:00` : value}`)
+        : new Date(value);
+  const startDate = toDate(start);
+  const endDate = toDate(end);
+  if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) return '';
+  const s = timeParts(startDate);
+  const e = timeParts(endDate);
+  return s.period === e.period
+    ? `${s.clock} to ${e.clock} ${e.period}`
+    : `${s.clock} ${s.period} to ${e.clock} ${e.period}`;
+};
+
+/**
+ * Format an amount without cents when it is a whole number ("$45"), with
+ * cents otherwise ("$47.25").
+ */
+export const formatWholePrice = (amount: number, currency: string = 'USD'): string => {
+  const symbol = getCurrencySymbol(currency);
+  const rounded = Math.round(amount * 100) / 100;
+  return Number.isInteger(rounded) ? `${symbol}${rounded}` : `${symbol}${rounded.toFixed(2)}`;
+};
+
+/**
+ * Sentence-case location label: "In person" / "Online".
+ */
+export const formatLocationSentence = (location?: string | null): string => {
+  if (!location) return '';
+  const value = location.toLowerCase();
+  if (value === 'in-person' || value === 'in person') return 'In person';
+  if (value === 'online') return 'Online';
+  const spaced = value.replace(/-/g, ' ');
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+};

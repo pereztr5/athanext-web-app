@@ -60,50 +60,33 @@ const MessageBubble = ({
     );
   }
 
+  // Default variant (CoachChatPanel): no avatars; read status only on outgoing messages.
   return (
-    <div className={cn("flex w-full gap-3 px-2", isUser ? "justify-end" : "justify-start")}>
-      {!isUser && (
-        <div className="mt-1 h-10 w-10 rounded-full bg-[#1c77ff] text-white font-semibold flex items-center justify-center shadow-soft">
-          <span className="text-sm leading-none">{initials}</span>
-        </div>
-      )}
-      <div className={cn("max-w-xl w-full space-y-2", isUser ? "text-right" : "text-left")}>
-        <div
-          className={cn(
-            "rounded-[18px] px-4 py-3 text-sm leading-relaxed shadow-soft break-words break-all overflow-hidden max-w-[85%] sm:max-w-[75%] inline-block text-left",
-            isUser
-              ? "bg-[#1a73e8] text-white"
-              : "bg-white/90 text-slate-800 border border-slate-200"
-          )}
-        >
-          {text}
-        </div>
-        <div
-          className={cn(
-            "flex items-center gap-2 text-xs text-slate-500",
-            isUser ? "justify-end pr-1" : "justify-start pl-1"
-          )}
-        >
-          <span>{time}</span>
-          {status && isUser && (
-            <>
-              <CheckCheck className="h-3.5 w-3.5 text-slate-500" />
-              <span>{status}</span>
-            </>
-          )}
-          {!isUser && status && (
-            <>
-              <CheckCheck className="h-3.5 w-3.5 text-slate-500" />
-              <span>{status}</span>
-            </>
-          )}
-        </div>
+    <div className={cn("flex w-full flex-col gap-1.5", isUser ? "items-end" : "items-start")}>
+      <div
+        className={cn(
+          "max-w-[80%] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2.5 text-[14px] leading-[18px] tracking-[-0.03em] [text-wrap:pretty]",
+          isUser
+            ? "bg-[#0054B4] text-[#F1F1E6]"
+            : "border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]"
+        )}
+      >
+        {text}
       </div>
-      {isUser && (
-        <div className="mt-1 h-10 w-10 rounded-full bg-[#1c77ff] text-white font-semibold flex items-center justify-center shadow-soft">
-          <span className="text-sm leading-none">{initials}</span>
-        </div>
-      )}
+      <span
+        className={cn(
+          "flex items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]",
+          isUser ? "pr-0.5" : "pl-0.5"
+        )}
+      >
+        {time}
+        {isUser && status ? (
+          <>
+            <CheckCheck className="size-3" strokeWidth={2} aria-hidden="true" />
+            {status}
+          </>
+        ) : null}
+      </span>
     </div>
   );
 };

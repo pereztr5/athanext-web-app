@@ -1,16 +1,15 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import type { ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import {
   ArrowLeft,
-  CalendarClock,
   CalendarDays,
-  CheckCircle2,
-  Mail,
+  Check,
+  Info,
   MapPin,
   NotebookPen,
-  Phone,
+  Search,
   SendHorizontal,
-  ShieldCheck,
   User,
   UserCheck2,
   UserPlus,
@@ -25,8 +24,8 @@ import { mapRpcRowToAthlete, buildAttendancePayload, buildFeedbackPayload, build
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
 
+import { BrandPill, BrandStar } from "@/components/brand";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -35,16 +34,19 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Separator } from "@/components/ui/separator";
+import { Skeleton } from "@/components/ui/skeleton";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import RatingStars from "@/components/ui/RatingStars";
-import { formatSessionPrice, formatSlotTime, formatSessionDate, getLocationLabel } from "@/utils/sessionFormatting";
-import { PRIMARY } from "@/config/colors";
+import {
+  formatLocationSentence,
+  formatSessionDate,
+  formatTimeSpan,
+  formatWholePrice,
+} from "@/utils/sessionFormatting";
 
 type Athlete = {
   id: string;
@@ -60,7 +62,7 @@ type Athlete = {
   goals?: string;
 };
 
-const formatCurrency = (amount: number) => `$${amount.toFixed(2)}`;
+const formatCurrency = (amount: number) => formatWholePrice(amount);
 
 const getInitials = (name: string) =>
   name
@@ -70,7 +72,68 @@ const getInitials = (name: string) =>
     .slice(0, 2)
     .toUpperCase();
 
- 
+/** "Midfielder, 15, Intermediate": skips the "N/A" placeholder age. */
+const getAthleteMeta = (athlete: Athlete) =>
+  [athlete.role, athlete.age && athlete.age !== "N/A" ? athlete.age : null, athlete.level]
+    .filter(Boolean)
+    .join(", ");
+
+/** "Mar 9, 2026, 4:00 to 5:00 PM" from the slot's date and HH:mm[:ss] times. */
+const getSessionWhen = (date?: string | null, start?: string | null, end?: string | null) =>
+  [date ? formatSessionDate(date) : null, start && end ? formatTimeSpan(start, end) : null]
+    .filter(Boolean)
+    .join(", ");
+
+const labelClass = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+const fieldLabelClass = "text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+const bodyClass = "text-[14px] leading-[18px] tracking-[-0.03em]";
+const avatarFallbackClass = "bg-[#E5EDF7] text-[14px] font-medium text-[#0054B4]";
+const dialogShellClass = "gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C]";
+const dialogSectionClass = "px-[25px] py-5";
+const dialogTitleClass = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
+const dialogDescriptionClass = "text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
+const textareaClass = "resize-none text-[14px] leading-[18px] tracking-[-0.03em]";
+
+const Divider = () => <div className="h-px bg-[#EAEADF]" />;
+
+const AthleteAvatar = ({ athlete, className }: { athlete: Athlete; className?: string }) => (
+  <Avatar className={cn("h-10 w-10 shrink-0", className)}>
+    {athlete.avatar ? <AvatarImage src={athlete.avatar} alt={athlete.name} /> : null}
+    <AvatarFallback className={avatarFallbackClass}>{getInitials(athlete.name)}</AvatarFallback>
+  </Avatar>
+);
+
+const SummaryRow = ({ label, value, icon }: { label: string; value: ReactNode; icon?: ReactNode }) => (
+  <div className={cn("flex items-center justify-between gap-3", bodyClass)}>
+    <span className="flex items-center gap-2 text-[#767980]">
+      {icon}
+      {label}
+    </span>
+    <span className="font-medium text-[#1A202C]">{value}</span>
+  </div>
+);
+
+const OverviewField = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex flex-col gap-1.5">
+    <span className={labelClass}>{label}</span>
+    <span className={cn(bodyClass, "text-[#1A202C]")}>{children}</span>
+  </div>
+);
+
+const ListNote = ({ children }: { children: ReactNode }) => (
+  <div className="flex items-center gap-[10px] rounded-[8px] bg-[#F4F4EB] p-4">
+    <Info className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+    <p className={cn(bodyClass, "text-[#767980]")}>{children}</p>
+  </div>
+);
+
+const ReadOnlyStars = ({ value }: { value: number }) => (
+  <span className="flex items-center gap-1" aria-hidden="true">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <BrandStar key={star} filled={star <= value} size={16} />
+    ))}
+  </span>
+);
 
 const CoachSessionFeedback = () => {
   const navigate = useNavigate();
@@ -177,7 +240,7 @@ const CoachSessionFeedback = () => {
 
     if (profile.type !== 'coach' || !profile.data) {
       toast({
-        title: 'Access Denied',
+        title: 'Access denied',
         description: 'Only coaches can access this page.',
         variant: 'destructive',
       });
@@ -187,7 +250,7 @@ const CoachSessionFeedback = () => {
 
     if (!slotId) {
       toast({
-        title: 'Invalid Session',
+        title: 'Invalid session',
         description: 'Session ID is missing.',
         variant: 'destructive',
       });
@@ -199,7 +262,7 @@ const CoachSessionFeedback = () => {
   useEffect(() => {
     if (dataError) {
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'Failed to load session data.',
         variant: 'destructive',
       });
@@ -390,7 +453,7 @@ const CoachSessionFeedback = () => {
         },
         onError: (error) => {
           toast({
-            title: 'Error',
+            title: 'Something went wrong',
             description: 'Failed to initialize attendance.',
             variant: 'destructive',
           });
@@ -435,7 +498,7 @@ const CoachSessionFeedback = () => {
       },
       onError: (error) => {
         toast({
-          title: 'Error',
+          title: 'Something went wrong',
           description: 'Failed to update attendance.',
           variant: 'destructive',
         });
@@ -489,7 +552,7 @@ const CoachSessionFeedback = () => {
     const bookingId = bookingIdMap[pendingUnselect.id];
     if (!bookingId) {
       toast({
-        title: 'Error',
+        title: 'Something went wrong',
         description: 'Booking information not found.',
         variant: 'destructive',
       });
@@ -512,7 +575,7 @@ const CoachSessionFeedback = () => {
       },
       onError: (error) => {
         toast({
-          title: 'Error',
+          title: 'Something went wrong',
           description: 'Failed to save attendance.',
           variant: 'destructive',
         });
@@ -539,8 +602,8 @@ const CoachSessionFeedback = () => {
     upsertFeedback(payloadItems, {
       onSuccess: () => {
         toast({
-          title: 'Success',
-          description: 'Feedback submitted successfully.',
+          title: 'Feedback saved',
+          description: 'Your feedback is saved.',
         });
         setAthleteFeedbackSubmitted((prev) => {
           const next = { ...prev };
@@ -553,7 +616,7 @@ const CoachSessionFeedback = () => {
       },
       onError: (error) => {
         toast({
-          title: 'Error',
+          title: 'Something went wrong',
           description: 'Failed to submit feedback.',
           variant: 'destructive',
         });
@@ -573,7 +636,7 @@ const CoachSessionFeedback = () => {
       },
       onError: (error) => {
         toast({
-          title: 'Error',
+          title: 'Something went wrong',
           description: 'Failed to save session feedback.',
           variant: 'destructive',
         });
@@ -583,219 +646,220 @@ const CoachSessionFeedback = () => {
 
   if (isLoadingData || profileLoading) {
     return (
-      <div className="min-h-[50vh] pt-6 pb-16 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-lg text-slate-600">Loading session data...</p>
+      <div className="px-4 pb-16 pt-6 lg:px-6" aria-busy="true" aria-live="polite">
+        <span className="sr-only">Loading session</span>
+        <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+          <div className="flex items-center gap-3">
+            <Skeleton className="size-[34px] rounded-[8px]" />
+            <div className="flex flex-col gap-[10px]">
+              <Skeleton className="h-7 w-72 rounded-[6px]" />
+              <Skeleton className="h-4 w-56 rounded-[6px]" />
+            </div>
+          </div>
+          <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_360px]">
+            <div className="flex flex-col gap-6">
+              <Skeleton className="h-[180px] rounded-[10px]" />
+              <Skeleton className="h-[320px] rounded-[10px]" />
+            </div>
+            <Skeleton className="h-[360px] rounded-[10px]" />
+          </div>
         </div>
       </div>
     );
   }
 
+  const sessionWhen = getSessionWhen(sessionHeader.sessionDate, sessionHeader.startTime, sessionHeader.endTime);
+  const sessionRatingShown = sessionHoverRating ?? sessionRating ?? 0;
+
   return (
-    <div className="pt-6 pb-16">
-      <div className="max-w-6xl mx-auto px-4 lg:px-6 flex flex-col gap-6">
-        <div className="flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <Button
-              variant="ghost"
-              className="rounded-xl h-10 w-10 p-0 border bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 hidden sm:inline-flex"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-5 w-5 text-blue-600" />
-            </Button>
-            <Button
-              variant="ghost"
-              className="rounded-xl h-10 w-10 p-0 border bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50 inline-flex sm:hidden flex-shrink-0"
-              onClick={() => navigate(-1)}
-            >
-              <ArrowLeft className="h-5 w-5 text-blue-600" />
-            </Button>
-            <div>
-              <h1 className="text-3xl font-semibold text-slate-900">
-                {totalAthletes === 1 ? "Individual" : "Group"} Session - Check-in &amp; Feedback
-              </h1>
-              <p className="text-sm text-slate-600 mt-1">
-                {sessionHeader.sessionName || ""}
-                {sessionHeader.sessionDate ? ` • ${formatSessionDate(sessionHeader.sessionDate)}` : ""}
-                {sessionHeader.startTime && sessionHeader.endTime
-                  ? ` • ${formatSlotTime(sessionHeader.startTime)} - ${formatSlotTime(sessionHeader.endTime)}`
-                  : ""}
+    <div className="px-4 pb-16 pt-6 tracking-[-0.03em] text-[#1A202C] lg:px-6">
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+        <div className="flex items-start gap-3">
+          <Button
+            variant="outline"
+            size="icon"
+            className="shrink-0"
+            onClick={() => navigate(-1)}
+            aria-label="Go back"
+          >
+            <ArrowLeft className="size-4" strokeWidth={1.5} />
+          </Button>
+          <div className="flex min-w-0 flex-col gap-[10px]">
+            <h1 className="text-[28px] font-bold leading-[30px] tracking-[-0.05em] text-[#1A202C] sm:text-[32px]">
+              Check-in and feedback
+            </h1>
+            <div className="flex flex-wrap items-center gap-2">
+              <BrandPill tone="neutral">{totalAthletes === 1 ? "Individual session" : "Group session"}</BrandPill>
+              <p className="text-[16px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                {[sessionHeader.sessionName, sessionWhen].filter(Boolean).join(", ")}
               </p>
             </div>
           </div>
         </div>
 
-        <div className="grid grid-cols-1 xl:grid-cols-[minmax(0,2fr)_360px] gap-6">
-          <div className="space-y-6">
-            <Card className="rounded-xl">
-              <CardHeader className="pb-2">
-                <CardTitle className="text-lg text-slate-800">Session Overview</CardTitle>
+        <div className="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,2fr)_360px]">
+          <div className="flex min-w-0 flex-col gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-[#1A202C]">Session overview</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                  <div className="space-y-1">
-                    <p className="text-base font-semibold text-slate-800">{sessionHeader.sessionName || "Session"}</p>
-                    {sessionHeader.pillar && (
-                      <p className="text-sm text-slate-600">
-                        <span className="font-medium text-slate-800">Pillar:</span>{" "}
-                        <span>{sessionHeader.pillar}</span>
-                      </p>
-                    )}
-                  </div>
-                  <div className="rounded-xl bg-blue-50 px-4 py-2 text-right border border-blue-100 min-w-[140px]">
-                    <p className="text-xs text-slate-600">Rate per athlete</p>
-                    <p className="text-lg font-semibold text-blue-700">
-                      {sessionHeader.rateCents !== null ? formatSessionPrice(sessionHeader.rateCents) : "$0"}
+              <CardContent className="flex flex-col gap-5 px-[25px] pb-[25px]">
+                <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
+                  <div className="flex min-w-0 flex-col gap-[10px]">
+                    <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                      {sessionHeader.sessionName || "Session"}
                     </p>
+                    {sessionHeader.pillar ? (
+                      <div>
+                        <BrandPill tone="blue">{sessionHeader.pillar}</BrandPill>
+                      </div>
+                    ) : null}
+                  </div>
+                  <div className="flex flex-col items-start gap-1.5 sm:items-end">
+                    <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
+                      {sessionHeader.rateCents !== null ? formatWholePrice(sessionHeader.rateCents) : "$0"}
+                    </span>
+                    <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">per athlete</span>
                   </div>
                 </div>
-                <Separator />
-                <div className="space-y-2">
-                  <p className="text-sm text-slate-700">
-                    <span className="font-medium text-slate-800">Coach:</span>{" "}
-                    <span className="text-blue-700 font-semibold">{sessionHeader.coachName || ""}</span>
-                  </p>
-                  <div className="flex items-center gap-2 text-sm text-slate-600">
-                    <MapPin className="h-4 w-4 text-blue-600" />
-                    <span>{sessionHeader.locationType ? getLocationLabel(sessionHeader.locationType as 'online' | 'in-person') : ""}</span>
-                  </div>
+                <div className="h-px bg-[#EAEADF]" />
+                <div className="flex flex-wrap gap-x-6 gap-y-3">
+                  {sessionHeader.coachName ? <OverviewField label="Coach">{sessionHeader.coachName}</OverviewField> : null}
+                  {sessionHeader.locationType ? (
+                    <OverviewField label="Location">
+                      <span className="inline-flex items-center gap-1.5">
+                        <MapPin className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                        {formatLocationSentence(sessionHeader.locationType)}
+                      </span>
+                    </OverviewField>
+                  ) : null}
+                  {sessionWhen ? <OverviewField label="When">{sessionWhen}</OverviewField> : null}
                 </div>
               </CardContent>
             </Card>
 
             <Card>
-            <div className="p-4 pt-5">
-              <Input
-                placeholder="Search athletes"
-                value={search}
-                onChange={(event) => setSearch(event.target.value)}
-                className="h-10 w-full"
-              />
-            </div>
-            <CardHeader className="pb-3 flex-row items-center justify-between gap-3 flex-wrap md:flex-nowrap">
-              <div className="space-y-1">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  Attendance
-                  <Badge className="bg-red-50 text-red-700 border-red-200 text-xs">
-                      Required
-                    </Badge>
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Mark athletes who attended this session.
-                  </p>
-              </div>
-              <div className="flex items-center gap-3 flex-wrap md:flex-nowrap">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Checkbox
-                    checked={allSelected ? true : attendedCount === 0 ? false : "indeterminate"}
-                    onCheckedChange={handleSelectAll}
-                    aria-label="Select all athletes"
-                    className="rounded-md"
-                  />
-                  <span>Select all</span>
+              <CardHeader className="flex-row flex-wrap items-start justify-between gap-3 space-y-0">
+                <div className="flex flex-col gap-[10px]">
+                  <div className="flex items-center gap-2">
+                    <CardTitle className="text-[#1A202C]">Attendance</CardTitle>
+                    <BrandPill tone="amber">Required</BrandPill>
+                  </div>
+                  <p className={cn(bodyClass, "text-[#767980]")}>Mark who attended this session.</p>
                 </div>
-                <div className="text-sm font-medium text-blue-700 bg-blue-50 border border-blue-100 px-3 py-1.5 rounded-full">
-                  {attendedCount} selected
+                <div className="flex flex-wrap items-center gap-3">
+                  <label className={cn(bodyClass, "flex cursor-pointer items-center gap-2 text-[#484D56]")}>
+                    <Checkbox
+                      checked={allSelected ? true : attendedCount === 0 ? false : "indeterminate"}
+                      onCheckedChange={handleSelectAll}
+                      aria-label="Select all athletes"
+                    />
+                    Select all
+                  </label>
+                  <BrandPill tone="blue">{attendedCount} selected</BrandPill>
+                  <Button type="button" size="sm" variant="outline" onClick={() => setWalkInOpen(true)}>
+                    <UserPlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    Add athlete
+                  </Button>
                 </div>
-                <Button type="button" size="sm" variant="outline" onClick={() => setWalkInOpen(true)}>
-                  <UserPlus className="mr-1.5 h-4 w-4" />
-                  Add athlete
-                </Button>
-              </div>
               </CardHeader>
-              <CardContent className="space-y-3 max-h-[360px] overflow-y-auto pr-2">
-                {filteredAthletes.map((athlete) => {
-                  const isPresent = attendance[athlete.id];
-                  return (
-                    <button
-                      key={athlete.id}
-                      type="button"
-                      onClick={() => {
-                        if (!sessionFeedbackCompleted) {
-                          toggleAttendance(athlete.id);
-                        }
-                      }}
-                      className={cn(
-                        "w-full text-left rounded-xl border px-3 py-3 flex flex-col sm:flex-row sm:items-start gap-3 md:gap-4 transition-all",
-                        "hover:border-blue-200 hover:bg-blue-50/60",
-                        isPresent ? "border-blue-200 bg-blue-50/70" : "border-border bg-white"
-                      )}
-                    >
-                      <Checkbox
-                        checked={isPresent}
-                        onCheckedChange={() => {
+              <CardContent className="flex flex-col gap-[10px] px-[25px] pb-[25px]">
+                <div className="relative">
+                  <Search
+                    className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]"
+                    strokeWidth={1.5}
+                    aria-hidden="true"
+                  />
+                  <Input
+                    placeholder="Search athletes"
+                    aria-label="Search athletes"
+                    value={search}
+                    onChange={(event) => setSearch(event.target.value)}
+                    className="w-full pl-9"
+                  />
+                </div>
+                {dataError ? (
+                  <p className={cn(bodyClass, "text-destructive")}>
+                    We couldn't load this session's athletes. Refresh the page to try again.
+                  </p>
+                ) : athletes.length === 0 ? (
+                  <ListNote>No athletes on this session yet. Use Add athlete to add a walk-in.</ListNote>
+                ) : filteredAthletes.length === 0 ? (
+                  <ListNote>No athletes match your search.</ListNote>
+                ) : null}
+                <div className="flex max-h-[380px] flex-col gap-[10px] overflow-y-auto">
+                  {filteredAthletes.map((athlete) => {
+                    const isPresent = attendance[athlete.id];
+                    const meta = getAthleteMeta(athlete);
+                    return (
+                      <button
+                        key={athlete.id}
+                        type="button"
+                        onClick={() => {
                           if (!sessionFeedbackCompleted) {
                             toggleAttendance(athlete.id);
                           }
                         }}
-                        onClick={(event) => event.stopPropagation()}
-                        className="rounded-md"
-                        aria-label={`Mark ${athlete.name} as attended`}
-                      />
-                      <Avatar className="h-12 w-12">
-                        {athlete.avatar ? (
-                          <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                        ) : (
-                          <AvatarFallback className="bg-blue-100 text-blue-700">
-                            {getInitials(athlete.name)}
-                          </AvatarFallback>
+                        className={cn(
+                          "flex w-full flex-col gap-3 rounded-[8px] border border-[#EAEADF] px-4 py-3 text-left transition-colors sm:flex-row sm:items-center",
+                          "focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]",
+                          isPresent ? "bg-[#F4F4EB] hover:bg-[#EAEADF]" : "bg-transparent hover:bg-[#F4F4EB]"
                         )}
-                      </Avatar>
-                      <div className="flex-1 min-w-0 space-y-0.5">
-                        <div className="flex items-center gap-2">
-                          <p className="text-sm font-semibold text-slate-800 truncate">
-                            {athlete.name}
-                          </p>
-                          {unpaidAthleteIds.has(athlete.id) ? (
-                            <Badge className="bg-amber-50 text-amber-700 border-amber-200 text-xs">
-                              Awaiting payment
-                            </Badge>
-                          ) : null}
+                      >
+                        <div className="flex min-w-0 flex-1 items-center gap-3">
+                          <Checkbox
+                            checked={isPresent}
+                            onCheckedChange={() => {
+                              if (!sessionFeedbackCompleted) {
+                                toggleAttendance(athlete.id);
+                              }
+                            }}
+                            onClick={(event) => event.stopPropagation()}
+                            aria-label={`Mark ${athlete.name} as attended`}
+                          />
+                          <AthleteAvatar athlete={athlete} />
+                          <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <p className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                                {athlete.name}
+                              </p>
+                              {unpaidAthleteIds.has(athlete.id) ? <BrandPill tone="amber">Awaiting payment</BrandPill> : null}
+                              {!isPresent ? <BrandPill tone="muted">Absent</BrandPill> : null}
+                            </div>
+                            {meta ? <p className={cn(bodyClass, "truncate text-[#767980]")}>{meta}</p> : null}
+                          </div>
                         </div>
-                        <p className="text-sm text-muted-foreground">
-                          {athlete.role} | {athlete.age}
-                          {athlete.level ? ` | ${athlete.level}` : ""}
-                        </p>
-                      </div>
-                      {isPresent && (
-                        <div className="flex flex-col sm:flex-row flex-wrap gap-2 items-stretch sm:items-center w-full sm:w-auto">
-                          <Button
-                            size="sm"
-                            className="w-full sm:w-auto px-3 py-2 text-[13px] rounded-full transition-all flex items-center justify-center gap-1.5 bg-amber-50 border border-amber-400 text-amber-700 hover:bg-amber-100"
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openFeedbackDialog([athlete]);
-                            }}
-                          >
-                            {athleteFeedbackSubmitted[athlete.id] ? 'Edit feedback' : 'Add feedback'}
-                          </Button>
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="w-full sm:w-auto px-3 py-2 text-[13px] rounded-full transition-all border border-[#0d7ff2] text-[#0d7ff2] hover:bg-blue-50 flex items-center justify-center gap-1.5"
-                            style={{
-                              borderColor: PRIMARY.main,
-                              color: PRIMARY.main,
-                              backgroundColor: "hsla(210,90%,50%,0.08)",
-                            }}
-                            onClick={(event) => {
-                              event.stopPropagation();
-                              openProfileDialog(athlete);
-                            }}
-                          >
-                            <span className="inline-flex items-center gap-1 ">
-                              <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.477 0 8.268 2.943 9.542 7-1.274 4.057-5.065 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
-                              </svg>
+                        {isPresent && (
+                          <div className="flex w-full flex-wrap items-center gap-[10px] sm:w-auto sm:flex-nowrap">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 sm:flex-none"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openFeedbackDialog([athlete]);
+                              }}
+                            >
+                              {athleteFeedbackSubmitted[athlete.id] ? "Edit feedback" : "Add feedback"}
+                            </Button>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="flex-1 sm:flex-none"
+                              onClick={(event) => {
+                                event.stopPropagation();
+                                openProfileDialog(athlete);
+                              }}
+                            >
+                              <User className="size-4" strokeWidth={1.5} aria-hidden="true" />
                               Profile
-                            </span>
-                          </Button>
-                        </div>
-                      )}
-                    </button>
-                  );
-                })}
+                            </Button>
+                          </div>
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
               </CardContent>
             </Card>
 
@@ -808,204 +872,180 @@ const CoachSessionFeedback = () => {
             />
 
             <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-lg">Overall Session Feedback</CardTitle>
+              <CardHeader>
+                <CardTitle className="text-[#1A202C]">Session feedback</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-2">
-                <div className="flex flex-col gap-1">
-                  <label className="text-sm font-medium text-slate-800">
-                    Overall session rating <span className="text-red-600">*</span>
-                  </label>
+              <CardContent className="flex flex-col gap-5 px-[25px] pb-[25px]">
+                <div className="flex flex-col gap-[10px]">
+                  <div className="flex items-center gap-2">
+                    <span className={fieldLabelClass}>
+                      Overall rating
+                    </span>
+                    <BrandPill tone="amber">Required</BrandPill>
+                  </div>
                   <div className="flex items-center gap-3">
                     <RatingStars
                       label="Overall session rating"
-                      value={sessionHoverRating ?? sessionRating ?? 0}
+                      value={sessionRatingShown}
                       onChange={(val) => setSessionRating(val)}
                       onHover={(val) => setSessionHoverRating(val)}
                       onLeave={() => setSessionHoverRating(null)}
                     />
-                    <span className="text-sm font-semibold text-slate-900">
-                      {(sessionHoverRating ?? sessionRating ?? 0).toFixed(1)}
-                    </span>
+                    {sessionRatingShown > 0 ? (
+                      <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
+                        {sessionRatingShown} of 5
+                      </span>
+                    ) : null}
                   </div>
                 </div>
-                <p className="text-sm font-medium text-slate-800">Session summary</p>
-                <Textarea
-                  value={sessionSummary}
-                  onChange={(event) => setSessionSummary(event.target.value)}
-                  placeholder="Provide an overall summary of the session, key focus areas, and general observations..."
-                  className="min-h-[140px] bg-slate-50"
-                />
+                <div className="flex flex-col gap-[10px]">
+                  <label htmlFor="session-summary" className={fieldLabelClass}>
+                    Session summary
+                  </label>
+                  <Textarea
+                    id="session-summary"
+                    value={sessionSummary}
+                    onChange={(event) => setSessionSummary(event.target.value)}
+                    placeholder="Key focus areas and general observations"
+                    className={cn(textareaClass, "min-h-[140px]")}
+                  />
+                </div>
               </CardContent>
             </Card>
           </div>
 
-          <div className="space-y-4">
-            <Card className="border-blue-100">
-              <CardHeader className="pb-4">
-                <CardTitle className="text-lg">Payment Summary</CardTitle>
-                <p className="text-sm text-muted-foreground">
-                  Based on confirmed attendance.
-                </p>
+          <div className="flex flex-col gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-[#1A202C]">Payment summary</CardTitle>
+                <p className={cn(bodyClass, "text-[#767980]")}>Based on confirmed attendance.</p>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Rate per athlete</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatCurrency(ratePerAthlete)}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Athletes attended</span>
-                  <span className="font-semibold text-slate-800">
-                    {attendedCount}
-                  </span>
-                </div>
-                <Separator />
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">Session total</span>
-                  <span className="font-semibold text-slate-800">
-                    {formatCurrency(sessionTotal)}
-                  </span>
-                </div>
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50 px-3 py-3 flex items-center justify-between">
-                  <div className="flex items-center gap-3">
-                    <CheckCircle2 className="h-5 w-5 text-emerald-600" />
-                    <div>
-                      <p className="text-sm font-semibold text-emerald-700">
-                        Your payout
-                      </p>
-                      <p className="text-xs text-emerald-700">Payout to coach</p>
-                    </div>
+              <CardContent className="flex flex-col gap-4 px-[25px] pb-[25px]">
+                <SummaryRow label="Rate per athlete" value={formatCurrency(ratePerAthlete)} />
+                <SummaryRow label="Athletes attended" value={attendedCount} />
+                <div className="h-px bg-[#EAEADF]" />
+                <SummaryRow label="Session total" value={formatCurrency(sessionTotal)} />
+                <div className="flex items-center justify-between gap-3 rounded-[8px] bg-[#F4F4EB] p-4">
+                  <div className="flex flex-col gap-1.5">
+                    <span className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Your payout</span>
+                    <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">Paid to you as the coach</span>
                   </div>
-                  <span className="text-lg font-bold text-emerald-700">
+                  <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
                     {formatCurrency(payout)}
                   </span>
                 </div>
-                <Separator />
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>Total Athletes</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">
-                      {totalAthletes}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <UserCheck2 className="h-4 w-4" />
-                      <span>Attended</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">
-                      {attendedCount}
-                    </span>
-                  </div>
-                  <div className="flex items-center justify-between text-sm">
-                    <div className="flex items-center gap-2 text-muted-foreground">
-                      <UserX className="h-4 w-4" />
-                      <span>Absent</span>
-                    </div>
-                    <span className="font-semibold text-slate-800">
-                      {absentCount}
-                    </span>
-                  </div>
+                <div className="h-px bg-[#EAEADF]" />
+                <div className="flex flex-col gap-3">
+                  <SummaryRow
+                    label="Total athletes"
+                    value={totalAthletes}
+                    icon={<Users className="size-4" strokeWidth={1.5} aria-hidden="true" />}
+                  />
+                  <SummaryRow
+                    label="Attended"
+                    value={attendedCount}
+                    icon={<UserCheck2 className="size-4" strokeWidth={1.5} aria-hidden="true" />}
+                  />
+                  <SummaryRow
+                    label="Absent"
+                    value={absentCount}
+                    icon={<UserX className="size-4" strokeWidth={1.5} aria-hidden="true" />}
+                  />
+                </div>
+                <div className="h-px bg-[#EAEADF]" />
+                <div className="flex flex-col gap-[10px]">
+                  <Button
+                    size="lg"
+                    className="w-full text-[16px] disabled:opacity-60"
+                    disabled={!sessionRating || isUpdatingSessionFeedback || sessionFeedbackCompleted}
+                    onClick={handleCompleteSession}
+                  >
+                    {sessionFeedbackCompleted ? (
+                      <Check className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    ) : (
+                      <SendHorizontal className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    )}
+                    {isUpdatingSessionFeedback
+                      ? "Saving..."
+                      : sessionFeedbackCompleted
+                      ? "Session submitted"
+                      : "Complete session and send"}
+                  </Button>
+                  {!sessionRating && (
+                    <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                      Add an overall rating to complete the session.
+                    </p>
+                  )}
                 </div>
               </CardContent>
             </Card>
-
-            <div className="space-y-2">
-              {!sessionRating && (
-                <p className="text-sm text-red-600">
-                  Overall session rating is required to complete the session.
-                </p>
-              )}
-              <Button
-                className="w-full rounded-full h-12 text-base"
-                disabled={!sessionRating || isUpdatingSessionFeedback || sessionFeedbackCompleted}
-                onClick={handleCompleteSession}
-                style={{
-                  backgroundColor: PRIMARY.main,
-                  color: PRIMARY.foreground,
-                }}
-              >
-                <SendHorizontal className="h-4 w-4 mr-2" />
-                {isUpdatingSessionFeedback ? 'Processing...' : sessionFeedbackCompleted ? 'Session Feedback Submitted' : 'Complete session & send'}
-              </Button>
-            </div>
           </div>
         </div>
       </div>
 
-    <Dialog
-      open={feedbackDialogOpen}
+      <Dialog
+        open={feedbackDialogOpen}
         onOpenChange={(open) => {
           if (!open) {
             closeDialogs();
           }
         }}
       >
-        <DialogContent className="sm:max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Submit Feedback</DialogTitle>
-            <DialogDescription>
-              Share highlights and notes for the selected athletes.
+        <DialogContent className={cn(dialogShellClass, "sm:max-w-[720px]")}>
+          <DialogHeader className={cn(dialogSectionClass, "space-y-1.5 pr-14 text-left")}>
+            <DialogTitle className={dialogTitleClass}>Athlete feedback</DialogTitle>
+            <DialogDescription className={dialogDescriptionClass}>
+              Share highlights and notes for each athlete.
             </DialogDescription>
           </DialogHeader>
+          <Divider />
           {feedbackDialogAthletes.length > 0 && (
-            <div className="space-y-6 max-h-[70vh] overflow-y-auto pr-2">
+            <div className="flex max-h-[65vh] flex-col overflow-y-auto">
               {feedbackDialogAthletes.map((athlete, index) => {
                 const athleteRating = athleteRatingMap[athlete.id];
+                const athleteRatingShown = athleteHoverRatingMap[athlete.id] ?? athleteRating ?? 0;
+                const athleteScore = athleteScoreMap[athlete.id];
+                const meta = getAthleteMeta(athlete);
                 return (
-                  <div key={athlete.id} className="space-y-4">
-                    <div className="flex items-center gap-3">
-                      <Avatar className="h-12 w-12">
-                        {athlete.avatar ? (
-                          <AvatarImage
-                            src={athlete.avatar}
-                            alt={athlete.name}
-                          />
+                  <div key={athlete.id}>
+                    <div className={cn(dialogSectionClass, "flex flex-col gap-5")}>
+                      <div className="flex items-center gap-3">
+                        <AthleteAvatar athlete={athlete} />
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{athlete.name}</p>
+                          {meta ? <p className={cn(bodyClass, "text-[#767980]")}>{meta}</p> : null}
+                        </div>
+                        {feedbackDialogAthletes.length > 1 ? (
+                          <BrandPill tone="neutral" className="shrink-0">
+                            {index + 1} of {feedbackDialogAthletes.length}
+                          </BrandPill>
+                        ) : null}
+                      </div>
+
+                      <div className="flex flex-col gap-[10px] rounded-[8px] bg-[#F4F4EB] p-4">
+                        <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">From the athlete</p>
+                        {athleteScore ? (
+                          <div className="flex items-center gap-2">
+                            <ReadOnlyStars value={athleteScore} />
+                            <span className={cn(bodyClass, "text-[#484D56]")}>{athleteScore} of 5</span>
+                          </div>
                         ) : (
-                          <AvatarFallback className="bg-blue-100 text-blue-700">
-                            {getInitials(athlete.name)}
-                          </AvatarFallback>
+                          <p className={cn(bodyClass, "text-[#767980]")}>No rating yet</p>
                         )}
-                      </Avatar>
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800">
-                          {athlete.name}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                          {athlete.role} | {athlete.age}
-                          {athlete.level ? ` | ${athlete.level}` : ""}
+                        <p className={cn(bodyClass, athleteNoteMap[athlete.id] ? "text-[#484D56]" : "text-[#767980]")}>
+                          {athleteNoteMap[athlete.id] || "No note yet"}
                         </p>
                       </div>
-                      <Badge className="ml-auto">{index + 1} of {feedbackDialogAthletes.length}</Badge>
-                    </div>
 
-                    <div className="space-y-3 rounded-xl border border-slate-200 bg-slate-50 p-4">
-                      <p className="text-sm font-medium text-slate-800">From the athlete</p>
-                      <p className="text-sm text-slate-700">
-                        {athleteScoreMap[athlete.id]
-                          ? `${athleteScoreMap[athlete.id]} of 5 stars`
-                          : "No rating yet"}
-                      </p>
-                      <p className="text-sm text-slate-700">
-                        {athleteNoteMap[athlete.id] || "No note yet"}
-                      </p>
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="space-y-1">
-                        <p className="text-sm font-medium text-slate-800">
-                          Your rating of this athlete <span className="text-muted-foreground">(optional)</span>
+                      <div className="flex flex-col gap-[10px]">
+                        <p className={fieldLabelClass}>
+                          Your rating of this athlete <span className="font-normal text-[#767980]">(optional)</span>
                         </p>
-                        <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex flex-wrap items-center gap-3">
                           <RatingStars
                             size="sm"
                             label={`Rating for ${athlete.name}`}
-                            value={athleteHoverRatingMap[athlete.id] ?? athleteRating ?? 0}
+                            value={athleteRatingShown}
                             onChange={(val) =>
                               setAthleteRatingMap((prev) => ({ ...prev, [athlete.id]: val }))
                             }
@@ -1016,14 +1056,16 @@ const CoachSessionFeedback = () => {
                               setAthleteHoverRatingMap((prev) => ({ ...prev, [athlete.id]: null }))
                             }
                           />
-                          <span className="text-sm font-semibold text-slate-900">
-                            {(athleteHoverRatingMap[athlete.id] ?? athleteRating ?? 0).toFixed(1)}
-                          </span>
+                          {athleteRatingShown > 0 ? (
+                            <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                              {athleteRatingShown} of 5
+                            </span>
+                          ) : null}
                           {athleteRating && (
                             <Button
                               variant="ghost"
                               size="sm"
-                              className="h-8 px-2 text-xs"
+                              className="px-2 text-[14px] text-[#767980]"
                               onClick={() =>
                                 setAthleteRatingMap((prev) => ({ ...prev, [athlete.id]: undefined }))
                               }
@@ -1034,14 +1076,12 @@ const CoachSessionFeedback = () => {
                         </div>
                       </div>
 
-                    </div>
-
-                    <div className="space-y-3">
-                      <div className="space-y-2">
-                        <p className="text-sm font-medium text-slate-800">
-                          Feedback to Athlete/Parent
-                        </p>
+                      <div className="flex flex-col gap-[10px]">
+                        <label htmlFor={`feedback-to-athlete-${athlete.id}`} className={fieldLabelClass}>
+                          Feedback to the athlete or parent
+                        </label>
                         <Textarea
+                          id={`feedback-to-athlete-${athlete.id}`}
                           value={athleteFeedbackMap[athlete.id] ?? ""}
                           onChange={(event) =>
                             setAthleteFeedbackMap((prev) => ({
@@ -1049,15 +1089,16 @@ const CoachSessionFeedback = () => {
                               [athlete.id]: event.target.value,
                             }))
                           }
-                          placeholder={`E.g. ${athlete.name} commanded the box well and improved footwork...`}
-                          className="min-h-[120px] resize-none focus-visible:ring-blue-300 focus-visible:ring-2 ml-1 focus-visible:ring-offset-0"
+                          placeholder={`For example, ${athlete.name} commanded the box well and improved footwork`}
+                          className={cn(textareaClass, "min-h-[110px]")}
                         />
                       </div>
-                      <div className="space-y-2 pb-2">
-                        <p className="text-sm font-medium text-slate-800">
-                          Coach-only notes <span className="text-muted-foreground">(optional)</span>
-                        </p>
+                      <div className="flex flex-col gap-[10px]">
+                        <label htmlFor={`coach-notes-${athlete.id}`} className={fieldLabelClass}>
+                          Coach-only notes <span className="font-normal text-[#767980]">(optional)</span>
+                        </label>
                         <Textarea
+                          id={`coach-notes-${athlete.id}`}
                           value={privateFeedbackMap[athlete.id] ?? ""}
                           onChange={(event) =>
                             setPrivateFeedbackMap((prev) => ({
@@ -1065,40 +1106,32 @@ const CoachSessionFeedback = () => {
                               [athlete.id]: event.target.value,
                             }))
                           }
-                          placeholder="Internal notes only you can see..."
-                          className="min-h-[100px] resize-none focus-visible:ring-blue-300 ml-1 mb-1 focus-visible:ring-2 focus-visible:ring-offset-0"
+                          placeholder="Only you can see these notes"
+                          className={cn(textareaClass, "min-h-[90px]")}
                         />
                       </div>
                     </div>
-                    {index < feedbackDialogAthletes.length - 1 && <Separator />}
+                    {index < feedbackDialogAthletes.length - 1 && <Divider />}
                   </div>
                 );
               })}
             </div>
           )}
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-between gap-3">
-            <Button variant="secondary" className="rounded-full border border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100" disabled>
-              <NotebookPen className="h-4 w-4 mr-2" />
-              Save as Draft
+          <Divider />
+          <div className={cn(dialogSectionClass, "flex flex-col-reverse gap-[10px] sm:flex-row sm:items-center sm:justify-between")}>
+            <Button variant="ghost" className="text-[#767980]" disabled>
+              <NotebookPen className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              Save as draft
             </Button>
-            <div className="flex gap-3">
-              <Button variant="outline" className="rounded-full" onClick={closeDialogs}>
+            <div className="flex flex-col-reverse gap-[10px] sm:flex-row">
+              <Button variant="outline" onClick={closeDialogs}>
                 Cancel
               </Button>
-              <Button
-                className="rounded-full"
-                onClick={handleSubmitFeedback}
-                disabled={isSubmittingFeedback}
-                style={{
-                  backgroundColor: "hsla(210,90%,50%,0.12)",
-                  color: PRIMARY.main,
-                  borderColor: PRIMARY.main,
-                }}
-              >
-                {isSubmittingFeedback ? 'Saving...' : 'Save feedback'}
+              <Button onClick={handleSubmitFeedback} disabled={isSubmittingFeedback}>
+                {isSubmittingFeedback ? "Saving..." : "Save feedback"}
               </Button>
             </div>
-          </DialogFooter>
+          </div>
         </DialogContent>
       </Dialog>
 
@@ -1110,356 +1143,214 @@ const CoachSessionFeedback = () => {
           }
         }}
       >
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className={cn(dialogShellClass, "sm:max-w-xl")}>
           {profileDialogAthlete && (
-            <div className="space-y-6">
-              <DialogHeader className="space-y-0 pb-4 border-b">
-                <DialogTitle className="text-2xl font-normal text-slate-700">Athlete Profile</DialogTitle>
+            <>
+              <DialogHeader className={cn(dialogSectionClass, "space-y-0 pr-14 text-left")}>
+                <DialogTitle className={dialogTitleClass}>Athlete profile</DialogTitle>
+                <DialogDescription className="sr-only">Details for {profileDialogAthlete.name}</DialogDescription>
               </DialogHeader>
-
-              <div className="flex flex-col items-start  space-y-3">
-                <Avatar className="h-28 w-28">
-                  {profileDialogAthlete.avatar ? (
-                    <AvatarImage
-                      src={profileDialogAthlete.avatar}
-                      alt={profileDialogAthlete.name}
-                    />
-                  ) : (
-                    <AvatarFallback className="bg-blue-100 text-blue-700 text-2xl">
-                      {getInitials(profileDialogAthlete.name)}
-                    </AvatarFallback>
-                  )}
-                </Avatar>
-                <div className="space-y-1">
-                  <p className="text-xl font-semibold text-slate-900">
-                    {profileDialogAthlete.name}
-                  </p>
-                  <p className="text-sm text-slate-500">
-                    {[profileDialogAthlete.role, profileDialogAthlete.age, profileDialogAthlete.level]
-                      .filter(Boolean)
-                      .join(" • ")}
-                  </p>
-                  {attendance[profileDialogAthlete.id] !== undefined && (
-                    <p className="text-sm text-primary font-medium">
-                      {attendance[profileDialogAthlete.id] ? "✓ Attended this session" : "Marked absent"}
+              <Divider />
+              <div className={cn(dialogSectionClass, "flex max-h-[65vh] flex-col gap-5 overflow-y-auto")}>
+                <div className="flex items-center gap-4">
+                  <AthleteAvatar athlete={profileDialogAthlete} className="h-16 w-16" />
+                  <div className="flex min-w-0 flex-col gap-1.5">
+                    <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                      {profileDialogAthlete.name}
                     </p>
-                  )}
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <p className="text-base font-semibold text-slate-900">Information</p>
-                <div className="grid grid-cols-1 gap-4 text-sm text-slate-700">
-                  {profileDialogAthlete.hometown && (
-                    <div className="flex items-start gap-3">
-                      <MapPin className="h-5 w-5 text-slate-400 mt-0.5" />
+                    {getAthleteMeta(profileDialogAthlete) ? (
+                      <p className={cn(bodyClass, "text-[#767980]")}>{getAthleteMeta(profileDialogAthlete)}</p>
+                    ) : null}
+                    {attendance[profileDialogAthlete.id] !== undefined && (
                       <div>
-                        <p className="text-xs text-slate-500 mb-0.5">Location</p>
-                        <p className="font-normal text-slate-900">{profileDialogAthlete.hometown}</p>
+                        {attendance[profileDialogAthlete.id] ? (
+                          <BrandPill tone="green">
+                            <Check className="size-3" strokeWidth={1.5} aria-hidden="true" />
+                            Attended this session
+                          </BrandPill>
+                        ) : (
+                          <BrandPill tone="muted">Marked absent</BrandPill>
+                        )}
                       </div>
-                    </div>
-                  )}
-                  {profileDialogAthlete.school && (
-                    <div className="flex items-start gap-3">
-                      <NotebookPen className="h-5 w-5 text-slate-400 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-slate-500 mb-0.5">School</p>
-                        <p className="font-normal text-slate-900">{profileDialogAthlete.school}</p>
-                      </div>
-                    </div>
-                  )}
-                  {profileDialogAthlete.goals && (
-                    <div className="flex items-start gap-3">
-                      <CalendarDays className="h-5 w-5 text-slate-400 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-slate-500 mb-0.5">Joined</p>
-                        <p className="font-normal text-slate-900">{profileDialogAthlete.goals}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {profileDialogAthlete.bio && (
-                <div className="space-y-3">
-                  <p className="text-base font-semibold text-slate-900">About</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {profileDialogAthlete.bio}
-                  </p>
-                </div>
-              )}
-
-              {profileDialogAthlete.interests && profileDialogAthlete.interests.length > 0 && (
-                <div className="space-y-3">
-                  <p className="text-base font-semibold text-slate-900">Key Skills</p>
-                  <div className="flex flex-wrap gap-2">
-                    {profileDialogAthlete.interests.map((interest) => (
-                      <span
-                        key={interest}
-                        className="inline-flex items-center gap-2 rounded-full bg-slate-100 text-slate-700 px-3 py-1.5 text-sm font-normal"
-                      >
-                        <span className="text-blue-600">🏆</span>
-                        {interest}
-                      </span>
-                    ))}
+                    )}
                   </div>
                 </div>
-              )}
 
-              <DialogFooter className="pt-4">
-                <Button variant="outline" className="w-full rounded-lg" onClick={closeDialogs}>
+                {(profileDialogAthlete.hometown || profileDialogAthlete.school || profileDialogAthlete.goals) && (
+                  <div className="flex flex-col gap-3">
+                    <p className={fieldLabelClass}>Information</p>
+                    <div className="flex flex-col gap-3">
+                      {profileDialogAthlete.hometown && (
+                        <div className="flex items-start gap-3">
+                          <MapPin className="mt-0.5 size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                          <div className="flex flex-col gap-1.5">
+                            <span className={labelClass}>Location</span>
+                            <span className={cn(bodyClass, "text-[#1A202C]")}>{profileDialogAthlete.hometown}</span>
+                          </div>
+                        </div>
+                      )}
+                      {profileDialogAthlete.school && (
+                        <div className="flex items-start gap-3">
+                          <NotebookPen className="mt-0.5 size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                          <div className="flex flex-col gap-1.5">
+                            <span className={labelClass}>School</span>
+                            <span className={cn(bodyClass, "text-[#1A202C]")}>{profileDialogAthlete.school}</span>
+                          </div>
+                        </div>
+                      )}
+                      {profileDialogAthlete.goals && (
+                        <div className="flex items-start gap-3">
+                          <CalendarDays className="mt-0.5 size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                          <div className="flex flex-col gap-1.5">
+                            <span className={labelClass}>Goals</span>
+                            <span className={cn(bodyClass, "text-[#1A202C]")}>{profileDialogAthlete.goals}</span>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
+
+                {profileDialogAthlete.bio && (
+                  <div className="flex flex-col gap-[10px]">
+                    <p className={fieldLabelClass}>About</p>
+                    <p className={cn(bodyClass, "text-[#484D56]")}>{profileDialogAthlete.bio}</p>
+                  </div>
+                )}
+
+                {profileDialogAthlete.interests && profileDialogAthlete.interests.length > 0 && (
+                  <div className="flex flex-col gap-[10px]">
+                    <p className={fieldLabelClass}>Key skills</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {profileDialogAthlete.interests.map((interest) => (
+                        <BrandPill key={interest} tone="neutral">
+                          {interest}
+                        </BrandPill>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+              <Divider />
+              <div className={cn(dialogSectionClass, "flex justify-end")}>
+                <Button variant="outline" onClick={closeDialogs}>
                   Close
                 </Button>
-              </DialogFooter>
-            </div>
+              </div>
+            </>
           )}
         </DialogContent>
       </Dialog>
 
-      {/* <Dialog
-        open={Boolean(profileDialogAthlete)}
-        onOpenChange={(open) => {
-          if (!open) {
-            closeDialogs();
-          }
-        }}
-      >
-        <DialogContent className="sm:max-w-2xl">
-          {profileDialogAthlete && (
-            <div className="space-y-6">
-              <DialogHeader className="space-y-2">
-                <DialogTitle className="text-2xl font-semibold text-slate-900">Athlete Profile</DialogTitle>
-                <DialogDescription className="text-sm text-slate-500">
-                  Quick view of athlete details.
-                </DialogDescription>
-              </DialogHeader>
-
-              <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                <div className="flex items-center gap-4">
-                  <Avatar className="h-16 w-16">
-                    {profileDialogAthlete.avatar ? (
-                      <AvatarImage
-                        src={profileDialogAthlete.avatar}
-                        alt={profileDialogAthlete.name}
-                      />
-                    ) : (
-                      <AvatarFallback className="bg-blue-100 text-blue-700 text-lg">
-                        {getInitials(profileDialogAthlete.name)}
-                      </AvatarFallback>
-                    )}
-                  </Avatar>
-                  <div className="space-y-1">
-                    <p className="text-lg font-semibold text-slate-900">
-                      {profileDialogAthlete.name}
-                    </p>
-                    <p className="text-sm text-slate-600">
-                      {[profileDialogAthlete.role, profileDialogAthlete.age, profileDialogAthlete.level]
-                        .filter(Boolean)
-                        .join(" • ")}
-                    </p>
-                  </div>
-                </div>
-                {attendance[profileDialogAthlete.id] !== undefined && (
-                  <Badge className="bg-blue-50 text-blue-700 border border-blue-100 rounded-full px-3 py-1 text-sm font-semibold">
-                    {attendance[profileDialogAthlete.id] ? "Marked Present" : "Marked Absent"}
-                  </Badge>
-                )}
-              </div>
-
-              <div className="space-y-3">
-                <p className="text-sm font-semibold text-slate-900">Contact Information</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
-                  {profileDialogAthlete.hometown && (
-                    <div className="flex items-start gap-3 w-full rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <MapPin className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-slate-500">Location</p>
-                        <p className="font-semibold text-slate-900">{profileDialogAthlete.hometown}</p>
-                      </div>
-                    </div>
-                  )}
-                  {profileDialogAthlete.school && (
-                    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5">
-                      <NotebookPen className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-slate-500">School</p>
-                        <p className="font-semibold text-slate-900">{profileDialogAthlete.school}</p>
-                      </div>
-                    </div>
-                  )}
-                  {profileDialogAthlete.goals && (
-                    <div className="flex items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2.5 sm:col-span-2">
-                      <CalendarDays className="h-4 w-4 text-blue-600 mt-0.5" />
-                      <div>
-                        <p className="text-xs text-slate-500">Current Goal</p>
-                        <p className="font-semibold text-slate-900">{profileDialogAthlete.goals}</p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              {profileDialogAthlete.bio && (
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-900">About</p>
-                  <p className="text-sm text-slate-600 leading-relaxed">
-                    {profileDialogAthlete.bio}
-                  </p>
-                </div>
-              )}
-
-              {profileDialogAthlete.interests && profileDialogAthlete.interests.length > 0 && (
-                <div className="space-y-2">
-                  <p className="text-sm font-semibold text-slate-900">Key Skills</p>
-                  <div className="flex flex-wrap gap-2">
-                    {profileDialogAthlete.interests.map((interest) => (
-                      <span
-                        key={interest}
-                        className="inline-flex items-center rounded-full bg-blue-50 text-blue-700 border border-blue-100 px-3 py-1 text-xs font-medium"
-                      >
-                        {interest}
-                      </span>
-                    ))}
-                  </div>
-                </div>
-              )}
-
-              <DialogFooter className="pt-2">
-                <Button variant="outline" className="rounded-full" onClick={closeDialogs}>
-                  Close
-                </Button>
-              </DialogFooter>
-            </div>
-          )}
-        </DialogContent>
-      </Dialog> */}
-
       <Dialog open={Boolean(pendingUnselect)} onOpenChange={(open) => !open && closeAbsentDialog()}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Mark athlete as absent</DialogTitle>
-            <DialogDescription>
-              Please add a brief reason for why this athlete did not attend.
+        <DialogContent className={cn(dialogShellClass, "sm:max-w-md")}>
+          <DialogHeader className={cn(dialogSectionClass, "space-y-1.5 pr-14 text-left")}>
+            <DialogTitle className={dialogTitleClass}>Mark as absent</DialogTitle>
+            <DialogDescription className={dialogDescriptionClass}>
+              Add a short reason this athlete didn't attend.
             </DialogDescription>
           </DialogHeader>
+          <Divider />
           {pendingUnselect && (
-            <div className="space-y-3">
+            <div className={cn(dialogSectionClass, "flex flex-col gap-5")}>
               <div className="flex items-center gap-3">
-                <Avatar className="h-10 w-10">
-                  {pendingUnselect.avatar ? (
-                    <AvatarImage src={pendingUnselect.avatar} alt={pendingUnselect.name} />
-                  ) : (
-                  <AvatarFallback className="bg-blue-100 text-blue-700">
-                    {getInitials(pendingUnselect.name)}
-                  </AvatarFallback>
-                )}
-              </Avatar>
-                <div>
-                  <p className="text-sm font-semibold text-slate-800">{pendingUnselect.name}</p>
-                  <p className="text-xs text-muted-foreground">
-                    {pendingUnselect.role} | {pendingUnselect.age}
-                    {pendingUnselect.level ? ` | ${pendingUnselect.level}` : ""}
-                  </p>
+                <AthleteAvatar athlete={pendingUnselect} />
+                <div className="flex min-w-0 flex-col gap-1.5">
+                  <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{pendingUnselect.name}</p>
+                  {getAthleteMeta(pendingUnselect) ? (
+                    <p className={cn(bodyClass, "text-[#767980]")}>{getAthleteMeta(pendingUnselect)}</p>
+                  ) : null}
                 </div>
               </div>
-              <div className="space-y-2">
-                <label className="text-xs font-medium text-slate-700">Reason</label>
+              <div className="flex flex-col gap-[10px]">
+                <label htmlFor="absent-reason" className={fieldLabelClass}>
+                  Reason
+                </label>
                 <Textarea
+                  id="absent-reason"
                   value={pendingReason}
                   onChange={(event) => {
                     setPendingReason(event.target.value);
                     if (reasonError) setReasonError(false);
                   }}
-                  placeholder="e.g. Injury, illness, schedule conflict..."
-                  className={cn("min-h-[120px]", reasonError ? "border-red-200 focus-visible:ring-red-200" : "")}
+                  placeholder="For example, injury, illness or a schedule conflict"
+                  aria-invalid={reasonError}
+                  className={cn(textareaClass, "min-h-[110px]", reasonError && "border-destructive focus-visible:ring-destructive")}
                 />
-                {reasonError && <p className="text-xs text-red-600">Reason is required</p>}
+                {reasonError && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">Add a reason to continue.</p>}
               </div>
             </div>
           )}
-          <DialogFooter className="flex flex-col sm:flex-row sm:justify-end gap-2">
-            <Button variant="outline" className="rounded-full" onClick={closeAbsentDialog}>
+          <Divider />
+          <div className={cn(dialogSectionClass, "flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end")}>
+            <Button variant="outline" onClick={closeAbsentDialog}>
               Cancel
             </Button>
-            <Button className="rounded-full" onClick={confirmAbsent}>
-              Save reason
-            </Button>
-          </DialogFooter>
+            <Button onClick={confirmAbsent}>Save reason</Button>
+          </div>
         </DialogContent>
       </Dialog>
 
       <Dialog open={completionDialogOpen} onOpenChange={setCompletionDialogOpen}>
-        <DialogContent className="sm:max-w-xl p-0 overflow-hidden">
-          <div className="bg-gradient-to-r from-emerald-500 to-green-500 text-white px-6 py-4 flex items-center justify-between">
-            <div>
-              <p className="text-lg font-semibold flex items-center gap-2">
-                <span className="inline-flex h-6 w-6 items-center justify-center rounded-full border border-white/60">
-                  ✓
-                </span>
-                Session Completed! 🎉
-              </p>
-              <p className="text-sm text-emerald-50">Your session has been successfully saved</p>
+        <DialogContent className={cn(dialogShellClass, "sm:max-w-xl")}>
+          <DialogHeader className={cn(dialogSectionClass, "space-y-1.5 pr-14 text-left")}>
+            <div className="flex items-center gap-[10px]">
+              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#CBE7D1] text-[#1E7431]" aria-hidden="true">
+                <Check className="size-4" strokeWidth={1.5} />
+              </span>
+              <DialogTitle className={dialogTitleClass}>Session completed</DialogTitle>
+            </div>
+            <DialogDescription className={dialogDescriptionClass}>Your session feedback is saved.</DialogDescription>
+          </DialogHeader>
+          <Divider />
+          <div className={cn(dialogSectionClass, "flex flex-col gap-5")}>
+            <div className="flex flex-col gap-1.5">
+              <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{sessionInfo.title || "Session"}</p>
+              {getSessionWhen(sessionInfo.date, sessionInfo.startTime, sessionInfo.endTime) ? (
+                <p className={cn(bodyClass, "text-[#767980]")}>
+                  {getSessionWhen(sessionInfo.date, sessionInfo.startTime, sessionInfo.endTime)}
+                </p>
+              ) : null}
+            </div>
+
+            <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2">
+              <div className="flex flex-col gap-[10px] rounded-[8px] bg-[#F4F4EB] p-4">
+                <span className={labelClass}>Athletes attended</span>
+                <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{attendedCount}</span>
+              </div>
+              <div className="flex flex-col gap-[10px] rounded-[8px] bg-[#F4F4EB] p-4">
+                <span className={labelClass}>Your payout</span>
+                <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{formatCurrency(payout)}</span>
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-[10px]">
+              <span className={labelClass}>Attended athletes</span>
+              {attendedAthletes.length ? (
+                <div className="flex flex-wrap gap-1.5">
+                  {attendedAthletes.map((athlete) => (
+                    <BrandPill key={athlete.id} tone="neutral" className="py-[3px] pl-[3px]">
+                      <Avatar className="size-4">
+                        {athlete.avatar ? <AvatarImage src={athlete.avatar} alt="" /> : null}
+                        <AvatarFallback className="bg-[#E5EDF7] text-[8px] font-medium text-[#0054B4]">
+                          {getInitials(athlete.name)}
+                        </AvatarFallback>
+                      </Avatar>
+                      {athlete.name}
+                    </BrandPill>
+                  ))}
+                </div>
+              ) : (
+                <p className={cn(bodyClass, "text-[#767980]")}>No attendees recorded.</p>
+              )}
             </div>
           </div>
-
-          <div className="p-6 space-y-5">
-            <div className="space-y-1">
-              <p className="text-base font-semibold text-slate-900">{sessionInfo.title}</p>
-              <p className="text-sm text-slate-700">
-                {sessionInfo.date} • {sessionInfo.startTime}-{sessionInfo.endTime}
-              </p>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3 space-y-1">
-                <p className="text-xs font-semibold text-slate-600">Athletes</p>
-                <p className="text-xl font-bold text-slate-900">{attendedCount}</p>
-              </div>
-              <div className="rounded-xl border border-emerald-100 bg-emerald-50 px-4 py-3 space-y-1">
-                <p className="text-xs font-semibold text-emerald-700">Your payout</p>
-                <p className="text-2xl font-bold text-emerald-700">{formatCurrency(payout)}</p>
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <p className="text-xs font-semibold text-slate-600">Attended athletes</p>
-              <div className="flex flex-wrap gap-2">
-                {attendedAthletes.length ? (
-                  attendedAthletes.map((athlete) => (
-                    <div
-                      key={athlete.id}
-                      className="inline-flex items-center gap-2 rounded-full bg-slate-50 px-3 py-2 border border-slate-200"
-                    >
-                      <Avatar className="h-7 w-7 border border-slate-200">
-                        {athlete.avatar ? (
-                          <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                        ) : (
-                          <AvatarFallback className="bg-blue-100 text-blue-700 text-xs">
-                            {getInitials(athlete.name)}
-                          </AvatarFallback>
-                        )}
-                      </Avatar>
-                      <span className="text-sm font-medium text-slate-800">{athlete.name}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className="text-sm text-muted-foreground">No attendees recorded.</p>
-                )}
-              </div>
-            </div>
-
-            {/* <div className="rounded-xl border border-slate-200 bg-slate-50 px-4 py-3 text-sm text-slate-700 flex items-start gap-2">
-              <span className="text-lg leading-none">💡</span>
-            </div> */}
-
-            <div className="flex justify-end gap-2">
-              <Button variant="outline" className="rounded-full" onClick={() => setCompletionDialogOpen(false)}>
-                Close
-              </Button>
-              <Button className="rounded-full" onClick={() => navigate('/profile')}>
-                Go to profile
-              </Button>
-            </div>
+          <Divider />
+          <div className={cn(dialogSectionClass, "flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end")}>
+            <Button variant="outline" onClick={() => setCompletionDialogOpen(false)}>
+              Close
+            </Button>
+            <Button onClick={() => navigate('/profile')}>Go to profile</Button>
           </div>
         </DialogContent>
       </Dialog>

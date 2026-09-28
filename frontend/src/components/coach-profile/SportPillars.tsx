@@ -1,83 +1,63 @@
-import { Medal, UtilityPole } from "lucide-react";
+import { Medal } from "lucide-react";
 import type { Enums } from "@/integrations/supabase/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CoachProfileCard, CoachProfileCardHeader } from "./CoachProfileCard";
 
 interface SportPillarsProps {
   sport?: Enums<"sport_type"> | string | null;
   pillars?: any[];
+  /** @deprecated no longer used by the brand-kit card */
   iconColor?: string;
+  /** @deprecated no longer used by the brand-kit card */
   pillarBg?: string;
   isLoading?: boolean;
   loadError?: string | null;
 }
 
-export function SportPillars({
-  sport,
-  pillars = [],
-  isLoading = false,
-  loadError = null,
-  iconColor = "text-green-600",
-  pillarBg = "bg-green-50 dark:bg-green-900/20",
-}: SportPillarsProps) {
+const messageClass = "col-span-full text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
 
-
+export function SportPillars({ sport, pillars = [], isLoading = false, loadError = null }: SportPillarsProps) {
   const renderContent = () => {
     if (isLoading) {
-      return (
-        <div className="col-span-2 text-sm text-muted-foreground">
-          Loading sport pillars...
-        </div>
-      );
+      return <p className={messageClass}>Loading sport pillars</p>;
     }
 
     if (loadError) {
-      return (
-        <div className="col-span-2 text-sm text-muted-foreground">
-          {loadError}
-        </div>
-      );
+      return <p className={`${messageClass} text-destructive`}>{loadError}</p>;
     }
 
     if (pillars?.length) {
       return pillars.map((pillar) => (
         <div
           key={pillar.id}
-          className={`flex items-start gap-3 p-3 ${pillarBg} rounded-lg`}
+          className="flex items-start gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]"
         >
-          <Medal className="h-5 w-5 text-green-600 flex-shrink-0 mt-0.5" />
-          <div className="flex-1 min-w-0">
-            <span className="text-sm font-bold block">{pillar.name}</span>
-            <span className="text-xs text-muted-foreground block">
-              {pillar.description}
-            </span>
-            <span className="text-xs font-medium text-muted-foreground block truncate">
-              {pillar.category}
-            </span>
+          <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]">
+            <Medal className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          </span>
+          <div className="flex min-w-0 flex-1 flex-col gap-1">
+            <span className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{pillar.name}</span>
+            {pillar.description ? (
+              <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{pillar.description}</span>
+            ) : null}
+            {pillar.category ? (
+              <span className="truncate text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#A3A6AB]">
+                {pillar.category}
+              </span>
+            ) : null}
           </div>
         </div>
       ));
     }
 
     return (
-      <div className="col-span-2 text-sm text-muted-foreground">
-        {sport ? "No sport pillars available yet." : "Sport information is unavailable."}
-      </div>
+      <p className={messageClass}>{sport ? "No sport pillars yet." : "Sport information is unavailable."}</p>
     );
   };
 
   return (
-    <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <UtilityPole className={`h-5 w-5 ${iconColor}`} />
-          Holistic Development Pillars
-        </CardTitle>
-      </CardHeader>
-      <CardContent>
-        <div className="grid md:grid-cols-2 gap-4">
-          {renderContent()}
-        </div>
-      </CardContent>
-    </Card>
+    <CoachProfileCard>
+      <CoachProfileCardHeader title="Development pillars" />
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">{renderContent()}</div>
+    </CoachProfileCard>
   );
 }

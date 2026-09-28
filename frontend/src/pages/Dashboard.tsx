@@ -10,6 +10,7 @@ import { useRole } from "@/hooks/useRole";
 import { useDashboardData, type DashboardActivity } from "@/hooks/useDashboardData";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
+import { formatTimeSpan } from "@/utils/sessionFormatting";
 
 const longDate = (iso: string) =>
   new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(
@@ -19,10 +20,7 @@ const longDate = (iso: string) =>
 const shortDate = (iso: string) =>
   new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(iso));
 
-const timeRange12h = (startIso: string, endIso: string) => {
-  const fmt = new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit" });
-  return `${fmt.format(new Date(startIso))} – ${fmt.format(new Date(endIso))}`;
-};
+const timeRange12h = (startIso: string, endIso: string) => formatTimeSpan(startIso, endIso);
 
 const relativeDay = (iso: string) => {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -73,7 +71,7 @@ const DashCard = ({
 }) => (
   <div
     className={cn(
-      "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]",
+      "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]",
       className
     )}
   >
@@ -168,7 +166,7 @@ const StatTile = ({
   sub: string;
 }) => (
   <DashCard>
-    <span className="inline-flex size-8 items-center justify-center rounded-[10px] bg-[#E5EDF7] text-[#0054B4]">
+    <span className="inline-flex size-8 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
       {icon}
     </span>
     <div className="flex flex-col gap-[3px]">
@@ -231,10 +229,10 @@ const cardTitleClass =
   "text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]";
 
 const primaryButtonClass =
-  "inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]";
+  "inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6] transition-colors hover:bg-[#0054B4]/90";
 
 const secondaryButtonClass =
-  "inline-flex items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]";
+  "inline-flex h-[34px] items-center justify-center whitespace-nowrap rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]";
 
 const captionClass =
   "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]";
@@ -289,7 +287,7 @@ const Dashboard = () => {
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6 pb-10">
       <header className="flex flex-col gap-[10px]">
         <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
-          Welcome back, {firstName} 👋
+          Welcome back, {firstName}
         </h1>
         <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
           {isCoach ? "Keep growing your coaching business." : "Keep building on your game."}
@@ -380,13 +378,13 @@ const Dashboard = () => {
         {isCoach ? (
           <>
             <StatTile
-              icon={<Calendar className="size-4" strokeWidth={1.75} />}
+              icon={<Calendar className="size-4" strokeWidth={1.5} />}
               value={error ? "—" : stats.sessionsThisMonth}
               label="Sessions this month"
               sub="Completed"
             />
             <StatTile
-              icon={<CircleDollarSign className="size-4" strokeWidth={1.75} />}
+              icon={<CircleDollarSign className="size-4" strokeWidth={1.5} />}
               value={
                 error
                   ? "—"
@@ -398,7 +396,7 @@ const Dashboard = () => {
               sub={stats.revenueThisMonth == null ? "Not connected yet" : "Gross earnings"}
             />
             <StatTile
-              icon={<Users className="size-4" strokeWidth={1.75} />}
+              icon={<Users className="size-4" strokeWidth={1.5} />}
               value={error ? "—" : stats.activeAthletes}
               label="Active athletes"
               sub="On your roster"
@@ -407,19 +405,19 @@ const Dashboard = () => {
         ) : (
           <>
             <StatTile
-              icon={<Calendar className="size-4" strokeWidth={1.75} />}
+              icon={<Calendar className="size-4" strokeWidth={1.5} />}
               value={error ? "—" : stats.completedCount}
               label="Sessions completed"
               sub="All time"
             />
             <StatTile
-              icon={<Clock className="size-4" strokeWidth={1.75} />}
+              icon={<Clock className="size-4" strokeWidth={1.5} />}
               value={error ? "—" : stats.hoursTotal}
               label="Hours trained"
               sub="Total training time"
             />
             <StatTile
-              icon={<UserRound className="size-4" strokeWidth={1.75} />}
+              icon={<UserRound className="size-4" strokeWidth={1.5} />}
               value={error ? "—" : stats.thirdStat}
               label="Coaches worked with"
               sub="All time"
@@ -551,8 +549,8 @@ const Dashboard = () => {
               activities.map((a) => (
                 <div key={`${a.label}-${a.when}`} className="flex items-center justify-between gap-[10px]">
                   <span className="flex min-w-0 items-center gap-[10px]">
-                    <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-[10px] bg-[#EAEADF] text-[#767980]">
-                      <Activity className="size-4" strokeWidth={1.75} />
+                    <span className="inline-flex size-7 shrink-0 items-center justify-center rounded-[8px] bg-[#EAEADF] text-[#767980]">
+                      <Activity className="size-4" strokeWidth={1.5} />
                     </span>
                     <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
                       {activityLabel(a)}

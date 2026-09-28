@@ -1,14 +1,16 @@
 import { useState } from "react";
+import { ChevronDown } from "lucide-react";
 import { useFAQItems } from "@/hooks/useFAQItems";
-import { ChevronDown, Loader2 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Skeleton } from "@/components/ui/skeleton";
+import { cn } from "@/lib/utils";
+import { CoachProfileCard, CoachProfileCardHeader } from "./CoachProfileCard";
 
 interface FAQSectionProps {
   type?: string;
   language?: string;
 }
 
-export function FAQSection({ type = 'general', language = 'en' }: FAQSectionProps) {
+export function FAQSection({ type = "general", language = "en" }: FAQSectionProps) {
   const [openIndex, setOpenIndex] = useState<number | null>(null);
   const { data: faqs = [], isLoading: loading, error } = useFAQItems(type);
 
@@ -18,61 +20,60 @@ export function FAQSection({ type = 'general', language = 'en' }: FAQSectionProp
 
   if (loading) {
     return (
-      <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">FAQ</CardTitle>
-        </CardHeader>
-        <CardContent className="flex justify-center py-8">
-          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
-        </CardContent>
-      </Card>
+      <CoachProfileCard>
+        <CoachProfileCardHeader title="FAQ" />
+        <div className="flex flex-col gap-[10px]" aria-busy="true" aria-label="Loading FAQs">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-[14px] w-full rounded-[4px]" />
+          ))}
+        </div>
+      </CoachProfileCard>
     );
   }
 
   if (error || faqs.length === 0) {
     return (
-      <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-        <CardHeader>
-          <CardTitle className="text-lg">FAQ</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <p className="text-sm text-muted-foreground text-center py-4">
-            {error ? 'Failed to load FAQs' : 'No FAQs available at this time.'}
-          </p>
-        </CardContent>
-      </Card>
+      <CoachProfileCard>
+        <CoachProfileCardHeader title="FAQ" />
+        <p className={cn("text-[14px] leading-[18px] tracking-[-0.03em]", error ? "text-destructive" : "text-[#A3A6AB]")}>
+          {error ? "Couldn't load FAQs. Please try again later." : "No FAQs yet."}
+        </p>
+      </CoachProfileCard>
     );
   }
 
   return (
-    <Card className="bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-lg">FAQ</CardTitle>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        {faqs.map((faq, index) => (
-          <div key={faq.id} className="border-b last:border-b-0 pb-3 last:pb-0">
-            <button
-              onClick={() => toggleFAQ(index)}
-              className="flex items-start justify-between w-full text-left group"
-            >
-              <span className="text-sm font-medium pr-2">
-                {faq.question[language] || faq.question['en'] || Object.values(faq.question)[0]}
-              </span>
-              <ChevronDown 
-                className={`h-4 w-4 flex-shrink-0 transition-transform ${
-                  openIndex === index ? 'rotate-180' : ''
-                }`}
-              />
-            </button>
-            {openIndex === index && (
-              <p className="text-sm text-muted-foreground mt-2">
-                {faq.answer[language] || faq.answer['en'] || Object.values(faq.answer)[0]}
-              </p>
-            )}
-          </div>
-        ))}
-      </CardContent>
-    </Card>
+    <CoachProfileCard>
+      <CoachProfileCardHeader title="FAQ" />
+      <div className="flex flex-col gap-[10px]">
+        {faqs.map((faq, index) => {
+          const open = openIndex === index;
+          return (
+            <div key={faq.id}>
+              <button
+                type="button"
+                onClick={() => toggleFAQ(index)}
+                aria-expanded={open}
+                className="flex w-full items-center justify-between gap-2 text-left"
+              >
+                <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#1A202C]">
+                  {faq.question[language] || faq.question["en"] || Object.values(faq.question)[0]}
+                </span>
+                <ChevronDown
+                  className={cn("size-4 shrink-0 text-[#1A202C] transition-transform", open && "rotate-180")}
+                  strokeWidth={1.5}
+                  aria-hidden="true"
+                />
+              </button>
+              {open && (
+                <p className="mt-2 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                  {faq.answer[language] || faq.answer["en"] || Object.values(faq.answer)[0]}
+                </p>
+              )}
+            </div>
+          );
+        })}
+      </div>
+    </CoachProfileCard>
   );
 }

@@ -1,5 +1,4 @@
-import { useState, useMemo, useEffect, useRef } from 'react';
-import { Button } from '@/components/ui/button';
+import { useState, useMemo, useEffect, useRef, type ReactNode } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Skeleton } from '@/components/ui/skeleton';
@@ -16,7 +15,8 @@ import { getDefaultGroupCapacity } from '@/api/configurations';
 import { CoachAvailability, CoachAvailabilitySlot, DayOfWeek, SlotBookingStatus } from '@/types/availability';
 import type { CoachAvailabilityWithOccurrences } from '@/types/availabilityWithOccurrences';
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
-import { formatWeekRange, getWeekStart, parseISODateLocal, toLocalISODate } from '@/utils/dateHelpers';
+import { formatWeekRange, getWeekStart, isBookingWindowClosed, parseISODateLocal, toLocalISODate } from '@/utils/dateHelpers';
+import { BrandPill } from '@/components/brand';
 import { strings } from '@/config/strings';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { PROFILE_TYPE } from "@/utils/db";
@@ -51,6 +51,94 @@ const formatActualWeekRangeUtc = (isoDates: string[], fallbackStart: Date, range
   return `${startStr} - ${endStr}`;
 };
 
+const cardClass = "rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none";
+const cardBodyClass = "flex flex-col gap-5 px-[25px] pb-[25px] pt-[30px]";
+const titleClass = "flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]";
+const primaryButtonClass =
+  "inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390]";
+const secondaryButtonClass =
+  "inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:opacity-40";
+const iconButtonClass =
+  "inline-flex size-[30px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]";
+const periodChipClass = (active: boolean) =>
+  `rounded-[8px] border px-3 py-1.5 text-[12px] font-medium leading-[13px] tracking-[-0.03em] transition-colors ${
+    active
+      ? "border-transparent bg-[#E5EDF7] text-[#0054B4]"
+      : "border-[#EAEADF] bg-[#F7F7F0] text-[#484D56] hover:bg-[#F1F1E6]"
+  }`;
+
+const SectionTitle = ({ children }: { children: ReactNode }) => (
+  <h2 className={titleClass}>
+    <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+    {children}
+  </h2>
+);
+
+interface WeekHeaderProps {
+  title: string;
+  rangeLabel: string;
+  weekIndex: number;
+  weekCount: number;
+  openCount: number | null;
+  onPrevious: () => void;
+  onNext: () => void;
+}
+
+/** Brand week header: "Week of Mar 9" + EST pill, open-slot count and compact week pager. */
+const WeekHeader = ({ title, rangeLabel, weekIndex, weekCount, openCount, onPrevious, onNext }: WeekHeaderProps) => (
+  <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex items-center gap-2">
+      <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+      <h2
+        className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]"
+        title={rangeLabel || undefined}
+      >
+        {title}
+      </h2>
+      <BrandPill tone="amber">EST</BrandPill>
+    </div>
+    <div className="flex items-center justify-between gap-3 sm:justify-end">
+      {openCount !== null ? (
+        <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          {openCount} {openCount === 1 ? "slot" : "slots"} open
+        </span>
+      ) : (
+        <span />
+      )}
+      <div className="flex items-center gap-1.5">
+        <button
+          type="button"
+          onClick={onPrevious}
+          disabled={weekIndex === 0}
+          aria-label="Previous week"
+          className={iconButtonClass}
+        >
+          <ChevronLeft className="size-4" strokeWidth={1.5} />
+        </button>
+        <span
+          className="min-w-[40px] text-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]"
+          aria-live="polite"
+        >
+          <span className="sr-only">Week </span>
+          {weekIndex + 1}
+          <span aria-hidden="true"> / </span>
+          <span className="sr-only"> of </span>
+          {weekCount}
+        </span>
+        <button
+          type="button"
+          onClick={onNext}
+          disabled={weekIndex >= weekCount - 1}
+          aria-label="Next week"
+          className={iconButtonClass}
+        >
+          <ChevronRight className="size-4" strokeWidth={1.5} />
+        </button>
+      </div>
+    </div>
+  </div>
+);
+
 interface CoachAvailabilitySectionProps {
   coachId: string;
   allowEditing?: boolean;
@@ -68,7 +156,6 @@ export const CoachAvailabilitySection = ({
   coachId,
   allowEditing = true,
   onBookSlot,
-  iconColor,
 }: CoachAvailabilitySectionProps) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState<CoachAvailability | CoachAvailabilityWithOccurrences | null>(null);
@@ -97,7 +184,6 @@ export const CoachAvailabilitySection = ({
   const [slotStatusLoading, setSlotStatusLoading] = useState(true);
   const slotStatusRequestRef = useRef(0);
   const [defaultGroupCapacity, setDefaultGroupCapacity] = useState<number>(50);
-  const resolvedIconClass = iconColor || "text-blue-600";
 
   useEffect(() => {
     const fetchDefaultCapacity = async () => {
@@ -303,6 +389,25 @@ export const CoachAvailabilitySection = ({
       .filter(Boolean) as string[];
     return formatActualWeekRangeUtc(inRangeDates, currentWeek, selectedPeriod.start_date, selectedPeriod.end_date);
   }, [currentWeek, resolvedWeeklySlots, selectedPeriod]);
+
+  const weekTitle = useMemo(() => {
+    if (!selectedPeriod || !currentWeek) return '';
+    const periodStart = parseISODateUtc(selectedPeriod.start_date);
+    const start = currentWeek < periodStart ? periodStart : currentWeek;
+    const showYear = start.getFullYear() !== new Date().getFullYear();
+    return `Week of ${start.toLocaleDateString('en-US', showYear ? { month: 'short', day: 'numeric', year: 'numeric' } : { month: 'short', day: 'numeric' })}`;
+  }, [currentWeek, selectedPeriod]);
+
+  // Open = enabled, not full and still inside the booking window. Hidden until statuses load.
+  const openSlotCount = useMemo(() => {
+    if (slotStatusLoading || slotStatusError) return null;
+    return resolvedWeeklySlots.filter(
+      (slot) =>
+        slot.is_enabled &&
+        !slotStatusMap[slot.id]?.isFull &&
+        !isBookingWindowClosed(slot.occurrence_date, slot.start_time)
+    ).length;
+  }, [resolvedWeeklySlots, slotStatusMap, slotStatusLoading, slotStatusError]);
 
   // Handlers
   const handleEdit = (period: CoachAvailability, dayToFocus?: DayOfWeek) => {
@@ -643,73 +748,80 @@ export const CoachAvailabilitySection = ({
 
   if (error) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Calendar className={`w-5 h-5 ${resolvedIconClass}`} />
-              <h2 className="text-xl font-medium">Availability</h2>
-            </div>
-            <Alert variant="destructive">
-              <AlertDescription>
-                Failed to load availability. Please try again later.
-              </AlertDescription>
-            </Alert>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className={cardClass}>
+        <CardContent className={cardBodyClass}>
+          <SectionTitle>Availability</SectionTitle>
+          <Alert variant="destructive" className="rounded-[8px] border-[#F5C2C2] bg-[#FDF1F1] text-[#B42318]">
+            <AlertDescription className="text-[14px] leading-[18px] tracking-[-0.03em]">
+              Couldn't load availability. Please try again later.
+            </AlertDescription>
+          </Alert>
+        </CardContent>
+      </Card>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-2">
-              <Calendar className={`w-5 h-5 ${resolvedIconClass}`} />
-              <h2 className="text-xl font-medium">Availability</h2>
-            </div>
-            <div className="space-y-3">
-              {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-20 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      <Card className={cardClass}>
+        <CardContent className={cardBodyClass}>
+          <SectionTitle>Availability</SectionTitle>
+          <div className="flex flex-col gap-3">
+            {[1, 2, 3].map((i) => (
+              <Skeleton key={i} className="h-[50px] w-full rounded-[8px] bg-[#F1F1E6]" />
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     );
   }
+
+  const weekHeader = selectedPeriod && currentWeek ? (
+    <WeekHeader
+      title={weekTitle}
+      rangeLabel={currentWeekRangeLabel.replace(" - ", " – ")}
+      weekIndex={currentWeekIndex}
+      weekCount={weeks.length}
+      openCount={openSlotCount}
+      onPrevious={handlePreviousWeek}
+      onNext={handleNextWeek}
+    />
+  ) : null;
+
+  const periodChips = sortedAvailabilities.length > 1 ? (
+    <div className="flex flex-wrap gap-2">
+      {sortedAvailabilities.map((period) => (
+        <button
+          key={period.id}
+          type="button"
+          aria-pressed={selectedPeriod?.id === period.id}
+          onClick={() => {
+            setSelectedPeriodId(period.id);
+            setCurrentWeekIndex(0);
+          }}
+          className={periodChipClass(selectedPeriod?.id === period.id)}
+        >
+          {formatRangeWithYear(period.start_date, period.end_date)}
+        </button>
+      ))}
+    </div>
+  ) : null;
 
   return (
     <>
       <div className="space-y-6">
         {(!sortedAvailabilities || sortedAvailabilities.length === 0) ? (
-          <Card className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none">
-            <CardContent className="p-6">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between mb-6">
-                <div className="flex items-center gap-2">
-                  <Calendar className={`w-6 h-6 ${resolvedIconClass}`} />
-                  <h2 className="text-2xl font-medium">Availability</h2>
-                </div>
+          <Card className={cardClass}>
+            <CardContent className={cardBodyClass}>
+              <SectionTitle>Availability</SectionTitle>
+              <div className="flex flex-col items-center justify-center gap-4 rounded-[8px] bg-[#F4F4EB] px-5 py-10 text-center">
+                <Calendar className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">No availability set yet</p>
                 {canManage && (
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(true)}
-                    className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
-                  >
-                    Add availability
-                  </button>
-                )}
-              </div>
-              <div className="flex flex-col items-center justify-center space-y-4">
-                <Calendar className={`w-16 h-16 ${resolvedIconClass}`} />
-                <p className="text-gray-600 text-base">No availability set yet</p>
-                {canManage && (
-                  <button
-                    type="button"
-                    onClick={() => setIsModalOpen(true)}
-                    className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
+                    className={primaryButtonClass}
                   >
                     Add availability
                   </button>
@@ -719,18 +831,15 @@ export const CoachAvailabilitySection = ({
           </Card>
         ) : canManage ? (
           <div className="flex flex-col gap-6">
-            <section className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
+            <section className={`flex flex-col gap-5 ${cardClass} px-[25px] pb-[25px] pt-[30px]`}>
               <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-                  <Calendar className="size-4" strokeWidth={1.75} />
-                  Booking period
-                </h2>
+                <SectionTitle>Booking period</SectionTitle>
                 <div className="flex flex-wrap items-center gap-2">
                   <button
                     type="button"
                     disabled={!selectedPeriod}
                     onClick={() => selectedPeriod && handleEdit(selectedPeriod)}
-                    className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] disabled:opacity-40"
+                    className={secondaryButtonClass}
                   >
                     Edit
                   </button>
@@ -738,50 +847,30 @@ export const CoachAvailabilitySection = ({
                     type="button"
                     disabled={!selectedPeriod}
                     onClick={() => selectedPeriod && handleDeletePeriod(selectedPeriod.id)}
-                    className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] disabled:opacity-40"
+                    className={secondaryButtonClass}
                   >
                     Delete
                   </button>
                   <button
                     type="button"
                     onClick={() => setIsModalOpen(true)}
-                    className="rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
+                    className={primaryButtonClass}
                   >
                     Add availability
                   </button>
                 </div>
               </div>
-              {sortedAvailabilities.length > 1 && (
-                <div className="flex flex-wrap gap-2">
-                  {sortedAvailabilities.map((period) => (
-                    <button
-                      key={period.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPeriodId(period.id);
-                        setCurrentWeekIndex(0);
-                      }}
-                      className={`rounded-[8px] border px-3 py-1.5 text-[12px] font-medium ${
-                        selectedPeriod?.id === period.id
-                          ? "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
-                          : "border-[#EAEADF] bg-[#F4F4EB] text-[#484D56]"
-                      }`}
-                    >
-                      {formatRangeWithYear(period.start_date, period.end_date)}
-                    </button>
-                  ))}
-                </div>
-              )}
+              {periodChips}
               {selectedPeriod && (
-                <div className="flex flex-col gap-3 rounded-[8px] border border-[#D9D9CF] bg-[#EAEADF] p-[10px] sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex flex-col gap-3 rounded-[8px] bg-[#F4F4EB] p-[10px] sm:flex-row sm:items-center sm:justify-between">
                   <div className="flex flex-col gap-[5px]">
-                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Selected period</span>
-                    <span className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#1A202C]">
+                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">Selected period</span>
+                    <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
                       {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
                     </span>
                   </div>
                   {weeklySlotCount > 0 && (
-                    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980]">
+                    <p className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#767980]">
                       {bookedSlotCount} of {weeklySlotCount} weekly slots booked
                     </p>
                   )}
@@ -794,19 +883,19 @@ export const CoachAvailabilitySection = ({
                 {bookingMix.map((group) => (
                   <div
                     key={group.label}
-                    className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]"
+                    className={`flex flex-col gap-3 ${cardClass} px-[25px] pb-[25px] pt-[30px]`}
                   >
-                    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980]">{group.label}</p>
-                    <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
+                    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">{group.label}</p>
+                    <p className="text-[32px] font-bold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
                       {group.booked} / {group.total}
                     </p>
-                    <div className="h-[5px] w-full overflow-hidden rounded-[10px] bg-[#D9D9CF]">
+                    <div className="h-[5px] w-full overflow-hidden rounded-[10px] bg-[#EAEADF]">
                       <div
                         className="h-full rounded-[10px] bg-[#0054B4]"
                         style={{ width: `${Math.round((group.booked / group.total) * 100)}%` }}
                       />
                     </div>
-                    <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
+                    <p className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">
                       {group.open} {group.open === 1 ? "slot" : "slots"} open
                     </p>
                   </div>
@@ -815,43 +904,8 @@ export const CoachAvailabilitySection = ({
             )}
 
             {selectedPeriod && (
-              <section className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
-                <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-                  <Calendar className="size-4" strokeWidth={1.75} />
-                  Weekly time slots
-                </h2>
-                {currentWeek && (
-                  <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                    <button
-                      type="button"
-                      onClick={handlePreviousWeek}
-                      disabled={currentWeekIndex === 0}
-                      className={`inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] disabled:cursor-not-allowed ${
-                        currentWeekIndex === 0 ? "bg-[#F7F7F0] text-[#A3A6AB]" : "bg-[#F1F1E6] text-[#484D56]"
-                      }`}
-                    >
-                      <ChevronLeft className="size-4" />
-                      Previous week
-                    </button>
-                    <div className="flex items-center justify-center gap-[5px]">
-                      <p className="text-center text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-                        Week {currentWeekIndex + 1} of {weeks.length}: {currentWeekRangeLabel.replace(" - ", " – ")}
-                      </p>
-                      <span className="rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]">
-                        EST
-                      </span>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={handleNextWeek}
-                      disabled={currentWeekIndex === weeks.length - 1}
-                      className="inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]"
-                    >
-                      Next week
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
-                )}
+              <section className={`flex flex-col gap-5 ${cardClass} px-[25px] pb-[25px] pt-[30px]`}>
+                {weekHeader ?? <SectionTitle>Weekly time slots</SectionTitle>}
                 <AvailabilityTable
                   slots={resolvedWeeklySlots}
                   onEdit={handleSlotEdit}
@@ -866,105 +920,45 @@ export const CoachAvailabilitySection = ({
             )}
           </div>
         ) : (
-          <Card className="border border-[#EAEADF] bg-[#F7F7F0] shadow-none">
-            <CardContent className="flex flex-col gap-5 p-[25px] py-[30px]">
-              <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-                <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-                  <Calendar className="size-4" strokeWidth={1.75} />
-                  Availability
-                </h2>
-              </div>
-
-              {sortedAvailabilities.length > 1 && (
-                <div className="flex flex-wrap gap-2">
-                  {sortedAvailabilities.map((period) => (
-                    <button
-                      key={period.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedPeriodId(period.id);
-                        setCurrentWeekIndex(0);
-                      }}
-                      className={`rounded-lg px-3 py-1.5 text-body-sm ${
-                        selectedPeriod?.id === period.id
-                          ? 'bg-primary text-primary-foreground'
-                          : 'bg-white text-foreground'
-                      }`}
-                    >
-                      {formatRangeWithYear(period.start_date, period.end_date)}
-                    </button>
-                  ))}
-                </div>
-              )}
+          <Card className={cardClass}>
+            <CardContent className={cardBodyClass}>
+              {weekHeader ?? <SectionTitle>Availability</SectionTitle>}
 
               {selectedPeriod && (
-                <div className="flex flex-col gap-4">
-                  <div className="flex flex-col gap-[5px] rounded-[8px] border border-[#D9D9CF] bg-[#EAEADF] p-[10px]">
-                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Selected period</span>
-                    <span className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#1A202C]">
-                      {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
-                    </span>
-                  </div>
-
-                  <div className="flex flex-col gap-5 md:flex-row md:items-center">
-                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Filter by date</span>
+                <div className="flex flex-col gap-3 rounded-[8px] bg-[#F4F4EB] p-[10px] md:flex-row md:items-center md:justify-between">
+                  {periodChips ?? (
+                    <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                      Booking period{" "}
+                      <span className="font-medium text-[#1A202C]">
+                        {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
+                      </span>
+                    </p>
+                  )}
+                  <div className="flex flex-col gap-2 md:flex-row md:items-center md:gap-3">
+                    <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">Filter by date</span>
                     <DateRangePicker
                       startDate={dateRangeStart || new Date(selectedPeriod.start_date)}
                       endDate={dateRangeEnd || new Date(selectedPeriod.end_date)}
                       onChange={handleDateRangeChange}
                       minStartDate={new Date(selectedPeriod.start_date)}
                       variant="cream"
-                      className="gap-5"
+                      className="gap-3"
                     />
                   </div>
                 </div>
               )}
 
-              {selectedPeriod && currentWeek && (
-                <div className="flex flex-col items-stretch justify-between gap-3 border-t border-[#EAEADF] pt-5 md:flex-row md:items-center">
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handlePreviousWeek}
-                    disabled={currentWeekIndex === 0}
-                    className="h-auto rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] hover:bg-[#F1F1E6] disabled:text-[#A3A6AB]"
-                  >
-                    <ChevronLeft className="mr-1 h-4 w-4" />
-                    Previous week
-                  </Button>
-                  <div className="flex items-center justify-center gap-[5px]">
-                    <p className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-                      Weekly time slots
-                    </p>
-                    <span className="rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]">
-                      EST
-                    </span>
-                  </div>
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={handleNextWeek}
-                    disabled={currentWeekIndex === weeks.length - 1}
-                    className="h-auto rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] hover:bg-[#F1F1E6] disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]"
-                  >
-                    Next week
-                    <ChevronRight className="ml-1 h-4 w-4" />
-                  </Button>
-                </div>
-              )}
-
-              {/* Table */}
               {selectedPeriod && (
-              <AvailabilityTable
-                slots={resolvedWeeklySlots}
-                onBookSlot={onBookSlot ? handleBookSlot : undefined}
-                showActions={!!onBookSlot}
-                slotStatusMap={slotStatusMap}
-                slotStatusLoading={slotStatusLoading && !slotStatusError}
-                platformFeePerc={platformFeePerc}
-                appearance="athlete"
-              />
-            )}
+                <AvailabilityTable
+                  slots={resolvedWeeklySlots}
+                  onBookSlot={onBookSlot ? handleBookSlot : undefined}
+                  showActions={!!onBookSlot}
+                  slotStatusMap={slotStatusMap}
+                  slotStatusLoading={slotStatusLoading && !slotStatusError}
+                  platformFeePerc={platformFeePerc}
+                  appearance="athlete"
+                />
+              )}
             </CardContent>
           </Card>
         )}
@@ -1004,12 +998,12 @@ export const CoachAvailabilitySection = ({
               deleteTargetType === 'period'
                 ? (
                   <div className="space-y-1">
-                    <div className="text-gray-800 font-semibold py-5">
+                    <div className="py-5 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
                       {deleteTargetPeriod
                         ? formatRangeWithYear(deleteTargetPeriod.start_date, deleteTargetPeriod.end_date)
                         : 'Selected period'}
                     </div>
-                    <div className="text-sm text-left text-gray-600 ">
+                    <div className="text-left text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
                       This will delete all slots and occurrences in this period. This cannot be undone.
                     </div>
                   </div>

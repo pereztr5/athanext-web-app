@@ -29,8 +29,11 @@ type UserMenuProps = {
   fallbackImg?: string | null;
   useFallbackDelay?: boolean;
   avatarReady?: boolean;
-  /** Sidebar avatar matches the Figma 40px, 10px-radius mark. */
-  variant?: "default" | "sidebar";
+  /**
+   * Sidebar avatar matches the Figma 40px, 10px-radius mark.
+   * Header avatar is the brand-kit 28px circle with flat blue initials and no completion ring.
+   */
+  variant?: "default" | "sidebar" | "header";
 };
 
 export const UserMenu: React.FC<UserMenuProps> = ({
@@ -105,17 +108,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 
           const { dismiss } = toast({
             duration: 6000,
-            className: "border border-blue-100 bg-blue-50/90 dark:bg-blue-950/70 shadow-[0_20px_45px_rgba(37,99,235,0.18)] rounded-2xl px-5 py-4",
             title: `New message from ${senderName}`,
             description: (
-              <div className="mt-3 text-sm text-slate-700 dark:text-slate-200 space-y-3">
+              <div className="mt-2 space-y-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
                 <p className="line-clamp-3">
                   {newMessage.body || 'You have a new message waiting.'}
                 </p>
                 <div className="flex gap-2">
                   <Button
                     size="sm"
-                    className="rounded-full px-4 bg-blue-600 hover:bg-blue-700 text-white shadow-sm"
                     onClick={async () => {
                       // Check actual unread state instead of blindly clearing
                       if (user?.id) {
@@ -126,12 +127,11 @@ export const UserMenu: React.FC<UserMenuProps> = ({
                       dismissToast?.();
                     }}
                   >
-                    Open Chat
+                    Open chat
                   </Button>
                   <Button
                     size="sm"
-                    variant="ghost"
-                    className="rounded-full px-4 text-blue-700 hover:text-blue-800"
+                    variant="outline"
                     onClick={async () => {
                       // Check actual unread state instead of blindly clearing
                       if (user?.id) {
@@ -352,16 +352,27 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     const isComplete = clampedCompletion >= 100;
     const degrees = clampedCompletion * 3.6;
     const sidebarMark = variant === "sidebar";
+    const headerMark = variant === "header";
     const node = (
       <Avatar
         className={cn(
           "relative h-full w-full overflow-hidden",
-          sidebarMark ? "rounded-[10px] bg-[#1599BC]" : "rounded-full bg-white"
+          sidebarMark
+            ? "rounded-[10px] bg-[#1599BC]"
+            : headerMark
+              ? "rounded-full bg-[#E5EDF7]"
+              : "rounded-full bg-[#E5EDF7]"
         )}
       >
         {shouldShowSkeleton ? (
           <div className="w-full h-full flex items-center justify-center">
-            <Skeleton className={cn("h-full w-full", sidebarMark ? "rounded-[10px]" : "rounded-full")} />
+            <Skeleton
+              className={cn(
+                "h-full w-full",
+                sidebarMark ? "rounded-[10px]" : "rounded-full",
+                headerMark && "bg-[#EAEADF]"
+              )}
+            />
           </div>
         ) : displayAvatarUrl ? (
           <AvatarImage
@@ -376,7 +387,9 @@ export const UserMenu: React.FC<UserMenuProps> = ({
               "flex h-full w-full items-center justify-center",
               sidebarMark
                 ? "rounded-[10px] bg-[#1599BC] text-[14px] font-medium text-[#F1F1E6]"
-                : "rounded-full bg-gradient-to-br from-primary/20 via-primary/15 to-primary/10 text-sm font-semibold text-primary"
+                : headerMark
+                  ? "rounded-full bg-[#E5EDF7] text-[12px] font-medium tracking-[-0.03em] text-[#0054B4]"
+                  : "rounded-full bg-[#E5EDF7] text-[12px] font-medium tracking-[-0.03em] text-[#0054B4]"
             )}
           >
             {initials}
@@ -393,17 +406,25 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     };
   }, [shouldShowSkeleton, displayAvatarUrl, displayName, initials, profileProgress?.completion, variant]);
 
+  const headerVariant = variant === "header";
+
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"
+          aria-label="Account menu"
           className={cn(
-            "relative h-10 w-10 p-0 hover:bg-transparent",
+            "relative p-0 hover:bg-transparent",
+            headerVariant ? "h-7 w-7" : "h-10 w-10",
             variant === "sidebar" ? "rounded-[10px]" : "rounded-full"
           )}
         >
-          {variant !== "sidebar" && profileCompletion > 0 && profileCompletion < 100 ? (
+          {headerVariant ? (
+            <div className="relative h-7 w-7 overflow-hidden rounded-full">
+              {avatarNode}
+            </div>
+          ) : variant !== "sidebar" && profileCompletion > 0 && profileCompletion < 100 ? (
             <div
               className={cn(
                 "relative h-10 w-10 rounded-full p-[4px] transition-all duration-200",
@@ -426,8 +447,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({
       </DropdownMenuTrigger>
       <DropdownMenuContent
         className="flex w-[227px] flex-col gap-[5px] rounded-[10px] border-[#EAEADF] bg-[#F4F4EB] p-[10px] shadow-[0px_0px_15px_0px_rgba(0,0,0,0.05)]"
-        align="start"
-        side="top"
+        align={headerVariant ? "end" : "start"}
+        side={headerVariant ? "bottom" : "top"}
         sideOffset={12}
         forceMount
       >

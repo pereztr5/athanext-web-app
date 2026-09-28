@@ -1,15 +1,15 @@
-import { Badge } from '../ui/badge';
 import { useState } from "react";
+import type { KeyboardEvent } from "react";
 import { Button } from '../ui/button';
-import { MapPin, Star, Instagram } from 'lucide-react';
+import { MapPin, Instagram, MessageCircle, Loader2 } from 'lucide-react';
 import { Card, CardContent } from '../ui/card';
 import rowerIcon from '../../assets/images/colored-rowing.png';
 import footballIcon from '../../assets/images/colored-soccer.png';
-import { CoachVerificationBadge } from './CoachVerificationBadge';
-import { PRIMARY, colors } from '@/config/colors';
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import type { Coach } from '@/types/coachProfile'
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
+import { BrandPill, BrandStar } from "@/components/brand";
+
 interface CoachCardProps {
     coach: Coach;
     onViewProfile: (coachId: string) => void;
@@ -19,6 +19,28 @@ interface CoachCardProps {
     disableSendMessage?: boolean;
     isSendingMessage?: boolean;
 }
+
+/**
+ * Display-only sentence case: "Technical Skills" -> "Technical skills".
+ * Words written fully in capitals (e.g. "GK", "U18") are left alone.
+ */
+const toSentenceCase = (value: string) => {
+    const words = value.trim().split(/\s+/);
+    return words
+        .map((word, index) => {
+            const isAcronym = word.length > 1 && word === word.toUpperCase() && /[A-Z]/.test(word);
+            if (isAcronym) return word;
+            const lower = word.toLowerCase();
+            return index === 0 ? lower.charAt(0).toUpperCase() + lower.slice(1) : lower;
+        })
+        .join(' ');
+};
+
+const pillToggleClass =
+    "inline-flex items-center whitespace-nowrap rounded-[4px] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40";
+
+const actionButtonBase =
+    "h-[34px] rounded-[8px] border text-[14px] font-medium tracking-[-0.03em] shadow-none min-w-0";
 
 const CoachCard = ({
     coach,
@@ -48,51 +70,50 @@ const CoachCard = ({
         : typeof rawFavoritePositions === "string"
             ? rawFavoritePositions.split(",").map((item) => item.trim()).filter(Boolean)
             : [];
-    const primarySpecialty = specialtyList[0] || 'Coach';
+    const primarySpecialty = specialtyList[0]
+        ? (() => {
+            const label = toSentenceCase(specialtyList[0]);
+            return /\bcoach$/i.test(label) ? label : `${label} coach`;
+        })()
+        : 'Coach';
     const primaryLocation = coach?.locations?.[0] || 'Location not specified';
     const sportOption = SPORTS_OPTIONS.find(
         (option) => option.value.toLowerCase() === (coach?.sport || "").toLowerCase()
     );
     const getFavoritePositionLabel = (value: string) =>
-        sportOption?.positions.find((position) => position.value === value)?.label ||
-        normalizePosition(sportOption?.value || "", value);
-
-    // Special styling only for specific elements
-
-    const initialsClass = "text-primary font-bold text-lg";
-    const avatarInnerClass = "w-16 h-16 bg-primary/30 rounded-full flex items-center justify-center";
-    const avatarClass = "relative p-1 group-hover:bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center mr-4";
+        toSentenceCase(
+            sportOption?.positions.find((position) => position.value === value)?.label ||
+            normalizePosition(sportOption?.value || "", value)
+        );
 
     const sportSource = ((coach as any)?.sport || (coach as any)?.sport_type || '').toLowerCase();
     const isRowing = sportSource.includes('row');
-    const isSoccer = ["soccer", "football", "scoccer"].some((s) => sportSource.includes(s));
-    const sportIcon = isRowing ? rowerIcon : isSoccer ? footballIcon : footballIcon;
-    const isGoalkeeper = coach?.position === "goalkeeper";
-    const badgeClass = isGoalkeeper
-        ? "bg-[#E8F3EB] hover:bg-[#cfebd6] text-[#1B8A3B] border border-[#1B8A3B33]"
-        : "bg-[#ECF0F3] hover:bg-[#e0e6eb] text-[#0A3A67] border border-[#0A3A6736]";
-    const favoriteBadgeStyle = isRowing
-        ? {
-            backgroundColor: colors.rowingBlueTheme.badgeBackground,
-            color: colors.rowingBlueTheme.badgeText,
-            borderColor: colors.rowingBlueTheme.primary,
-        }
-        : isSoccer
-          ? {
-              backgroundColor: colors.soccerTheme.cardLight,
-              color: colors.soccerTheme.cardLightText,
-              borderColor: colors.soccerTheme.primary,
-          }
-          : {
-              backgroundColor: colors.pastel.blue.main,
-              color: colors.pastel.blue.foreground,
-              borderColor: colors.primary.main,
-          };
+    const sportIcon = isRowing ? rowerIcon : footballIcon;
+
     const maxBadgesToShow = 2;
-    const visibleBadges = specialtyList.slice(0, maxBadgesToShow);
-    const extraBadges = specialtyList.slice(maxBadgesToShow);
-    const visibleFavoritePositions = favoritePositions.slice(0, maxBadgesToShow);
-    const extraFavoritePositions = favoritePositions.slice(maxBadgesToShow);
+    const visibleBadges = showAllSpecialties ? specialtyList : specialtyList.slice(0, maxBadgesToShow);
+    const extraBadgeCount = Math.max(specialtyList.length - maxBadgesToShow, 0);
+    const visibleFavoritePositions = showAllPositions
+        ? favoritePositions
+        : favoritePositions.slice(0, maxBadgesToShow);
+    const extraFavoritePositionCount = Math.max(favoritePositions.length - maxBadgesToShow, 0);
+
+    const ratingVisible = isPublicCoachRatingVisible(coach?.total_reviews, coach?.rating);
+    const messageDisabled = disableSendMessage || !onSendMessage || isSendingMessage;
+
+    const openProfile = () => {
+        if (coach.id) {
+            onViewProfile(coach.id);
+        }
+    };
+
+    const handleCardKeyDown = (event: KeyboardEvent<HTMLDivElement>) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            openProfile();
+        }
+    };
 
     return (
         <Card
@@ -100,172 +121,150 @@ const CoachCard = ({
             role="button"
             tabIndex={0}
             aria-label={`View ${coach?.name} profile`}
-            onClick={() => {
-                if (coach.id) {
-                    onViewProfile(coach.id);
-                }
-            }}
-            className="rounded-xl group hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm h-full flex flex-col cursor-pointer w-full max-w-md md:max-w-none mx-auto"
+            onClick={openProfile}
+            onKeyDown={handleCardKeyDown}
+            className="h-full w-full max-w-md md:max-w-none mx-auto flex flex-col cursor-pointer rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] shadow-none transition-colors hover:border-[#DCDCCF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/30"
         >
-            <CardContent className="p-4 flex flex-col flex-1 h-full">
-                <div className="flex-1 flex flex-col gap-3">
-                    <div className="flex mb-1 flex-shrink-0">
-                        <div>
+            <CardContent className="flex flex-1 flex-col gap-5 px-[25px] pt-[30px] pb-[25px]">
+                <div className="flex flex-1 flex-col gap-5">
+                    {/* Header: avatar, name block, rating */}
+                    <div className="flex items-start gap-3">
+                        <div className="relative size-10 flex-none">
                             {coach?.image_url ? (
-                                <div className="relative w-16 h-16 mr-5">
-                                    <img src={coach?.image_url} alt={coach?.name} className="w-full h-full rounded-full object-cover" />
-                                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 rounded-full p-1 bg-white">
-                                        <img src={sportIcon} alt="sport" className="w-5 h-5" />
-                                    </div>
-                                </div>
+                                <img
+                                    src={coach.image_url}
+                                    alt={coach?.name}
+                                    className="size-10 rounded-full object-cover"
+                                />
                             ) : (
-                                <div className={avatarClass}>
-                                    <div className={avatarInnerClass}>
-                                        <span className={initialsClass}>{initials}</span>
-                                    </div>
-                                    <div className="absolute -bottom-3 left-1/2 transform -translate-x-1/2 rounded-full p-1 bg-white">
-                                        <img src={sportIcon} alt="sport" className="w-5 h-5" />
-                                    </div>
+                                <div className="flex size-10 items-center justify-center rounded-full bg-[#E5EDF7] text-[14px] font-medium tracking-[-0.03em] text-[#0054B4]">
+                                    {initials}
                                 </div>
-                            )
-                            }
+                            )}
+                            <img
+                                src={sportIcon}
+                                alt=""
+                                aria-hidden="true"
+                                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-[#F7F7F0] p-px"
+                            />
                         </div>
-                        <div className="flex flex-col gap-1">
-                            <div className="flex items-center gap-2">
-                                <p className="font-bold text-lg text-foreground leading-tight">{coach?.name || 'Unknown Coach'}</p>
-                                {coach?.is_verified && <CoachVerificationBadge className="h-4 w-4" />}
+
+                        <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                            <div className="flex min-w-0 items-center gap-1.5">
+                                <p className="truncate text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                                    {coach?.name || 'Unknown coach'}
+                                </p>
+                                {coach?.is_verified && (
+                                    <span className="inline-flex flex-none" title="Verified coach">
+                                        <svg
+                                            width="16"
+                                            height="16"
+                                            viewBox="0 0 24 24"
+                                            fill="none"
+                                            stroke="#0054B4"
+                                            strokeWidth={1.5}
+                                            strokeLinecap="round"
+                                            strokeLinejoin="round"
+                                            role="img"
+                                            aria-label="Verified coach"
+                                        >
+                                            <circle cx="12" cy="12" r="9" />
+                                            <path d="m8.5 12 2.5 2.5 5-5" />
+                                        </svg>
+                                    </span>
+                                )}
                                 {coach?.instagram_handle && (
                                     <a
                                         href={`https://instagram.com/${coach.instagram_handle}`}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={(e) => e.stopPropagation()}
-                                        className="inline-flex items-center justify-center w-6 h-6 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-full hover:opacity-80 transition-opacity"
+                                        className="inline-flex flex-none items-center justify-center rounded-[4px] text-[#767980] transition-colors hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40"
                                         aria-label={`View ${coach.name}'s Instagram profile`}
                                     >
-                                        <Instagram className="h-3.5 w-3.5 text-white" />
+                                        <Instagram className="size-4" strokeWidth={1.5} />
                                     </a>
                                 )}
                             </div>
-                            <p className="text-sm text-muted-foreground">{primarySpecialty}</p>
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground mb-1">
-                                <MapPin className="h-4 w-4" />
-                                <span>{primaryLocation}</span>
-                            </div>
-                            {visibleBadges.length > 0 && (
-                                <div className="flex flex-wrap gap-2 mb-1">
-                                    {visibleBadges.map((specialty, index) => (
-                                        <Badge
-                                            key={`${specialty}-${index}`}
-                                            className="w-fit text-xs font-semibold bg-[#ECF0F3] text-[#0A3A67] border border-[#0A3A6736] px-3 py-1"
-                                        >
-                                            {specialty}
-                                        </Badge>
-                                    ))}
-                                    {extraBadges.length > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                setShowAllSpecialties((prev) => !prev);
-                                            }}
-                                            className="px-3 py-1 rounded-full bg-[#ECF0F3] text-[#0A3A67] border border-[#0A3A6736] text-xs font-semibold hover:bg-[#e0e6eb] transition-colors"
-                                            aria-expanded={showAllSpecialties}
-                                            aria-label={`Show all ${specialtyList.length} specialties`}
-                                        >
-                                            +{extraBadges.length}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                            {showAllSpecialties && (
-                                <div className="flex flex-wrap gap-2 mb-1">
-                                    {extraBadges.map((specialty, index) => (
-                                        <Badge
-                                            key={`all-${specialty}-${index}`}
-                                            className="w-fit text-xs font-semibold bg-[#ECF0F3] text-[#0A3A67] border border-[#0A3A6736] px-3 py-1"
-                                        >
-                                            {specialty}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                            {favoritePositions.length > 0 && (
-                                <div className="flex flex-wrap gap-2">
-                                    {visibleFavoritePositions.map((position, index) => (
-                                        <Badge
-                                            key={`${position}-${index}`}
-                                            className="w-fit text-xs font-semibold px-3 py-1 border transition-opacity hover:opacity-90"
-                                            style={favoriteBadgeStyle}
-                                        >
-                                            {getFavoritePositionLabel(position)}
-                                        </Badge>
-                                    ))}
-                                    {extraFavoritePositions.length > 0 && (
-                                        <button
-                                            type="button"
-                                            onClick={(event) => {
-                                                event.stopPropagation();
-                                                setShowAllPositions((prev) => !prev);
-                                            }}
-                                            className="px-3 py-1 rounded-full text-xs font-semibold border transition-opacity hover:opacity-90"
-                                            style={favoriteBadgeStyle}
-                                            aria-expanded={showAllPositions}
-                                            aria-label={`Show all ${favoritePositions.length} favorite positions`}
-                                        >
-                                            +{extraFavoritePositions.length}
-                                        </button>
-                                    )}
-                                </div>
-                            )}
-                            {showAllPositions && (
-                                <div className="flex flex-wrap gap-2">
-                                    {extraFavoritePositions.map((position, index) => (
-                                        <Badge
-                                            key={`all-favorite-${position}-${index}`}
-                                            className="w-fit text-xs font-semibold px-3 py-1 border transition-opacity hover:opacity-90"
-                                            style={favoriteBadgeStyle}
-                                        >
-                                            {getFavoritePositionLabel(position)}
-                                        </Badge>
-                                    ))}
-                                </div>
-                            )}
-                            
+                            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                                {primarySpecialty}
+                            </p>
+                            <p className="flex items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                                <MapPin className="size-3 flex-none" strokeWidth={2} aria-hidden="true" />
+                                <span className="truncate">{primaryLocation}</span>
+                            </p>
+                        </div>
+
+                        <div className="flex flex-none items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                            <BrandStar filled={ratingVisible} size={16} />
+                            <span>{publicCoachRatingLabel(coach?.rating, coach?.total_reviews)}</span>
+                            {ratingVisible ? (
+                                <span className="text-[12px] font-normal leading-[14px] text-[#767980]">
+                                    {coach?.total_reviews || 0} reviews
+                                </span>
+                            ) : null}
                         </div>
                     </div>
 
-                </div>
-
-                {/* Divider */}
-                <div className='w-full h-[1px] bg-[#F0F0F0] mt-3' />
-
-                {/* Rating near buttons */}
-                <div className="w-full flex items-center justify-between gap-2 flex-wrap mt-3">
-                    <div className="w-fit flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-1 bg-[#FFFBEB] px-3 py-2 rounded-[.8rem]">
-                            <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                            <span className="font-semibold text-sm">{publicCoachRatingLabel(coach?.rating, coach?.total_reviews)}</span>
+                    {/* Specialty + position pills */}
+                    {(specialtyList.length > 0 || favoritePositions.length > 0) && (
+                        <div className="flex flex-wrap gap-1.5">
+                            {visibleBadges.map((specialty, index) => (
+                                <BrandPill key={`${specialty}-${index}`} tone="neutral">
+                                    {toSentenceCase(specialty)}
+                                </BrandPill>
+                            ))}
+                            {extraBadgeCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        setShowAllSpecialties((prev) => !prev);
+                                    }}
+                                    className={`${pillToggleClass} bg-[#F1F1E6] text-[#484D56] hover:bg-[#EAEADF]`}
+                                    aria-expanded={showAllSpecialties}
+                                    aria-label={
+                                        showAllSpecialties
+                                            ? 'Show fewer specialties'
+                                            : `Show all ${specialtyList.length} specialties`
+                                    }
+                                >
+                                    {showAllSpecialties ? 'Less' : `+${extraBadgeCount}`}
+                                </button>
+                            )}
+                            {visibleFavoritePositions.map((position, index) => (
+                                <BrandPill key={`favorite-${position}-${index}`} tone="teal">
+                                    {getFavoritePositionLabel(position)}
+                                </BrandPill>
+                            ))}
+                            {extraFavoritePositionCount > 0 && (
+                                <button
+                                    type="button"
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+                                        setShowAllPositions((prev) => !prev);
+                                    }}
+                                    className={`${pillToggleClass} bg-[#E7F4F8] text-[#1599BC] hover:bg-[#D9EEF4]`}
+                                    aria-expanded={showAllPositions}
+                                    aria-label={
+                                        showAllPositions
+                                            ? 'Show fewer favourite positions'
+                                            : `Show all ${favoritePositions.length} favourite positions`
+                                    }
+                                >
+                                    {showAllPositions ? 'Less' : `+${extraFavoritePositionCount}`}
+                                </button>
+                            )}
                         </div>
-                        {isPublicCoachRatingVisible(coach?.total_reviews, coach?.rating) ? (
-                          <span className="text-xs text-muted-foreground">({coach?.total_reviews || 0} reviews)</span>
-                        ) : null}
-                    </div>
+                    )}
                 </div>
 
-                {/* Bio intentionally hidden on All Coaches view as requested */}
-
-                <div className="flex flex-col gap-3 items-center justify-center mt-3">
-                    <div className='grid grid-cols-2 gap-2 w-full sm:flex sm:flex-row sm:justify-center sm:items-stretch'>
-                        {/* <Button
-                            variant="outline"
-                            className="flex-1 text-xs rounded-full whitespace-nowrap"
-                        >
-                            Free Consultant
-                        </Button> */}
+                {/* Actions */}
+                <div className="flex flex-col gap-2.5">
+                    <div className="flex gap-2">
                         <Button
-                            className="w-full sm:flex-1 text-xs font-medium rounded-full whitespace-normal sm:whitespace-nowrap min-w-0"
-                            style={{ backgroundColor: PRIMARY.main, color: PRIMARY.foreground }}
+                            type="button"
+                            className={`${actionButtonBase} flex-1 border-[#6698D2] bg-[#0054B4] px-3 text-[#F1F1E6] hover:bg-[#004390]`}
                             onClick={(event) => {
                                 event.stopPropagation();
                                 if (onSession) {
@@ -275,12 +274,12 @@ const CoachCard = ({
                                 onViewProfile(coach.id!);
                             }}
                         >
-                            Book a Session
+                            Book a session
                         </Button>
                         <Button
-                            className="w-full sm:flex-1 text-xs font-medium rounded-full whitespace-normal sm:whitespace-nowrap min-w-0"
-                            style={{ backgroundColor: PRIMARY.main, color: PRIMARY.foreground }}
-                                onClick={(event) => {
+                            type="button"
+                            className={`${actionButtonBase} flex-1 border-[#EAEADF] bg-[#F4F4EB] px-3 text-[#1A202C] hover:bg-[#EAEADF]`}
+                            onClick={(event) => {
                                 event.stopPropagation();
                                 if (onViewPackages) {
                                     onViewPackages();
@@ -289,13 +288,15 @@ const CoachCard = ({
                                 onViewProfile(coach.id!);
                             }}
                         >
-                            View Packages
+                            View packages
                         </Button>
                         <Button
-                            className="col-span-2 w-full sm:flex-1 text-xs font-medium rounded-full whitespace-normal sm:whitespace-nowrap disabled:opacity-70 sm:col-span-1 min-w-0"
                             type="button"
-                            disabled={disableSendMessage || !onSendMessage || isSendingMessage}
-                            style={{ backgroundColor: PRIMARY.main, color: PRIMARY.foreground }}
+                            className={`${actionButtonBase} w-[34px] flex-none border-[#EAEADF] bg-[#F4F4EB] p-0 text-[#1A202C] hover:bg-[#EAEADF] disabled:opacity-60`}
+                            disabled={messageDisabled}
+                            aria-label={isSendingMessage ? 'Starting a conversation' : `Send ${coach?.name || 'this coach'} a message`}
+                            aria-busy={isSendingMessage || undefined}
+                            title={isSendingMessage ? 'Starting...' : 'Send a message'}
                             onClick={(event) => {
                                 event.stopPropagation();
                                 if (onSendMessage) {
@@ -303,20 +304,23 @@ const CoachCard = ({
                                 }
                             }}
                         >
-                            {isSendingMessage ? "Starting..." : "Send a Message"}
+                            {isSendingMessage ? (
+                                <Loader2 className="size-4 animate-spin" strokeWidth={1.5} aria-hidden="true" />
+                            ) : (
+                                <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                            )}
                         </Button>
                     </div>
-                    <Button
-                        variant="secondary"
-                        className="w-full py-6 text-sm font-medium rounded-[1.5rem] shadow-sm bg-black hover:bg-gray-500 text-white"
-                        onClick={() => {
-                            if (coach.id) {
-                                onViewProfile(coach.id);
-                            }
+                    <button
+                        type="button"
+                        className="self-center rounded-[4px] text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] transition-colors hover:text-[#004390] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40"
+                        onClick={(event) => {
+                            event.stopPropagation();
+                            openProfile();
                         }}
                     >
-                        View Full Profile
-                    </Button>
+                        View full profile
+                    </button>
                 </div>
             </CardContent>
         </Card>

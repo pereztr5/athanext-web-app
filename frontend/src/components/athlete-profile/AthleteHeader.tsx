@@ -1,6 +1,5 @@
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { BrandPill } from "@/components/brand";
 import { Carousel } from "@/components/coach-profile";
 import { CoachVerificationBadge } from "@/components/coach/CoachVerificationBadge";
 import { Calendar, MapPin, MessageCircle } from "lucide-react";
@@ -17,6 +16,7 @@ interface AthleteHeaderProps {
     summary: string;
     heroImages?: string[];
   };
+  /** Kept for API compatibility; the brand kit no longer uses sport-coloured chrome. */
   sportTheme: {
     buttonClass: string;
     badgeClass: string;
@@ -25,9 +25,10 @@ interface AthleteHeaderProps {
   onMessage: () => void;
 }
 
+const metaClass = "flex items-center gap-1.5 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
+
 export const AthleteHeader = ({
   athlete,
-  sportTheme,
   onBook,
   onMessage,
 }: AthleteHeaderProps) => {
@@ -40,54 +41,53 @@ export const AthleteHeader = ({
     .toUpperCase();
 
   return (
-    <Card className="border-0 shadow-lg">
-      <CardContent className="p-0">
-        <Carousel photos={photos} altTextPrefix={athlete.name} />
-        <div className="flex flex-col gap-4 px-4 pb-6 pt-4 md:px-6">
-          <div className="flex items-start gap-4">
-            <div className="flex h-20 w-20 items-center justify-center rounded-full border-4 border-white bg-gradient-to-br from-primary/30 to-primary/10 text-2xl font-bold text-primary">
-              {initials}
-            </div>
-            <div className="flex-1">
-              <div className="flex flex-wrap items-center gap-2">
-                <h1 className="text-3xl font-bold text-slate-900">{athlete.name}</h1>
-                <CoachVerificationBadge className="h-5 w-5" />
-              </div>
-              <p className="text-sm text-muted-foreground">
-                {athlete.position} • {athlete.school}
-              </p>
-              <div className="mt-2 flex flex-wrap gap-2">
-                {athlete.tags.map((tag, i) => (
-                  <Badge key={`${tag}-${i}`} className={`text-xs ${sportTheme.badgeClass} border`}>
-                    {tag}
-                  </Badge>
-                ))}
-              </div>
-              <div className="mt-3 flex flex-wrap gap-4 text-sm text-muted-foreground">
-                <span className="flex items-center gap-1">
-                  <Calendar className="h-4 w-4" />
-                  Class of {athlete.classOf}
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="h-4 w-4" />
-                  {athlete.contact.location}
-                </span>
-              </div>
-              <div className="mt-3 flex flex-wrap gap-2">
-                <Button className={`${sportTheme.buttonClass} px-8 text-white`} onClick={onBook}>
-                  Actively Recruiting
-                </Button>
-                <Button variant="outline" className="px-6" onClick={onMessage}>
-                  <MessageCircle className="mr-2 h-4 w-4" />
-                  Send Message
-                </Button>
-              </div>
-            </div>
-          </div>
-          {/* Placeholder until copy is finalized */}
-          {/* <p className="rounded-xl border bg-slate-50 p-4 text-sm text-slate-600">{athlete.summary}</p> */}
+    <section className="flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]">
+      <Carousel photos={photos} altTextPrefix={athlete.name} />
+      <div className="flex flex-col items-start gap-5 sm:flex-row">
+        <div
+          aria-hidden="true"
+          className="flex size-20 shrink-0 items-center justify-center rounded-full border border-[#EAEADF] bg-[#E5EDF7] text-[24px] font-medium tracking-[-0.05em] text-[#0054B4]"
+        >
+          {initials}
         </div>
-      </CardContent>
-    </Card>
+        <div className="flex min-w-0 flex-1 flex-col gap-[10px]">
+          <div className="flex flex-wrap items-center gap-2">
+            <h1 className="text-[32px] font-bold leading-[34px] tracking-[-0.05em] text-[#1A202C]">{athlete.name}</h1>
+            <CoachVerificationBadge className="size-5" />
+          </div>
+          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
+            {[athlete.position, athlete.school].filter(Boolean).join(", ")}
+          </p>
+          {athlete.tags.length > 0 && (
+            <div className="flex flex-wrap gap-2">
+              {athlete.tags.map((tag, i) => (
+                <BrandPill key={`${tag}-${i}`} tone="neutral">
+                  {tag}
+                </BrandPill>
+              ))}
+            </div>
+          )}
+          <div className="flex flex-wrap gap-x-5 gap-y-2">
+            <span className={metaClass}>
+              <Calendar className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              Class of {athlete.classOf}
+            </span>
+            <span className={metaClass}>
+              <MapPin className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              {athlete.contact.location}
+            </span>
+          </div>
+          <div className="flex flex-wrap gap-[10px] pt-1">
+            <Button onClick={onBook}>Actively recruiting</Button>
+            <Button variant="outline" className="gap-1.5" onClick={onMessage}>
+              <MessageCircle className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              Send message
+            </Button>
+          </div>
+        </div>
+      </div>
+      {/* Placeholder until copy is finalized */}
+      {/* <p className="rounded-[8px] bg-[#F4F4EB] p-4 text-[14px] text-[#484D56]">{athlete.summary}</p> */}
+    </section>
   );
 };

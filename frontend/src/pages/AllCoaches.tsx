@@ -723,52 +723,6 @@ const AllCoaches = () => {
     selectedCoachForPackages?.id
   );
 
-  const getCardStyling = (sport: string) => {
-    switch (sport) {
-      case "soccer":
-        return {
-          card: "hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-white dark:bg-gray-800 border border-gray-200 dark:border-gray-700 cursor-pointer",
-
-          header: "bg-blue-500 text-white",
-
-          avatar: "bg-blue-500 text-white",
-
-          button:
-            "bg-blue-600 hover:bg-blue-700 text-white group-hover:scale-105 transition-transform",
-
-          price: "text-blue-600 dark:text-blue-400",
-        };
-
-      case "rowing":
-        return {
-          card: "hover:shadow-xl transition-all duration-300 hover:-translate-y-2 bg-gradient-to-br from-red-50 to-gray-50 dark:from-red-900/20 dark:to-gray-900/20 border-red-200 dark:border-red-800 cursor-pointer",
-
-          header: "bg-gradient-to-r from-red-600 to-gray-800 text-white",
-
-          avatar: "bg-gradient-to-br from-red-600 to-gray-800 text-white",
-
-          button:
-            "bg-gradient-to-r from-red-600 to-gray-800 hover:from-red-700 hover:to-gray-900 text-white group-hover:scale-105 transition-transform",
-
-          price: "text-red-600 dark:text-red-400",
-        };
-
-      default:
-        return {
-          card: "hover:shadow-xl transition-all duration-300 hover:-translate-y-2 cursor-pointer",
-
-          header: "bg-primary text-white",
-
-          avatar: "bg-primary text-primary-foreground",
-
-          button:
-            "bg-blue-600 hover:bg-blue-700 text-white group-hover:scale-105 transition-transform",
-
-          price: "text-blue-600",
-        };
-    }
-  };
-
   const formatList = (items: string[]) => {
     if (items.length <= 1) return items[0] || "";
     if (items.length === 2) return items.join(" & ");
@@ -819,21 +773,20 @@ const AllCoaches = () => {
     return {
       sportCount: sportList.length,
       sportLabel: formattedList.length
-        ? `Sports Today — ${formatList(formattedList)}`
-        : "Sports Today — Updating...",
+        ? `Sports: ${formatList(formattedList)}`
+        : "Sports",
     };
   }, [coaches]);
 
   if (loading) {
     return (
-      <div className={isAuthenticated ? "flex min-h-[50vh] items-center justify-center" : "min-h-screen bg-background flex items-center justify-center"}>
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-
-          <p className="text-muted-foreground">Loading coaches...</p>
+      <div className={isAuthenticated ? "flex min-h-[50vh] items-center justify-center px-4" : "flex min-h-screen items-center justify-center bg-[#F1F1E6] px-4"}>
+        <div className="flex flex-col items-center gap-3 text-center">
+          <div className="size-10 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
+          <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Loading coaches</p>
           {isLoadingSlow && (
-            <p className="mt-2 text-xs text-muted-foreground">
-              This is taking longer than usual. Please wait while we fetch data.
+            <p className="max-w-[320px] text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
+              This is taking longer than usual. Hang on while we fetch the latest profiles.
             </p>
           )}
         </div>
@@ -843,9 +796,35 @@ const AllCoaches = () => {
 
   const filterTriggerClass =
     "!h-auto w-full !rounded-[8px] !border-[#EAEADF] !bg-[#F7F7F0] !px-[10px] !py-[10px] !text-[12px] !font-normal !leading-[14px] !tracking-[-0.36px] shadow-none focus:!ring-0 focus:!ring-offset-0 [&>svg]:!size-4 [&>svg]:!opacity-100 [&>svg]:!text-[#767980]";
+  const filterLabel = (value: string) => {
+    switch (value) {
+      case "All Sports":
+        return "All sports";
+      case "All Pillars":
+        return "All pillars";
+      case "All Positions":
+        return "All positions";
+      case "Highest Rated":
+        return "Highest rated";
+      case "Lowest Rated":
+        return "Lowest rated";
+      default:
+        return value;
+    }
+  };
+  const isDefaultFilter = (value: string) =>
+    ["All Sports", "All Pillars", "All Positions", "Highest Rated"].includes(value);
+  const triggerClass = (value: string, width: string) =>
+    `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
+  const coachCountLabel = `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found`;
+  const heroStats = [
+    { value: verifiedCoachesCount.toLocaleString(), label: "Verified coaches" },
+    { value: String(sportCount), label: sportLabel },
+    { value: coachingPillarCount.toLocaleString(), label: "Coaching pillars" },
+  ];
 
   return (
-    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-16 md:px-10" : "min-h-screen bg-app-background"}>
+    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-16 md:px-10" : "min-h-screen bg-[#F1F1E6] font-sans"}>
       {isAuthenticated ? (
         <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[10px]">
           <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
@@ -856,182 +835,125 @@ const AllCoaches = () => {
           </p>
         </div>
       ) : (
-      <div className="relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 px-4 py-16 border-b border-primary/20 mt-[3.8rem]">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+        <section className="mt-[3.8rem] border-b border-[#EAEADF] px-4 pb-12 pt-14 md:pb-16 md:pt-20">
+          <div className="mx-auto flex max-w-[1000px] flex-col items-center gap-[30px] text-center">
+            <div className="flex flex-col items-center gap-[15px]">
+              <span className="rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-1 text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#0054B4]">
+                Coach directory
+              </span>
+              <h1 className="max-w-[720px] text-[36px] font-bold leading-[38px] tracking-[-0.05em] text-[#1A202C] md:text-[48px] md:leading-[50px]">
+                Discover your coach in our growing directory
+              </h1>
+              <p className="max-w-[640px] text-[16px] leading-[22px] tracking-[-0.03em] text-[#484D56]">
+                Every AthaNext coach has a searchable profile. Explore their experience, compare
+                specialties, and find the right fit for your goals.
+              </p>
+            </div>
 
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" />
-
-        <div className="relative max-w-8xl mx-auto text-center">
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">
-            <span className="text-slate-800 dark:text-slate-200">
-              Discover Your{" "}
-            </span>
-
-            <span className="bg-gradient-to-r from-blue-600 to-blue-400 bg-clip-text text-transparent">
-              Coach
-            </span>
-
-            <span className="text-slate-800 dark:text-slate-200">
-              {" "}
-              in Our Growing Database
-            </span>
-          </h1>
-
-          <p className="text-lg text-slate-700 dark:text-slate-300 max-w-3xl mx-auto mb-8">
-            The AthaNext platform is built around a comprehensive coach
-            database—verified, searchable, and tailored to athletes like you.
-            With just a few clicks, you can explore profiles, compare
-            specialties, and find the perfect fit for your goals.
-          </p>
-
-          {/* Database Highlights */}
-
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8 max-w-4xl mx-auto">
-            <Card className="border border-primary/20 bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all duration-300">
-              <CardContent className="p-4 text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-1">
-                  {verifiedCoachesCount.toLocaleString()}
+            <div className="grid w-full max-w-[760px] grid-cols-1 gap-[10px] sm:grid-cols-3">
+              {heroStats.map((stat) => (
+                <div
+                  key={stat.label}
+                  className="flex flex-col items-center gap-[6px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]"
+                >
+                  <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
+                    {stat.value}
+                  </span>
+                  <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{stat.label}</span>
                 </div>
+              ))}
+            </div>
 
-                <div className="text-sm text-muted-foreground font-medium">
-                  Verified Coaches
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-primary/20 bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all duration-300">
-              <CardContent className="p-4 text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-1">
-                  {sportCount}
-                </div>
-
-                <div className="text-sm text-muted-foreground font-medium">
-                  {sportLabel}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card className="border border-primary/20 bg-card/50 backdrop-blur-sm hover:border-primary/30 transition-all duration-300">
-              <CardContent className="p-4 text-center">
-                <div className="text-3xl font-bold bg-gradient-to-r from-primary to-blue-600 bg-clip-text text-transparent mb-1">
-                  {coachingPillarCount.toLocaleString()}
-                </div>
-
-                <div className="text-sm text-muted-foreground font-medium">
-                  Coaching Pillars
-                </div>
-              </CardContent>
-            </Card>
+            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+              Use the filters below to narrow coaches by sport, pillar, or position.
+            </p>
           </div>
-
-          {/* Quick Guide */}
-
-          <p className="text-sm text-slate-600 dark:text-slate-400">
-            Use the filters below to search by sport, position, specialty, or
-            price and discover the right coach for your next step.
-          </p>
-        </div>
-      </div>
+        </section>
       )}
 
       {/* Search and Filters Header */}
 
-      <div className={isAuthenticated ? "mx-auto mt-6 w-full max-w-[1000px]" : "bg-app-background px-4 py-8 md:px-0"}>
+      <div className={isAuthenticated ? "mx-auto mt-6 w-full max-w-[1000px]" : "px-4 pt-10"}>
         <div className={isAuthenticated ? "" : "mx-auto max-w-[1000px]"}>
           {!isAuthenticated && (
-          <div className="mb-6">
-            <h1 className="text-page-title text-foreground">
-              Browse coaches
-            </h1>
-
-            <p className="text-muted-foreground mt-1">
-              {strings.coach.findYourPerfectMatch}
-            </p>
-          </div>
+            <div className="mb-5 flex flex-col gap-[10px]">
+              <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+                Browse coaches
+              </h2>
+              <p className="text-[16px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                Find your perfect coaching match
+              </p>
+            </div>
           )}
 
           {/* Search and Filters */}
 
-          <div className={isAuthenticated ? "flex flex-col gap-[10px] lg:flex-row lg:items-center" : "flex flex-col md:flex-row gap-4 items-start"}>
-            {isAuthenticated ? (
-              <div className="flex min-w-0 flex-1 items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px]">
-                <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.75} />
-                <input
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  placeholder="Search coaches"
-                  className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
-                />
-              </div>
-            ) : (
-            <div className="relative w-full md:w-80">
-              <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-
-              <Input
-                placeholder={strings.coach.searchPlaceholder}
+          <div className="flex flex-col gap-[10px] lg:flex-row lg:items-center">
+            <div className="flex min-w-0 flex-1 items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px] focus-within:ring-2 focus-within:ring-[#6698D2]">
+              <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+              <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 !rounded-[10px] focus-visible:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"
+                placeholder={isAuthenticated ? "Search coaches" : "Search coaches, specialties, locations"}
+                aria-label="Search coaches"
+                className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
               />
             </div>
-            )}
 
-            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-3" : "flex gap-2 flex-wrap items-start w-full md:w-auto"}>
+            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-3" : "grid min-w-0 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:flex lg:flex-none"}>
               {!isAuthenticated && (
-              <Select value={selectedSport} onValueChange={setSelectedSport}>
-                <SelectTrigger className="w-[120px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0">
-                  <SelectValue placeholder={strings.coach.sport} />
-                </SelectTrigger>
+                <Select value={selectedSport} onValueChange={setSelectedSport}>
+                  <SelectTrigger className={triggerClass(selectedSport, "lg:!w-[130px]")} aria-label="Sport">
+                    <SelectValue placeholder="Sport">{filterLabel(selectedSport)}</SelectValue>
+                  </SelectTrigger>
 
-                <SelectContent className="border border-border shadow-lg z-50 ">
-                  {sports.map((sport, index) => (
-                    <SelectItem key={index} value={sport}>
-                      {sport}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+                  <SelectContent className="z-50">
+                    {sports.map((sport, index) => (
+                      <SelectItem key={index} value={sport}>
+                        {filterLabel(sport)}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               )}
 
               <Select value={selectedPillar} onValueChange={setSelectedPillar}>
-                <SelectTrigger className={isAuthenticated ? `${filterTriggerClass} ${selectedPillar === "All Pillars" ? "!text-[#767980]" : "!text-[#1A202C]"}` : "w-[150px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"}>
-                  <SelectValue />
+                <SelectTrigger className={triggerClass(selectedPillar, "lg:!w-[160px]")} aria-label="Coaching pillar">
+                  <SelectValue>{filterLabel(selectedPillar)}</SelectValue>
                 </SelectTrigger>
 
-                <SelectContent className={isAuthenticated ? "z-50 border border-[#EAEADF] bg-[#F7F7F0] shadow-lg" : "bg-background border border-border shadow-lg z-50"}>
+                <SelectContent className="z-50">
                   {getAvailablePillars().map((pillar) => (
                     <SelectItem key={pillar} value={pillar}>
-                      {isAuthenticated && pillar === "All Pillars" ? "All pillars" : pillar}
+                      {filterLabel(pillar)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={selectedFavoritePosition} onValueChange={setSelectedFavoritePosition}>
-                <SelectTrigger className={isAuthenticated ? `${filterTriggerClass} ${selectedFavoritePosition === "All Positions" ? "!text-[#767980]" : "!text-[#1A202C]"}` : "w-[170px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"}>
-                  <SelectValue placeholder="Favorite Position" />
+                <SelectTrigger className={triggerClass(selectedFavoritePosition, "lg:!w-[170px]")} aria-label="Favorite position">
+                  <SelectValue placeholder="Favorite position">{filterLabel(selectedFavoritePosition)}</SelectValue>
                 </SelectTrigger>
 
-                <SelectContent className={isAuthenticated ? "z-50 border border-[#EAEADF] bg-[#F7F7F0] shadow-lg" : "bg-background border border-border shadow-lg z-50"}>
+                <SelectContent className="z-50">
                   {getAvailableFavoritePositions().map((position) => (
                     <SelectItem key={position} value={position}>
-                      {isAuthenticated && position === "All Positions" ? "All positions" : position}
+                      {filterLabel(position)}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
 
               <Select value={sortBy} onValueChange={setSortBy}>
-                <SelectTrigger className={isAuthenticated ? `${filterTriggerClass} ${sortBy === "Highest Rated" ? "!text-[#767980]" : "!text-[#1A202C]"}` : "w-[150px] !rounded-[10px] focus:ring-offset-0 focus-visible:!ring-0 focus-visible:!outline-none focus:ring-0"}>
-                  <SelectValue />
+                <SelectTrigger className={triggerClass(sortBy, "lg:!w-[150px]")} aria-label="Sort coaches">
+                  <SelectValue>{filterLabel(sortBy)}</SelectValue>
                 </SelectTrigger>
 
-                <SelectContent className={isAuthenticated ? "z-50 border border-[#EAEADF] bg-[#F7F7F0] shadow-lg" : "bg-background border border-border shadow-lg z-50"}>
-                  <SelectItem value="Highest Rated">
-                    {isAuthenticated ? "Highest rated" : strings.coach.highestRated}
-                  </SelectItem>
+                <SelectContent className="z-50">
+                  <SelectItem value="Highest Rated">Highest rated</SelectItem>
                   {!isAuthenticated && (
-                  <SelectItem value="Lowest Rated">Lowest Rated</SelectItem>
+                    <SelectItem value="Lowest Rated">Lowest rated</SelectItem>
                   )}
                 </SelectContent>
               </Select>
@@ -1041,30 +963,37 @@ const AllCoaches = () => {
       </div>
 
       {/* Results */}
-      <section className={isAuthenticated ? "mx-auto mt-6 w-full max-w-[1000px]" : "w-full px-4"}>
-        <div className={isAuthenticated ? "" : "mx-auto py-8 max-w-8xl"}>
+      <section className={isAuthenticated ? "mx-auto mt-6 w-full max-w-[1000px]" : "w-full px-4 pb-16 pt-6"}>
+        <div className={isAuthenticated ? "" : "mx-auto max-w-8xl"}>
 
-          <p className={isAuthenticated ? "mb-6 text-[14px] font-normal tracking-[-0.7px] text-[#767980]" : "text-muted-foreground mb-6"}>
-            {filteredCoaches.length} coaches found
+          <p className={isAuthenticated ? "mb-6 text-[14px] font-normal tracking-[-0.7px] text-[#767980]" : "mx-auto mb-6 max-w-[1000px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]"}>
+            {coachCountLabel}
           </p>
 
           {filteredCoaches.length === 0 ? (
-            <div className="text-center py-12">
-              <p className="text-muted-foreground text-lg mb-4">
-                No coaches found matching your criteria
-              </p>
-
-                  <Button
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSelectedSport("All Sports");
-                      setSelectedPillar("All Pillars");
-                      setSelectedFavoritePosition("All Positions");
-                      setSortBy("Highest Rated");
-                    }}
-                    variant="outline"
-                  >
-                Clear Filters
+            <div className="mx-auto flex max-w-[1000px] flex-col items-center gap-[15px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center">
+              <span className="inline-flex size-10 items-center justify-center rounded-[8px] bg-[#F4F4EB] text-[#767980]" aria-hidden="true">
+                <Search className="size-5" strokeWidth={1.5} />
+              </span>
+              <div className="flex flex-col gap-[6px]">
+                <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                  No coaches match your filters
+                </p>
+                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                  Try a different search or clear the filters to see every coach.
+                </p>
+              </div>
+              <Button
+                onClick={() => {
+                  setSearchQuery("");
+                  setSelectedSport("All Sports");
+                  setSelectedPillar("All Pillars");
+                  setSelectedFavoritePosition("All Positions");
+                  setSortBy("Highest Rated");
+                }}
+                variant="outline"
+              >
+                Clear filters
               </Button>
             </div>
           ) : (

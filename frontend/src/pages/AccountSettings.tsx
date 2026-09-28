@@ -16,6 +16,7 @@ import { getInitials } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 
 const rowLabelClass = "w-[180px] shrink-0 text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C]";
+const fieldLabelClass = "text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
 const rowValueClass = "text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#484D56]";
 
 const SettingRow = ({
@@ -50,7 +51,7 @@ const EditButton = ({ onClick, disabled }: { onClick?: () => void; disabled?: bo
     disabled={disabled}
     className="inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980] disabled:cursor-default"
   >
-    <Pencil className="size-3" strokeWidth={1.75} />
+    <Pencil className="size-3" strokeWidth={1.5} />
     Edit
   </button>
 );
@@ -65,8 +66,8 @@ const Field = ({
   empty?: string;
 }) => (
   <div className="space-y-1.5">
-    <p className="text-body-sm text-muted-foreground">{label}</p>
-    <p className="text-body-l text-foreground">{value?.trim() ? value : empty}</p>
+    <p className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">{label}</p>
+    <p className="text-[16px] leading-[18px] tracking-[-0.03em] text-[#1A202C]">{value?.trim() ? value : empty}</p>
   </div>
 );
 
@@ -286,7 +287,7 @@ const AccountSettings = () => {
                 <SectionTitle title="Password" />
                 <form className="max-w-[420px] space-y-5" onSubmit={handlePasswordChange}>
                   <div className="space-y-2">
-                    <Label htmlFor="current-password" className="text-[14px] font-normal text-[#1A202C]">
+                    <Label htmlFor="current-password" className={fieldLabelClass}>
                       Current password
                     </Label>
                     <div className="relative">
@@ -295,21 +296,21 @@ const AccountSettings = () => {
                         type={showCurrentPassword ? "text" : "password"}
                         value={currentPassword}
                         onChange={(e) => setCurrentPassword(e.target.value)}
-                        className="h-auto rounded-[8px] border-[#EAEADF] bg-[#F7F7F0] px-[10px] py-[10px] pr-10 text-[14px] text-[#1A202C]"
+                        className="pr-10"
                         autoComplete="current-password"
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980] transition-colors hover:text-[#1A202C]"
                         onClick={() => setShowCurrentPassword((v) => !v)}
                         aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                       >
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showCurrentPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
                       </button>
                     </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="new-password" className="text-[14px] font-normal text-[#1A202C]">
+                    <Label htmlFor="new-password" className={fieldLabelClass}>
                       New password
                     </Label>
                     <div className="relative">
@@ -320,16 +321,16 @@ const AccountSettings = () => {
                         onChange={(e) => setNewPassword(e.target.value)}
                         onFocus={() => setIsNewPasswordFocused(true)}
                         onBlur={() => setIsNewPasswordFocused(false)}
-                        className="h-auto rounded-[8px] border-[#EAEADF] bg-[#F7F7F0] px-[10px] py-[10px] pr-10 text-[14px] text-[#1A202C]"
+                        className="pr-10"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980] transition-colors hover:text-[#1A202C]"
                         onClick={() => setShowNewPassword((v) => !v)}
                         aria-label={showNewPassword ? "Hide password" : "Show password"}
                       >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showNewPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
                       </button>
                     </div>
                     {(isNewPasswordFocused || newPassword) && (
@@ -337,7 +338,7 @@ const AccountSettings = () => {
                     )}
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password" className="text-[14px] font-normal text-[#1A202C]">
+                    <Label htmlFor="confirm-password" className={fieldLabelClass}>
                       Confirm new password
                     </Label>
                     <div className="relative">
@@ -346,36 +347,32 @@ const AccountSettings = () => {
                         type={showConfirmPassword ? "text" : "password"}
                         value={confirmPassword}
                         onChange={(e) => setConfirmPassword(e.target.value)}
-                        className="h-auto rounded-[8px] border-[#EAEADF] bg-[#F7F7F0] px-[10px] py-[10px] pr-10 text-[14px] text-[#1A202C]"
+                        className="pr-10"
                         autoComplete="new-password"
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980]"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980] transition-colors hover:text-[#1A202C]"
                         onClick={() => setShowConfirmPassword((v) => !v)}
                         aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                       >
-                        {showConfirmPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showConfirmPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
                       </button>
                     </div>
                   </div>
                   {formError && (
-                    <p className="flex items-center gap-2 text-[14px] text-[#FB4747]">
-                      <Lock className="h-4 w-4" />
+                    <p className="flex items-center gap-2 text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">
+                      <Lock className="size-4 shrink-0" strokeWidth={1.5} />
                       {formError}
                     </p>
                   )}
                   {successMessage && (
-                    <p className="flex items-center gap-2 text-[14px] text-[#32C152]">
-                      <ShieldCheck className="h-4 w-4" />
+                    <p className="flex items-center gap-2 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1E7431]">
+                      <ShieldCheck className="size-4 shrink-0" strokeWidth={1.5} />
                       {successMessage}
                     </p>
                   )}
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="h-auto rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[10px] text-[14px] font-medium text-[#F1F1E6] hover:bg-[#0054B4]"
-                  >
+                  <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? "Updating…" : "Update password"}
                   </Button>
                 </form>
@@ -388,42 +385,41 @@ const AccountSettings = () => {
   }
 
   return (
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[60px] overflow-x-hidden px-4 pb-16 pt-2 md:px-0">
-      <div>
-        <h1 className="text-page-title text-foreground">Settings</h1>
-      </div>
+    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[60px]">
+      <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Settings</h1>
 
       <div className="flex flex-col gap-6">
         <section>
-          <Card className="rounded-[10px] border-0 bg-[#F7F7F0] shadow-none">
-            <CardHeader className="flex flex-row items-start justify-between gap-4 px-[25px] pt-[30px]">
+          <Card>
+            <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
               <div>
-                <CardTitle className="text-card-title">Profile</CardTitle>
-                <CardDescription className="text-body-m">
+                <CardTitle className="tracking-[-0.05em]">Profile</CardTitle>
+                <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
                   Details from your AthaNext profile.
                 </CardDescription>
               </div>
               <Button
                 variant="outline"
-                className="h-[30px] rounded-lg border-border bg-white"
+                size="sm"
                 onClick={() => navigate(isCoach ? `${ROUTES.PROFILE}?mode=edit` : ROUTES.PROFILE)}
               >
                 Edit
               </Button>
             </CardHeader>
-            <CardContent className="space-y-8 px-[25px] pb-[30px]">
+            <CardContent className="space-y-8">
               <div className="flex items-center gap-4">
                 <Avatar className="h-16 w-16">
                   {userImg ? <AvatarImage src={userImg} alt={displayName} /> : null}
-                  <AvatarFallback className="bg-sidebar-primary/10 text-sidebar-primary">
+                  <AvatarFallback className="bg-[#E5EDF7] text-[16px] font-medium text-[#0054B4]">
                     {getInitials(displayName)}
                   </AvatarFallback>
                 </Avatar>
                 <div>
-                  <p className="text-body-sm text-muted-foreground">Profile picture</p>
+                  <p className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">Profile picture</p>
                   <button
                     type="button"
-                    className="text-subtitle text-primary"
+                    className="mt-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] hover:underline"
                     onClick={() => navigate(isCoach ? `${ROUTES.PROFILE}?mode=edit` : ROUTES.PROFILE)}
                   >
                     Update
@@ -452,14 +448,14 @@ const AccountSettings = () => {
 
         {isAthleteLike && (
           <section>
-            <Card className="rounded-[10px] border-0 bg-[#F7F7F0] shadow-none">
-              <CardHeader className="flex flex-row items-start justify-between gap-4 px-[25px] pt-[30px]">
-                <CardTitle className="text-card-title">Guardian</CardTitle>
-                <Button variant="outline" className="h-[30px] rounded-lg border-border bg-white" disabled>
+            <Card>
+              <CardHeader className="flex flex-row items-start justify-between gap-4 space-y-0">
+                <CardTitle className="tracking-[-0.05em]">Guardian</CardTitle>
+                <Button variant="outline" size="sm" disabled>
                   Edit
                 </Button>
               </CardHeader>
-              <CardContent className="space-y-6 px-[25px] pb-[30px]">
+              <CardContent className="space-y-6">
                 <div className="grid gap-6 sm:grid-cols-2">
                   <Field label="Name" value={null} empty="Not set" />
                   <Field label="Email" value={null} empty="Not set" />
@@ -468,7 +464,7 @@ const AccountSettings = () => {
                     value={user?.email_confirmed_at ? "Verified" : "Pending verification"}
                   />
                 </div>
-                <Button variant="outline" className="h-9 rounded-lg" disabled>
+                <Button variant="outline" disabled>
                   Add guardian
                 </Button>
               </CardContent>
@@ -477,11 +473,11 @@ const AccountSettings = () => {
         )}
 
         <section>
-          <Card className="rounded-[10px] border-0 bg-[#F7F7F0] shadow-none">
-            <CardHeader className="px-[25px] pt-[30px]">
-              <CardTitle className="text-card-title">Account</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle className="tracking-[-0.05em]">Account</CardTitle>
             </CardHeader>
-            <CardContent className="px-[25px] pb-[30px]">
+            <CardContent>
               {!isAthleteLike && (
                 <div className="mb-6">
                   <Field
@@ -490,7 +486,11 @@ const AccountSettings = () => {
                   />
                 </div>
               )}
-              <Button variant="destructive" className="h-9 rounded-lg" disabled>
+              <Button
+                variant="outline"
+                className="border-[#FD9191] bg-[#FEECEC] text-[#FB4747] hover:bg-[#FEECEC]"
+                disabled
+              >
                 Delete account
               </Button>
             </CardContent>
@@ -499,20 +499,20 @@ const AccountSettings = () => {
 
         {canChangePassword && (
           <section>
-            <Card className="rounded-[10px] border-0 bg-[#F7F7F0] shadow-none">
+            <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-card-title">
-                  <KeyRound className="h-5 w-5 text-sidebar-primary" />
+                <CardTitle className="flex items-center gap-2 tracking-[-0.05em]">
+                  <KeyRound className="size-5 text-[#767980]" strokeWidth={1.5} />
                   Change password
                 </CardTitle>
-                <CardDescription className="text-body-m">
+                <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
                   Update the password for {email}.
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 <form className="space-y-5" onSubmit={handlePasswordChange}>
                   <div className="space-y-2">
-                    <Label htmlFor="current-password">Current password</Label>
+                    <Label htmlFor="current-password" className={fieldLabelClass}>Current password</Label>
                     <div className="relative">
                       <Input
                         id="current-password"
@@ -524,17 +524,17 @@ const AccountSettings = () => {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980] transition-colors hover:text-[#1A202C]"
                         onClick={() => setShowCurrentPassword((v) => !v)}
                         aria-label={showCurrentPassword ? "Hide password" : "Show password"}
                       >
-                        {showCurrentPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showCurrentPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
                       </button>
                     </div>
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="new-password">New password</Label>
+                    <Label htmlFor="new-password" className={fieldLabelClass}>New password</Label>
                     <div className="relative">
                       <Input
                         id="new-password"
@@ -548,11 +548,11 @@ const AccountSettings = () => {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980] transition-colors hover:text-[#1A202C]"
                         onClick={() => setShowNewPassword((v) => !v)}
                         aria-label={showNewPassword ? "Hide password" : "Show password"}
                       >
-                        {showNewPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        {showNewPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
                       </button>
                     </div>
                     {(isNewPasswordFocused || newPassword) && (
@@ -561,7 +561,7 @@ const AccountSettings = () => {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="confirm-password">Confirm new password</Label>
+                    <Label htmlFor="confirm-password" className={fieldLabelClass}>Confirm new password</Label>
                     <div className="relative">
                       <Input
                         id="confirm-password"
@@ -573,33 +573,33 @@ const AccountSettings = () => {
                       />
                       <button
                         type="button"
-                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground"
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-[#767980] transition-colors hover:text-[#1A202C]"
                         onClick={() => setShowConfirmPassword((v) => !v)}
                         aria-label={showConfirmPassword ? "Hide password" : "Show password"}
                       >
                         {showConfirmPassword ? (
-                          <EyeOff className="h-4 w-4" />
+                          <EyeOff className="size-4" strokeWidth={1.5} />
                         ) : (
-                          <Eye className="h-4 w-4" />
+                          <Eye className="size-4" strokeWidth={1.5} />
                         )}
                       </button>
                     </div>
                   </div>
 
                   {formError && (
-                    <p className="flex items-center gap-2 text-body-m text-destructive">
-                      <Lock className="h-4 w-4" />
+                    <p className="flex items-center gap-2 text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">
+                      <Lock className="size-4 shrink-0" strokeWidth={1.5} />
                       {formError}
                     </p>
                   )}
                   {successMessage && (
-                    <p className="flex items-center gap-2 text-body-m text-emerald-700">
-                      <ShieldCheck className="h-4 w-4" />
+                    <p className="flex items-center gap-2 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1E7431]">
+                      <ShieldCheck className="size-4 shrink-0" strokeWidth={1.5} />
                       {successMessage}
                     </p>
                   )}
 
-                  <Button type="submit" className="h-10 rounded-lg" disabled={isSubmitting}>
+                  <Button type="submit" disabled={isSubmitting}>
                     {isSubmitting ? "Updating…" : "Update password"}
                   </Button>
                 </form>
@@ -609,19 +609,20 @@ const AccountSettings = () => {
         )}
 
         <section>
-          <Card className="rounded-[10px] border-0 bg-[#F7F7F0] shadow-none">
-            <CardHeader className="px-[25px] pt-[30px]">
-              <CardTitle className="text-card-title">Payments</CardTitle>
+          <Card>
+            <CardHeader>
+              <CardTitle className="tracking-[-0.05em]">Payments</CardTitle>
             </CardHeader>
-            <CardContent className="flex items-center justify-between gap-4 px-[25px] pb-[30px]">
+            <CardContent className="flex items-center justify-between gap-4">
               <div>
-                <p className="text-subtitle text-foreground">Stripe</p>
-                <p className="mt-1 text-body-m text-muted-foreground">Not connected</p>
+                <p className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Stripe</p>
+                <p className="mt-1 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">Not connected</p>
               </div>
             </CardContent>
           </Card>
         </section>
       </div>
+    </div>
     </div>
   );
 };

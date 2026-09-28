@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useMemo } from "react";
-import { Calendar, CircleDollarSign, Star } from "lucide-react";
+import { Calendar, CircleDollarSign } from "lucide-react";
+import { BrandStar } from "@/components/brand";
 import { useRole } from "@/hooks/useRole";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useReviews } from "@/hooks/useReviews";
@@ -9,7 +10,7 @@ import { ROUTES } from "@/routes";
 import type { SessionUIModel } from "@/types/sessions-api";
 
 const cardClass =
-  "flex min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]";
+  "flex min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]";
 
 function lastSixMonths(now = new Date()) {
   return Array.from({ length: 6 }, (_, index) => {
@@ -107,7 +108,7 @@ const AnalyticsPage = () => {
   if (!ready) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-b-2 border-[#0054B4]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
       </div>
     );
   }
@@ -198,13 +199,7 @@ const AnalyticsPage = () => {
               <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Ratings</h2>
               <div className="flex items-center gap-[3px]" aria-hidden>
                 {[1, 2, 3, 4, 5].map((star) => (
-                  <Star
-                    key={star}
-                    className="size-[11px]"
-                    strokeWidth={1.5}
-                    fill={star <= filledStars ? "#F0B144" : "none"}
-                    color={star <= filledStars ? "#F0B144" : "#D9D9CF"}
-                  />
+                  <BrandStar key={star} filled={star <= filledStars} size={12} />
                 ))}
               </div>
             </div>
@@ -254,8 +249,8 @@ function MetricCard({
   const Icon = icon === "calendar" ? Calendar : CircleDollarSign;
   return (
     <section className={cardClass}>
-      <span className="flex size-8 items-center justify-center rounded-[10px] bg-[#E5EDF7] text-[#0054B4]">
-        <Icon className="size-4" strokeWidth={1.75} />
+      <span className="flex size-8 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
+        <Icon className="size-4" strokeWidth={1.5} />
       </span>
       <div className="flex flex-col gap-[3px]">
         <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">{value}</p>
@@ -307,7 +302,7 @@ function RevenueChart({
           {[0, 1, 2, 3].map((line) => (
             <span
               key={line}
-              className="absolute left-0 right-0 h-px bg-[#EAEADF]"
+              className="absolute left-0 right-0 h-px bg-[#D9D9CF]"
               style={{ top: `${(line / 3) * 100}%` }}
             />
           ))}

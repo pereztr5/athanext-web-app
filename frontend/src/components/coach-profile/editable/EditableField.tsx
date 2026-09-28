@@ -48,11 +48,13 @@ export const EditableField: React.FC<EditableFieldProps> = ({
     label,
     required = false,
 }) => {
+    const inputId = React.useId();
     if (isEditMode) {
         const inputElement = (
             <div className="flex items-center gap-1">
                 {inputPrefix}
                 <Input
+                    id={inputId}
                     type={type}
                     value={value}
                     onBlur={onBlur}
@@ -71,8 +73,8 @@ export const EditableField: React.FC<EditableFieldProps> = ({
 
         if (label) {
             return (
-                <div className="space-y-1">
-                    <label className="text-sm font-medium">
+                <div className="flex flex-col gap-1.5">
+                    <label htmlFor={inputId} className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
                         {label}
                         {required && <span className="ml-1 text-destructive">*</span>}
                     </label>

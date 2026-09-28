@@ -1,6 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Loader2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, X } from 'lucide-react';
+
+const navButtonClass =
+    "absolute top-1/2 -translate-y-1/2 inline-flex size-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0]/90 text-[#1A202C] transition-colors hover:bg-[#F7F7F0]";
 
 interface CarouselProps {
     photos: string[];
@@ -67,9 +70,10 @@ export function Carousel({
     // When no photos are available, show a grayed-out placeholder
     if (hasNoPhotos) {
         return (
-            <div className={`${frameClass} bg-gray-300 dark:bg-gray-600 rounded-sm flex items-center justify-center`}>
-                <div className="text-center">
-                    <p className="text-gray-500 dark:text-gray-400 text-sm">No cover image available</p>
+            <div className={`${frameClass} flex items-center justify-center rounded-[8px] bg-[#F4F4EB]`}>
+                <div className="flex flex-col items-center gap-2 text-center">
+                    <ImageIcon className="size-6 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                    <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">No cover photo yet</p>
                 </div>
             </div>
         );
@@ -77,11 +81,11 @@ export function Carousel({
 
     return (
         <>
-        <div className={`${frameClass} overflow-hidden`}>
+        <div className={`${frameClass} overflow-hidden rounded-[8px] bg-[#F4F4EB]`}>
             <img
                 src={currentPhoto}
                 alt={`${altTextPrefix || 'Photo'} ${currentPhotoIndex + 1}`}
-                className={`w-full h-full ${fitClass} rounded-sm !border-0 !ring-0 !outline-none bg-black ${isImageLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
+                className={`w-full h-full ${fitClass} rounded-[8px] !border-0 !ring-0 !outline-none bg-[#F4F4EB] ${isImageLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
                 onClick={enablePreview ? () => setPreviewOpen(true) : undefined}
                 role={enablePreview ? 'button' : undefined}
                 tabIndex={enablePreview ? 0 : -1}
@@ -98,13 +102,13 @@ export function Carousel({
                 }}
             />
             {(isImageLoading || isImageError) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-black/80">
+                <div className="absolute inset-0 flex items-center justify-center bg-[#F4F4EB]">
                     {isImageError ? (
-                        <p className="text-sm text-slate-500">Image failed to load.</p>
+                        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">This photo couldn't load.</p>
                     ) : (
-                        <div className="flex items-center gap-2 text-slate-500">
-                            <Loader2 className="h-5 w-5 animate-spin" />
-                            <span className="text-sm">Loading image...</span>
+                        <div className="flex items-center gap-2 text-[#767980]">
+                            <Loader2 className="size-4 animate-spin" strokeWidth={1.5} aria-hidden="true" />
+                            <span className="text-[14px] leading-[18px] tracking-[-0.03em]">Loading photo</span>
                         </div>
                     )}
                 </div>
@@ -114,18 +118,20 @@ export function Carousel({
             {hasMultiplePhotos && (
                 <>
                     <button
+                        type="button"
                         onClick={prevPhoto}
-                        className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 rounded-full p-2 shadow-lg transition-colors"
+                        className={`${navButtonClass} left-4`}
                         aria-label="Previous photo"
                     >
-                        <ChevronLeft className="h-6 w-6 text-slate-900 dark:text-white" />
+                        <ChevronLeft className="size-4" strokeWidth={1.5} />
                     </button>
                     <button
+                        type="button"
                         onClick={nextPhoto}
-                        className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/90 dark:bg-slate-800/90 hover:bg-white dark:hover:bg-slate-800 rounded-full p-2 shadow-lg transition-colors"
+                        className={`${navButtonClass} right-4`}
                         aria-label="Next photo"
                     >
-                        <ChevronRight className="h-6 w-6 text-slate-900 dark:text-white" />
+                        <ChevronRight className="size-4" strokeWidth={1.5} />
                     </button>
                 </>
             )}
@@ -135,11 +141,12 @@ export function Carousel({
                 <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2">
                     {safePhotos.map((_, index) => (
                         <button
+                            type="button"
                             key={index}
                             onClick={() => setCurrentPhotoIndex(index)}
-                            className={`h-2 rounded-full transition-all ${index === currentPhotoIndex
-                                ? 'w-8 bg-white'
-                                : 'w-2 bg-white/60'
+                            className={`h-[5px] rounded-[10px] transition-all ${index === currentPhotoIndex
+                                ? 'w-6 bg-[#F7F7F0]'
+                                : 'w-[5px] bg-[#F7F7F0]/60'
                                 }`}
                             aria-label={`Go to photo ${index + 1}`}
                         />
@@ -153,13 +160,14 @@ export function Carousel({
                 <div className="absolute inset-0" onClick={() => setPreviewOpen(false)} />
                 <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col gap-3 z-[2101]">
                     <button
+                        type="button"
                         aria-label="Close preview"
-                        className="absolute -top-10 right-0 text-white/90 hover:text-white"
+                        className="absolute -top-10 right-0 text-[#F1F1E6]/90 hover:text-[#F1F1E6]"
                         onClick={() => setPreviewOpen(false)}
                     >
-                        <X className="h-6 w-6" />
+                        <X className="size-6" strokeWidth={1.5} />
                     </button>
-                    <div className="relative w-full h-full max-h-[80vh] bg-black/30 rounded-md overflow-hidden flex items-center justify-center">
+                    <div className="relative w-full h-full max-h-[80vh] bg-black/30 rounded-[10px] overflow-hidden flex items-center justify-center">
                         <img
                             src={safePhotos[currentPhotoIndex]}
                             alt={`${altTextPrefix || 'Photo'} ${currentPhotoIndex + 1}`}
@@ -168,18 +176,20 @@ export function Carousel({
                         {hasMultiplePhotos && (
                             <>
                                 <button
+                                    type="button"
                                     onClick={(e) => { e.stopPropagation(); prevPhoto(); }}
-                                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 rounded-full p-2 shadow-lg"
+                                    className={`${navButtonClass} left-4`}
                                     aria-label="Previous photo"
                                 >
-                                    <ChevronLeft className="h-6 w-6" />
+                                    <ChevronLeft className="size-4" strokeWidth={1.5} />
                                 </button>
                                 <button
+                                    type="button"
                                     onClick={(e) => { e.stopPropagation(); nextPhoto(); }}
-                                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 hover:bg-white text-slate-900 rounded-full p-2 shadow-lg"
+                                    className={`${navButtonClass} right-4`}
                                     aria-label="Next photo"
                                 >
-                                    <ChevronRight className="h-6 w-6" />
+                                    <ChevronRight className="size-4" strokeWidth={1.5} />
                                 </button>
                             </>
                         )}
@@ -188,9 +198,10 @@ export function Carousel({
                         <div className="flex items-center justify-center gap-2">
                             {safePhotos.map((_, index) => (
                                 <button
+                                    type="button"
                                     key={index}
                                     onClick={() => setCurrentPhotoIndex(index)}
-                                    className={`h-2 rounded-full transition-all ${index === currentPhotoIndex ? 'w-8 bg-white' : 'w-2 bg-white/60'}`}
+                                    className={`h-[5px] rounded-[10px] transition-all ${index === currentPhotoIndex ? 'w-6 bg-[#F7F7F0]' : 'w-[5px] bg-[#F7F7F0]/60'}`}
                                     aria-label={`Go to photo ${index + 1}`}
                                 />
                             ))}

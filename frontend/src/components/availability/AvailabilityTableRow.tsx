@@ -3,10 +3,11 @@
  * Reusable row component for displaying a single availability slot
  */
 
-import { Button } from '@/components/ui/button';
 import { TableRow, TableCell } from '@/components/ui/table';
 import { CoachAvailabilitySlot, DAY_OF_WEEK_MAP, SlotBookingStatus } from '@/types/availability';
-import { Loader2, SquarePen, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2 } from 'lucide-react';
+import { BrandPill } from '@/components/brand';
+import { formatTimeSpan, formatWholePrice } from '@/utils/sessionFormatting';
 import { getTodayISODate, isBookingWindowClosed, parseISODateLocal } from '@/utils/dateHelpers';
 
 interface AvailabilityTableRowProps {
@@ -32,14 +33,6 @@ export function AvailabilityTableRow({
   appearance,
   onDelete,
 }: AvailabilityTableRowProps) {
-  const formatTime = (time: string) => {
-    return new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
-      hour: 'numeric',
-      minute: '2-digit',
-      hour12: true,
-    });
-  };
-
   const todayISO = getTodayISODate();
   const isBookingClosed = isBookingWindowClosed(slot?.occurrence_date, slot?.start_time);
   const isEditDateLocked = slot?.occurrence_date ? slot.occurrence_date < todayISO : false;
@@ -67,86 +60,83 @@ export function AvailabilityTableRow({
     ? basePrice * (1 + (platformFeePerc || 0) / 100)
     : basePrice;
 
-  const athlete = appearance === "athlete";
   let disableBooking = isDisabled || isChecking;
-  let bookLabel: string | JSX.Element = "Book";
+  let bookLabel = "Book";
+  // Non-actionable states render as a neutral pill instead of a disabled button.
+  let statusPill: string | null = null;
 
   if (isDateLocked) {
-    bookLabel = "Unavailable";
+    statusPill = "Unavailable";
     disableBooking = true;
   } else if (isChecking) {
-    bookLabel = (
-      <Loader2 className="w-4 h-4 animate-spin" />
-    );
     disableBooking = true;
   } else if (isPayNow) {
-    bookLabel = "Pay Now";
+    bookLabel = "Pay now";
   } else if (bookedByMe) {
-    bookLabel = "Already Booked";
+    statusPill = "Already booked";
     disableBooking = true;
   } else if (isReserved) {
-    bookLabel = "Reserved";
+    statusPill = "Reserved";
     disableBooking = true;
   } else if (isFullyBooked) {
-    bookLabel = "Booked";
+    statusPill = "Fully booked";
     disableBooking = true;
+  } else if (disableBooking) {
+    statusPill = "Unavailable";
   }
 
-  const cell = "h-[70px] border-[#EAEADF] bg-[#F7F7F0] px-2 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]";
+  // Rows that can't be acted on read as faint text, matching the brand table.
+  const isMutedRow = isCoachDisabled || (showBookAction ? Boolean(statusPill) : isEditDateLocked);
+  const textTone = isMutedRow ? "text-[#A3A6AB]" : "text-[#1A202C]";
+  const subTone = isMutedRow ? "" : "text-[#767980]";
+  const cell = "h-auto border-t border-[#EAEADF] bg-transparent px-0 py-4 pr-3 align-middle text-[14px] font-normal leading-[18px] tracking-[-0.03em]";
+  const textCell = `${cell} ${textTone}`;
   const locationLabel = slot.location === "online" ? "Online" : "In person";
+  const isIndividual = slot.session_type === 'individual';
+  const typeTone = isMutedRow ? "muted" : isIndividual ? "blue" : "teal";
+  const timeLabel = formatTimeSpan(slot.start_time, slot.end_time);
 
   return (
-    <TableRow className="border-[#EAEADF] hover:bg-[#F7F7F0]">
-      <TableCell className={cell}>
-        <div className="flex flex-col leading-tight">
-          <span>{DAY_OF_WEEK_MAP[slot.day_of_week]}</span>
-          {dateLabel && <span className="text-[12px] text-[#1A202C]">{dateLabel}</span>}
-        </div>
-      </TableCell>
-      <TableCell className={`${cell} whitespace-nowrap`}>
-        {slot.session_name || '-'}
-      </TableCell>
-      <TableCell className={cell}>
-        {slot.pillar_slot ? (
-          <span className="inline-flex rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-1 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#0054B4]">
-            {slot.pillar_slot}
-          </span>
-        ) : (
-          "-"
+    <TableRow className="border-0 hover:bg-transparent">
+      <TableCell className={textCell}>
+        <div className="font-medium">{DAY_OF_WEEK_MAP[slot.day_of_week]}</div>
+        {dateLabel && (
+          <div className={`mt-[2px] text-[12px] leading-[14px] ${subTone}`}>{dateLabel}</div>
         )}
       </TableCell>
-      <TableCell className={cell}>
-        ${displayPrice.toFixed(2)}
+      <TableCell className={`${textCell} whitespace-nowrap`}>
+        {slot.session_name || '-'}
       </TableCell>
-      {!athlete && (
-      <TableCell className={cell}>
-        {slot.duration_minutes} min
+      <TableCell className={textCell}>
+        {slot.pillar_slot || '-'}
       </TableCell>
-      )}
-      <TableCell className={`${cell} whitespace-nowrap`}>
-        {formatTime(slot.start_time)}
+      <TableCell className={textCell}>
+        {formatWholePrice(displayPrice)}
       </TableCell>
-      <TableCell className={`${cell} whitespace-nowrap`}>
-        {formatTime(slot.end_time)}
-      </TableCell>
-      <TableCell className={cell}>
-        {slot.session_type === 'individual' ? 'Individual' : 'Group'}
+      <TableCell className={`${textCell} whitespace-nowrap`}>
+        {timeLabel}
+        <div className={`mt-[2px] text-[12px] leading-[14px] ${subTone}`}>
+          {slot.duration_minutes} min
+        </div>
       </TableCell>
       <TableCell className={cell}>
+        <BrandPill tone={typeTone}>{isIndividual ? 'Individual' : 'Group'}</BrandPill>
+      </TableCell>
+      <TableCell className={textCell}>
         {locationLabel}
       </TableCell>
       {showActions && (
-        <TableCell className={cell}>
-          <div className="flex items-center gap-2">
+        <TableCell className={`${cell} pr-0`}>
+          <div className="flex items-center justify-end gap-3">
             {onEdit && appearance === "coach" ? (
               <button
                 type="button"
                 onClick={() => !isEditDisabled && onEdit(slot)}
                 disabled={isEditDisabled}
                 aria-label="Edit slot"
-                className="inline-flex size-4 items-center justify-center text-[#767980] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <SquarePen className="size-4" strokeWidth={1.75} />
+                <Pencil className="size-4" strokeWidth={1.5} />
               </button>
             ) : null}
             {onDelete && appearance === "coach" ? (
@@ -155,20 +145,25 @@ export function AvailabilityTableRow({
                 onClick={() => !isEditDisabled && onDelete(slot)}
                 disabled={isEditDisabled}
                 aria-label="Delete slot"
-                className="inline-flex size-4 items-center justify-center text-[#767980] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
               >
-                <Trash2 className="size-4" strokeWidth={1.75} />
+                <Trash2 className="size-4" strokeWidth={1.5} />
               </button>
             ) : null}
             {showBookAction && (
-              <Button
-                size="sm"
-                onClick={() => !disableBooking && onBookSlot(slot)}
-                className="h-auto rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6] hover:bg-[#0054B4] disabled:border-[#EAEADF] disabled:bg-[#EAEADF] disabled:text-[#767980]"
-                disabled={disableBooking}
-              >
-                {bookLabel}
-              </Button>
+              statusPill ? (
+                <BrandPill tone="neutral">{statusPill}</BrandPill>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => !disableBooking && onBookSlot?.(slot)}
+                  disabled={disableBooking}
+                  aria-label={isChecking ? "Checking availability" : undefined}
+                  className="inline-flex h-[30px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390] disabled:cursor-not-allowed disabled:border-[#EAEADF] disabled:bg-[#F4F4EB] disabled:text-[#767980]"
+                >
+                  {isChecking ? <Loader2 className="size-4 animate-spin" strokeWidth={1.5} /> : bookLabel}
+                </button>
+              )
             )}
           </div>
         </TableCell>

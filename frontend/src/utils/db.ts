@@ -86,7 +86,7 @@ export const DEFAULT_PERSONA = PERSONA_TYPES[0]; // "athlete"
 // ============================================================================
 
 export const LOCATION_OPTIONS: Option[] = [
-  { value: "in-person", label: "In-Person" },
+  { value: "in-person", label: "In person" },
   { value: "online", label: "Online" },
 ];
 

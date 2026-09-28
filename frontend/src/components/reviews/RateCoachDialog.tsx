@@ -1,6 +1,6 @@
-import type { ReactNode } from "react";
-import { Calendar, Clock4, MapPin, SendHorizontal, Users, X } from "lucide-react";
+import { Check } from "lucide-react";
 
+import { BrandPill, BrandStar } from "@/components/brand";
 import { RateCoachDialogSkeleton } from "@/components/reviews/RateCoachDialogSkeleton";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -14,7 +14,12 @@ import {
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
 import type { AthleteSession } from "@/types/athlete-sessions";
-import { getAvatarUrlFromName, getInitialsFromName } from "@/utils/sessionFormatting";
+import {
+  formatLocationSentence,
+  formatTimeSpan,
+  getAvatarUrlFromName,
+  getInitialsFromName,
+} from "@/utils/sessionFormatting";
 
 type RatingStarsProps = {
   value: number;
@@ -25,43 +30,32 @@ type RatingStarsProps = {
 };
 
 const RatingStars = ({ value, onChange, onHover, onLeave, disabled = false }: RatingStarsProps) => (
-  <div className="flex items-center gap-2">
-    {[1, 2, 3, 4, 5].map((star) => {
-      const isActive = star <= value;
-      return (
-        <button
-          key={star}
-          type="button"
-          className={cn("p-1", disabled && "cursor-not-allowed opacity-60")}
-          onClick={() => !disabled && onChange(star)}
-          onMouseEnter={() => !disabled && onHover(star)}
-          onMouseLeave={onLeave}
-          disabled={disabled}
-          aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
-        >
-          <StarIcon isActive={isActive} />
-        </button>
-      );
-    })}
+  <div className="flex items-center gap-1.5">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <button
+        key={star}
+        type="button"
+        className={cn(
+          "rounded-[4px] p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]",
+          disabled && "cursor-not-allowed opacity-60"
+        )}
+        onClick={() => !disabled && onChange(star)}
+        onMouseEnter={() => !disabled && onHover(star)}
+        onMouseLeave={onLeave}
+        disabled={disabled}
+        aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
+      >
+        <BrandStar filled={star <= value} size={24} />
+      </button>
+    ))}
   </div>
-);
-
-const StarIcon = ({ isActive }: { isActive: boolean }) => (
-  <svg
-    aria-hidden="true"
-    focusable="false"
-    className={cn("h-8 w-8 transition-all", isActive ? "fill-yellow-400 text-yellow-400" : "text-slate-300")}
-    viewBox="0 0 24 24"
-    role="img"
-  >
-    <path d="M12 .587l3.668 7.434 8.2 1.192-5.934 5.787 1.402 8.18L12 18.896l-7.336 3.86 1.402-8.18L.132 9.213l8.2-1.192z" />
-  </svg>
 );
 
 type RateCoachDialogProps = {
   open: boolean;
   session: AthleteSession | null;
-  coachSport: "soccer" | "rowing";
+  /** Coach's sport. The sport pill is hidden when it isn't known. */
+  coachSport?: "soccer" | "rowing";
   rating: number;
   hoverRating: number | null;
   comment: string;
@@ -81,9 +75,14 @@ type RateCoachDialogProps = {
   onHoverChange: (value: number) => void;
   onHoverLeave: () => void;
   onCommentChange: (value: string) => void;
+  /** Formats the session start (ISO) as a date, e.g. "Mon, Mar 9". */
   formatDate: (iso: string) => string;
-  formatTime: (iso: string) => string;
 };
+
+const sectionClass = "px-[25px] py-5";
+const Divider = () => <div className="h-px bg-[#EAEADF]" />;
+const buttonBase =
+  "h-[34px] rounded-[8px] border px-4 text-[16px] font-medium leading-[18px] tracking-[-0.03em]";
 
 export const RateCoachDialog = ({
   open,
@@ -103,162 +102,148 @@ export const RateCoachDialog = ({
   onHoverLeave,
   onCommentChange,
   formatDate,
-  formatTime,
 }: RateCoachDialogProps) => {
   const hasExistingFeedback = Boolean(existingFeedback?.athlete_rated_at);
-  const locationLabel = session?.locationType
-    ? session.locationType === "In Person"
-      ? "In-Person"
-      : session.locationType
-    : session?.location === "in-person" || session?.location === "in person" || session?.location === "In Person"
-      ? "In-Person"
-      : session?.location === "online" || session?.location === "Online"
-        ? "Online"
-        : session?.location ?? "";
-  
+  const locationLabel = formatLocationSentence(session?.locationType || session?.location).toLowerCase();
+  const displayedRating = hoverRating ?? rating;
+  const metaLine = session
+    ? [session.title, formatDate(session.start), formatTimeSpan(session.start, session.end), locationLabel]
+        .filter(Boolean)
+        .join(", ")
+    : "";
+
   return (
-  <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-    <DialogContent className="max-w-2xl p-0 overflow-hidden">
-      {session && (
-        <div className="p-6 space-y-6">
-          <DialogHeader className="space-y-2">
-            <DialogTitle className="text-2xl font-semibold text-slate-900">Rate Your Coach</DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground">
-              Share your experience to help coaches improve and guide other athletes.
-            </DialogDescription>
-          </DialogHeader>
+    <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
+      <DialogContent className="max-w-[720px] gap-0 overflow-hidden rounded-[10px] border-[#EAEADF] bg-[#F7F7F0] p-0 font-sans tracking-[-0.03em] text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)] sm:rounded-[10px] [&>button]:right-[17px] [&>button]:top-[19px] [&>button]:text-[#767980] [&>button[data-state=open]]:bg-transparent [&>button[data-state=open]]:text-[#767980]">
+        {session && (
+          <>
+            <DialogHeader className={cn(sectionClass, "space-y-0 pr-14 text-left")}>
+              <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Rate your coach</DialogTitle>
+              <DialogDescription className="sr-only">
+                Share your experience to help coaches improve and guide other athletes.
+              </DialogDescription>
+            </DialogHeader>
 
-          <div className="rounded-2xl border border-slate-200 bg-slate-50 p-5 space-y-3">
-            <div className="flex items-start gap-3">
-              <Avatar className="h-12 w-12 border border-slate-200">
-                <AvatarImage src={session.coachAvatar ?? getAvatarUrlFromName(session.coach)} alt={session.coach} />
-                <AvatarFallback className="bg-blue-100 text-blue-700 font-semibold">
-                  {getInitialsFromName(session.coach)}
-                </AvatarFallback>
-              </Avatar>
-              <div className="space-y-1">
-                <p className="text-base font-semibold text-slate-900">{session.coach}</p>
-                <p className="text-sm text-slate-700">{session.title}</p>
+            <Divider />
+
+            <div className={cn(sectionClass, "flex flex-col gap-5")}>
+              <div className="flex items-center gap-3">
+                <Avatar className="h-10 w-10 shrink-0">
+                  <AvatarImage src={session.coachAvatar ?? getAvatarUrlFromName(session.coach)} alt={session.coach} />
+                  <AvatarFallback className="bg-[#E5EDF7] text-[14px] font-medium text-[#0054B4]">
+                    {getInitialsFromName(session.coach)}
+                  </AvatarFallback>
+                </Avatar>
+                <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                  <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{session.coach}</p>
+                  <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{metaLine}</p>
+                </div>
+                {coachSport ? (
+                  <BrandPill tone="teal" className="shrink-0">
+                    {coachSport === "rowing" ? "Rowing" : "Soccer"}
+                  </BrandPill>
+                ) : null}
               </div>
+
+              {existingFeedback?.feedback_to_athlete ? (
+                <div className="flex flex-col gap-1.5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-4">
+                  <p className="text-[14px] leading-[18px] font-medium text-[#1A202C]">From your coach</p>
+                  <p className="text-[14px] leading-[18px] text-[#767980]">{existingFeedback.feedback_to_athlete}</p>
+                </div>
+              ) : null}
+
+              {hasExistingFeedback && existingFeedback ? (
+                <p className="text-[14px] leading-[18px] text-[#767980]">
+                  You can update the rating you sent on{" "}
+                  {new Date(existingFeedback.athlete_rated_at || existingFeedback.created_at).toLocaleDateString(
+                    "en-US",
+                    { month: "short", day: "numeric", year: "numeric" }
+                  )}
+                  .
+                </p>
+              ) : null}
+
+              {isLoadingFeedback ? (
+                <RateCoachDialogSkeleton />
+              ) : (
+                <>
+                  <div className="flex flex-col gap-[10px]">
+                    <p className="text-[16px] font-medium leading-[18px] text-[#1A202C]">Overall rating</p>
+                    <div className="flex items-center gap-3">
+                      <RatingStars
+                        value={displayedRating}
+                        onChange={onRatingChange}
+                        onHover={onHoverChange}
+                        onLeave={onHoverLeave}
+                      />
+                      {displayedRating > 0 ? (
+                        <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
+                          {displayedRating} of 5
+                        </span>
+                      ) : null}
+                    </div>
+                    {rating < 1 && (
+                      <p className="text-[12px] leading-[14px] text-[#767980]">Select at least 1 star to submit</p>
+                    )}
+                  </div>
+
+                  <div className="flex flex-col gap-[10px]">
+                    <label htmlFor="rate-coach-comment" className="text-[16px] font-medium leading-[18px] text-[#1A202C]">
+                      What went well
+                    </label>
+                    <Textarea
+                      id="rate-coach-comment"
+                      value={comment}
+                      onChange={(event) => onCommentChange(event.target.value)}
+                      placeholder="Optional. Your coach sees this"
+                      className="min-h-[90px] rounded-[8px] border-0 bg-[#F1F1E6] p-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:ring-[#6698D2]"
+                      maxLength={2000}
+                    />
+                  </div>
+                </>
+              )}
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm text-slate-700">
-              <InfoRow icon={<Calendar className="h-4 w-4 text-blue-600" />} text={formatDate(session.start)} />
-              <InfoRow
-                icon={<Clock4 className="h-4 w-4 text-blue-600" />}
-                text={`${formatTime(session.start)} - ${formatTime(session.end)}`}
-              />
-              <InfoRow icon={<MapPin className="h-4 w-4 text-blue-600" />} text={locationLabel} />
-              <InfoRow
-                icon={<Users className="h-4 w-4 text-blue-600" />}
-                text={`${coachSport === "soccer" ? "Soccer" : "Rowing"}${
-                  session.sportPillars?.length ? ` - ${session.sportPillars[0]}` : ""
-                }`}
-              />
-            </div>
-          </div>
 
-          {existingFeedback?.feedback_to_athlete ? (
-            <div className="rounded-xl border border-slate-200 bg-white p-4">
-              <p className="text-sm font-semibold text-slate-900">From your coach</p>
-              <p className="mt-1 text-sm text-slate-700">{existingFeedback.feedback_to_athlete}</p>
-            </div>
-          ) : null}
-
-          {hasExistingFeedback && existingFeedback ? (
-            <p className="text-sm text-slate-600">
-              You can update the rating you sent on{" "}
-              {new Date(existingFeedback.athlete_rated_at || existingFeedback.created_at).toLocaleDateString("en-US", {
-                month: "short",
-                day: "numeric",
-                year: "numeric",
-              })}
-              .
-            </p>
-          ) : null}
-
-          {isLoadingFeedback ? (
-            <RateCoachDialogSkeleton />
-          ) : (
-            <>
-              <div className="space-y-2">
-            <p className="text-base font-semibold text-slate-900 flex items-center gap-1">
-              Overall Rating <span className="text-amber-600">*</span>
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {hasExistingFeedback ? "Your rating" : "How would you rate your overall experience?"}
-            </p>
-            <div className="flex items-center gap-3">
-              <RatingStars
-                value={hoverRating ?? rating}
-                onChange={onRatingChange}
-                onHover={onHoverChange}
-                onLeave={onHoverLeave}
-              />
-              <span className="text-lg font-semibold text-slate-900">{(hoverRating ?? rating).toFixed(1)}</span>
-            </div>
-              {rating < 1 && (
-              <p className="text-xs text-amber-600 mt-1">Please select at least 1 star to submit.</p>
-            )}
-          </div>
-
-          <div className="space-y-2">
-            <p className="text-base font-semibold text-slate-900 flex items-center gap-1">
-              Share more details
-            </p>
-            <p className="text-sm text-muted-foreground">
-              {hasExistingFeedback ? "Your feedback" : "What went well? Any suggestions for your coach?"}
-            </p>
-            <Textarea
-              value={comment}
-              onChange={(event) => onCommentChange(event.target.value)}
-              placeholder="Add optional feedback for your coach"
-              className="bg-slate-50"
-              maxLength={2000}
-            />
-          </div>
-
-          <div className="flex flex-col sm:flex-row sm:justify-end gap-3">
-            <Button variant="outline" className="rounded-full px-6" onClick={onCancel} disabled={isSubmitting || isSubmitted}>
-              <X className="h-4 w-4 mr-2" />
-              Cancel
-            </Button>
-              <Button 
-                className="rounded-full px-6 bg-blue-600 hover:bg-blue-700 disabled:bg-green-600 disabled:hover:bg-green-600" 
-                onClick={onSubmit} 
-                disabled={isSubmitting || isSubmitted || rating < 1}
-              >
-                {isSubmitted ? (
-                  <>
-                    <svg className="h-4 w-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                    </svg>
-                    Feedback Submitted
-                  </>
-                ) : isSubmitting ? (
-                  <>
-                    <SendHorizontal className="h-4 w-4 mr-2" />
-                    Submitting...
-                  </>
-                ) : (
-                  <>
-                    <SendHorizontal className="h-4 w-4 mr-2" />
-                    {hasExistingFeedback ? "Update rating" : "Submit rating"}
-                  </>
-                )}
-              </Button>
-              </div>
-            </>
-          )}
-        </div>
-      )}
-    </DialogContent>
-  </Dialog>
+            {!isLoadingFeedback ? (
+              <>
+                <Divider />
+                <div className={cn(sectionClass, "flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end")}>
+                  <Button
+                    variant="outline"
+                    className={cn(buttonBase, "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] hover:bg-[#EAEADF] hover:text-[#1A202C]")}
+                    onClick={onCancel}
+                    disabled={isSubmitting || isSubmitted}
+                  >
+                    Cancel
+                  </Button>
+                  <Button
+                    className={cn(
+                      buttonBase,
+                      "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#0054B4]/90",
+                      isSubmitted && "disabled:opacity-100"
+                    )}
+                    onClick={onSubmit}
+                    disabled={isSubmitting || isSubmitted || rating < 1}
+                  >
+                    {isSubmitted ? (
+                      <>
+                        <Check strokeWidth={1.5} aria-hidden="true" />
+                        Feedback submitted
+                      </>
+                    ) : isSubmitting ? (
+                      "Submitting..."
+                    ) : hasExistingFeedback ? (
+                      "Update rating"
+                    ) : (
+                      "Submit rating"
+                    )}
+                  </Button>
+                </div>
+              </>
+            ) : null}
+          </>
+        )}
+      </DialogContent>
+    </Dialog>
   );
 };
-
-const InfoRow = ({ icon, text }: { icon: ReactNode; text: string }) => (
-  <div className="flex items-center gap-2">
-    {icon}
-    <span>{text}</span>
-  </div>
-);

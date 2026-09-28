@@ -1,5 +1,17 @@
 import { clsx, type ClassValue } from "clsx"
-import { twMerge } from "tailwind-merge"
+import { extendTailwindMerge } from "tailwind-merge"
+
+// Teach tailwind-merge the custom font sizes from tailwind.config.ts. Without
+// this it reads `text-body-m` as a colour and drops it next to `text-[#1A202C]`.
+const twMerge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [
+        { text: ["page-title", "highlight", "section", "card-title", "subtitle", "body-l", "body-m", "body-sm", "stat"] },
+      ],
+    },
+  },
+})
 
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))

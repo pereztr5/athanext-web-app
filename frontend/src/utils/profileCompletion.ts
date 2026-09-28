@@ -42,12 +42,12 @@ const FIELD_LABELS: Record<string, string> = {
   about: "Bio",
   image: "Profile image",
   coverImage: "Cover images",
-  graduationYear: "Graduation Year",
-  highSchool: "High School",
+  graduationYear: "Graduation year",
+  highSchool: "High school",
   gpa: "GPA",
   height: "Height",
   weight: "Weight",
-  dominantHand: "Dominant Hand",
+  dominantHand: "Dominant hand",
 };
 
 export const DEFAULT_PROFILE_PROGRESS: ProfileProgress = {

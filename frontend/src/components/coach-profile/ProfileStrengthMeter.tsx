@@ -1,116 +1,96 @@
-import React, { useMemo } from "react";
+import { useMemo } from "react";
+import { BrandPill } from "@/components/brand";
 import { calculateProfileProgress, type ProfileData } from "@/utils/profileCompletion";
+import { CoachProfileCard } from "./CoachProfileCard";
+import { cn } from "@/lib/utils";
 
 interface ProfileStrengthMeterProps {
-    coach?: ProfileData | null;
-    athlete?: ProfileData | null;
+  coach?: ProfileData | null;
+  athlete?: ProfileData | null;
+  /** Shows the "Edit profile" link. Omit it while the profile is already in edit mode. */
+  onEdit?: () => void;
+  /** "card" renders its own brand card; "inline" (default) sits inside another card. */
+  variant?: "card" | "inline";
+  className?: string;
 }
 
-export function ProfileStrengthMeter({ coach, athlete }: ProfileStrengthMeterProps) {
-    const profileSource = athlete ?? coach ?? null;
-    const profileStrength = useMemo(
-        () => calculateProfileProgress(profileSource || undefined),
-        [profileSource]
-    );
+export function ProfileStrengthMeter({
+  coach,
+  athlete,
+  onEdit,
+  variant = "inline",
+  className,
+}: ProfileStrengthMeterProps) {
+  const profileSource = athlete ?? coach ?? null;
+  const profileStrength = useMemo(
+    () => calculateProfileProgress(profileSource || undefined),
+    [profileSource]
+  );
 
-    // If completion is 100%, don't render the meter
-    if (profileStrength.completion === 100) {
-        return null;
-    }
+  // A complete profile needs no meter
+  if (profileStrength.completion >= 100) {
+    return null;
+  }
 
-    const getStrengthColor = (percentage: number): string => {
-        if (percentage < 33) return "bg-red-500";
-        if (percentage < 66) return "bg-yellow-500";
-        return "bg-green-500";
-    };
+  const { completion, completedFields, totalFields, missingFields } = profileStrength;
+  const fieldsLeft = missingFields.length;
 
-    const getStrengthLabel = (percentage: number): string => {
-        if (percentage < 33) return "Weak";
-        if (percentage < 66) return "Fair";
-        return "Strong";
-    };
+  const content = (
+    <>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Profile strength</h2>
+        {onEdit ? (
+          <button
+            type="button"
+            onClick={onEdit}
+            className="shrink-0 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] hover:text-[#004390]"
+          >
+            Edit profile
+          </button>
+        ) : null}
+      </div>
 
-    const getWidthClass = (percentage: number): string => {
-        if (percentage <= 10) return "w-[10%]";
-        if (percentage <= 20) return "w-[20%]";
-        if (percentage <= 30) return "w-[30%]";
-        if (percentage <= 40) return "w-[40%]";
-        if (percentage <= 50) return "w-[50%]";
-        if (percentage <= 60) return "w-[60%]";
-        if (percentage <= 70) return "w-[70%]";
-        if (percentage <= 80) return "w-[80%]";
-        if (percentage <= 90) return "w-[90%]";
-        return "w-full";
-    };
+      <div className="flex flex-col gap-[6px]">
+        <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{completion}%</span>
+        <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+          {completedFields} of {totalFields} fields complete
+        </span>
+      </div>
 
-    return (
-        <div className="w-full py-4 space-y-2">
-            <div className="flex items-center justify-between">
-                <div>
-                    <p className="text-sm font-semibold text-foreground">Profile Strength</p>
-                    <p className="text-xs text-muted-foreground">
-                        {profileStrength.completedFields} of {profileStrength.totalFields} fields completed
-                    </p>
-                </div>
-                <span className="text-sm font-bold text-foreground">{profileStrength.completion}%</span>
-            </div>
+      <div
+        className="h-[5px] w-full overflow-hidden rounded-[10px] bg-[#D9D9CF]"
+        role="progressbar"
+        aria-label="Profile strength"
+        aria-valuemin={0}
+        aria-valuemax={100}
+        aria-valuenow={completion}
+      >
+        <div
+          className="h-full rounded-[10px] bg-[#0054B4] transition-[width] duration-300"
+          style={{ width: `${Math.max(0, Math.min(100, completion))}%` }}
+        />
+      </div>
 
-            {/* Progress Bar */}
-            <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
-                <div
-                    className={`h-full rounded-full transition-all duration-300 ${getStrengthColor(
-                        profileStrength.completion
-                    )} ${getWidthClass(profileStrength.completion)}`}
-                />
-            </div>
-
-            {/* Strength Label */}
-            <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${getStrengthColor(profileStrength.completion)}`} />
-                <p className="text-xs text-muted-foreground">
-                    {getStrengthLabel(profileStrength.completion)} profile
-                </p>
-            </div>
-
-            {profileStrength.consistencyIssues.length > 0 && (
-                <div className="mt-2 p-2 bg-amber-50 border border-amber-200 rounded text-[11px] text-amber-700">
-                    <p className="font-medium mb-1">Please review:</p>
-                    <ul className="list-disc list-inside space-y-0.5">
-                        {profileStrength.consistencyIssues.map((issue) => (
-                            <li key={issue}>{issue}</li>
-                        ))}
-                    </ul>
-                </div>
-            )}
-
-            {/* Missing Fields Warning */}
-            {profileStrength.completion < 100 && (
-                <div className="mt-3 p-3 bg-blue-50 border border-blue-200 rounded text-xs text-blue-700 space-y-2">
-                    <div>
-                        <p className="font-medium">Complete your profile to unlock more visibility</p>
-                        <p className="text-blue-600">
-                            Add the missing details to increase your credibility.
-                        </p>
-                    </div>
-
-                    {profileStrength.missingFields.length > 0 && (
-                        <div>
-                            <p className="font-semibold text-[11px] text-blue-800">Pending fields</p>
-                            <div className="mt-1.5 flex flex-wrap gap-1.5">
-                                {profileStrength.missingFields.map((field) => (
-                                    <span
-                                        key={field}
-                                        className="px-2.5 py-1 rounded-full bg-white text-blue-700 border border-blue-200 text-[11px]"
-                                    >
-                                        {field}
-                                    </span>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-                </div>
-            )}
-
+      {fieldsLeft > 0 ? (
+        <div className="flex flex-col gap-[10px] rounded-[8px] bg-[#F4F4EB] p-3">
+          <span className="text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]">
+            {fieldsLeft} {fieldsLeft === 1 ? "field" : "fields"} left. Complete profiles get booked more
+          </span>
+          <div className="flex flex-wrap gap-[6px]">
+            {missingFields.map((field) => (
+              <BrandPill key={field} tone="neutral">
+                {field}
+              </BrandPill>
+            ))}
+          </div>
         </div>
-    );
+      ) : null}
+    </>
+  );
+
+  if (variant === "card") {
+    return <CoachProfileCard className={className}>{content}</CoachProfileCard>;
+  }
+
+  return <div className={cn("flex w-full flex-col gap-5 pb-5", className)}>{content}</div>;
 }

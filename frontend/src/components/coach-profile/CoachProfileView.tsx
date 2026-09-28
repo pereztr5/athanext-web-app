@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, BadgeCheck, ChevronDown, ExternalLink, Info, SquareCheck, Star } from "lucide-react";
+import { ArrowLeft, BadgeCheck, ChevronDown, ExternalLink, Info, SquareCheck } from "lucide-react";
 import { formatRichTextForRender } from "@/utils/richText";
 import "@/styles/richText.css";
-import { calculateProfileProgress, type ProfileData } from "@/utils/profileCompletion";
+import type { ProfileData } from "@/utils/profileCompletion";
 import { fetchLocationFromZipCode, formatLocationDisplay } from "@/utils/geolocation";
 import { useFAQItems } from "@/hooks/useFAQItems";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
@@ -14,25 +14,12 @@ import {
   CoachProfileChip,
 } from "./CoachProfileCard";
 import { AvailabilitySummaryCard } from "./AvailabilitySummaryCard";
+import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
+import { ReviewsCard } from "@/components/reviews/ReviewsCard";
+import { BrandStar } from "@/components/brand";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
-
-function PublicReviewComments({ reviews }: { reviews: Review[] }) {
-  const withText = reviews.filter((review) => review.review_text?.trim());
-  if (withText.length === 0) return null;
-
-  return (
-    <div className="flex flex-col gap-3">
-      {withText.slice(0, 5).map((review) => (
-        <div key={review.id} className="rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] px-3 py-2">
-          <p className="text-[14px] font-medium text-[#1A202C]">{review.reviewer_name || "Athlete"}</p>
-          <p className="text-[14px] text-[#484D56]">{review.review_text}</p>
-        </div>
-      ))}
-    </div>
-  );
-}
 
 interface Review {
   id: string;
@@ -97,7 +84,6 @@ export function CoachProfileView({
   );
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const { data: faqs = [] } = useFAQItems("general");
-  const profileStrength = useMemo(() => calculateProfileProgress(coach), [coach]);
   const bioHtml = formatRichTextForRender(coach.bio);
   const position = coach.coach_position || coach.position || "Coach";
   const showPublicRating = isPublicCoachRatingVisible(totalReviews, averageRating);
@@ -175,12 +161,8 @@ export function CoachProfileView({
 
   const sectionTitle = "text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]";
   const headerRating = showPublicRating
-    ? `${publicCoachRatingLabel(averageRating, totalReviews).replace(".", ",")} (${totalReviews})`
+    ? `${publicCoachRatingLabel(averageRating, totalReviews)} (${totalReviews})`
     : "New";
-  const reviewScore = showPublicRating
-    ? publicCoachRatingLabel(averageRating, totalReviews).replace(".", ",")
-    : "New";
-  const filledStars = showPublicRating ? Math.round(averageRating) : 0;
 
   if (readOnly) {
     return (
@@ -222,7 +204,7 @@ export function CoachProfileView({
               </div>
               {headerRating ? (
                 <p className="flex items-center gap-[3px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
-                  <Star className="size-[7px] fill-[#F0B144] text-[#F0B144]" />
+                  <BrandStar size={8} />
                   {headerRating}
                 </p>
               ) : null}
@@ -355,7 +337,7 @@ export function CoachProfileView({
                     key={cert.id || idx}
                     className="flex items-start gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]"
                   >
-                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#CBE7D1] bg-[#DEECE1] text-[#1B8A3B]">
+                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#CBE7D1] text-[#1E7431]">
                       <SquareCheck className="size-4" strokeWidth={1.75} />
                     </span>
                     <div className="min-w-0">
@@ -372,63 +354,13 @@ export function CoachProfileView({
             )}
           </CoachProfileCard>
 
-          <CoachProfileCard>
-            <h2 className={sectionTitle}>Reviews & ratings</h2>
-            <div className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]">
-              <div className="flex items-end justify-between gap-3">
-                <p className="flex items-end gap-[6px]">
-                  <span className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
-                    {reviewScore}
-                  </span>
-                  {showPublicRating ? (
-                    <span className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-                      ({totalReviews} reviews)
-                    </span>
-                  ) : null}
-                </p>
-                {showPublicRating ? (
-                  <span className="inline-flex gap-0.5">
-                    {Array.from({ length: 5 }).map((_, i) => (
-                      <Star
-                        key={i}
-                        className={cn(
-                          "size-[12px]",
-                          i < filledStars ? "fill-[#F0B144] text-[#F0B144]" : "fill-[#D9D9CF] text-[#D9D9CF]"
-                        )}
-                      />
-                    ))}
-                  </span>
-                ) : null}
-              </div>
-              {showPublicRating ? (
-                <>
-                  <div className="h-px w-full bg-[#EAEADF]" />
-                  <div className="flex flex-col gap-[10px]">
-                    {[5, 4, 3, 2, 1].map((stars) => {
-                      const count = ratingDistribution[stars] || 0;
-                      const width = totalReviews > 0 ? `${(count / totalReviews) * 100}%` : "0%";
-                      return (
-                        <div key={stars} className="flex items-center gap-[17px]">
-                          <span className="w-[50px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
-                            {stars} {stars === 1 ? "star" : "stars"}
-                          </span>
-                          <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
-                            <span className="block h-full rounded-[10px] bg-[#0054B4]" style={{ width }} />
-                          </span>
-                          <span className="w-5 text-right text-[12px] leading-[14px] text-[#1A202C]">{count}</span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <PublicReviewComments reviews={reviews} />
-                </>
-              ) : (
-                <p className="text-[14px] leading-[18px] text-[#767980]">
-                  Ratings and comments appear after 3 athlete reviews.
-                </p>
-              )}
-            </div>
-          </CoachProfileCard>
+          <ReviewsCard
+            averageRating={averageRating}
+            totalReviews={totalReviews}
+            distribution={ratingDistribution}
+            reviews={reviews}
+            showRating={showPublicRating}
+          />
         </div>
       </div>
     );
@@ -441,41 +373,11 @@ export function CoachProfileView({
     .slice(0, 2)
     .map((part) => part[0]?.toUpperCase() ?? "")
     .join("");
-  const maxReviewCount = Math.max(1, ...[5, 4, 3, 2, 1].map((star) => ratingDistribution[star] ?? 0));
 
   return (
     <div className="overflow-x-hidden px-4 pb-16 md:px-10">
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
-      {profileStrength.completion < 100 && (
-        <CoachProfileCard>
-          <div className="flex items-center justify-between gap-3">
-            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Profile strength</h2>
-            <span className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-              {profileStrength.completion}%
-            </span>
-          </div>
-          <div className="h-[6px] w-full overflow-hidden rounded-[10px] bg-[#D9D9CF]">
-            <div
-              className="h-full rounded-[10px] bg-[#0054B4]"
-              style={{ width: `${profileStrength.completion}%` }}
-            />
-          </div>
-          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
-            {profileStrength.completedFields} of {profileStrength.totalFields} fields completed.
-            {profileStrength.missingFields.length > 0
-              ? " Add the missing details to increase your visibility."
-              : ""}
-          </p>
-          {profileStrength.missingFields.length > 0 && (
-            <div className="flex flex-wrap items-center gap-[10px]">
-              <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">Pending</span>
-              {profileStrength.missingFields.map((field) => (
-                <CoachProfileChip key={field} label={field} />
-              ))}
-            </div>
-          )}
-        </CoachProfileCard>
-      )}
+      <ProfileStrengthMeter coach={coach} onEdit={onEdit} variant="card" />
 
       <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px] lg:items-stretch">
         <div className="relative h-[179px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] lg:h-auto lg:min-h-[179px]">
@@ -503,7 +405,7 @@ export function CoachProfileView({
           </div>
           <div className="flex items-end justify-between gap-3">
             <span className="inline-flex items-center gap-[3px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
-              <Star className="size-[7px] fill-[#F0B144] text-[#F0B144]" />
+              <BrandStar size={8} />
               {headerRating || "No reviews"}
             </span>
             <div className="flex items-center gap-[10px]">
@@ -636,7 +538,7 @@ export function CoachProfileView({
                     key={cert.id || idx}
                     className="flex items-start gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]"
                   >
-                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] border border-[#CBE7D1] bg-[#DEECE1] text-[#3C7A4E]">
+                    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#CBE7D1] text-[#1E7431]">
                       <SquareCheck className="size-4" strokeWidth={1.75} />
                     </span>
                     <div className="min-w-0">
@@ -670,59 +572,13 @@ export function CoachProfileView({
             <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{trainingFormat}</p>
           </CoachProfileCard>
 
-          <CoachProfileCard>
-            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Reviews & ratings</h2>
-            <div className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]">
-              <div className="flex items-end justify-between gap-3">
-                <div className="flex items-end gap-[6px]">
-                  <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
-                    {reviewScore}
-                  </p>
-                  <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-                    {showPublicRating ? `(${totalReviews} reviews)` : "Ratings appear after 3 athlete reviews"}
-                  </p>
-                </div>
-                {showPublicRating ? (
-                  <div className="flex items-center gap-[3px]" aria-hidden>
-                    {[1, 2, 3, 4, 5].map((star) => (
-                      <Star
-                        key={star}
-                        className="size-[11px]"
-                        strokeWidth={1.5}
-                        fill={star <= filledStars ? "#F0B144" : "none"}
-                        color={star <= filledStars ? "#F0B144" : "#D9D9CF"}
-                      />
-                    ))}
-                  </div>
-                ) : null}
-              </div>
-              {showPublicRating ? (
-                <>
-                  <div className="h-px w-full bg-[#EAEADF]" />
-                  <div className="flex flex-col gap-[10px]">
-                    {[5, 4, 3, 2, 1].map((star) => {
-                      const count = ratingDistribution[star] ?? 0;
-                      const width = totalReviews > 0 ? Math.round((count / maxReviewCount) * 100) : 0;
-                      return (
-                        <div key={star} className="flex items-center gap-[17px]">
-                          <span className="w-[50px] shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
-                            {star} {star === 1 ? "star" : "stars"}
-                          </span>
-                          <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
-                            <span className="block h-[5px] rounded-[10px] bg-[#0054B4]" style={{ width: `${width}%` }} />
-                          </span>
-                          <span className="w-5 shrink-0 text-right text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C]">
-                            {count}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                  <PublicReviewComments reviews={reviews} />
-                </>
-              ) : null}
-            </div>
-          </CoachProfileCard>
+          <ReviewsCard
+            averageRating={averageRating}
+            totalReviews={totalReviews}
+            distribution={ratingDistribution}
+            reviews={reviews}
+            showRating={showPublicRating}
+          />
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">

@@ -7,25 +7,20 @@ import {
   Calendar,
   CalendarCheck,
   ChevronDown,
-  Clock,
   Filter,
   History,
   Info,
   MapPin,
   PlayCircle,
   Search,
-  Users,
 } from "lucide-react";
 
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import { Badge } from "@/components/ui/badge";
+import { BrandPill } from "@/components/brand";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
 import { capitalizeFirst, cn } from "@/lib/utils";
@@ -51,61 +46,115 @@ import { ERROR_CODES } from "@/constants/errorCodes";
 import type { SessionFilters, SessionUIModel } from "@/types/sessions-api";
 import type { UISession } from "@/types/my-sessions";
 import {
-  formatSessionDate,
-  formatSessionPrice,
-  formatSessionTime,
-  formatISOTime,
+  formatLocationSentence,
+  formatTimeSpan,
+  formatWholePrice,
   getAvatarUrlFromName,
   getInitialsFromName,
   getStartMeta,
-  formatLocationDisplay,
 } from "@/utils/sessionFormatting";
+import { parseISODateLocal } from "@/utils/dateHelpers";
 import { PROFILE_TYPE } from "@/utils/db";
-import { ROUTES } from "@/routes";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
 
 type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
 
+/**
+ * "Thu, Mar 12" for dates in the reference year, "Thu, Mar 12, 2027" otherwise.
+ * Accepts a YYYY-MM-DD date or an ISO datetime.
+ */
+const formatWeekdayDate = (dateOrIso: string, reference: Date = new Date()): string => {
+  const date = parseISODateLocal(dateOrIso.split("T")[0]);
+  if (isNaN(date.getTime())) return "";
+  return date.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    ...(date.getFullYear() !== reference.getFullYear() ? { year: "numeric" as const } : {}),
+  });
+};
 
-const MAX_ATHLETE_PILLS = 5;
+/** A real uploaded photo, or null for missing/generated (dicebear) avatars. */
+const realPhoto = (url?: string | null) => (url && !url.includes("dicebear.com") ? url : null);
 
-const AthleteList = memo(({ athletes, totalAthletes }: { athletes: { id: string; name: string; avatar?: string | null }[]; totalAthletes: number }) => {
+const MAX_ATHLETE_PILLS = 2;
+const AVATAR_TONES = ["bg-[#E5EDF7] text-[#0054B4]", "bg-[#E7F4F8] text-[#1599BC]"];
+
+const labelClass = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+const primaryActionClass =
+  "inline-flex h-[30px] items-center justify-center whitespace-nowrap rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#0054B4]/90";
+const secondaryActionClass =
+  "inline-flex h-[30px] items-center justify-center whitespace-nowrap rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF]";
+
+const CardField = ({ label, value }: { label: string; value: string }) => (
+  <div className="flex flex-col gap-1.5">
+    <span className={labelClass}>{label}</span>
+    <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C]">{value}</span>
+  </div>
+);
+
+const PersonPill = ({ name, avatar, toneIndex = 0 }: { name: string; avatar?: string | null; toneIndex?: number }) => {
+  const photo = realPhoto(avatar);
+  return (
+    <span className="inline-flex max-w-full items-center gap-1.5 rounded-[4px] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2 text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#484D56]">
+      <span
+        className={cn(
+          "inline-flex size-[22px] shrink-0 items-center justify-center overflow-hidden rounded-full text-[10px] font-medium",
+          AVATAR_TONES[toneIndex % AVATAR_TONES.length]
+        )}
+      >
+        {photo ? <img src={photo} alt="" className="size-full object-cover" /> : getInitialsFromName(name)}
+      </span>
+      <span className="truncate">{name}</span>
+    </span>
+  );
+};
+
+const AthleteList = memo(({ athletes, totalAthletes: rawTotal }: { athletes: { id: string; name: string; avatar?: string | null }[]; totalAthletes: number }) => {
+  // The API can send the count as a string, so normalise it before comparing.
+  const totalAthletes = Number(rawTotal) || 0;
   const visibleAthletes = athletes.slice(0, MAX_ATHLETE_PILLS);
   const remainingCount = Math.max(totalAthletes - visibleAthletes.length, 0);
 
   return (
-    <div className="flex items-center gap-2 flex-wrap">
-      {visibleAthletes.map((athlete) => (
-        <div
-          key={athlete.id}
-          className="flex items-center gap-2 rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2"
-        >
-          <Avatar className="h-[22px] w-[22px] rounded-[3px]">
-            <AvatarImage src={athlete.avatar ?? getAvatarUrlFromName(athlete.name)} alt={athlete.name} />
-            <AvatarFallback className="rounded-[3px] bg-[#C1C1B8] text-[10px] font-medium text-[#484D56]">
-              {getInitialsFromName(athlete.name)}
-            </AvatarFallback>
-          </Avatar>
-          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">{athlete.name}</span>
+    <div className="flex flex-col gap-2">
+      <span className={labelClass}>
+        {totalAthletes} {totalAthletes === 1 ? "athlete" : "athletes"}
+      </span>
+      {visibleAthletes.length > 0 || remainingCount > 0 ? (
+        <div className="flex flex-wrap gap-1.5">
+          {visibleAthletes.map((athlete, index) => (
+            <PersonPill key={athlete.id} name={athlete.name} avatar={athlete.avatar} toneIndex={index} />
+          ))}
+          {remainingCount > 0 ? <BrandPill tone="neutral">+{remainingCount}</BrandPill> : null}
         </div>
-      ))}
-      {remainingCount > 0 && (
-        <Badge variant="outline" className="rounded-full border-dashed text-xs">
-          +{remainingCount} more
-        </Badge>
-      )}
+      ) : null}
     </div>
   );
 });
 
 AthleteList.displayName = "AthleteList";
 
+const CoachBlock = ({ name, avatar }: { name: string; avatar?: string | null }) => (
+  <div className="flex flex-col gap-2">
+    <span className={labelClass}>Coach</span>
+    <div className="flex">
+      <PersonPill name={name} avatar={avatar} />
+    </div>
+  </div>
+);
+
+const SessionTypePill = ({ type }: { type: UISession["type"] }) => (
+  <BrandPill tone={type === "group" ? "teal" : "blue"}>{type === "group" ? "Group" : "Individual"}</BrandPill>
+);
+
 const sessionNeedsPayment = (session: UISession) =>
   session.dbStatus === "pending_payment" ||
   session.paymentStatus === "unpaid" ||
   session.paymentStatus === "requires_action";
 
+/** Rendered inside a card-level <button>, so it's a span with button semantics. */
 const PayNowAction = ({
   paying,
   onPay,
@@ -127,7 +176,7 @@ const PayNowAction = ({
       event.stopPropagation();
       if (!paying) onPay();
     }}
-    className="inline-flex cursor-pointer items-center justify-center rounded-[8px] border border-[#E4D7A2] bg-[#F8F1D8] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#7A5B00]"
+    className={cn(primaryActionClass, "cursor-pointer", paying && "cursor-default opacity-60")}
   >
     {paying ? "Starting payment…" : "Pay now"}
   </span>
@@ -145,14 +194,45 @@ const calculatePlatformFee = (
   return { baseRate, platformFee, totalRate };
 };
 
+const sessionPriceLabel = (
+  session: UISession,
+  role: UserRole,
+  platformFeePerc: number,
+  stripeFeePerc: number
+) =>
+  formatWholePrice(
+    role === PROFILE_TYPE.athlete
+      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate
+      : session.rate,
+    session.currency
+  );
+
+const PriceBlock = ({ price }: { price: string }) => (
+  <div className="flex flex-col items-start gap-1.5 md:items-end">
+    <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{price}</span>
+    <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">per athlete</span>
+  </div>
+);
+
+const cardShellClass =
+  "grid w-full grid-cols-1 gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-left font-sans text-[#1A202C] md:grid-cols-[1fr_auto] md:gap-x-6";
+const cardAsideClass = "flex flex-row flex-wrap items-end justify-between gap-5 md:flex-col md:items-end";
+
+const SessionTitleRow = ({ session, children }: { session: UISession; children?: ReactNode }) => (
+  <div className="flex flex-wrap items-center gap-2">
+    <span className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+      {capitalizeFirst(session.title)}
+    </span>
+    <SessionTypePill type={session.type} />
+    {children}
+  </div>
+);
+
 const SessionCard = ({
   session,
   now,
   onSelect,
   role,
-  resolvePillarIcon,
-  submittedSessionIds,
-  onFeedbackNavigate,
   platformFeePerc = 0,
   stripeFeePerc = 0,
   canPay = false,
@@ -163,9 +243,6 @@ const SessionCard = ({
   now: Date;
   onSelect: (session: UISession) => void;
   role: UserRole;
-  resolvePillarIcon: (pillarName?: string | null) => typeof AlertCircle;
-  submittedSessionIds: Set<string>;
-  onFeedbackNavigate: (slotId: string, session?: UISession) => void;
   platformFeePerc?: number;
   stripeFeePerc?: number;
   canPay?: boolean;
@@ -173,135 +250,41 @@ const SessionCard = ({
   onPay?: () => void;
 }) => {
   const startMeta = session.computedStatus === "upcoming" ? getStartMeta(session.start, now) : null;
-  const personLabel =
-    role === PROFILE_TYPE.coach
-      ? session.athleteNamesDisplay && session.athleteNamesDisplay !== "No athletes"
-        ? session.athleteNamesDisplay
-        : ""
-      : session.coachName || "";
-  const placeLabel = formatLocationDisplay(session.location);
-  const timingLabel = startMeta?.startsIn
-    ? `${placeLabel} · Starting in ${startMeta.startsIn}`
-    : placeLabel;
-  const price = formatSessionPrice(
-    role === PROFILE_TYPE.athlete
-      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate
-      : session.rate,
-    session.currency
-  );
-  const typeChipClass = cn(
-    "inline-flex h-7 items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
-    session.type === "group"
-      ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
-      : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
-  );
-
-  if (role === PROFILE_TYPE.coach) {
-    const coachDate = new Intl.DateTimeFormat("en-US", {
-      month: "long",
-      day: "numeric",
-      year: "numeric",
-    }).format(new Date(`${session.dateOnly}T12:00:00`));
-    const athlete = session.athletes[0];
-    const photo = athlete?.avatar && !athlete.avatar.includes("dicebear.com") ? athlete.avatar : null;
-
-    return (
-      <button
-        type="button"
-        onClick={() => onSelect(session)}
-        className="flex w-full flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-6 text-left md:h-[136px] md:flex-row md:items-center md:gap-0 md:py-0"
-      >
-        <div className="flex w-full shrink-0 flex-col gap-2 md:w-[180px]">
-          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-            {capitalizeFirst(session.title)}
-          </p>
-          <span className={cn(typeChipClass, "w-fit")}>{session.type}</span>
-        </div>
-        <div className="flex w-full shrink-0 flex-col gap-[5px] md:w-[266px]">
-          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.8px] text-[#1A202C]">{coachDate}</p>
-          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-            {session.timeRange.replace(" - ", " – ")}
-          </p>
-        </div>
-        <div className="w-full shrink-0 md:w-[145px]">
-          {athlete ? (
-            <span className="inline-flex items-center gap-[5px] rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
-              <span className="inline-flex size-[22px] items-center justify-center overflow-hidden rounded-[3px] bg-[#C1C1B8] text-[9px] font-medium text-[#484D56]">
-                {photo ? (
-                  <img src={photo} alt="" className="size-full object-cover" />
-                ) : (
-                  getInitialsFromName(athlete.name)
-                )}
-              </span>
-              <span className="truncate text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
-                {athlete.name}
-              </span>
-            </span>
-          ) : null}
-        </div>
-        <div className="w-full shrink-0 md:w-[240px]">
-          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{timingLabel}</p>
-        </div>
-        <div className="flex shrink-0 flex-col items-start gap-[9px] md:ml-auto md:items-end">
-          <div className="md:text-right">
-            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
-            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
-          </div>
-          <span className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]">
-            View Details
-          </span>
-        </div>
-      </button>
-    );
-  }
+  const statusLabel =
+    session.computedStatus === "in-progress"
+      ? "In progress"
+      : startMeta?.startsIn
+        ? `Starts in ${startMeta.startsIn}`
+        : null;
+  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc);
+  const showPay = canPay && Boolean(onPay);
 
   return (
-    <button
-      type="button"
-      onClick={() => onSelect(session)}
-      className="flex w-full flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px] text-left md:flex-row md:items-end md:justify-between"
-    >
-      <div className="flex min-w-0 flex-col gap-1.5">
-        <div className="flex flex-wrap items-center gap-[5px]">
-          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-            {capitalizeFirst(session.title)}
-          </p>
-          <span
-            className={cn(
-              "inline-flex items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
-              session.type === "group"
-                ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
-                : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
-            )}
-          >
-            {session.type}
-          </span>
+    <button type="button" onClick={() => onSelect(session)} className={cardShellClass}>
+      <div className="flex min-w-0 flex-col gap-5">
+        <SessionTitleRow session={session}>
+          {statusLabel ? <BrandPill tone="amber">{statusLabel}</BrandPill> : null}
+          {role !== PROFILE_TYPE.coach && sessionNeedsPayment(session) ? (
+            <BrandPill tone="amber">Awaiting payment</BrandPill>
+          ) : null}
+        </SessionTitleRow>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <CardField label="Date" value={formatWeekdayDate(session.dateOnly, now)} />
+          <CardField label="Time" value={formatTimeSpan(session.start, session.end)} />
+          {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
         </div>
-        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-          {formatSessionDate(session.dateOnly)}
-        </p>
-        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-          {session.timeRange}
-        </p>
-        {personLabel ? (
-          <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
-            {personLabel}
-          </p>
-        ) : null}
-        <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{timingLabel}</p>
-        {sessionNeedsPayment(session) ? (
-          <p className="text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#7A5B00]">Awaiting payment</p>
+        {role === PROFILE_TYPE.coach ? (
+          <AthleteList athletes={session.athletes ?? []} totalAthletes={session.totalAthletes ?? session.athletes?.length ?? 0} />
+        ) : session.coachName ? (
+          <CoachBlock name={session.coachName} avatar={session.coachAvatar} />
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-col items-start gap-[10px] md:items-end">
-        <div className="md:text-right">
-          <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
-          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
+      <div className={cardAsideClass}>
+        <PriceBlock price={price} />
+        <div className="flex flex-wrap items-center gap-[10px] md:justify-end">
+          {showPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
+          <span className={showPay ? secondaryActionClass : primaryActionClass}>View details</span>
         </div>
-        {canPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
-        <span className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]">
-          View details
-        </span>
       </div>
     </button>
   );
@@ -313,7 +296,6 @@ const PastDraftCard = ({
   onPastNavigate,
   onFeedbackNavigate,
   role,
-  resolvePillarIcon,
   hasFeedbackSubmitted,
   showFeedbackAction,
   platformFeePerc = 0,
@@ -327,7 +309,6 @@ const PastDraftCard = ({
   onPastNavigate: (session: UISession) => void;
   onFeedbackNavigate: (slotId: string, session?: UISession) => void;
   role: 'coach' | 'athlete' | null;
-  resolvePillarIcon: (pillarName?: string | null) => typeof AlertCircle;
   hasFeedbackSubmitted: boolean;
   showFeedbackAction: boolean;
   platformFeePerc?: number;
@@ -336,12 +317,8 @@ const PastDraftCard = ({
   paying?: boolean;
   onPay?: () => void;
 }) => {
-  const price = formatSessionPrice(
-    role === PROFILE_TYPE.athlete
-      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate
-      : session.rate,
-    session.currency
-  );
+  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc);
+  const showPay = canPay && Boolean(onPay);
   const openDetails = () => {
     if (session.computedStatus === "past" || session.computedStatus === "completed") {
       if (role === PROFILE_TYPE.coach) {
@@ -353,112 +330,64 @@ const PastDraftCard = ({
   };
 
   return (
-    <Card
-      className="cursor-pointer rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none"
-      onClick={openDetails}
-    >
-      <CardContent className="px-[25px] py-[30px]">
-        <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <div className="flex flex-wrap items-center gap-[5px]">
-              <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-                {capitalizeFirst(session.title)}
-              </p>
-              <span
-                className={cn(
-                  "inline-flex items-center rounded-[4px] border px-2 py-1 text-[14px] font-medium capitalize leading-[18px] tracking-[-0.42px]",
-                  session.type === "group"
-                    ? "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
-                    : "border-[#CCDDF0] bg-[#E5EDF7] text-[#0054B4]"
-                )}
-              >
-                {session.type}
-              </span>
-            </div>
-            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-              {formatSessionDate(session.dateOnly)}
-            </p>
-            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-              {session.timeRange}
-              {session.location ? ` · ${formatLocationDisplay(session.location)}` : ""}
-              {session.pillarSlot ? ` · ${session.pillarSlot}` : ""}
-            </p>
-            {role === PROFILE_TYPE.coach ? (
-              <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
-                {session.totalAthletes} {session.totalAthletes === 1 ? "athlete" : "athletes"}
-              </p>
-            ) : null}
-            {role === PROFILE_TYPE.coach ? (
-              <AthleteList athletes={session.athletes} totalAthletes={session.totalAthletes} />
-            ) : null}
-            {sessionNeedsPayment(session) ? (
-              <p className="text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#7A5B00]">Awaiting payment</p>
-            ) : null}
-            {role === PROFILE_TYPE.athlete && session.coachName ? (
-              <div className="inline-flex w-fit items-center gap-2 rounded-[4px] border border-[#EAEADF] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2">
-                <Avatar className="h-[22px] w-[22px] rounded-[3px]">
-                  <AvatarImage
-                    src={session.coachAvatar ?? getAvatarUrlFromName(session.coachName || "Coach")}
-                    alt={session.coachName}
-                  />
-                  <AvatarFallback className="rounded-[3px] bg-[#C1C1B8] text-[10px] font-medium text-[#484D56]">
-                    {getInitialsFromName(session.coachName || "Coach")}
-                  </AvatarFallback>
-                </Avatar>
-                <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
-                  {session.coachName}
-                </span>
-              </div>
-            ) : null}
-          </div>
-          <div className="flex shrink-0 flex-col items-start gap-[10px] md:items-end">
-            <div className="md:text-right">
-              <p className="text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">{price}</p>
-              <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">per athlete</p>
-            </div>
-            <div className="flex flex-col gap-2">
-              {canPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
-              <button
-                type="button"
-                className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#F1F1E6]"
-                onClick={(event) => {
-                  event.stopPropagation();
-                  openDetails();
-                }}
-              >
-                View details
-              </button>
-              {showFeedbackAction && (session.computedStatus === "past" || session.computedStatus === "completed") ? (
-                <button
-                  type="button"
-                  className={cn(
-                    "inline-flex items-center justify-center gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-4 py-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]",
-                    hasFeedbackSubmitted && "border-[#D0EBF2] bg-[#E7F4F8] text-[#1599BC]"
-                  )}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    if (session.id) {
-                      onFeedbackNavigate(session.id, session);
-                    }
-                  }}
-                >
-                  {hasFeedbackSubmitted ? "Edit feedback" : "Add feedback"}
-                </button>
-              ) : null}
-            </div>
-          </div>
+    <div className={cn(cardShellClass, "cursor-pointer")} onClick={openDetails}>
+      <div className="flex min-w-0 flex-col gap-5">
+        <SessionTitleRow session={session}>
+          {sessionNeedsPayment(session) ? <BrandPill tone="amber">Awaiting payment</BrandPill> : null}
+        </SessionTitleRow>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <CardField label="Date" value={formatWeekdayDate(session.dateOnly)} />
+          <CardField label="Time" value={formatTimeSpan(session.start, session.end)} />
+          {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
+          {session.pillarSlot ? <CardField label="Pillar" value={session.pillarSlot} /> : null}
         </div>
-      </CardContent>
-    </Card>
+        {role === PROFILE_TYPE.coach ? (
+          <AthleteList athletes={session.athletes ?? []} totalAthletes={session.totalAthletes ?? session.athletes?.length ?? 0} />
+        ) : null}
+        {role === PROFILE_TYPE.athlete && session.coachName ? (
+          <CoachBlock name={session.coachName} avatar={session.coachAvatar} />
+        ) : null}
+      </div>
+      <div className={cardAsideClass}>
+        <PriceBlock price={price} />
+        <div className="flex flex-wrap items-center gap-[10px] md:justify-end">
+          {showPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
+          {showFeedbackAction && (session.computedStatus === "past" || session.computedStatus === "completed") ? (
+            <button
+              type="button"
+              className={secondaryActionClass}
+              onClick={(event) => {
+                event.stopPropagation();
+                if (session.id) {
+                  onFeedbackNavigate(session.id, session);
+                }
+              }}
+            >
+              {hasFeedbackSubmitted ? "Edit feedback" : "Add feedback"}
+            </button>
+          ) : null}
+          <button
+            type="button"
+            className={showPay ? secondaryActionClass : primaryActionClass}
+            onClick={(event) => {
+              event.stopPropagation();
+              openDetails();
+            }}
+          >
+            View details
+          </button>
+        </div>
+      </div>
+    </div>
   );
 };
 
 const EmptySessionNote = ({ children }: { children: string }) => (
-  <div className="flex items-center gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
-    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#F4F4EB] text-[#A3A6AB]">
-      <Info className="size-4" strokeWidth={1.75} />
+  <div className="flex items-center gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]">
+    <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#F4F4EB] text-[#A3A6AB]">
+      <Info className="size-4" strokeWidth={1.5} aria-hidden="true" />
     </span>
-    <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#A3A6AB]">{children}</p>
+    <p className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#767980]">{children}</p>
   </div>
 );
 
@@ -466,26 +395,24 @@ const SessionGroup = ({
   iconBg,
   icon,
   title,
-  titleClass,
   count,
-  countClass,
   empty,
   children,
 }: {
   iconBg: string;
   icon: ReactNode;
   title: string;
-  titleClass: string;
   count: number;
-  countClass: string;
   empty: string;
   children: ReactNode;
 }) => (
   <section className="flex flex-col gap-[14px]">
     <div className="flex items-center gap-[10px]">
-      <span className={cn("inline-flex size-8 items-center justify-center rounded-[10px]", iconBg)}>{icon}</span>
-      <h2 className={cn("text-[20px] font-medium leading-[18px] tracking-[-1px]", titleClass)}>{title}</h2>
-      <p className={cn("text-[16px] font-medium leading-none tracking-[-0.8px]", countClass)}>{count}</p>
+      <span className={cn("inline-flex size-8 items-center justify-center rounded-[8px]", iconBg)} aria-hidden="true">
+        {icon}
+      </span>
+      <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">{title}</h2>
+      <span className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">{count}</span>
     </div>
     {count > 0 ? <div className="flex flex-col gap-[14px]">{children}</div> : <EmptySessionNote>{empty}</EmptySessionNote>}
   </section>
@@ -695,16 +622,8 @@ const MySessions = () => {
     },
     onSuccess: () => {
       toast({
-        title: "Feedback Submitted",
-        description: (
-          <div className="space-y-1 text-slate-800">
-            <div className="flex items-center gap-2">
-              <span className="text-emerald-600 text-base">✓</span>
-              <span className="font-semibold text-slate-900">Thank you for your feedback.</span>
-            </div>
-            <p className="text-sm">Your coach will review it to improve future sessions.</p>
-          </div>
-        ),
+        title: "Feedback submitted",
+        description: "Thanks. Your coach will use it to shape future sessions.",
         duration: 5000,
       });
       // Track this session as having submitted feedback
@@ -911,7 +830,7 @@ const MySessions = () => {
   const selectedSessionHeader = useMemo(() => {
     if (!selectedSessionSafe) {
       return {
-        title: "Session Details",
+        title: "Session details",
         description: "Review your session details",
       };
     }
@@ -922,40 +841,40 @@ const MySessions = () => {
 
     if (selectedSessionSafe.computedStatus === "completed" || selectedSessionSafe.computedStatus === "past") {
       return {
-        title: "Session Completed",
+        title: "Session completed",
         description: "This session has ended",
       };
     }
 
     if (selectedSessionSafe.computedStatus === "in-progress") {
       return {
-        title: "Session In Progress",
-        description: "Your session is currently in progress",
+        title: "Session in progress",
+        description: "Your session is happening now",
       };
     }
 
     if (selectedSessionSafe.computedStatus === "upcoming") {
       if (minutesToStart <= 15) {
         return {
-          title: "Session Starting Now!",
+          title: "Starting now",
           description: "Your session is ready to begin",
         };
       }
       if (minutesToStart <= 30) {
         return {
-          title: "Session Starting Soon",
+          title: "Starting soon",
           description: `Starts in ${Math.ceil(minutesToStart)} minutes`,
         };
       }
       const meta = getStartMeta(selectedSessionSafe.start, now);
       return {
-        title: "Upcoming Session",
+        title: "Upcoming session",
         description: meta?.startsIn ? `Starts in ${meta.startsIn}` : "Your session is scheduled",
       };
     }
 
     return {
-      title: "Session Details",
+      title: "Session details",
       description: "Review your session details",
     };
   }, [selectedSessionSafe, now]);
@@ -980,7 +899,7 @@ const MySessions = () => {
   const fieldLabel = "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]";
   const selectClass = (isPlaceholder: boolean) =>
     cn(
-      "w-full appearance-none rounded-[8px] border-0 bg-[#F1F1E6] p-[10px] pr-8 text-[14px] font-normal leading-[18px] tracking-[-0.42px] outline-none",
+      "w-full appearance-none rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[10px] py-[9px] pr-8 text-[14px] font-normal leading-[18px] tracking-[-0.42px] outline-none",
       isPlaceholder ? "text-[#A3A6AB]" : "text-[#1A202C]"
     );
   const dateLabel = filters.date
@@ -995,17 +914,17 @@ const MySessions = () => {
             My sessions
           </h1>
           <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-            Review and provide feedback for you sessions
+            Review your sessions and leave feedback
           </p>
         </div>
 
         <div className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
           <div className="flex items-center gap-[5px]">
-            <Filter className="size-4 text-[#1A202C]" strokeWidth={1.75} />
+            <Filter className="size-4 text-[#1A202C]" strokeWidth={1.5} />
             <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Filters</h2>
           </div>
-          <div className="flex items-center gap-[10px] rounded-[8px] bg-[#F1F1E6] p-[10px]">
-            <Search className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.75} />
+          <div className="flex items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[10px] py-[9px] focus-within:ring-2 focus-within:ring-[#6698D2]">
+            <Search className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} />
             <input
               value={filters.search ?? ""}
               onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
@@ -1029,7 +948,7 @@ const MySessions = () => {
                   aria-label="Date"
                   className="absolute inset-0 cursor-pointer opacity-0"
                 />
-                <Calendar className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]" strokeWidth={1.75} />
+                <Calendar className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]" strokeWidth={1.5} />
               </div>
             </div>
             <div className="flex min-w-0 flex-col gap-[5px]">
@@ -1046,7 +965,7 @@ const MySessions = () => {
                   <option value="group">Group</option>
                   <option value="individual">Individual</option>
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
               </div>
             </div>
             <div className="flex min-w-0 flex-col gap-[5px]">
@@ -1060,11 +979,11 @@ const MySessions = () => {
                   className={selectClass(filters.status === "all")}
                 >
                   <option value="all">All sessions</option>
-                  <option value="in-progress">In Progress</option>
+                  <option value="in-progress">In progress</option>
                   <option value="upcoming">Upcoming</option>
                   <option value="past">Past</option>
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
               </div>
             </div>
             <div className="flex min-w-0 flex-col gap-[5px]">
@@ -1081,10 +1000,10 @@ const MySessions = () => {
                   className={selectClass(filters.locationType === "all")}
                 >
                   <option value="all">All locations</option>
-                  <option value="in-person">In Person</option>
+                  <option value="in-person">In person</option>
                   <option value="online">Online</option>
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
               </div>
             </div>
             <div className="flex min-w-0 flex-col gap-[5px]">
@@ -1107,19 +1026,17 @@ const MySessions = () => {
                     </option>
                   ))}
                 </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.75} />
+                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
               </div>
             </div>
           </div>
         </div>
 
         <SessionGroup
-          iconBg="bg-[#CCDDF0] text-[#0054B4]"
-          icon={<PlayCircle className="size-4" strokeWidth={1.75} />}
+          iconBg="bg-[#E5EDF7] text-[#0054B4]"
+          icon={<PlayCircle className="size-4" strokeWidth={1.5} />}
           title="In progress sessions"
-          titleClass="text-[#0054B4]"
           count={inProgressSessions.length}
-          countClass="text-[#6698D2]"
           empty="No sessions in progress"
         >
           {inProgressSessions.map((session) => (
@@ -1129,9 +1046,6 @@ const MySessions = () => {
               now={now}
               onSelect={setSelectedSession}
               role={role}
-              resolvePillarIcon={resolvePillarIconForSession}
-              submittedSessionIds={submittedSessionIds}
-              onFeedbackNavigate={handleFeedbackNavigate}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
               canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
@@ -1142,12 +1056,10 @@ const MySessions = () => {
         </SessionGroup>
 
         <SessionGroup
-          iconBg="bg-[#D0EBF2] text-[#1599BC]"
-          icon={<CalendarCheck className="size-4" strokeWidth={1.75} />}
+          iconBg="bg-[#E7F4F8] text-[#1599BC]"
+          icon={<CalendarCheck className="size-4" strokeWidth={1.5} />}
           title="Upcoming sessions"
-          titleClass="text-[#1599BC]"
           count={upcomingSessions.length}
-          countClass="text-[#73C2D7]"
           empty="No upcoming sessions"
         >
           {upcomingSessions.map((session) => (
@@ -1157,9 +1069,6 @@ const MySessions = () => {
               now={now}
               onSelect={setSelectedSession}
               role={role}
-              resolvePillarIcon={resolvePillarIconForSession}
-              submittedSessionIds={submittedSessionIds}
-              onFeedbackNavigate={handleFeedbackNavigate}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
               canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
@@ -1170,13 +1079,11 @@ const MySessions = () => {
         </SessionGroup>
 
         <SessionGroup
-          iconBg="bg-[#D1D2D5] text-[#767980]"
-          icon={<History className="size-4" strokeWidth={1.75} />}
+          iconBg="bg-[#F4F4EB] text-[#767980]"
+          icon={<History className="size-4" strokeWidth={1.5} />}
           title="Previous sessions"
-          titleClass="text-[#767980]"
           count={pastCompletedSessions.length}
-          countClass="text-[#A3A6AB]"
-          empty="No sessions in progress"
+          empty="No previous sessions"
         >
           {pastCompletedSessions.map((session) => (
             <PastDraftCard
@@ -1186,7 +1093,6 @@ const MySessions = () => {
               onPastNavigate={handlePastNavigate}
               onFeedbackNavigate={handleFeedbackNavigate}
               role={role}
-              resolvePillarIcon={resolvePillarIconForSession}
               hasFeedbackSubmitted={hasSubmittedFeedback(session)}
               showFeedbackAction={role === PROFILE_TYPE.coach || persona === PROFILE_TYPE.athlete}
               platformFeePerc={platformFeePerc}
@@ -1207,173 +1113,136 @@ const MySessions = () => {
           }
         }}
       >
-        <DialogContent className="max-w-3xl p-0 overflow-hidden [&>button]:text-white [&>button[data-state=open]]:text-white">
-          {selectedSessionSafe && (
-            <>
-              <div className="bg-[#0d7ff2] text-white px-6 py-5 flex items-start gap-3">
-                <Clock className="w-6 h-6 mt-1" />
-                <div>
-                  <DialogTitle className="text-xl font-semibold leading-tight">
+        <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-y-auto p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[13px] [&>button]:top-[11px] [&>button]:text-[#767980] [&>button]:opacity-100 [&>button:hover]:text-[#1A202C] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]">
+          {selectedSessionSafe && (() => {
+            const isAthleteView = role === PROFILE_TYPE.athlete;
+            const perAthleteRate = isAthleteView
+              ? calculatePlatformFee(selectedSessionSafe.rate, platformFeePerc, stripeFeePerc).totalRate
+              : Number(selectedSessionSafe.rate) || 0;
+            const athleteCount = Number(selectedSessionSafe.totalAthletes) || 0;
+            const totalLabel = `${formatWholePrice(perAthleteRate * athleteCount, selectedSessionSafe.currency)} for ${athleteCount} ${
+              athleteCount === 1 ? "athlete" : "athletes"
+            }`;
+            const PillarIcon = selectedSessionSafe.pillarSlot
+              ? resolvePillarIconForSession(selectedSessionSafe.pillarSlot)
+              : null;
+            const details: { label: string; value: ReactNode }[] = [
+              { label: "Date", value: formatWeekdayDate(selectedSessionSafe.dateOnly, now) || "-" },
+              { label: "Time", value: formatTimeSpan(selectedSessionSafe.start, selectedSessionSafe.end) || "-" },
+              { label: "Location", value: formatLocationSentence(selectedSessionSafe.location) || "-" },
+              { label: "Total", value: totalLabel },
+            ];
+            if (selectedSessionSafe.pillarSlot) {
+              details.push({
+                label: "Pillar",
+                value: (
+                  <span className="inline-flex items-center gap-1.5">
+                    {PillarIcon ? <PillarIcon className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" /> : null}
+                    {selectedSessionSafe.pillarSlot}
+                  </span>
+                ),
+              });
+            }
+            const canOpenCoach = !isAthleteView ? false : Boolean(selectedSessionSafe.coachName && selectedSessionSafe.coachId);
+
+            return (
+              <>
+                <div className="flex flex-col gap-1.5 px-[25px] py-5 pr-14 text-left">
+                  <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
                     {selectedSessionHeader.title}
                   </DialogTitle>
-                  <DialogDescription className="text-sm text-white/90 mt-1">
+                  <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
                     {selectedSessionHeader.description}
                   </DialogDescription>
                 </div>
-              </div>
-              <div className="p-6 space-y-5">
-                <div className="rounded-xl border border-slate-200 bg-slate-50 p-5 space-y-4">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <h3 className="text-xl font-semibold text-slate-900">{capitalizeFirst(selectedSessionSafe.title)}</h3>
-                    <Badge
-                      variant="outline"
-                      className="rounded-full bg-blue-50 text-blue-700 border-blue-200 flex items-center gap-1"
-                    >
-                      <Users className="w-4 h-4" />
-                      {selectedSessionSafe.type === "group" ? "Group Session" : "Individual Session"}
-                    </Badge>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-3">
-                      <Calendar className="w-5 h-5 text-blue-600 mt-1" />
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Date &amp; Time</p>
-                        <p className="text-sm text-slate-800">
-                          {formatSessionDate(selectedSessionSafe.dateOnly)} • {formatISOTime(selectedSessionSafe.start)} - {formatISOTime(selectedSessionSafe.end)}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-3">
-                      <MapPin className="w-5 h-5 text-blue-600 mt-1" />
-                      <div className="space-y-1">
-                        <p className="text-xs text-muted-foreground">Location Type</p>
-                        <p className="text-sm text-slate-800">
-                          {formatLocationDisplay(selectedSessionSafe.location)}
-                        </p>
-                      </div>
-                    </div>
-                    {selectedSessionSafe.pillarSlot && (
-                      <div className="flex items-start gap-3 md:col-span-2">
-                        {(() => {
-                          const PillarIcon = resolvePillarIconForSession(selectedSessionSafe.pillarSlot);
-                          return <PillarIcon className="w-5 h-5 text-blue-600 mt-1" />;
-                        })()}
-                        <div className="space-y-1">
-                          <p className="text-xs text-muted-foreground">Pillar</p>
-                          <p className="text-sm text-slate-800">{selectedSessionSafe.pillarSlot}</p>
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                </div>
+                <div className="h-px bg-[#EAEADF]" />
 
-                <div className="rounded-xl border border-slate-200 bg-white p-5 space-y-3">
-                  {role === PROFILE_TYPE.coach ? (
-                    <>
-                      <p className="text-xs font-semibold text-slate-600">
-                        ATHLETES ({selectedSessionSafe.totalAthletes})
+                <div className="flex flex-col gap-5 px-[25px] py-5">
+                  {/* Session summary */}
+                  <div className="flex items-start justify-between gap-5">
+                    <div className="flex min-w-0 flex-col gap-2.5">
+                      <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em]">
+                        {capitalizeFirst(selectedSessionSafe.title)}
                       </p>
-                      <div className={selectedSessionSafe.athletes.length > 4 ? "max-h-40 overflow-y-auto pr-1" : ""}>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                          {selectedSessionSafe.athletes.map((athlete) => (
-                            <div
-                              key={athlete.id}
-                              className="flex items-center gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2"
-                            >
-                              <Avatar className="h-9 w-9">
-                                {athlete.avatar ? (
-                                  <AvatarImage src={athlete.avatar} alt={athlete.name} />
-                                ) : (
-                                  <AvatarFallback className="bg-slate-100 text-slate-700 text-xs">
-                                    {getInitialsFromName(athlete.name)}
-                                  </AvatarFallback>
-                                )}
-                              </Avatar>
-                              <p className="text-sm text-slate-800">{athlete.name}</p>
-                            </div>
+                      <div className="flex flex-wrap gap-1.5">
+                        <SessionTypePill type={selectedSessionSafe.type} />
+                        {selectedSessionSafe.computedStatus === "in-progress" ? (
+                          <BrandPill tone="amber">In progress</BrandPill>
+                        ) : null}
+                        {isAthleteView && sessionNeedsPayment(selectedSessionSafe) ? (
+                          <BrandPill tone="amber">Awaiting payment</BrandPill>
+                        ) : null}
+                      </div>
+                    </div>
+                    <div className="flex flex-none flex-col items-end gap-1.5 text-right">
+                      <p className="text-[32px] font-bold leading-[30px]">
+                        {formatWholePrice(perAthleteRate, selectedSessionSafe.currency)}
+                      </p>
+                      <p className="text-[12px] leading-[14px] text-[#767980]">per athlete</p>
+                    </div>
+                  </div>
+
+                  {/* Details */}
+                  <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-[8px] bg-[#F4F4EB] px-5 py-4 sm:grid-cols-2">
+                    {details.map((item) => (
+                      <div key={item.label} className="flex flex-col gap-1.5">
+                        <dt className={labelClass}>{item.label}</dt>
+                        <dd className="text-[14px] leading-[18px] text-[#1A202C]">{item.value}</dd>
+                      </div>
+                    ))}
+                  </dl>
+
+                  {/* People */}
+                  {role === PROFILE_TYPE.coach ? (
+                    <div className="flex flex-col gap-2">
+                      <span className={labelClass}>
+                        {athleteCount} {athleteCount === 1 ? "athlete" : "athletes"}
+                      </span>
+                      {selectedSessionSafe.athletes.length > 0 ? (
+                        <div
+                          className={cn(
+                            "flex flex-wrap gap-1.5",
+                            selectedSessionSafe.athletes.length > 12 && "max-h-40 overflow-y-auto pr-1"
+                          )}
+                        >
+                          {selectedSessionSafe.athletes.map((athlete, index) => (
+                            <PersonPill key={athlete.id} name={athlete.name} avatar={athlete.avatar} toneIndex={index} />
                           ))}
                         </div>
-                      </div>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-xs font-semibold text-slate-600">COACH</p>
-                      {selectedSessionSafe.coachName && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            if (selectedSessionSafe.coachId) {
-                              navigate(`/coach/${selectedSessionSafe.coachId}`);
-                            }
-                          }}
-                          className="flex w-full items-center gap-3 rounded-xl border border-blue-200 bg-blue-50 px-3 py-2 text-left transition hover:border-blue-300 hover:bg-blue-100"
-                        >
-                          <Avatar className="h-9 w-9 border border-blue-200">
-                            <AvatarImage
-                              src={selectedSessionSafe.coachAvatar ?? getAvatarUrlFromName(selectedSessionSafe.coachName || "Coach")}
-                              alt={selectedSessionSafe.coachName}
-                            />
-                            <AvatarFallback className="bg-gradient-to-br from-blue-400 to-blue-600 text-white text-sm font-semibold">
-                              {getInitialsFromName(selectedSessionSafe.coachName || "Coach")}
-                            </AvatarFallback>
-                          </Avatar>
-                          <p className="text-sm text-slate-800">{selectedSessionSafe.coachName}</p>
-                        </button>
-                      )}
-                    </>
-                  )}
+                      ) : null}
+                    </div>
+                  ) : selectedSessionSafe.coachName ? (
+                    <CoachBlock name={selectedSessionSafe.coachName} avatar={selectedSessionSafe.coachAvatar} />
+                  ) : null}
+
+                  <p className="text-[12px] leading-[14px] text-[#767980]">
+                    Be ready at the location with the equipment you need.
+                  </p>
                 </div>
 
-                <div className="rounded-xl border border-green-200 bg-green-50 p-5 space-y-2">
-                  {role === PROFILE_TYPE.athlete ? (
-                    <>
-                      <p className="text-xs font-semibold text-green-700">SESSION RATE</p>
-                      <p className="text-xl font-semibold text-green-700">
-                        {formatSessionPrice(
-                          calculatePlatformFee(selectedSessionSafe.rate, platformFeePerc, stripeFeePerc).totalRate,
-                          selectedSessionSafe.currency
-                        )} per Athlete
-                      </p>
-                      <p className="text-sm text-green-700/80">
-                        Total: {formatSessionPrice(
-                          calculatePlatformFee(selectedSessionSafe.rate, platformFeePerc, stripeFeePerc).totalRate * selectedSessionSafe.totalAthletes,
-                          selectedSessionSafe.currency
-                        )} for {selectedSessionSafe.totalAthletes}{" "}
-                        {selectedSessionSafe.totalAthletes === 1 ? "Athlete" : "Athletes"}
-                      </p>
-                    </>
-                  ) : (
-                    <>
-                      <p className="text-xs font-semibold text-green-700">SESSION RATE</p>
-                      <p className="text-xl font-semibold text-green-700">
-                        {formatSessionPrice(selectedSessionSafe.rate, selectedSessionSafe.currency)} per Athlete
-                      </p>
-                      <p className="text-sm text-green-700/80">
-                        Total: {formatSessionPrice(
-                          selectedSessionSafe.rate * selectedSessionSafe.totalAthletes,
-                          selectedSessionSafe.currency
-                        )} for {selectedSessionSafe.totalAthletes}{" "}
-                        {selectedSessionSafe.totalAthletes === 1 ? "Athlete" : "Athletes"}
-                      </p>
-                    </>
-                  )}
-                </div>
-
-                <div className="text-center">
+                <div className="h-px bg-[#EAEADF]" />
+                <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
                   <Button
-                    variant="outline"
-                    className="rounded-full px-6 w-full"
+                    variant={canOpenCoach ? "outline" : "default"}
                     onClick={() => setSelectedSession(null)}
                   >
                     Close
                   </Button>
-                  <p className="text-xs text-muted-foreground mt-3">
-                    Make sure you're ready at the location with all necessary equipment
-                  </p>
+                  {canOpenCoach ? (
+                    <Button
+                      onClick={() => {
+                        if (selectedSessionSafe.coachId) {
+                          navigate(`/coach/${selectedSessionSafe.coachId}`);
+                        }
+                      }}
+                    >
+                      View coach profile
+                    </Button>
+                  ) : null}
                 </div>
-              </div>
-            </>
-          )}
+              </>
+            );
+          })()}
         </DialogContent>
       </Dialog>
 
@@ -1395,7 +1264,6 @@ const MySessions = () => {
           rate: rateSession.rate,
           sportPillars: rateSession.pillarSlot ? [rateSession.pillarSlot] : [],
         } : null}
-        coachSport="soccer"
         rating={rating}
         hoverRating={hoverRating}
         comment={coachComment}
@@ -1409,8 +1277,7 @@ const MySessions = () => {
         onHoverChange={setHoverRating}
         onHoverLeave={() => setHoverRating(null)}
         onCommentChange={setCoachComment}
-        formatDate={(iso) => formatSessionDate(iso.split("T")[0])}
-        formatTime={formatISOTime}
+        formatDate={(iso) => formatWeekdayDate(iso, now)}
       />
     </div>
   );

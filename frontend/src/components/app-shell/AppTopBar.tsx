@@ -137,7 +137,7 @@ export const AppTopBar = () => {
               aria-label="Notifications"
               className="relative inline-flex size-5 items-center justify-center text-[#1A202C]"
             >
-              <Bell className="size-5" strokeWidth={1.75} />
+              <Bell className="size-5" strokeWidth={1.5} />
               {hasNewMessage && (
                 <span className="absolute -right-0.5 -top-0.5 size-[6.6px] rounded-full bg-[#0054B4]" />
               )}
@@ -201,7 +201,7 @@ export const AppTopBar = () => {
                 ))
               ) : (
                 <p className="px-[5px] py-2 text-[12px] leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
-                  {conversationsQuery.isLoading ? "Loading…" : "No notifications yet."}
+                  {conversationsQuery.isLoading ? "Loading…" : "No notifications yet"}
                 </p>
               )}
             </div>

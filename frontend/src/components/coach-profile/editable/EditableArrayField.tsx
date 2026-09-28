@@ -75,8 +75,8 @@ export const EditableArrayField: React.FC<EditableArrayFieldProps> = ({
 
     if (label) {
         return (
-            <div className="space-y-1">
-                <label className="text-sm font-medium">{label}</label>
+            <div className="flex flex-col gap-1.5">
+                <label className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{label}</label>
                 {inputElement}
             </div>
         );

@@ -29,43 +29,47 @@ const FavoritePositionsField = ({
   }
 
   return (
-    <div className="space-y-2">
-      <Label>Positions Coached</Label>
+    <div className="space-y-1.5">
+      <Label className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
+        Positions coached
+      </Label>
       {sport ? (
         availablePositions.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-1.5">
             {availablePositions.map((option) => {
               const checked = selectedPositions.includes(option.value);
               return (
                 <label
                   key={option.value}
                   className={cn(
-                    "flex items-center gap-3 rounded-lg border p-2 transition cursor-pointer",
-                    checked ? "border-primary/60 bg-primary/5" : "border-border hover:border-primary/40"
+                    "flex min-h-[38px] cursor-pointer items-center gap-3 rounded-[8px] border px-3 py-2 transition-colors",
+                    checked
+                      ? "border-[#6698D2] bg-[#E5EDF7]"
+                      : "border-[#EAEADF] bg-[#F1F1E6] hover:bg-[#F4F4EB]"
                   )}
                 >
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-primary"
+                    className="h-4 w-4 accent-[#0054B4]"
                     checked={checked}
                     onChange={() => onToggle(option.value)}
                   />
-                  <span className="text-sm">{option.label}</span>
+                  <span className="text-[14px] tracking-[-0.03em] text-[#1A202C]">{option.label}</span>
                 </label>
               );
             })}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
-            No positions available for the selected sport.
+          <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+            No positions available for this sport.
           </p>
         )
       ) : (
-        <p className="text-sm text-muted-foreground">
-          Select a sport first to pick positions coached.
+        <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+          Choose a sport first to pick the positions you coach.
         </p>
       )}
-      {error && <p className="text-sm text-destructive">{error}</p>}
+      {error && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p>}
     </div>
   );
 };

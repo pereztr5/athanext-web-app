@@ -2,9 +2,8 @@ import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import SignUpConfirmation from "../assets/images/sign-up-confirmation.png";
-import { Mail, RefreshCcw, ArrowLeft } from "lucide-react";
+import { Mail, RefreshCcw } from "lucide-react";
+import logo from "@/assets/AthaNext-Logo.svg";
 import { useToast } from "@/hooks/use-toast";
 import { authAPI } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
@@ -18,9 +17,9 @@ interface SignupConfirmationProps {
 }
 
 const steps = [
-  "Check your email inbox (and spam folder)",
+  "Check your inbox, and your spam or junk folder",
   "Click the confirmation link in the email",
-  "Start connecting with elite coaches",
+  "Complete your profile and start booking sessions",
 ];
 
 const SignupConfirmation = ({
@@ -72,7 +71,7 @@ const SignupConfirmation = ({
 
     toast({
       title: "Email sent",
-      description: `We've resent the confirmation to ${currentEmail}.`,
+      description: `We've sent the confirmation again to ${currentEmail}.`,
     });
   };
 
@@ -83,82 +82,75 @@ const SignupConfirmation = ({
 
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background to-muted pt-20">
-      <div className="max-w-2xl mx-auto px-4 pb-16">
-        <Card className="shadow-lg border-primary/20">
-          <CardHeader className="flex flex-col items-center gap-4 text-center pt-10">
-            <div className="h-16 w-16 rounded-full flex items-center justify-center">
-              {/* <Trophy className="h-8 w-8 text-primary" /> */}
-              <img src={SignUpConfirmation} className="mx-auto" />
+    <div className="min-h-screen bg-background pt-20">
+      <div className="flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-10">
+        <Card className="w-full max-w-[480px]">
+          <CardHeader className="items-center gap-2.5 space-y-0 text-center">
+            <img src={logo} alt="AthaNext" className="h-7 w-auto" />
+            <div className="mt-4 flex h-12 w-12 items-center justify-center rounded-full bg-[#E5EDF7]">
+              <Mail strokeWidth={1.5} className="h-6 w-6 text-[#0054B4]" aria-hidden="true" />
             </div>
-            <div>
-              <h1 className="text-2xl font-bold">Thank You for Signing Up!</h1>
-              <p className="text-muted-foreground mt-2">
-                Welcome to AthaNext! Check your email to activate your account and start connecting
-                with elite coaches.
-              </p>
-            </div>
+            <h1 className="pt-2 text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+              Check your email
+            </h1>
+            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+              We sent a confirmation link to{" "}
+              <span className="font-medium text-[#1A202C] [overflow-wrap:anywhere]">
+                {currentEmail || "your email"}
+              </span>
+              . Open it to activate your account.
+            </p>
           </CardHeader>
 
-          <CardContent className="space-y-6 pb-10">
-            <div className="rounded-xl bg-primary/5 border border-primary/10 px-4 py-3 items-center text-center">
-              <div className="text-sm flex gap-3 justify-center">
-                <Mail className="h-5 w-5 text-primary" />
-                <p className="text-muted-foreground">Confirmation email sent to:</p>
-              </div>
-              <div className="text-sm">
-                 <p className="font-medium text-primary">{currentEmail || "your email"}</p>
-              </div>
-            </div>
-
-            <div className="rounded-xl border border-border/60 bg-muted/40 px-4 py-4 space-y-3">
-              <h3 className="font-semibold">What's next?</h3>
-              <div className="space-y-2 text-sm text-muted-foreground">
+          <CardContent className="space-y-5">
+            <div className="space-y-3 rounded-[8px] bg-[#F4F4EB] px-5 py-4">
+              <h2 className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                What's next
+              </h2>
+              <ol className="space-y-2.5">
                 {steps.map((step, idx) => (
-                  <div key={idx} className="flex items-start gap-3">
-                    <span className="mt-0.5 h-6 w-6 rounded-full bg-primary text-white text-xs font-semibold flex items-center justify-center">
+                  <li
+                    key={idx}
+                    className="flex items-start gap-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]"
+                  >
+                    <span className="flex h-[18px] w-[18px] flex-none items-center justify-center rounded-full bg-[#E5EDF7] text-[11px] font-semibold leading-none text-[#0054B4]">
                       {idx + 1}
                     </span>
                     <span>{step}</span>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ol>
             </div>
 
-            <div className="text-center text-sm text-muted-foreground">
-              Didn’t receive the email?
-            </div>
-
-            <div className="flex flex-col gap-3">
+            <div className="space-y-2.5">
+              <p className="text-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                Didn't get the email?
+              </p>
               <Button
                 size="lg"
-                className="w-full rounded-full"
+                className="w-full"
                 onClick={handleResend}
                 disabled={isResending || !currentEmail}
               >
-                <RefreshCcw className="h-4 w-4 mr-2" />
-                {isResending ? "Resending..." : "Resend Confirmation Email"}
+                <RefreshCcw strokeWidth={1.5} className="mr-2 h-4 w-4" />
+                {isResending ? "Resending…" : "Resend confirmation email"}
               </Button>
             </div>
 
-            <Separator />
+            <div className="h-px bg-[#EAEADF]" />
 
-            <div className="text-center text-sm text-muted-foreground">
+            <p className="text-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
               Still having trouble?{" "}
               <button
                 type="button"
-                className="text-primary underline underline-offset-2"
+                className="rounded-[4px] font-medium text-[#0054B4] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
                 onClick={handleSupport}
               >
-                Contact Support
+                Contact support
               </button>
-            </div>
-
+            </p>
           </CardContent>
         </Card>
-        <div className="text-center text-sm text-muted-foreground mt-5">
-              Make sure to check your spam or junk folder if you don’t see the email in your inbox.
-            </div>
       </div>
     </div>
   );

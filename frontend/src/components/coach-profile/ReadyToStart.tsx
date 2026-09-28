@@ -1,37 +1,27 @@
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { CoachProfileCard, CoachProfileCardHeader } from "./CoachProfileCard";
 
 interface ReadyToStartProps {
   onFreeConsultation: () => void;
   onBookSession: () => void;
   onViewPackages: () => void;
   hourlyRate?: number;
-  buttonClass: string;
+  /** @deprecated no longer used by the brand-kit card */
+  buttonClass?: string;
 }
 
-export function ReadyToStart({ 
-  onFreeConsultation,
-  onBookSession,
-  onViewPackages,
-  hourlyRate = 138,
-  buttonClass 
-}: ReadyToStartProps) {
+export function ReadyToStart({ onFreeConsultation }: ReadyToStartProps) {
   return (
-    <Card className="bg-gradient-to-tl from-green-100 via-sky-50/50 to-white backdrop-blur-sm">
-      <CardHeader>
-        <CardTitle className="text-lg">Ready to Start?</CardTitle>
-        <p className="text-sm text-black">
-          Book your first session and get a personalized training plan tailored to your goals.
+    <CoachProfileCard>
+      <div className="flex flex-col gap-[10px]">
+        <CoachProfileCardHeader title="Ready to start" />
+        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          Book your first session and get a training plan built around your goals.
         </p>
-      </CardHeader>
-      <CardContent className="space-y-3">
-        <Button 
-          className="w-full bg-transparent hover:bg-gray-50 text-[#0D7FF2] border-2 border-[#0D7FF2] font-medium"
-          onClick={onFreeConsultation}
-        >
-          Free 15 Minute Consultation
-        </Button>        
-      </CardContent>
-    </Card>
+      </div>
+      <Button className="w-full" onClick={onFreeConsultation}>
+        Free 15-minute consultation
+      </Button>
+    </CoachProfileCard>
   );
 }

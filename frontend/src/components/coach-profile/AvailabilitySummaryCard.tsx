@@ -98,34 +98,37 @@ export function AvailabilitySummaryCard({ coachId, sessionTypes }: AvailabilityS
   return (
     <CoachProfileCard>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-[5px] text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-          <Calendar className="size-4" strokeWidth={1.75} />
+        <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+          <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
           Availability
         </h2>
         <Link
           to={ROUTES.AVAILABILITY}
-          className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
+          className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390]"
         >
           Manage availability
         </Link>
       </div>
 
-      <div className="flex flex-col gap-[5px] rounded-[8px] border border-[#D9D9CF] bg-[#EAEADF] p-[10px]">
-        <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Selected period</span>
-        <span className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#1A202C]">
+      <div className="flex flex-col gap-[5px] rounded-[8px] bg-[#F4F4EB] p-[10px]">
+        <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">Selected period</span>
+        <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
           {isLoading ? "Loading…" : summary.periodLabel}
         </span>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col">
         {[
           ["Open slots this week", isLoading ? "—" : String(summary.openSlots)],
           ["Booked", isLoading ? "—" : String(summary.booked)],
           ["Session types offered", formatSessionTypes(sessionTypes)],
         ].map(([label, value]) => (
-          <div key={label} className="flex items-center justify-between gap-4">
-            <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{label}</span>
-            <span className="text-right text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">{value}</span>
+          <div
+            key={label}
+            className="flex items-center justify-between gap-4 border-t border-[#EAEADF] py-3 first:border-t-0 first:pt-0 last:pb-0"
+          >
+            <span className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#767980]">{label}</span>
+            <span className="text-right text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{value}</span>
           </div>
         ))}
       </div>

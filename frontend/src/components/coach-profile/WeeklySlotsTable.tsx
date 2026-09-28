@@ -7,7 +7,11 @@
 import React, { useCallback, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
-import { AlertCircle, Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { BrandPill } from '@/components/brand';
+
+const weekNavButtonClass =
+  "inline-flex size-[30px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]";
 import {
   calculateEndTime,
   normalizeTimeFormat,
@@ -435,62 +439,65 @@ export const WeeklySlotsTable = ({
 
   const currentWeek = weeks[currentWeekIndex] || null;
   const currentWeekISO = currentWeek ? toLocalISODate(currentWeek) : '';
+  const weekStartLabel = currentWeek
+    ? (currentWeek < formStartDate ? formStartDate : currentWeek).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+    : '';
 
   return (
     <div
       className="-mx-[25px] flex min-h-[360px] max-h-[65vh] flex-col border-t border-[#EAEADF] px-[25px] pt-5"
       ref={scrollRef}
     >
-      <div className="mb-5 flex items-center gap-2">
-        <Calendar className="size-4 text-[#1A202C]" strokeWidth={1.75} />
-        <h3 className="text-[16px] font-medium leading-[18px] tracking-[-0.8px] text-[#1A202C]">Weekly time slots</h3>
-      </div>
-      <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-        <button
-          type="button"
-          onClick={onPrevWeek}
-          disabled={currentWeekIndex === 0}
-          className={`inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] disabled:cursor-not-allowed ${
-            currentWeekIndex === 0 ? "bg-[#F7F7F0] text-[#A3A6AB]" : "bg-[#F1F1E6] text-[#484D56]"
-          }`}
-        >
-          <ChevronLeft className="size-4" />
-          Previous week
-        </button>
-        <div className="flex items-center justify-center gap-[5px]">
-          <span className="text-center text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-            Week {currentWeekIndex + 1} of {Math.max(weeks.length, 1)}
-            {currentWeek ? `: ${formatClampedWeekRange(currentWeek, formStartDate, formEndDate).replace(" - ", " – ")}` : ""}
-          </span>
-          <span className="rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]">
-            EST
-          </span>
+      <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+          <h3
+            className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]"
+            title={currentWeek ? formatClampedWeekRange(currentWeek, formStartDate, formEndDate).replace(" - ", " – ") : undefined}
+          >
+            {weekStartLabel ? `Week of ${weekStartLabel}` : "Weekly time slots"}
+          </h3>
+          <BrandPill tone="amber">EST</BrandPill>
           {currentWeekISO && weekErrorSet.has(currentWeekISO) && (
-            <span className="inline-flex size-2 rounded-full bg-[#FB4747]" title="Issues in this week" />
+            <span className="inline-flex size-2 rounded-full bg-[#FB4747]" title="Issues in this week">
+              <span className="sr-only">Issues in this week</span>
+            </span>
           )}
         </div>
-        <button
-          type="button"
-          onClick={onNextWeek}
-          disabled={currentWeekIndex >= weeks.length - 1}
-          className="inline-flex items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[13px] py-[7px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]"
-        >
-          Next week
-          <ChevronRight className="size-4" />
-        </button>
+        <div className="flex items-center justify-between gap-3 sm:justify-end">
+          <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]" aria-live="polite">
+            Week {currentWeekIndex + 1} of {Math.max(weeks.length, 1)}
+          </span>
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={onPrevWeek}
+              disabled={currentWeekIndex === 0}
+              aria-label="Previous week"
+              className={weekNavButtonClass}
+            >
+              <ChevronLeft className="size-4" strokeWidth={1.5} />
+            </button>
+            <button
+              type="button"
+              onClick={onNextWeek}
+              disabled={currentWeekIndex >= weeks.length - 1}
+              aria-label="Next week"
+              className={weekNavButtonClass}
+            >
+              <ChevronRight className="size-4" strokeWidth={1.5} />
+            </button>
+          </div>
+        </div>
       </div>
 
       <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
         {isOccurrencesBusy ? (
-          <div className="p-4">
-            <div className="mb-3">
-              <Skeleton className="h-6 w-40" />
-            </div>
-            <div className="space-y-3">
-              {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
+          <div className="flex flex-col gap-3 py-2">
+            <Skeleton className="h-[13px] w-40 rounded-[4px] bg-[#F1F1E6]" />
+            {[1, 2, 3, 4, 5, 6, 7].map((i) => (
+              <Skeleton key={i} className="h-[50px] w-full rounded-[8px] bg-[#F1F1E6]" />
+            ))}
           </div>
         ) : (
           <table className="w-full min-w-[650px]">
@@ -553,18 +560,19 @@ export const WeeklySlotsTable = ({
           const slots = occurrenceSlots[currentWeekISO]?.[firstDay] || [];
           addSlotToDay(firstDay, currentWeekISO, slots[slots.length - 1]);
         }}
-        className="mt-5 w-fit text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#0054B4]"
+        className="mt-5 inline-flex h-[30px] w-fit items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
       >
+        <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
         Add slot
       </button>
 
       {currentWeekErrors.overlap && (
         <Alert
           variant="destructive"
-          className="mt-3 bg-red-50 border border-red-200 py-2 px-3 flex items-center gap-3"
+          className="mt-3 flex items-center gap-2 rounded-[8px] border-0 bg-[#FDF1F1] px-3 py-2 [&>svg]:static [&>svg]:text-[#FB4747] [&>svg~*]:pl-0"
         >
-          <AlertCircle className="h-4 w-4 text-red-600" />
-          <span className="text-sm text-red-800 font-medium">{currentWeekErrors.overlap}</span>
+          <AlertCircle className="size-4 flex-none text-[#FB4747]" strokeWidth={1.5} aria-hidden="true" />
+          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#B42318]">{currentWeekErrors.overlap}</span>
         </Alert>
       )}
     </div>

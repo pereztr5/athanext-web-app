@@ -94,7 +94,15 @@ const {
 } = ATHLETE_IMAGE_LIMITS;
 
 const FieldError = ({ message }: { message?: string }) =>
-  message ? <p className="text-xs text-destructive">{message}</p> : null;
+  message ? <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{message}</p> : null;
+
+const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+const hintClass = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
+const fieldClass = "grid gap-2";
+const overlayPanelClass =
+  "w-full space-y-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-[25px] text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)]";
+const overlayTitleClass = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
+const rangeClass = "w-full accent-[#0054B4]";
 
 const hydrateProfile = (profile: AthleteProfileFormData | null): AthleteProfileFormData => {
   if (!profile) return { ...emptyProfile };
@@ -973,11 +981,11 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
     portalTarget && showProfileCropper && cropProfileFile
       ? createPortal(
           <div className="fixed inset-0 z-[2000] bg-black/60 flex items-center justify-center px-4 pointer-events-auto">
-            <div className="bg-white rounded-md shadow-xl w-full max-w-3xl p-4 space-y-4">
-              <h3 className="text-lg font-semibold">Crop Profile Photo</h3>
+            <div className={`${overlayPanelClass} max-w-3xl`}>
+              <h3 className={overlayTitleClass}>Crop profile photo</h3>
               <div
                 ref={profileCropContainerRef}
-                className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-md overflow-hidden bg-slate-100"
+                className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-[8px] overflow-hidden bg-[#F4F4EB]"
               >
                 {profileObjectUrl && profileCropSize && (
                   <Cropper
@@ -999,7 +1007,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                 )}
               </div>
               <div className="flex items-center gap-4">
-                <Label className="text-sm">Zoom</Label>
+                <Label className={labelClass}>Zoom</Label>
                 <input
                   type="range"
                   min={profileMinZoom}
@@ -1007,13 +1015,14 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                   step={0.1}
                   value={profileZoom}
                   onChange={(e) => setProfileZoom(Number(e.target.value))}
-                  className="w-full"
+                  className={rangeClass}
+                  aria-label="Zoom"
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleUseFullProfileImage}>Use Full Image</Button>
+              <div className="flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end">
+                <Button variant="outline" onClick={handleUseFullProfileImage}>Use full image</Button>
                 <Button variant="outline" onClick={handleProfileCropCancel}>Cancel</Button>
-                <Button onClick={handleProfileCropSave}>Save Crop</Button>
+                <Button onClick={handleProfileCropSave}>Save crop</Button>
               </div>
             </div>
           </div>,
@@ -1025,12 +1034,12 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
     portalTarget && showCoverCropper && cropCoverFile
       ? createPortal(
           <div className="fixed inset-0 z-[2000] bg-black/60 flex items-center justify-center px-4 pointer-events-auto">
-            <div className="bg-white rounded-md shadow-xl w-full max-w-5xl p-4 space-y-4">
-              <h3 className="text-lg font-semibold">Crop Cover Image</h3>
+            <div className={`${overlayPanelClass} max-w-5xl`}>
+              <h3 className={overlayTitleClass}>Crop cover photo</h3>
               <div className="flex flex-col lg:flex-row gap-4">
                 <div
                   ref={coverCropContainerRef}
-                  className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-md overflow-hidden"
+                  className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-[8px] overflow-hidden"
                   style={{ backgroundColor: coverBgColor }}
                 >
                   {coverObjectUrl && coverCropSize && (
@@ -1052,9 +1061,9 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                   )}
                 </div>
                 <div className="w-full lg:w-56 shrink-0 space-y-2">
-                  <p className="text-sm text-muted-foreground">Preview</p>
+                  <p className={labelClass}>Preview</p>
                   <div
-                    className="w-full aspect-[3/1] rounded-md overflow-hidden border"
+                    className="w-full aspect-[3/1] rounded-[8px] overflow-hidden border border-[#EAEADF]"
                     style={{ backgroundColor: coverBgColor }}
                   >
                     {coverPreviewUrl ? (
@@ -1067,38 +1076,39 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               </div>
               <div className="flex flex-wrap items-center gap-4">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-sm text-muted-foreground">Background</span>
+                  <span className={labelClass}>Background</span>
                   <div className="flex flex-wrap items-center gap-2">
                     {COVER_BG_COLORS.map((color) => (
                       <button
                         key={color}
                         type="button"
                         onClick={() => setCoverBgColor(color)}
-                        className={`h-6 w-6 rounded-full border transition-transform ${coverBgColor === color ? "ring-2 ring-slate-400 scale-110" : "hover:scale-105"}`}
+                        className={`size-6 rounded-full border border-[#EAEADF] transition-transform ${coverBgColor === color ? "ring-2 ring-[#6698D2] ring-offset-1 ring-offset-[#F7F7F0] scale-110" : "hover:scale-105"}`}
                         style={{ backgroundColor: color }}
                         aria-label={`Select ${color} background`}
                       />
                     ))}
                   </div>
                 </div>
-                <Label className="text-sm">Zoom</Label>
+                <Label className={labelClass}>Zoom</Label>
                 <input
                   type="range"
+                  aria-label="Zoom"
                   min={coverMinZoom}
                   max={3}
                   step={0.01}
                   value={coverZoom}
                   onChange={(e) => setCoverZoom(Number(e.target.value))}
-                  className="w-full"
+                  className={rangeClass}
                 />
               </div>
-              <div className="flex justify-end gap-2">
-                <Button variant="outline" onClick={handleUseFullCoverImage}>Use Full Image</Button>
+              <div className="flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end">
+                <Button variant="outline" onClick={handleUseFullCoverImage}>Use full image</Button>
                 <Button variant="outline" onClick={handleCoverCropSkip}>Skip</Button>
-                <Button onClick={handleCoverCropSave}>Save Crop</Button>
+                <Button onClick={handleCoverCropSave}>Save crop</Button>
               </div>
               {pendingCoverFiles.length > 0 && (
-                <p className="text-xs text-muted-foreground">Pending images: {pendingCoverFiles.length}</p>
+                <p className={hintClass}>Photos in queue: {pendingCoverFiles.length}</p>
               )}
             </div>
           </div>,
@@ -1110,7 +1120,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto"
+        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto gap-5 p-[25px]"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         // Phase 2: cropActive logic
@@ -1128,34 +1138,38 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             {/* <X className="h-4 w-4" /> */}
           {/* </Button> */}
         </DialogClose>
-        <DialogHeader>
-          <DialogTitle>Edit Profile</DialogTitle>
-          <DialogDescription>Update how coaches and teammates see your profile.</DialogDescription>
+        <DialogHeader className="pr-8 text-left">
+          <DialogTitle>Edit profile</DialogTitle>
+          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            Update how coaches and teammates see your profile.
+          </DialogDescription>
         </DialogHeader>
 
         {errors.form && (
-          <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+          <div role="alert" className="rounded-[8px] border border-destructive/30 bg-destructive/10 px-3 py-2 text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">
             {errors.form}
           </div>
         )}
 
-        <div className="grid gap-6 py-4">
+        <div className="grid gap-5">
           <div className="flex flex-col gap-2">
-            <Label>Profile Image</Label>
+            <Label className={labelClass}>Profile photo</Label>
             <div className="flex items-center gap-4">
-              <div 
-                className="h-20 w-20 rounded-full bg-slate-100 flex items-center justify-center overflow-hidden border cursor-pointer hover:opacity-80 transition-opacity"
+              <button
+                type="button"
+                aria-label="Upload profile photo"
+                className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#EAEADF] bg-[#E5EDF7] transition-opacity hover:opacity-80"
                 onClick={() => profileImageInputRef.current?.click()}
               >
                 {formData?.profileImageUrl && typeof formData.profileImageUrl === 'string' ? (
                   <img src={formData.profileImageUrl} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-2xl font-bold text-slate-400">
+                  <span className="text-[24px] font-medium tracking-[-0.05em] text-[#0054B4]">
                     {formData?.initials || "NA"}
                   </span>
                 )}
-              </div>
-              <div className="flex flex-col gap-2">
+              </button>
+              <div className="flex flex-col items-start gap-2">
                 <Input 
                   ref={profileImageInputRef}
                   type="file" 
@@ -1168,31 +1182,32 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                   variant="outline"
                   onClick={() => profileImageInputRef.current?.click()}
                 >
-                  Upload Photo
+                  Upload photo
                 </Button>
                 {formData?.profileImageUrl && typeof formData.profileImageUrl === 'string' && (
                   <Button
                     type="button"
                     variant="ghost"
-                    className="w-fit px-2 py-1 text-xs text-muted-foreground"
+                    size="sm"
+                    className="h-auto w-fit px-2 py-1 text-[12px] text-[#767980] hover:text-[#1A202C]"
                     onClick={() => setFormData((prev) => ({ ...prev, profileImageUrl: null }))}
                   >
                     Remove photo
                   </Button>
                 )}
-            <p className="text-xs text-muted-foreground">JPG, PNG, or WebP up to 8MB. Aspect Ratio 1:1</p>
+                <p className={hintClass}>JPG, PNG or WebP, up to 8MB. Square photos work best.</p>
               </div>
             </div>
           </div>
 
           <div className="flex flex-col gap-2">
-            <Label>Cover Images (Max {MAX_COVER_IMAGES})</Label>
-            <div className="grid grid-cols-3 gap-2 mb-2">
+            <Label className={labelClass}>Cover photos (up to {MAX_COVER_IMAGES})</Label>
+            <div className="grid grid-cols-3 gap-2">
               {Array.isArray(coverImages) && coverImages.map((img, idx) => (
                 typeof img === 'string' && img.trim() !== '' && (
                   <div
                     key={`${idx}-${img.substring(0, 20)}`}
-                    className="relative aspect-video bg-slate-100 rounded-md overflow-hidden group transition-all duration-300 hover:scale-[1.02] hover:shadow-lg/40 animate-in fade-in-50 cursor-pointer"
+                    className="group relative aspect-video cursor-pointer overflow-hidden rounded-[8px] bg-[#F4F4EB] animate-in fade-in-50"
                     onClick={() => coverImageInputRef.current?.click()}
                   >
                     <img
@@ -1207,20 +1222,22 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                         e.stopPropagation();
                         removeCoverImage(idx);
                       }}
-                      className="absolute top-1 right-1 bg-black/50 text-white p-1 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                      className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-[5px] bg-[#1A202C]/60 text-[#F1F1E6] transition-opacity focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
                     >
-                      <X className="h-3 w-3" />
+                      <X className="size-3.5" strokeWidth={1.5} />
                     </button>
                   </div>
                 )
               ))}
               {(!Array.isArray(coverImages) || coverImages.length < MAX_COVER_IMAGES) && (
-                <div 
-                  className="aspect-video bg-slate-50 border-2 border-dashed border-slate-200 rounded-md flex items-center justify-center transition-all duration-300 hover:border-slate-300 hover:bg-slate-50/80 animate-in fade-in-50 cursor-pointer"
+                <button
+                  type="button"
+                  aria-label="Add cover photo"
+                  className="flex aspect-video items-center justify-center rounded-[8px] border border-dashed border-[#D9D9CF] bg-[#F4F4EB] transition-colors hover:bg-[#EAEADF] animate-in fade-in-50"
                   onClick={() => coverImageInputRef.current?.click()}
                 >
-                  <ImageIcon className="h-6 w-6 text-slate-300" />
-                </div>
+                  <ImageIcon className="size-5 text-[#A3A6AB]" strokeWidth={1.5} />
+                </button>
               )}
             </div>
             <Input
@@ -1235,17 +1252,18 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             <Button
               type="button"
               variant="outline"
+              className="w-fit"
               onClick={() => coverImageInputRef.current?.click()}
               disabled={Array.isArray(coverImages) && coverImages.length >= MAX_COVER_IMAGES}
             >
-              Add Cover Images
+              Add cover photos
             </Button>
-            <p className="text-xs text-muted-foreground">JPG, PNG, or WebP. Max 10MB per image. Up to {MAX_COVER_IMAGES} images. Aspect Ratio 4:3</p>
+            <p className={hintClass}>JPG, PNG or WebP, up to 10MB each and {MAX_COVER_IMAGES} photos. Wide 3:1 photos work best.</p>
             <FieldError message={errors.coverImageUrls} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="fullName">Full Name</Label>
+          <div className={fieldClass}>
+            <Label htmlFor="fullName" className={labelClass}>Full name</Label>
             <Input
               id="fullName"
               value={formData?.fullName || ''}
@@ -1255,8 +1273,8 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             <FieldError message={errors?.fullName} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="sport">Sport</Label>
+          <div className={fieldClass}>
+            <Label htmlFor="sport" className={labelClass}>Sport</Label>
             <Select
               value={formData?.sport || undefined}
               onValueChange={handleSportChange}
@@ -1277,8 +1295,8 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             <FieldError message={errors?.sport} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="position">Position</Label>
+          <div className={fieldClass}>
+            <Label htmlFor="position" className={labelClass}>Position</Label>
             <Select
               value={formData?.position || undefined}
               onValueChange={(value) => handleInputChange("position", value)}
@@ -1306,8 +1324,8 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             <FieldError message={errors?.position} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="dateOfBirth">Date of Birth</Label>
+          <div className={fieldClass}>
+            <Label htmlFor="dateOfBirth" className={labelClass}>Date of birth</Label>
             <Input
               id="dateOfBirth"
               type="date"
@@ -1318,8 +1336,8 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             <FieldError message={errors?.dateOfBirth} />
           </div>
 
-          <div className="grid gap-2">
-            <Label htmlFor="phoneNumber">Phone Number</Label>
+          <div className={fieldClass}>
+            <Label htmlFor="phoneNumber" className={labelClass}>Phone number</Label>
             <Input
               id="phoneNumber"
               type="tel"
@@ -1331,7 +1349,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             <FieldError message={errors?.phoneNumber} />
           </div>
 
-          {/* <div className="grid gap-2">
+          {/* <div className={fieldClass}>
             <Label htmlFor="location">Location</Label>
             <Input
               id="location"
@@ -1363,8 +1381,8 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             onLocationResolved={handleLocationResolved}
           />
 
-          <div className="grid gap-2">
-            <Label htmlFor="graduationYear">High School Grad Year (if applicable)</Label>
+          <div className={fieldClass}>
+            <Label htmlFor="graduationYear" className={labelClass}>High school grad year (if applicable)</Label>
             <Input
               id="graduationYear"
               type="number"
@@ -1375,11 +1393,11 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               onChange={(e) => handleInputChange("graduationYear", e.target.value)}
               aria-invalid={Boolean(errors?.graduationYear)}
               disabled={isCurrentlyStudying}
-              className={isCurrentlyStudying ? "bg-gray-100 cursor-not-allowed" : ""}
+              className={isCurrentlyStudying ? "cursor-not-allowed bg-[#F4F4EB]" : ""}
             />
             <FieldError message={errors?.graduationYear} />
             
-            <div className="flex items-center space-x-2 mt-2">
+            <div className="mt-1 flex items-center gap-2">
               <Checkbox
                 id="currentlyStudying"
                 checked={isCurrentlyStudying}
@@ -1387,15 +1405,15 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               />
               <label
                 htmlFor="currentlyStudying"
-                className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C] peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
               >
                 I am currently studying
               </label>
             </div>
             
             {isCurrentlyStudying && (
-              <div className="mt-2">
-                <Label htmlFor="currentYearLevel">What year are you in?</Label>
+              <div className="mt-1 grid gap-2">
+                <Label htmlFor="currentYearLevel" className={labelClass}>What year are you in?</Label>
                 <Select
                   value={currentYearLevel}
                   onValueChange={handleYearLevelChange}
@@ -1415,7 +1433,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             )}
           </div>
 
-          {/* <div className="grid gap-2">
+          {/* <div className={fieldClass}>
             <Label htmlFor="tags">Tags (one per line)</Label>
             <Textarea
               id="tags"
@@ -1431,13 +1449,13 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
           </div> */}
         </div>
 
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-[10px] sm:space-x-0">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSaving}>
             Cancel
           </Button>
           <Button onClick={handleSave} disabled={isSaving}>
-            {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-            Save Changes
+            {isSaving && <Loader2 className="mr-1.5 size-4 animate-spin" strokeWidth={1.5} />}
+            Save changes
           </Button>
         </DialogFooter>
       </DialogContent>

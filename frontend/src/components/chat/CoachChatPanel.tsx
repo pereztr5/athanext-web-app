@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Send, X } from "lucide-react";
+import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { Loader2, Send, X } from "lucide-react";
 
 import type { Coach } from "@/types/coachProfile";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -25,6 +25,33 @@ const formatTime = (iso: string) => {
   return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
 };
 
+const getDayKey = (iso: string) => {
+  const date = new Date(iso);
+  return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
+};
+
+const formatDayLabel = (iso: string) => {
+  const date = new Date(iso);
+  const today = new Date();
+  const yesterday = new Date(today);
+  yesterday.setDate(today.getDate() - 1);
+  if (getDayKey(iso) === getDayKey(today.toISOString())) return "Today";
+  if (getDayKey(iso) === getDayKey(yesterday.toISOString())) return "Yesterday";
+  return date.toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    ...(date.getFullYear() !== today.getFullYear() ? { year: "numeric" } : {}),
+  });
+};
+
+const toSentenceCase = (value: string) => {
+  const trimmed = value.trim();
+  return trimmed ? trimmed.charAt(0).toUpperCase() + trimmed.slice(1).toLowerCase() : trimmed;
+};
+
+// Composer grows with its content up to ~4 lines (4 x 18px line height + 20px padding).
+const COMPOSER_MAX_HEIGHT = 92;
+
 const sortMessages = (items: MessageWithSender[]) =>
   [...items].sort((a, b) => Date.parse(a.created_at) - Date.parse(b.created_at));
 
@@ -34,6 +61,8 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
 
   const coachFirstName = useMemo(() => coach.name.split(" ")[0] || coach.name, [coach.name]);
   const coachInitials = useMemo(() => getInitials(coach.name), [coach.name]);
+  const coachPhotoUrl = coach.profile_image_url || coach.image_url || null;
+  const coachSubline = coach.sport?.trim() ? `${toSentenceCase(coach.sport)} coach` : null;
   const userInitials = useMemo(
     () => getInitials(userProfile?.name || (user?.user_metadata as any)?.name || "You"),
     [userProfile?.name, user?.user_metadata]
@@ -43,6 +72,7 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
   const [messages, setMessages] = useState<MessageWithSender[]>([]);
   const [input, setInput] = useState("");
   const listRef = useRef<HTMLDivElement | null>(null);
+  const inputRef = useRef<HTMLTextAreaElement | null>(null);
   const [isVisible, setIsVisible] = useState(false);
   const [isClosing, setIsClosing] = useState(false);
   const [isSending, setIsSending] = useState(false);
@@ -63,6 +93,14 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
     const id = requestAnimationFrame(() => setIsVisible(true));
     return () => cancelAnimationFrame(id);
   }, []);
+
+  useLayoutEffect(() => {
+    const el = inputRef.current;
+    if (!el) return;
+    el.style.height = "auto";
+    el.style.height = `${Math.min(el.scrollHeight, COMPOSER_MAX_HEIGHT)}px`;
+    el.style.overflowY = el.scrollHeight > COMPOSER_MAX_HEIGHT ? "auto" : "hidden";
+  }, [input]);
 
   useEffect(() => {
     listRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -301,84 +339,112 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
   return (
     <div
       className={cn(
-        "fixed bottom-6 right-6 z-[100] w-[420px] max-w-[92dvw] h-[700px] sm:h-[70dvh] bg-white rounded-3xl shadow-2xl border border-slate-200 flex flex-col overflow-hidden transition-all duration-300 ease-out max-[430px]:left-0 max-[430px]:right-0 max-[430px]:top-[var(--vv-top,0px)] max-[430px]:w-screen max-[430px]:max-w-none max-[430px]:rounded-none max-[430px]:h-[var(--vvh,100svh)] max-[430px]:pt-[env(safe-area-inset-top)] max-[430px]:pb-[env(safe-area-inset-bottom)]",
+        "fixed bottom-6 right-6 z-[100] w-[380px] max-w-[92dvw] h-[700px] sm:h-[70dvh] bg-[#F7F7F0] text-[#1A202C] rounded-[10px] shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-[#EAEADF] flex flex-col overflow-hidden transition-all duration-300 ease-out max-[430px]:left-0 max-[430px]:right-0 max-[430px]:top-[var(--vv-top,0px)] max-[430px]:w-screen max-[430px]:max-w-none max-[430px]:rounded-none max-[430px]:h-[var(--vvh,100svh)] max-[430px]:pt-[env(safe-area-inset-top)] max-[430px]:pb-[env(safe-area-inset-bottom)]",
         isVisible && !isClosing ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       )}
       aria-label={`Chat with ${coach.name}${activeConversationId ? `, conversation ${activeConversationId}` : ""}`}
     >
-      <div className="bg-[#0d7ff2] text-white px-5 py-4 flex items-start justify-between gap-3">
-        <div className="space-y-1">
-          <p className="text-xl font-semibold leading-tight">Hello {coachFirstName}</p>
-          <p className="text-xs text-white/80">Reach out directly to your coach.</p>
+      <div className="flex items-center gap-2.5 border-b border-[#EAEADF] px-5 py-4">
+        <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[12px] font-medium text-[#0054B4]">
+          {coachPhotoUrl ? (
+            <img src={coachPhotoUrl} alt="" className="size-full object-cover" />
+          ) : (
+            coachInitials
+          )}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <p className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{coach.name}</p>
+          {coachSubline ? (
+            <p className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{coachSubline}</p>
+          ) : null}
         </div>
         <button
           type="button"
           onClick={handleClose}
-          className="p-1.5 rounded-full hover:bg-white/15 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-white/70"
+          className="-mr-1.5 inline-flex size-7 shrink-0 items-center justify-center rounded-[8px] text-[#767980] transition-colors hover:bg-[#F1F1E6] hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40"
           aria-label="Close chat"
         >
-          <X className="h-4 w-4" />
+          <X className="size-4" strokeWidth={1.5} />
         </button>
       </div>
 
-      <div className="px-5 py-3 border-b border-slate-200 text-sm font-semibold text-[#0d7ff2]">AthaNext</div>
-
-      <div className="flex-1 overflow-y-auto bg-slate-50 px-4 py-3 space-y-4">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-[#F1F1E6] p-4">
         {loadingMessages ? (
-          <p className="text-sm text-slate-500">Loading messages...</p>
+          <div className="m-auto flex items-center gap-2 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]" role="status">
+            <Loader2 className="size-4 animate-spin" strokeWidth={1.5} aria-hidden="true" />
+            Loading messages
+          </div>
         ) : messagesError ? (
-          <p className="text-sm text-red-600">{messagesError}</p>
+          <p className="m-auto max-w-[260px] text-center text-[14px] leading-[18px] tracking-[-0.03em] text-destructive" role="alert">
+            {messagesError}
+          </p>
         ) : messages.length === 0 ? (
-          <p className="text-sm text-slate-500">No messages yet. Say hello to start the conversation.</p>
+          <div className="m-auto flex max-w-[260px] flex-col gap-1 text-center">
+            <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">No messages yet</p>
+            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+              Say hello to {coachFirstName} to start the conversation.
+            </p>
+          </div>
         ) : (
-          messages.map((message) => {
+          messages.map((message, index) => {
             const isUser = message.sender_id === user?.id;
+            const dayKey = getDayKey(message.created_at);
+            const showDay = index === 0 || getDayKey(messages[index - 1].created_at) !== dayKey;
             return (
-              <MessageBubble
-                key={message.id}
-                text={message.body}
-                time={formatTime(message.created_at)}
-                isUser={isUser}
-                initials={isUser ? userInitials : coachInitials}
-                status={isUser ? message.status || undefined : undefined}
-              />
+              <Fragment key={message.id}>
+                {showDay ? (
+                  <span className="self-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+                    {formatDayLabel(message.created_at)}
+                  </span>
+                ) : null}
+                <MessageBubble
+                  text={message.body}
+                  time={formatTime(message.created_at)}
+                  isUser={isUser}
+                  initials={isUser ? userInitials : coachInitials}
+                  status={isUser && message.status ? toSentenceCase(message.status) : undefined}
+                />
+              </Fragment>
             );
           })
         )}
         <div ref={listRef} />
       </div>
 
-      <form onSubmit={handleSend} className="border-t border-slate-200 bg-white px-4 py-3 space-y-3">
+      <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-[#EAEADF] px-4 py-3">
         <label className="sr-only" htmlFor="coach-chat-input">
           Send a message to {coach.name}
         </label>
-        <div className="rounded-xl border border-slate-200 bg-white">
-          <textarea
-            id="coach-chat-input"
-            rows={2}
-            value={input}
-            onChange={(event) => setInput(event.target.value)}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter' && !event.shiftKey) {
-                event.preventDefault();
-                if (input.trim() && !isSending && !loadingMessages) {
-                  handleSend(event as any);
-                }
+        <textarea
+          ref={inputRef}
+          id="coach-chat-input"
+          rows={1}
+          value={input}
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if (event.key === 'Enter' && !event.shiftKey) {
+              event.preventDefault();
+              if (input.trim() && !isSending && !loadingMessages) {
+                handleSend(event as any);
               }
-            }}
-            placeholder={`Ask Coach ${coachFirstName} anything...`}
-            className="w-full resize-none border-0 bg-transparent px-3 py-2 text-sm text-slate-800 placeholder:text-slate-400 focus-visible:outline-none focus-visible:ring-0"
-            maxLength={1000}
-            disabled={isSending || loadingMessages}
-          />
-        </div>
+            }
+          }}
+          placeholder={`Message ${coachFirstName}`}
+          className="block h-[38px] max-h-[92px] min-w-0 flex-1 resize-none rounded-[8px] border-0 bg-[#F1F1E6] px-3 py-[10px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40 disabled:opacity-60"
+          maxLength={1000}
+          disabled={isSending || loadingMessages}
+        />
         <button
           type="submit"
-          className="w-full inline-flex items-center justify-center gap-2 rounded-full bg-[#0d7ff2] text-white px-4 py-3 text-sm font-semibold shadow-sm hover:bg-[#0b6ed6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-offset-2 focus-visible:ring-[#0d7ff2] disabled:opacity-70"
+          aria-label={isSending ? "Sending message" : "Send message"}
+          className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] transition-colors hover:bg-[#004390] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-50"
           disabled={!input.trim() || isSending || loadingMessages}
         >
-          <Send className="h-4 w-4" />
-          {isSending ? "Sending..." : "Send"}
+          {isSending ? (
+            <Loader2 className="size-4 animate-spin" strokeWidth={1.5} aria-hidden="true" />
+          ) : (
+            <Send className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          )}
         </button>
       </form>
     </div>

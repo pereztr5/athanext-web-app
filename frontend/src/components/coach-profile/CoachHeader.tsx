@@ -1,34 +1,28 @@
-
 import {
     EditableField,
     EditableFieldGroup,
-    EditableNumberField,
 } from "./editable";
 import { Carousel } from "./Carousel";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import starIcon from "@/assets/images/star.png";
-import { Card, CardContent } from "@/components/ui/card";
 import { GenderPill } from "@/components/form/GenderPill";
 import { MultiSelect } from "@/components/ui/multi-select";
-import rowerIcon from "@/assets/images/colored-rowing.png";
 import { GenderSelect } from "@/components/form/GenderSelect";
 import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
-import footballIcon from "@/assets/images/colored-soccer.png";
-import { CoachVerificationBadge } from "@/components/coach/CoachVerificationBadge";
+import { CoachProfileChip } from "./CoachProfileCard";
+import { BrandPill, BrandStar } from "@/components/brand";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatLocationDisplay, type LocationInfo } from "@/utils/geolocation";
-import { MapPin, Clock, Instagram, ExternalLink, Camera, Plus, Trash2, X, Save, Edit, Loader2 } from "lucide-react";
-import type { Coach, SportTheme, CoachHeaderProps } from "@/types/coachProfile";
+import { BadgeCheck, MapPin, Instagram, Camera, Plus, Trash2, X, Loader2 } from "lucide-react";
+import type { CoachHeaderProps } from "@/types/coachProfile";
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import { createPortal } from "react-dom";
 import Cropper, { type Area } from "react-easy-crop";
 import { Label } from "@/components/ui/label";
 import { ZipCodeInput } from "@/components/form/ZipCodeInput";
-import { COACH_PROFILE_THEMES, colors, COVER_BG_COLORS } from "@/config/colors";
+import { COVER_BG_COLORS } from "@/config/colors";
 import { createCroppedPreview, fileToDataUrl, getCroppedFile } from "@/utils/imageUtils";
 import { detectCoachSport, normalizeCoachSport } from "@/utils/coachSport";
-import { publicCoachRatingLabel } from "@/utils/publicRating";
+import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { getInitials } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
 
@@ -62,6 +56,14 @@ function useObjectUrl() {
     return { create, revoke };
 }
 
+/* Shared brand-kit classes for the header, its edit form and image dialogs */
+const fieldLabelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+const requiredMarkClass = "ml-1 text-destructive";
+const modalSurfaceClass =
+    "w-full rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] font-sans tracking-[-0.03em] text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)]";
+const modalTitleClass = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
+const rangeClass = "h-[5px] w-full cursor-pointer accent-[#0054B4]";
+
 /* Avatar area:  uses a real <button> when interactive to satisfy ARIA/axe rules */
 function AvatarArea({
     name,
@@ -69,7 +71,6 @@ function AvatarArea({
     isEditMode,
     onClick,
     previewUrl,
-    sportIcon,
     isLoading,
 }: {
     name: string;
@@ -77,52 +78,40 @@ function AvatarArea({
     isEditMode?: boolean;
     onClick?: () => void;
     previewUrl?: string | null;
-    sportIcon?: string;
     isLoading?: boolean;
 }) {
     const initials = useMemo(() => getInitials(name), [name]);
     const isInteractive = Boolean(onClick);
 
-    const commonClasses = "w-28 h-28 relative flex items-center justify-center";
+    const commonClasses =
+        "relative flex size-28 items-center justify-center overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] p-0";
+
+    const editOverlay = isEditMode ? (
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#1A202C]/50 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <Camera className="size-5 text-[#F1F1E6]" strokeWidth={1.5} aria-hidden="true" />
+            <span className="text-[12px] font-medium leading-[13px] text-[#F1F1E6]">Change photo</span>
+        </div>
+    ) : null;
 
     const avatarContent = (
         <>
             {previewUrl || imageUrl ? (
-                <>
-                    <img
-                        loading="eager"
-                        alt={`${name}'s avatar`}
-                        src={previewUrl || imageUrl || undefined}
-                        className="w-28 h-28 rounded-full aspect-square border-2 border-[#D6D9E2] object-cover"
-                        {...({ fetchPriority: "high" } as any)}
-                    />
-                    {isLoading && (
-                        <div className="absolute inset-0 bg-white/70 rounded-full flex items-center justify-center">
-                            <Loader2 className="h-6 w-6 animate-spin text-slate-500" />
-                        </div>
-                    )}
-                    {isEditMode && (
-                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <Camera className="h-8 w-8 text-white" />
-                        </div>
-                    )}
-                </>
+                <img
+                    loading="eager"
+                    alt={`${name}'s avatar`}
+                    src={previewUrl || imageUrl || undefined}
+                    className="size-full object-cover"
+                    {...({ fetchPriority: "high" } as any)}
+                />
             ) : (
-                <div className="relative w-28 h-28 bg-gradient-to-br from-primary/20 to-primary/10 rounded-full flex items-center justify-center p-1 border-4 border-white dark:border-slate-800">
-                    <div className="w-full h-full bg-primary/30 rounded-full flex items-center justify-center">
-                        <span className="text-primary font-bold text-xl md:text-4xl">{initials}</span>
-                    </div>
-                    {isEditMode && (
-                        <div className="absolute inset-0 bg-black/50 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                            <Camera className="h-8 w-8 text-white" />
-                        </div>
-                    )}
+                <span className="text-[20px] font-medium text-[#484D56]">{initials}</span>
+            )}
+            {isLoading && (
+                <div className="absolute inset-0 flex items-center justify-center bg-[#F7F7F0]/70">
+                    <Loader2 className="size-5 animate-spin text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
                 </div>
             )}
-
-            <div className="absolute -bottom-5 left-1/2 transform -translate-x-1/2 rounded-full p-1 bg-white">
-                <img src={sportIcon} alt="sport" className="w-8 h-8" />
-            </div>
+            {editOverlay}
         </>
     );
 
@@ -132,13 +121,13 @@ function AvatarArea({
                 <button
                     type="button"
                     onClick={onClick}
-                    aria-label={`${name} avatar`}
-                    className={`${commonClasses} cursor-pointer group rounded-full p-0 border-none bg-transparent`}
+                    aria-label={isEditMode ? `Change ${name}'s photo` : `View ${name}'s photo`}
+                    className={`${commonClasses} group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] focus-visible:ring-offset-2`}
                 >
                     {avatarContent}
                 </button>
             ) : (
-                <div className={`${commonClasses} rounded-full p-0`} aria-label={`${name} avatar`}>
+                <div className={commonClasses} aria-label={`${name} avatar`}>
                     {avatarContent}
                 </div>
             )}
@@ -197,58 +186,54 @@ function CoverCarouselManager({
     }, [onCoverImagesSelect, coverImagesInputRef]);
 
     return (
-        <div className="relative">
-            <Carousel
-                photos={coverPreviews}
-                altTextPrefix={coachName}
-                enablePreview={!isEditMode}
-                aspect="cover3x1"
-                containUntilLg
-            />
+        <div className="flex flex-col gap-[10px]">
+            <div className="relative">
+                <Carousel
+                    photos={coverPreviews}
+                    altTextPrefix={coachName}
+                    enablePreview={!isEditMode}
+                    aspect="cover3x1"
+                    containUntilLg
+                />
 
-            {isEditMode && (
-                <div className="absolute top-4 right-4 flex gap-2 z-10">
-                    <input
-                        ref={coverImagesInputRef}
-                        type="file"
-                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                        multiple
-                        onChange={handleCoverImagesChange}
-                        className="hidden"
-                        aria-label="Upload cover images"
-                    />
+                {isEditMode && (
+                    <div className="absolute right-3 top-3 z-10 flex gap-2">
+                        <input
+                            ref={coverImagesInputRef}
+                            type="file"
+                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                            multiple
+                            onChange={handleCoverImagesChange}
+                            className="hidden"
+                            aria-label="Upload cover images"
+                        />
 
-                    <Button
-                        type="button"
-                        size="sm"
-                        onClick={handleCoverImagesClick}
-                        className="bg-black/50 hover:bg-black/70 text-white backdrop-blur-sm"
-                    >
-                        <Plus className="h-4 w-4 mr-1" />
-                        Add Cover Images
-                    </Button>
-                </div>
-            )}
+                        <Button type="button" variant="outline" size="sm" onClick={handleCoverImagesClick}>
+                            <Plus strokeWidth={1.5} aria-hidden="true" />
+                            Add cover photos
+                        </Button>
+                    </div>
+                )}
+            </div>
 
             {isEditMode && coverPreviews.length > 0 && (
-                <div className="absolute bottom-4 left-4 right-4 flex gap-2 overflow-x-auto z-10 pb-2">
+                <div className="flex gap-[10px] overflow-x-auto pb-1">
                     {coverPreviews.map((preview, index) => (
-                        <div key={index} className="relative group flex-shrink-0">
+                        <div key={index} className="relative flex-shrink-0">
                             <img
                                 src={preview}
                                 alt={`Cover ${index + 1}`}
-                                className="w-20 h-20 object-cover rounded-lg border-2 border-white"
+                                className="h-16 w-24 rounded-[8px] border border-[#EAEADF] object-cover"
                             />
 
-                            <Button
-                                size="sm"
-                                variant="ghost"
+                            <button
+                                type="button"
                                 onClick={() => onCoverImageRemove?.(index)}
-                                className="absolute top-0 right-0"
+                                className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-[6px] border border-[#EAEADF] bg-[#F7F7F0] text-destructive transition-colors hover:bg-[#EAEADF]"
                                 aria-label={`Remove cover image ${index + 1}`}
                             >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
+                                <Trash2 className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                            </button>
                         </div>
                     ))}
                 </div>
@@ -278,36 +263,26 @@ function ProfileActions({
     if (!isCoachProfile) return null;
 
     return (
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-[10px]">
             {isEditMode ? (
                 <>
-                    <Button onClick={onCancelEdit} variant="outline" size="sm" className="gap-2" disabled={isSaving}>
-                        <X className="h-4 w-4" />
+                    <Button onClick={onCancelEdit} variant="outline" disabled={isSaving}>
                         Cancel
                     </Button>
-                    <Button
-                        onClick={onSaveEdit}
-                        size="sm"
-                        className="gap-2 bg-green-600 hover:bg-green-700"
-                        disabled={isSaving || disableSave}
-                    >
+                    <Button onClick={onSaveEdit} disabled={isSaving || disableSave}>
                         {isSaving ? (
                             <>
-                                <Loader2 className="h-4 w-4 animate-spin" />
+                                <Loader2 className="animate-spin" strokeWidth={1.5} aria-hidden="true" />
                                 Saving...
                             </>
                         ) : (
-                            <>
-                                <Save className="h-4 w-4" />
-                                Save Changes
-                            </>
+                            "Save changes"
                         )}
                     </Button>
                 </>
             ) : (
-                <Button onClick={onEdit} variant="default" size="sm" className="gap-2">
-                    <Edit className="h-4 w-4" />
-                    Edit Profile
+                <Button onClick={onEdit} variant="outline">
+                    Edit profile
                 </Button>
             )}
         </div>
@@ -606,7 +581,7 @@ export function CoachHeader({
         };
     }, [previewUrl, revokeObjectUrl]);
 
-    const displayedPosition = coach.coach_position ?? coach.position ?? coach.specialties?.[0] ?? "Professional Coach";
+    const displayedPosition = coach.coach_position ?? coach.position ?? coach.specialties?.[0] ?? "Coach";
     const resolvedSport = useMemo(
         () => detectCoachSport(coach as any, sport),
         [coach, sport]
@@ -678,11 +653,6 @@ export function CoachHeader({
         // Pass the actual URL to parent for proper tracking
         onCoverImageRemove?.(urlToRemove);
     }, [coverPreviews, revokeObjectUrl, onCoverImageRemove]);
-
-    const sportIcon = useMemo(
-        () => (resolvedSport === "rowing" ? rowerIcon : footballIcon),
-        [resolvedSport]
-    );
 
     // Memoize location display to prevent unnecessary re-renders
     const locationDisplay = useMemo(() => {
@@ -868,48 +838,58 @@ export function CoachHeader({
     const profileCropperOverlay =
         portalTarget && showProfileCropper && cropProfileFile
             ? createPortal(
-                <div className="fixed inset-0 z-[2000] bg-black/60 flex items-center justify-center px-4 pointer-events-auto">
-                    <div className="bg-white rounded-md shadow-xl w-full max-w-3xl p-4 space-y-4">
-                        <h3 className="text-lg font-semibold">Crop Profile Photo</h3>
-                        <div
-                            ref={profileCropContainerRef}
-                            className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-md overflow-hidden bg-slate-100"
-                        >
-                            {profileObjectUrl && profileCropSize && (
-                                <Cropper
-                                    image={profileObjectUrl}
-                                    crop={profileCropPosition}
-                                    zoom={profileZoom}
-                                    aspect={1}
-                                    cropShape="round"
-                                    cropSize={profileCropSize}
-                                    minZoom={profileMinZoom}
-                                    maxZoom={3}
-                                    onCropChange={setProfileCropPosition}
-                                    onCropComplete={handleProfileCropComplete}
-                                    onZoomChange={setProfileZoom}
-                                    onMediaLoaded={handleProfileMediaLoaded}
-                                    restrictPosition={true}
-                                    objectFit="contain"
+                <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 px-4">
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="crop-profile-title"
+                        className={`${modalSurfaceClass} max-w-3xl`}
+                    >
+                        <h3 id="crop-profile-title" className={`${modalTitleClass} px-[25px] py-5`}>Crop profile photo</h3>
+                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="flex flex-col gap-5 px-[25px] py-5">
+                            <div
+                                ref={profileCropContainerRef}
+                                className="relative h-[200px] w-full overflow-hidden rounded-[8px] bg-[#F1F1E6] sm:h-[250px] lg:h-[300px]"
+                            >
+                                {profileObjectUrl && profileCropSize && (
+                                    <Cropper
+                                        image={profileObjectUrl}
+                                        crop={profileCropPosition}
+                                        zoom={profileZoom}
+                                        aspect={1}
+                                        cropShape="rect"
+                                        cropSize={profileCropSize}
+                                        minZoom={profileMinZoom}
+                                        maxZoom={3}
+                                        onCropChange={setProfileCropPosition}
+                                        onCropComplete={handleProfileCropComplete}
+                                        onZoomChange={setProfileZoom}
+                                        onMediaLoaded={handleProfileMediaLoaded}
+                                        restrictPosition={true}
+                                        objectFit="contain"
+                                    />
+                                )}
+                            </div>
+                            <div className="flex items-center gap-4">
+                                <Label htmlFor="crop-profile-zoom" className="text-[14px] font-medium text-[#484D56]">Zoom</Label>
+                                <input
+                                    id="crop-profile-zoom"
+                                    type="range"
+                                    min={profileMinZoom}
+                                    max={3}
+                                    step={0.1}
+                                    value={profileZoom}
+                                    onChange={(e) => setProfileZoom(Number(e.target.value))}
+                                    className={rangeClass}
                                 />
-                            )}
+                            </div>
                         </div>
-                        <div className="flex items-center gap-4">
-                            <Label className="text-sm">Zoom</Label>
-                            <input
-                                type="range"
-                                min={profileMinZoom}
-                                max={3}
-                                step={0.1}
-                                value={profileZoom}
-                                onChange={(e) => setProfileZoom(Number(e.target.value))}
-                                className="w-full"
-                            />
-                        </div>
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={handleUseFullProfileImage}>Use Full Image</Button>
+                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
+                            <Button variant="outline" onClick={handleUseFullProfileImage}>Use full image</Button>
                             <Button variant="outline" onClick={handleProfileCropCancel}>Cancel</Button>
-                            <Button onClick={handleProfileCropSave}>Save Crop</Button>
+                            <Button onClick={handleProfileCropSave}>Save crop</Button>
                         </div>
                     </div>
                 </div>,
@@ -920,100 +900,122 @@ export function CoachHeader({
     const coverCropperOverlay =
         portalTarget && showCoverCropper && cropCoverFile
             ? createPortal(
-                <div className="fixed inset-0 z-[2000] bg-black/60 flex items-center justify-center px-4 pointer-events-auto">
-                    <div className="bg-white rounded-md shadow-xl w-full max-w-5xl p-4 space-y-4">
-                        <h3 className="text-lg font-semibold">Crop Cover Image</h3>
-                        <div className="flex flex-col lg:flex-row gap-4">
-                            <div
-                                ref={coverCropperRef}
-                                className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-md overflow-hidden"
-                                style={{ backgroundColor: coverBgColor }}
-                            >
-                                {coverObjectUrl && coverCropSize && (
-                                    <Cropper
-                                        image={coverObjectUrl}
-                                        crop={coverCropPosition}
-                                        zoom={coverZoom}
-                                        aspect={3 / 1}
-                                        cropSize={coverCropSize}
-                                        minZoom={coverMinZoom}
-                                        maxZoom={3}
-                                        onMediaLoaded={handleCoverMediaLoaded}
-                                        onCropChange={setCoverCropPosition}
-                                        onZoomChange={setCoverZoom}
-                                        onCropComplete={handleCoverCropComplete}
-                                        objectFit="contain"
-                                        restrictPosition={false}
-                                    />
-                                )}
-                            </div>
-                            <div className="w-full lg:w-56 shrink-0 space-y-2">
-                                <p className="text-sm text-muted-foreground">Preview</p>
+                <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 px-4">
+                    <div
+                        role="dialog"
+                        aria-modal="true"
+                        aria-labelledby="crop-cover-title"
+                        className={`${modalSurfaceClass} max-h-[90vh] max-w-5xl overflow-y-auto`}
+                    >
+                        <div className="flex flex-wrap items-center justify-between gap-2 px-[25px] py-5">
+                            <h3 id="crop-cover-title" className={modalTitleClass}>Crop cover photo</h3>
+                            {pendingCoverFiles.length > 0 && (
+                                <span className="text-[14px] leading-[18px] text-[#767980]">
+                                    {pendingCoverFiles.length} {pendingCoverFiles.length === 1 ? "photo" : "photos"} left
+                                </span>
+                            )}
+                        </div>
+                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="flex flex-col gap-5 px-[25px] py-5">
+                            <div className="flex flex-col gap-4 lg:flex-row">
                                 <div
-                                    className="w-full aspect-[3/1] rounded-md overflow-hidden border"
+                                    ref={coverCropperRef}
+                                    className="relative h-[200px] w-full overflow-hidden rounded-[8px] sm:h-[250px] lg:h-[300px]"
                                     style={{ backgroundColor: coverBgColor }}
                                 >
-                                    {coverPreviewUrl ? (
-                                        <img src={coverPreviewUrl} alt="Cover preview" className="h-full w-full object-cover" />
-                                    ) : (
-                                        <div className="h-full w-full" />
+                                    {coverObjectUrl && coverCropSize && (
+                                        <Cropper
+                                            image={coverObjectUrl}
+                                            crop={coverCropPosition}
+                                            zoom={coverZoom}
+                                            aspect={3 / 1}
+                                            cropSize={coverCropSize}
+                                            minZoom={coverMinZoom}
+                                            maxZoom={3}
+                                            onMediaLoaded={handleCoverMediaLoaded}
+                                            onCropChange={setCoverCropPosition}
+                                            onZoomChange={setCoverZoom}
+                                            onCropComplete={handleCoverCropComplete}
+                                            objectFit="contain"
+                                            restrictPosition={false}
+                                        />
                                     )}
                                 </div>
-                            </div>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            <div className="flex flex-wrap items-center gap-2">
-                                <span className="text-sm text-muted-foreground">Background</span>
-                                <div className="flex flex-wrap items-center gap-2">
-                                    {COVER_BG_COLORS.map((color) => (
-                                        <button
-                                            key={color}
-                                            type="button"
-                                            onClick={() => setCoverBgColor(color)}
-                                            className={`h-6 w-6 rounded-full border transition-transform ${coverBgColor === color ? "ring-2 ring-slate-400 scale-110" : "hover:scale-105"}`}
-                                            style={{ backgroundColor: color }}
-                                            aria-label={`Select ${color} background`}
-                                        />
-                                    ))}
+                                <div className="flex w-full shrink-0 flex-col gap-2 lg:w-56">
+                                    <p className="text-[12px] font-medium leading-[13px] text-[#767980]">Preview</p>
+                                    <div
+                                        className="aspect-[3/1] w-full overflow-hidden rounded-[8px] border border-[#EAEADF]"
+                                        style={{ backgroundColor: coverBgColor }}
+                                    >
+                                        {coverPreviewUrl ? (
+                                            <img src={coverPreviewUrl} alt="Cover preview" className="h-full w-full object-cover" />
+                                        ) : (
+                                            <div className="h-full w-full" />
+                                        )}
+                                    </div>
                                 </div>
                             </div>
-                            <div className="flex items-center gap-4">
-                                <Label className="text-sm">Zoom</Label>
-                                <input
-                                    type="range"
-                                    min={coverMinZoom}
-                                    max={3}
-                                    step={0.01}
-                                    value={coverZoom}
-                                    onChange={(e) => setCoverZoom(Number(e.target.value))}
-                                    className="w-full"
-                                />
+                            <div className="flex flex-col gap-4">
+                                <div className="flex flex-wrap items-center gap-3">
+                                    <span className="text-[14px] font-medium text-[#484D56]">Background</span>
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        {COVER_BG_COLORS.map((color) => (
+                                            <button
+                                                key={color}
+                                                type="button"
+                                                onClick={() => setCoverBgColor(color)}
+                                                aria-pressed={coverBgColor === color}
+                                                className={`size-6 rounded-[6px] border border-[#EAEADF] transition-shadow ${coverBgColor === color ? "ring-2 ring-[#6698D2] ring-offset-2 ring-offset-[#F7F7F0]" : "hover:ring-1 hover:ring-[#C1C1B8]"}`}
+                                                style={{ backgroundColor: color }}
+                                                aria-label={`Select ${color} background`}
+                                            />
+                                        ))}
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                    <Label htmlFor="crop-cover-zoom" className="text-[14px] font-medium text-[#484D56]">Zoom</Label>
+                                    <input
+                                        id="crop-cover-zoom"
+                                        type="range"
+                                        min={coverMinZoom}
+                                        max={3}
+                                        step={0.01}
+                                        value={coverZoom}
+                                        onChange={(e) => setCoverZoom(Number(e.target.value))}
+                                        className={rangeClass}
+                                    />
+                                </div>
                             </div>
                         </div>
-                        <div className="flex justify-end gap-2">
-                            <Button variant="outline" onClick={handleUseFullCoverImage}>Use Full Image</Button>
+                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
+                            <Button variant="outline" onClick={handleUseFullCoverImage}>Use full image</Button>
                             <Button variant="outline" onClick={handleCoverCropSkip}>Skip</Button>
-                            <Button onClick={handleCoverCropSave}>Save Crop</Button>
+                            <Button onClick={handleCoverCropSave}>Save crop</Button>
                         </div>
-                        {pendingCoverFiles.length > 0 && (
-                            <p className="text-xs text-muted-foreground">Pending images: {pendingCoverFiles.length}</p>
-                        )}
                     </div>
                 </div>,
                 portalTarget
             )
             : null;
 
+    const instagramHandle = editedCoach?.instagram_handle ?? coach.instagram_handle;
+    const specialties = coach.specialties ?? [];
+    const sportLabel = resolvedSport === "rowing" ? "Rowing" : resolvedSport === "soccer" ? "Soccer" : null;
+    const showRating = isPublicCoachRatingVisible(coach.total_reviews, coach.rating);
+    const ratingLabel = showRating
+        ? `${publicCoachRatingLabel(coach.rating, coach.total_reviews)} (${coach.total_reviews})`
+        : publicCoachRatingLabel(coach.rating, coach.total_reviews);
+    const metaLabel = "text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]";
+
     return (
         <>
-        <Card
-            className={`w-full bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm overflow-hidden px-4 ! py-6 rounded-none border-t-0 rounded-b-md ${className}`}
+        <div
+            className={`flex w-full min-w-0 flex-col gap-6 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] font-sans tracking-[-0.03em] text-[#1A202C] ${className}`}
         >
             {/* Profile Strength Meter */}
             {showStrengthMeter && (
-                <div className="mb-4">
-                    <ProfileStrengthMeter coach={coach} />
-                </div>
+                <ProfileStrengthMeter coach={coach} onEdit={isEditMode ? undefined : onEdit} />
             )}
 
             <CoverCarouselManager
@@ -1066,124 +1068,62 @@ export function CoachHeader({
                 onCoverImageRemove={handleRemoveCoverImage}
             />
 
-            <CardContent className="p-4 md:p-6 !px-0">
-                <div className="flex flex-col md:flex-row items-start gap-4 md:gap-6">
-                    <div className="relative flex-shrink-0">
-                        <input
-                            ref={fileInputRef}
-                            type="file"
-                            accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
-                            onChange={(e) => {
-                                const file = e.target.files?.[0];
-                                if (!file) return;
-                                if (!file.type.startsWith("image/")) {
-                                    toast({
-                                        title: "Invalid file type",
-                                        description: "Please select a valid image file.",
-                                        variant: "destructive",
-                                    });
-                                    return;
-                                }
-                                if (file.size > MAX_PROFILE_IMAGE_SIZE) {
-                                    toast({
-                                        title: "Image too large",
-                                        description: "Profile images must be under 8MB.",
-                                        variant: "destructive",
-                                    });
-                                    return;
-                                }
-                                // Trigger cropper
-                                setCropProfileFile(file);
-                                setShowProfileCropper(true);
-                                if (fileInputRef.current) fileInputRef.current.value = "";
-                            }}
-                            className="hidden"
-                            disabled={!isEditMode}
-                            aria-label="Upload profile image"
-                        />
+            <div className="flex flex-col items-start gap-5 md:flex-row md:gap-6">
+                <div className="relative flex-shrink-0">
+                    <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="image/jpeg,image/jpg,image/png,image/gif,image/webp"
+                        onChange={(e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+                            if (!file.type.startsWith("image/")) {
+                                toast({
+                                    title: "Invalid file type",
+                                    description: "Please select a valid image file.",
+                                    variant: "destructive",
+                                });
+                                return;
+                            }
+                            if (file.size > MAX_PROFILE_IMAGE_SIZE) {
+                                toast({
+                                    title: "Image too large",
+                                    description: "Profile images must be under 8MB.",
+                                    variant: "destructive",
+                                });
+                                return;
+                            }
+                            // Trigger cropper
+                            setCropProfileFile(file);
+                            setShowProfileCropper(true);
+                            if (fileInputRef.current) fileInputRef.current.value = "";
+                        }}
+                        className="hidden"
+                        disabled={!isEditMode}
+                        aria-label="Upload profile image"
+                    />
 
-                        <AvatarArea
-                            name={coach.name}
-                            imageUrl={avatarDisplayUrl}
-                            isEditMode={isEditMode}
-                            onClick={!isEditMode && !avatarDisplayUrl ? undefined : handleAvatarClick}
-                            previewUrl={previewUrl}
-                            sportIcon={sportIcon}
-                            isLoading={isAvatarLoading}
-                        />
-                    </div>
+                    <AvatarArea
+                        name={coach.name}
+                        imageUrl={avatarDisplayUrl}
+                        isEditMode={isEditMode}
+                        onClick={!isEditMode && !avatarDisplayUrl ? undefined : handleAvatarClick}
+                        previewUrl={previewUrl}
+                        isLoading={isAvatarLoading}
+                    />
+                </div>
 
-                    <div className="flex-1 w-full flex flex-col gap-2">
-                        <div className={isEditMode ? "flex flex-col md:flex-row md:items-center md:justify-between gap-2" : "flex items-center justify-between gap-2"}>
-                            <div className="flex flex-wrap items-center gap-2 w-full">
-                                <div className="flex items-center gap-2 flex-1 min-w-[180px]">
-                                    <EditableField
-                                        isEditMode={isEditMode}
-                                        value={editedCoach?.name ?? coach.name}
-                                        onChange={(value) => {
-                                            // Allow typing freely, validation happens on save
-                                            onFieldChange?.("name", value);
-                                        }}
-                                        inputClassName="text-2xl md:text-3xl font-bold w-full md:max-w-md"
-                                        placeholder="Coach name"
-                                        renderDisplay={(value) => (
-                                            <h1 className="text-2xl md:text-3xl font-bold text-foreground">
-                                                {value}
-                                            </h1>
-                                        )}
-                                    />
-
-                                    {isEditMode && (
-                                        <span className="text-lg font-semibold leading-none text-destructive shrink-0" aria-label="Name is required">
-                                            *
-                                        </span>
-                                    )}
-
-                                    {coach?.is_verified && <CoachVerificationBadge className="w-6 h-5 md:w-6 md:h-6" />}
-
-                                    {!isEditMode && (editedCoach?.instagram_handle ?? coach.instagram_handle) ? (
-                                        <a
-                                            href={`https://instagram.com/${editedCoach?.instagram_handle ?? coach.instagram_handle}`}
-                                            target="_blank"
-                                            rel="noopener noreferrer"
-                                            className="inline-flex items-center justify-center w-6 h-6 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-full hover:opacity-80 transition-opacity"
-                                            aria-label={`View ${coach.name}'s Instagram profile`}
-                                        >
-                                            <Instagram className="h-3.5 w-3.5 text-white" />
-                                        </a>
-                                    ) : null}
-                                </div>
-
-                                {isEditMode && (
-                                    <div className="flex items-center gap-2 flex-1 min-w-[160px]">
-                                        <span className="text-lg font-semibold leading-none text-destructive shrink-0" aria-label="Required field">
-                                            *
-                                        </span>
-                                        <EditableField
-                                            isEditMode={isEditMode}
-                                            value={editedCoach?.instagram_handle ?? coach.instagram_handle ?? ""}
-                                            onChange={(value) => onFieldChange?.("instagram_handle", value)}
-                                            inputClassName="w-full md:max-w-xs"
-                                            placeholder="Instagram Username"
-                                            renderDisplay={(value) =>
-                                                value ? (
-                                                    <a
-                                                        href={`https://instagram.com/${value}`}
-                                                        target="_blank"
-                                                        rel="noopener noreferrer"
-                                                        className="inline-flex items-center justify-center w-6 h-6 bg-gradient-to-br from-purple-600 via-pink-600 to-orange-500 rounded-full hover:opacity-80 transition-opacity"
-                                                        aria-label={`View ${coach.name}'s Instagram profile`}
-                                                    >
-                                                        <Instagram className="h-3. 5 w-3.5 text-white" />
-                                                    </a>
-                                                ) : null
-                                            }
-                                        />
-                                    </div>
-                                )}
+                {isEditMode ? (
+                    /* ---------------- Edit form ---------------- */
+                    <div className="flex w-full min-w-0 flex-1 flex-col gap-5">
+                        <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                            <div className="flex flex-col gap-1.5">
+                                <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">Edit profile</h2>
+                                <p className={metaLabel}>
+                                    Fields marked <span className="text-destructive">*</span> are required
+                                </p>
                             </div>
-
-                            <div className={`${isEditMode ? "hidden md:flex" : "flex"} items-center`}>
+                            <div className="hidden md:flex">
                                 <ProfileActions
                                     isCoachProfile={isCoachProfile}
                                     isEditMode={isEditMode}
@@ -1196,133 +1136,83 @@ export function CoachHeader({
                             </div>
                         </div>
 
-                        {/* Bio Field */}
-                        {/* <div className="">
-                            {isEditMode ? (
-                                <div className="space-y-2">
-                                    <label className="text-sm font-medium text-foreground">Bio</label>
-                                    <textarea
-                                        value={editedCoach?.bio ?? coach.bio ?? ""}
-                                        onChange={(e) => onFieldChange?.("bio", e.target.value)}
-                                        placeholder="Write a short bio about yourself"
-                                        className="w-full min-h-[80px] px-3 py-2 text-sm border border-input rounded-md bg-background text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 resize-none"
-                                    />
-                                </div>
-                            ) : coach.bio ? (
-                                <div className="flex items-center gap-1 text-base md:text-lg text-muted-foreground">
-                                   <span> {coach.bio}</span>
-                                </div>
-                            ) : null}
-                        </div> */}
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <EditableField
+                                isEditMode={isEditMode}
+                                value={editedCoach?.name ?? coach.name}
+                                onChange={(value) => {
+                                    // Allow typing freely, validation happens on save
+                                    onFieldChange?.("name", value);
+                                }}
+                                inputClassName="w-full"
+                                placeholder="Coach name"
+                                label="Name"
+                                required
+                            />
+
+                            <EditableField
+                                isEditMode={isEditMode}
+                                value={editedCoach?.instagram_handle ?? coach.instagram_handle ?? ""}
+                                onChange={(value) => onFieldChange?.("instagram_handle", value)}
+                                inputClassName="w-full"
+                                placeholder="Instagram username"
+                                label="Instagram username"
+                                required
+                            />
+                        </div>
 
                         <EditableFieldGroup isEditMode={isEditMode}>
-                            {isEditMode ? (
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">
-                                        Development Pillars
-                                        <span className="ml-1 text-destructive">*</span>
-                                    </Label>
-                                    <MultiSelect
-                                        options={(coachPillarOptions || []).map((option) => ({
-                                            id: option.id,
-                                            title: option.title || "",
-                                        }))}
-                                        selected={(editedCoach?.specialties ?? coach.specialties ?? [])
-                                            .map(title => coachPillarOptions?.find(opt => opt.title === title)?.id)
-                                            .filter(Boolean) as string[]}
-                                        onChange={(selectedIds) => {
-                                            const titles = selectedIds
-                                                .map(id => coachPillarOptions?.find(opt => opt.id === id)?.title)
-                                                .filter(Boolean) as string[];
-                                            onFieldChange?.("specialties", titles);
-                                        }}
-                                        placeholder="Select development pillars..."
-                                        className="max-w-2xl"
-                                    />
-                                </div>
-                            ) : (
-                                <>
-                                    <div className="flex  flex-wrap gap-1.5 md:gap-2">
-                                        {(coach.specialties ?? []).map((specialty, index) => (
-                                            <Badge
-                                                key={index}
-                                                variant="outline"
-                                                className={isRowingSport ? "text-xs border" : `text-xs ${COACH_PROFILE_THEMES.default.badgeClass}`}
-                                                style={isRowingSport ? {
-                                                    backgroundColor: colors.rowingBlueTheme.badgeBackground,
-                                                    color: colors.rowingBlueTheme.badgeText,
-                                                    borderColor: colors.rowingBlueTheme.primary,
-                                                } : undefined}
-                                            >
-                                                {specialty}
-                                            </Badge>
-                                        ))}
-                                    </div>
-                                    {favoritePositions.length > 0 && (
-                                        <div className="flex flex-wrap gap-1.5 md:gap-2 mt-2">
-                                            {favoritePositions.map((position, index) => (
-                                                <Badge
-                                                    key={`${position}-${index}`}
-                                                    variant="outline"
-                                                    className={isRowingSport ? "text-xs border" : `text-xs ${COACH_PROFILE_THEMES.default.badgeClass}`}
-                                                    style={isRowingSport ? {
-                                                        backgroundColor: colors.rowingBlueTheme.badgeBackground,
-                                                        color: colors.rowingBlueTheme.badgeText,
-                                                        borderColor: colors.rowingBlueTheme.primary,
-                                                    } : undefined}
-                                                >
-                                                    {favoritePositionLabelMap.get(normalizePosition(resolvedSport || coach.sport || sport || "", position)) ?? normalizePosition(resolvedSport || coach.sport || sport || "", position)}
-                                                </Badge>
-                                            ))}
-                                        </div>
-                                    )}
-                                    
-                                    <div className="flex flex-wrap gap-1.5 md:gap-2 mt-2">
-                                        {coach.company && (
-                                            <Badge variant="outline" className="text-xs">
-                                                {coach.company}
-                                            </Badge>
-                                        )}
-                                    </div>
-                                </>
-                            )}
+                            <div className="flex flex-col gap-1.5">
+                                <Label className={fieldLabelClass}>
+                                    Development pillars
+                                    <span className={requiredMarkClass}>*</span>
+                                </Label>
+                                <MultiSelect
+                                    options={(coachPillarOptions || []).map((option) => ({
+                                        id: option.id,
+                                        title: option.title || "",
+                                    }))}
+                                    selected={(editedCoach?.specialties ?? coach.specialties ?? [])
+                                        .map(title => coachPillarOptions?.find(opt => opt.title === title)?.id)
+                                        .filter(Boolean) as string[]}
+                                    onChange={(selectedIds) => {
+                                        const titles = selectedIds
+                                            .map(id => coachPillarOptions?.find(opt => opt.id === id)?.title)
+                                            .filter(Boolean) as string[];
+                                        onFieldChange?.("specialties", titles);
+                                    }}
+                                    placeholder="Select development pillars"
+                                    className="w-full"
+                                />
+                            </div>
 
-                            {isEditMode && (
-                                <div className="space-y-2">
-                                    <Label className="text-sm font-medium">
-                                        Positions Coached
-                                        <span className="ml-1 text-destructive">*</span>
-                                    </Label>
-                                    <MultiSelect
-                                        options={favoritePositionOptions}
-                                        selected={favoritePositions}
-                                        onChange={(selectedIds) => {
-                                            onFieldChange?.("favourite_positions", selectedIds);
-                                        }}
-                                        placeholder="Select Positions Coached..."
-                                        className="max-w-2xl"
-                                    />
-                                </div>
-                            )}
+                            <div className="flex flex-col gap-1.5">
+                                <Label className={fieldLabelClass}>
+                                    Positions coached
+                                    <span className={requiredMarkClass}>*</span>
+                                </Label>
+                                <MultiSelect
+                                    options={favoritePositionOptions}
+                                    selected={favoritePositions}
+                                    onChange={(selectedIds) => {
+                                        onFieldChange?.("favourite_positions", selectedIds);
+                                    }}
+                                    placeholder="Select positions coached"
+                                    className="w-full"
+                                />
+                            </div>
 
-                            {isEditMode && (
-                                <div className="max-w-sm">
-                                    <EditableField
-                                        isEditMode={isEditMode}
-                                        value={editedCoach?.company ?? coach.company ?? ""}
-                                        onChange={(value) => onFieldChange?.("company", value)}
-                                        inputClassName="w-full"
-                                        placeholder="Company name"
-                                        label="Company"
-                                        renderDisplay={() => null}
-                                    />
-                                </div>
-                            )}
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                                <EditableField
+                                    isEditMode={isEditMode}
+                                    value={editedCoach?.company ?? coach.company ?? ""}
+                                    onChange={(value) => onFieldChange?.("company", value)}
+                                    inputClassName="w-full"
+                                    placeholder="Company name"
+                                    label="Company"
+                                    renderDisplay={() => null}
+                                />
 
-                        </EditableFieldGroup>
-
-                        {isEditMode && (
-                            <div className="max-w-sm">
                                 <ZipCodeInput
                                     value={zipCode}
                                     onChange={(value) => {
@@ -1346,134 +1236,160 @@ export function CoachHeader({
                                     }}
                                     disabled={isSaving}
                                     id="coach-zipCode"
-                                    label="Zip Code"
+                                    label="Zip code"
                                     required
                                 />
-                            </div>
-                        )}
 
-                        <div className={`flex flex-wrap gap-4 text-sm text-muted-foreground ${isEditMode ? "items-end" : "items-center"}`}>
-                            <div className={`bg-[#FFFBEB] rounded-sm flex items-center justify-center gap-2 p-2 ${isEditMode ? "self-end" : ""}`}>
-                                <img src={starIcon} alt="Star" className="w-4 h-4" />
-                                <span className="font-semibold text-sm">{publicCoachRatingLabel(coach.rating, coach.total_reviews)}</span>
-                            </div>
-
-                            {/* Location Display */}
-                            {!isEditMode && locationDisplay && (
-                                <div className="flex items-center gap-1">
-                                    <MapPin className="h-4 w-4" />
-                                    <span>{locationDisplay}</span>
+                                <div className="flex flex-col gap-1.5">
+                                    <Label className={fieldLabelClass}>
+                                        Gender
+                                        <span className={requiredMarkClass}>*</span>
+                                    </Label>
+                                    <GenderSelect
+                                        value={editedCoach?.gender ?? coach.gender ?? ""}
+                                        onChange={(value) => onFieldChange?.("gender", value)}
+                                        disabled={false}
+                                        showLabel={false}
+                                        label="Gender"
+                                        placeholder="Select gender"
+                                        required
+                                    />
                                 </div>
-                            )}
+                            </div>
+                        </EditableFieldGroup>
 
-                            <div className={`flex flex-wrap gap-3 ${isEditMode ? "items-center" : "items-center"}`}>
-                                {/* Gender Field */}
-                                <div className="flex-1 min-w-[20px]">
-                                    {isEditMode ? (
-                                        <div className="flex items-center gap-2">
-                                            <Label className="mb-0 shrink-0">
-                                                Gender
-                                                <span className="ml-1 text-destructive">*</span>
-                                            </Label>
-                                            <GenderSelect
-                                                value={editedCoach?.gender ?? coach.gender ?? ""}
-                                                onChange={(value) => onFieldChange?.("gender", value)}
-                                                disabled={false}
-                                                showLabel={false}
-                                                label="Gender"
-                                                placeholder="Select gender"
-                                                required
-                                            />
-                                        </div>
-                                    ) : coach.gender ? (
-                                        <GenderPill gender={coach.gender} showLabel={false} />
+                        <div className="flex justify-end md:hidden">
+                            <ProfileActions
+                                isCoachProfile={isCoachProfile}
+                                isEditMode={isEditMode}
+                                isSaving={isSaving}
+                                disableSave={!isLocationValid}
+                                onEdit={onEdit}
+                                onCancelEdit={onCancelEdit}
+                                onSaveEdit={onSaveEdit}
+                            />
+                        </div>
+                    </div>
+                ) : (
+                    /* ---------------- Display ---------------- */
+                    <div className="flex w-full min-w-0 flex-1 flex-col gap-5">
+                        <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+                            <div className="flex min-w-0 flex-col gap-[10px]">
+                                <div className="flex flex-wrap items-end gap-[6px]">
+                                    <h1 className="text-[32px] font-bold leading-[28px] tracking-[-0.05em] text-[#1A202C]">
+                                        {editedCoach?.name ?? coach.name}
+                                    </h1>
+                                    {coach?.is_verified && (
+                                        <BadgeCheck className="size-5 shrink-0 fill-[#0054B4] text-[#F7F7F0]" aria-label="Verified" />
+                                    )}
+                                    {instagramHandle ? (
+                                        <a
+                                            href={`https://instagram.com/${instagramHandle}`}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="inline-flex size-[26px] items-center justify-center rounded-[6px] border border-[#EAEADF] bg-[#F4F4EB] text-[#484D56] transition-colors hover:bg-[#EAEADF]"
+                                            aria-label={`View ${coach.name}'s Instagram profile`}
+                                        >
+                                            <Instagram className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                                        </a>
                                     ) : null}
                                 </div>
+                                <div className="flex flex-col gap-[2px] text-[12px] tracking-[-0.03em] text-[#767980]">
+                                    {locationDisplay ? (
+                                        <p className="inline-flex items-center gap-1 font-normal leading-[14px]">
+                                            <MapPin className="size-3" strokeWidth={1.5} aria-hidden="true" />
+                                            {locationDisplay}
+                                        </p>
+                                    ) : null}
+                                    <p className="font-medium leading-[13px]">{displayedPosition}</p>
+                                </div>
                             </div>
 
-                             {/* <div className="flex items-center gap-1">
-                                <EditableNumberField
-                                    icon={<Clock className="h-4 w-4" />}
-                                    label="Experience"
-                                    isEditMode={isEditMode}
-                                    value={editedCoach?.years_experience ?? coach.years_experience}
-                                    onChange={(value) => onFieldChange?.("years_experience", value)}
-                                    inputClassName="h-8 max-w-[100px]"
-                                    placeholder="Years"
-                                    renderDisplay={(value) => (
-                                        <span>{value ?? 15} years experience</span>
-                                    )}
-                                />
-                            </div> */}
+                            <ProfileActions
+                                isCoachProfile={isCoachProfile}
+                                isEditMode={isEditMode}
+                                isSaving={isSaving}
+                                disableSave={!isLocationValid}
+                                onEdit={onEdit}
+                                onCancelEdit={onCancelEdit}
+                                onSaveEdit={onSaveEdit}
+                            />
                         </div>
 
-                        {isEditMode && (
-                            <div className="mt-2 flex md:hidden justify-end">
-                                <ProfileActions
-                                    isCoachProfile={isCoachProfile}
-                                    isEditMode={isEditMode}
-                                    isSaving={isSaving}
-                                    disableSave={!isLocationValid}
-                                    onEdit={onEdit}
-                                    onCancelEdit={onCancelEdit}
-                                    onSaveEdit={onSaveEdit}
-                                />
+                        <div className="flex flex-wrap items-center gap-[10px]">
+                            <span className={`inline-flex items-center gap-[3px] ${metaLabel}`}>
+                                <BrandStar size={10} />
+                                {ratingLabel}
+                            </span>
+                            {sportLabel ? <BrandPill tone="teal">{sportLabel}</BrandPill> : null}
+                            {coach.gender ? <GenderPill gender={coach.gender} showLabel={false} /> : null}
+                        </div>
+
+                        {(specialties.length > 0 || favoritePositions.length > 0 || coach.company) && (
+                            <div className="flex flex-col gap-[10px]">
+                                {specialties.length > 0 && (
+                                    <div className="flex flex-wrap gap-2">
+                                        {specialties.map((specialty, index) => (
+                                            <CoachProfileChip key={`${specialty}-${index}`} label={specialty} />
+                                        ))}
+                                    </div>
+                                )}
+                                {(favoritePositions.length > 0 || coach.company) && (
+                                    <div className="flex flex-wrap gap-[6px]">
+                                        {favoritePositions.map((position, index) => (
+                                            <BrandPill key={`${position}-${index}`} tone="neutral">
+                                                {favoritePositionLabelMap.get(normalizePosition(resolvedSport || coach.sport || sport || "", position)) ?? normalizePosition(resolvedSport || coach.sport || sport || "", position)}
+                                            </BrandPill>
+                                        ))}
+                                        {coach.company && <BrandPill tone="muted">{coach.company}</BrandPill>}
+                                    </div>
+                                )}
                             </div>
                         )}
 
                         {!isCoachProfile && (
-                            <div className="flex flex-wrap gap-2 mt-2">
-                                {/* <Button
-                                    onClick={onBook}
-                                    className="bg-[#16A34A] hover:bg-[#16A34A]/90 text-white rounded-full px-10 py-2 flex items-center gap-2"
-                                >
-                                    <ExternalLink className="h-4 w-4" />
-                                    Book
-                                </Button> */}
-
-
-                                <Button
-                                    onClick={onBook}
-                                    className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white rounded-full px-6 py-2">
-                                    Book a Session
+                            <div className="flex flex-wrap gap-[10px]">
+                                <Button onClick={onBook}>Book a session</Button>
+                                <Button variant="outline" onClick={onViewPackages}>
+                                    View packages
                                 </Button>
-                                
                                 <Button
-                                    onClick={onViewPackages}
-                                    className="bg-[#2563EB] hover:bg-[#2563EB]/90 text-white rounded-full px-6 py-2"
-                                >
-                                    View Packages
-                                </Button>
-
-                                <Button
+                                    variant="outline"
                                     disabled={!canSendMessage || isSendingMessage}
                                     onClick={onSendMessage}
-                                    className="bg-[#1E293B] hover:bg-[#1E293B]/90 text-white rounded-full px-6 py-2 flex items-center gap-2 disabled:opacity-70"
                                 >
-                                    {isSendingMessage ? "Starting chat..." : "Send a Message"}
+                                    {isSendingMessage ? (
+                                        <>
+                                            <Loader2 className="animate-spin" strokeWidth={1.5} aria-hidden="true" />
+                                            Starting chat...
+                                        </>
+                                    ) : (
+                                        "Send a message"
+                                    )}
                                 </Button>
                             </div>
                         )}
                     </div>
-                </div>
-            </CardContent>
-        </Card>
+                )}
+            </div>
+        </div>
         
         {/* Crop modals */}
         {profileCropperOverlay}
         {coverCropperOverlay}
         {!isEditMode && avatarPreviewOpen && avatarDisplayUrl && portalTarget && createPortal(
-            <div className="fixed inset-0 z-[2100] bg-black/80 flex items-center justify-center px-4">
+            <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-black/80 px-4">
                 <div className="absolute inset-0" onClick={() => setAvatarPreviewOpen(false)} />
-                <div className="relative w-full max-w-3xl max-h-[90vh] flex flex-col gap-3 z-[2101]">
+                <div className="relative z-[2101] flex max-h-[90vh] w-full max-w-3xl flex-col gap-3">
                     <button
+                        type="button"
                         aria-label="Close preview"
-                        className="absolute -top-10 right-0 text-white/90 hover:text-white"
+                        className="absolute -top-10 right-0 inline-flex size-[34px] items-center justify-center rounded-[8px] text-[#F1F1E6]/90 transition-colors hover:text-[#F1F1E6]"
                         onClick={() => setAvatarPreviewOpen(false)}
                     >
-                        <X className="h-6 w-6" />
+                        <X className="size-5" strokeWidth={1.5} />
                     </button>
-                    <div className="relative w-full h-full max-h-[80vh] bg-black/30 rounded-md overflow-hidden flex items-center justify-center">
+                    <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-[10px] bg-black/30">
                         <img
                             src={avatarDisplayUrl}
                             alt={`${coach.name} profile`}
