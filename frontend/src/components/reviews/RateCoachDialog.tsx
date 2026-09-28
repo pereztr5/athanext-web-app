@@ -1,4 +1,5 @@
 import { Check } from "lucide-react";
+import { Link } from "react-router-dom";
 
 import { BrandPill, BrandStar } from "@/components/brand";
 import { RateCoachDialogSkeleton } from "@/components/reviews/RateCoachDialogSkeleton";
@@ -13,6 +14,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/routes";
 import type { AthleteSession } from "@/types/athlete-sessions";
 import {
   formatLocationSentence,
@@ -67,6 +69,7 @@ type RateCoachDialogProps = {
     created_at: string;
     feedback_to_athlete: string | null;
     athlete_rated_at: string | null;
+    edit_count?: number | null;
   } | null;
   isLoadingFeedback?: boolean;
   onSubmit: () => void;
@@ -104,6 +107,7 @@ export const RateCoachDialog = ({
   formatDate,
 }: RateCoachDialogProps) => {
   const hasExistingFeedback = Boolean(existingFeedback?.athlete_rated_at);
+  const isFeedbackLocked = hasExistingFeedback && (existingFeedback?.edit_count ?? 0) >= 1;
   const locationLabel = formatLocationSentence(session?.locationType || session?.location).toLowerCase();
   const displayedRating = hoverRating ?? rating;
   const metaLine = session
@@ -118,9 +122,13 @@ export const RateCoachDialog = ({
         {session && (
           <>
             <DialogHeader className={cn(sectionClass, "space-y-0 pr-14 text-left")}>
-              <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Rate your coach</DialogTitle>
+              <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+                {isFeedbackLocked ? "Your rating" : "Rate your coach"}
+              </DialogTitle>
               <DialogDescription className="sr-only">
-                Share your experience to help coaches improve and guide other athletes.
+                {isFeedbackLocked
+                  ? "Your feedback is locked after one edit. Contact support for further changes."
+                  : "Share your experience to help coaches improve and guide other athletes."}
               </DialogDescription>
             </DialogHeader>
 
@@ -152,9 +160,13 @@ export const RateCoachDialog = ({
                 </div>
               ) : null}
 
-              {hasExistingFeedback && existingFeedback ? (
+              {isFeedbackLocked ? (
                 <p className="text-[14px] leading-[18px] text-[#767980]">
-                  You can update the rating you sent on{" "}
+                  This rating is locked after one edit. Contact support if you need a further change.
+                </p>
+              ) : hasExistingFeedback && existingFeedback ? (
+                <p className="text-[14px] leading-[18px] text-[#767980]">
+                  You can make one update to the rating you sent on{" "}
                   {new Date(existingFeedback.athlete_rated_at || existingFeedback.created_at).toLocaleDateString(
                     "en-US",
                     { month: "short", day: "numeric", year: "numeric" }
@@ -175,6 +187,7 @@ export const RateCoachDialog = ({
                         onChange={onRatingChange}
                         onHover={onHoverChange}
                         onLeave={onHoverLeave}
+                        disabled={isFeedbackLocked}
                       />
                       {displayedRating > 0 ? (
                         <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
@@ -182,7 +195,7 @@ export const RateCoachDialog = ({
                         </span>
                       ) : null}
                     </div>
-                    {rating < 1 && (
+                    {!isFeedbackLocked && rating < 1 && (
                       <p className="text-[12px] leading-[14px] text-[#767980]">Select at least 1 star to submit</p>
                     )}
                   </div>
@@ -196,7 +209,9 @@ export const RateCoachDialog = ({
                       value={comment}
                       onChange={(event) => onCommentChange(event.target.value)}
                       placeholder="Optional. Your coach sees this"
-                      className="min-h-[90px] rounded-[8px] border-0 bg-[#F1F1E6] p-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:ring-[#6698D2]"
+                      readOnly={isFeedbackLocked}
+                      disabled={isFeedbackLocked}
+                      className="min-h-[90px] rounded-[8px] border-0 bg-[#F1F1E6] p-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:ring-[#6698D2] disabled:cursor-default disabled:opacity-100"
                       maxLength={2000}
                     />
                   </div>
@@ -214,30 +229,39 @@ export const RateCoachDialog = ({
                     onClick={onCancel}
                     disabled={isSubmitting || isSubmitted}
                   >
-                    Cancel
+                    {isFeedbackLocked ? "Close" : "Cancel"}
                   </Button>
-                  <Button
-                    className={cn(
-                      buttonBase,
-                      "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#0054B4]/90",
-                      isSubmitted && "disabled:opacity-100"
-                    )}
-                    onClick={onSubmit}
-                    disabled={isSubmitting || isSubmitted || rating < 1}
-                  >
-                    {isSubmitted ? (
-                      <>
-                        <Check strokeWidth={1.5} aria-hidden="true" />
-                        Feedback submitted
-                      </>
-                    ) : isSubmitting ? (
-                      "Submitting..."
-                    ) : hasExistingFeedback ? (
-                      "Update rating"
-                    ) : (
-                      "Submit rating"
-                    )}
-                  </Button>
+                  {isFeedbackLocked ? (
+                    <Button
+                      asChild
+                      className={cn(buttonBase, "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#0054B4]/90")}
+                    >
+                      <Link to={ROUTES.CONTACT_US}>Contact support</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      className={cn(
+                        buttonBase,
+                        "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#0054B4]/90",
+                        isSubmitted && "disabled:opacity-100"
+                      )}
+                      onClick={onSubmit}
+                      disabled={isSubmitting || isSubmitted || rating < 1}
+                    >
+                      {isSubmitted ? (
+                        <>
+                          <Check strokeWidth={1.5} aria-hidden="true" />
+                          Feedback submitted
+                        </>
+                      ) : isSubmitting ? (
+                        "Submitting..."
+                      ) : hasExistingFeedback ? (
+                        "Update rating"
+                      ) : (
+                        "Submit rating"
+                      )}
+                    </Button>
+                  )}
                 </div>
               </>
             ) : null}

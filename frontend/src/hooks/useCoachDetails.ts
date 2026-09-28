@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import { resolveCoachId } from "@/api/coachShare";
+import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
 
 export interface CoachCertification {
   id: string;
@@ -18,20 +19,25 @@ export interface CoachAchievement {
   year?: number;
 }
 
-// Public coach details without email for privacy
-export type PublicCoach = Omit<Tables<"coaches">, "email"> & { slug?: string | null };
+export type PublicCoach = Omit<Tables<"coaches">, "email" | "profile_faqs"> & {
+  slug?: string | null;
+  zip_code?: string | null;
+  profile_faqs?: Tables<"coaches">["profile_faqs"] | null;
+};
 
-export interface CoachDetails extends PublicCoach {
+export type CoachDetails = Omit<PublicCoach, "profile_faqs" | "is_verified" | "cover_image_urls"> & {
   certifications?: CoachCertification[];
   achievements?: CoachAchievement[];
   position?: string | null;
-  is_verified?: boolean;
-  cover_image_urls?: string[];
+  is_verified?: boolean | null;
+  cover_image_urls?: string[] | null;
   sport?: string | null;
   gender?: string | null;
   zip_code?: string | null;
   slug: string;
-}
+  favourite_positions?: string[] | null;
+  profile_faqs?: { id: string; question: string; answer: string }[] | null;
+};
 
 export const useCoachDetails = (coachKey: string | undefined) => {
   const query = useQuery<CoachDetails>({
@@ -110,7 +116,10 @@ export const useCoachDetails = (coachKey: string | undefined) => {
         zip_code: userProfile?.zip_code ?? null,
         certifications: certifications || [],
         achievements: achievements || [],
-      } as CoachDetails;
+        profile_faqs: normalizeCoachFaqs(
+          (coachData as { profile_faqs?: unknown }).profile_faqs
+        ),
+      } as unknown as CoachDetails;
     },
     enabled: !!coachKey,
   });

@@ -2,6 +2,7 @@ import { BrandStar } from "@/components/brand";
 import { formatWholePrice } from "@/utils/sessionFormatting";
 import { coachPublicLinkLabel } from "@/utils/coachSlug";
 import { cn } from "@/lib/utils";
+import logoMarkWhite from "@/assets/logo-mark-white.svg";
 
 export interface PricingShareSession {
   title: string;
@@ -222,15 +223,14 @@ export function PricingShareCard({
 
         <div className="mt-auto flex flex-col items-center gap-1.5 pb-7 text-[#8e97a9]">
           <div className="flex items-center gap-1.5">
-            <svg width="22" height="18" viewBox="0 0 22 18" aria-hidden="true">
-              <path
-                d="M1 12.5L20.5 1.5 14 17 11 11.5z M11 11.5L20.5 1.5"
-                fill="none"
-                stroke="#8e97a9"
-                strokeWidth="1.5"
-                strokeLinejoin="round"
-              />
-            </svg>
+            <img
+              src={logoMarkWhite}
+              alt=""
+              width={22}
+              height={22}
+              className="block size-[22px] object-contain"
+              aria-hidden="true"
+            />
             <span className="text-[17px] font-medium tracking-[-0.04em]">AthaNext</span>
           </div>
           <span className="text-[14px] tracking-[-0.01em] text-[#6f7788]">

@@ -62,6 +62,9 @@ export {
   type Package,
   type PackagePurchase,
   type PurchasePackageInput,
+  type CoachPackageInsert,
+  type CoachPackageUpdate,
+  type CoachPackageRow,
 } from './packages';
 
 // Partnerships API

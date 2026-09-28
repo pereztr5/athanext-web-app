@@ -48,6 +48,9 @@ export type SessionFeedbackRPCRow = {
   session_rating: number | null;
   session_summary: string | null;
   coach_notes: string | null;
+  edit_count?: number | null;
+  coach_edit_count?: number | null;
+  session_edit_count?: number | null;
   // Session metadata fields
   slot_session_name?: string | null;
   session_name?: string | null;

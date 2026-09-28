@@ -327,6 +327,9 @@ export const authAPI = {
           options: {
             redirectTo,
             scopes,
+            queryParams: {
+              prompt: "select_account",
+            },
           },
         });
 

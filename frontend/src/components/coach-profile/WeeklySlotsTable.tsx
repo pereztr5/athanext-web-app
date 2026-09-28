@@ -25,7 +25,7 @@ import type {
 } from '@/types/availability';
 import { ManageAvailabilityTableHeader } from '@/components/availability/ManageAvailabilityTableHeader';
 import { ManageAvailabilityTableRow } from '@/components/availability/ManageAvailabilityTableRow';
-import { toLocalISODate } from '@/utils/dateHelpers';
+import { toLocalISODate, getTodayISODate } from '@/utils/dateHelpers';
 import {
   DEFAULT_SLOT,
   isPastOrToday,
@@ -34,6 +34,18 @@ import {
   applyTemplateToWeek,
 } from '@/utils/availabilityModalHelpers';
 import type { SPORTPILLARS } from '@/api/sport-pillars';
+
+// A saved occurrence is past once its date is before today, or it ended earlier today (ATH-16).
+// Unsaved slots stay visible so a slot the coach just added never disappears mid-edit.
+const isPastSavedSlot = (slot?: SlotFormData | null): boolean => {
+  if (!slot?.occurrence_date) return false;
+  const todayISO = getTodayISODate();
+  if (slot.occurrence_date < todayISO) return true;
+  if (slot.occurrence_date > todayISO || !slot.occurrence_id || !slot.end_time) return false;
+  const now = new Date();
+  const nowHHMM = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  return normalizeTimeFormat(slot.end_time) <= nowHHMM;
+};
 
 interface WeeklySlotsTableProps {
   weeks: Date[];
@@ -509,21 +521,23 @@ export const WeeklySlotsTable = ({
                 const weekSlots = occurrenceSlots[weekISO] || { 1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [] } as any;
                 const slots = weekSlots[day] || [];
                 const dayErrors = (currentWeekErrors.slots?.[day] as Array<any>) || [];
+                // Keep each slot's original index for handlers; label by visible position.
+                const visibleSlots = slots
+                  .map((slot, idx) => ({ slot, idx }))
+                  .filter(({ slot }) =>
+                    isDateWithinRange(slot?.occurrence_date, formStartDate, formEndDate) &&
+                    // Hide past sessions instead of greying them out (ATH-16)
+                    !(isEditMode && isPastSavedSlot(slot))
+                  );
                 return (
                   <React.Fragment key={dayNum}>
-                    {slots.map((slot, idx) => {
-                      const inRange = isDateWithinRange(
-                        slot?.occurrence_date,
-                        formStartDate,
-                        formEndDate
-                      );
-                      if (!inRange) return null;
+                    {visibleSlots.map(({ slot, idx }, position) => {
                       return (
                         <ManageAvailabilityTableRow
                           compact
                           key={`${dayNum}-${idx}`}
                           dayOfWeek={day}
-                          dayName={idx === 0 ? dayName : `${dayName} (slot ${idx + 1})`}
+                          dayName={position === 0 ? dayName : `${dayName} (slot ${position + 1})`}
                           weekISO={weekISO}
                           slot={slot}
                           slotError={dayErrors[idx] || null}
@@ -544,6 +558,19 @@ export const WeeklySlotsTable = ({
                   </React.Fragment>
                 );
               })}
+              {isEditMode &&
+                !Object.values(occurrenceSlots[currentWeekISO] || {}).some((daySlots) =>
+                  (daySlots || []).some((slot) =>
+                    isDateWithinRange(slot?.occurrence_date, formStartDate, formEndDate) &&
+                    !isPastSavedSlot(slot)
+                  )
+                ) && (
+                  <tr>
+                    <td colSpan={10} className="py-6 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                      No upcoming slots this week.
+                    </td>
+                  </tr>
+                )}
             </tbody>
           </table>
         )}

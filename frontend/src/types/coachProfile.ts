@@ -7,6 +7,7 @@ export type Coach = {
   is_verified?: boolean;
   company?: string;
   specialties?: string[];
+  pathway_tags?: string[];
   favourite_positions?: string[];
   image_url?: string;
   rating?: number;

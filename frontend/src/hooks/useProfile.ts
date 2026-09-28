@@ -15,6 +15,7 @@ export interface AthleteProfile {
   phone_number?: string | null;
   location?: string | null;
   tags: string[];
+  pathway_tags?: string[];
   profile_image_url?: string | null;
   cover_image_urls: string[];
   bio?: string | null;
@@ -39,6 +40,7 @@ export interface AthleteProfileUpsertPayload {
   phone_number?: string | null;
   location?: string | null;
   tags: string[];
+  pathway_tags?: string[];
   profile_image_url?: string | null;
   cover_image_urls: string[];
   bio?: string | null;

@@ -8,10 +8,13 @@ import type { Database } from '@/integrations/supabase/types';
 
 // Public coach type (without email for privacy)
 // Extend table row omission to optionally include fields exposed via RPC (e.g., is_verified)
-export type PublicCoach = Omit<Database['public']['Tables']['coaches']['Row'], "email"> & {
+export type PublicCoach = Omit<Database['public']['Tables']['coaches']['Row'], "email" | "slug"> & {
   is_verified?: boolean;
   position?: string | null;
   sport?: string | null;
+  zip_code?: string | null;
+  pathway_tags?: string[];
+  slug?: string | null;
 };
 export type CoachInsert = Database['public']['Tables']['coaches']['Insert'];
 export type CoachUpdate = Database['public']['Tables']['coaches']['Update'];

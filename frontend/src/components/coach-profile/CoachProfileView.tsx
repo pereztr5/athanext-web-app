@@ -6,6 +6,7 @@ import "@/styles/richText.css";
 import type { ProfileData } from "@/utils/profileCompletion";
 import { fetchLocationFromZipCode, formatLocationDisplay } from "@/utils/geolocation";
 import { useFAQItems } from "@/hooks/useFAQItems";
+import { normalizeCoachFaqs } from "./FAQSection";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import {
   CoachProfileButton,
@@ -17,6 +18,7 @@ import { AvailabilitySummaryCard } from "./AvailabilitySummaryCard";
 import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
 import { ReviewsCard } from "@/components/reviews/ReviewsCard";
 import { BrandStar } from "@/components/brand";
+import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
@@ -43,15 +45,18 @@ interface CoachProfileViewProps {
     coach_position?: string;
     position?: string;
     specialties?: string[];
+    pathway_tags?: string[];
     session_types?: string[];
     languages?: string[];
     locations?: string[];
     zip_code?: string;
     cancellation_policy?: string;
     response_time_hours?: number;
+    profile_faqs?: { id: string; question: string; answer: string }[] | null;
     company?: string;
     is_verified?: boolean;
     hourly_rate?: number;
+    sport?: string | null;
     certifications?: {
       id?: string;
       certification_name?: string;
@@ -65,7 +70,7 @@ interface CoachProfileViewProps {
   ratingDistribution: Record<number, number>;
   reviews: Review[];
   onEdit: () => void;
-  onEditPackages: () => void;
+  onEditPackages: (pkg?: CoachPackage | null) => void;
   onEditCertifications: () => void;
   onLeaveReview?: () => void;
   readOnly?: boolean;
@@ -99,6 +104,7 @@ export function CoachProfileView({
 
   const photoUrl = coach.profile_image_url || coach.image_url;
   const pillars = (coach.specialties || []).slice(0, 6);
+  const pathwayTags = coach.pathway_tags || [];
   const brands = coach.company ? [coach.company] : [];
   const verified = Boolean(coach.is_verified);
 
@@ -158,20 +164,29 @@ export function CoachProfileView({
     : "Virtual & In-person";
   const languagesLabel = coach.languages?.join(", ") || "English";
 
+  const ownedFaqs = normalizeCoachFaqs(coach.profile_faqs);
   const faqItems =
-    faqs.length > 0
-      ? faqs.slice(0, 5).map((faq) => ({
-          id: faq.id,
-          question: faq.question?.en || Object.values(faq.question || {})[0] || "Question",
-          answer: faq.answer?.en || Object.values(faq.answer || {})[0] || "",
-        }))
-      : [
-          { id: "1", question: "What age groups do you work with?", answer: "" },
-          { id: "2", question: "Do you offer group training sessions?", answer: "" },
-          { id: "3", question: "What about report of the lesson?", answer: "" },
-          { id: "4", question: "How long until I see improvement?", answer: "" },
-          { id: "5", question: "Do you provide remote training packages?", answer: "" },
-        ];
+    ownedFaqs.length > 0
+      ? ownedFaqs
+          .filter((faq) => faq.question?.trim())
+          .map((faq) => ({
+            id: faq.id,
+            question: faq.question,
+            answer: faq.answer || "",
+          }))
+      : faqs.length > 0
+        ? faqs.slice(0, 5).map((faq) => ({
+            id: faq.id,
+            question: faq.question?.en || Object.values(faq.question || {})[0] || "Question",
+            answer: faq.answer?.en || Object.values(faq.answer || {})[0] || "",
+          }))
+        : [
+            { id: "1", question: "What age groups do you work with?", answer: "" },
+            { id: "2", question: "Do you offer group training sessions?", answer: "" },
+            { id: "3", question: "What about report of the lesson?", answer: "" },
+            { id: "4", question: "How long until I see improvement?", answer: "" },
+            { id: "5", question: "Do you provide remote training packages?", answer: "" },
+          ];
 
   const sectionTitle = "text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]";
   const headerRating = showPublicRating
@@ -233,6 +248,12 @@ export function CoachProfileView({
                   <span className="text-[14px] text-[#A3A6AB]">No pillars set</span>
                 )}
               </div>
+              {pathwayTags.length > 0 ? (
+                <div className="flex flex-col gap-2">
+                  <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Pathway</p>
+                  <PathwayTagChips selected={pathwayTags} readOnly />
+                </div>
+              ) : null}
             </div>
 
             <div className="flex flex-col gap-6 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
@@ -444,6 +465,12 @@ export function CoachProfileView({
               <span className="text-[14px] text-[#A3A6AB]">No pillars set</span>
             )}
           </div>
+          {pathwayTags.length > 0 ? (
+            <div className="flex flex-col gap-2">
+              <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Pathway</span>
+              <PathwayTagChips selected={pathwayTags} readOnly />
+            </div>
+          ) : null}
         </CoachProfileCard>
 
         <CoachProfileCard className="gap-6">
@@ -468,8 +495,10 @@ export function CoachProfileView({
                       Share pricing
                     </CoachProfileButton>
                   ) : null}
-                  <CoachProfileButton onClick={onEditPackages}>Edit</CoachProfileButton>
-                  <CoachProfileButton variant="primary" onClick={onEditPackages}>
+                  <CoachProfileButton onClick={() => onEditPackages(packages[0] ?? null)}>
+                    Edit
+                  </CoachProfileButton>
+                  <CoachProfileButton variant="primary" onClick={() => onEditPackages(null)}>
                     Add
                   </CoachProfileButton>
                 </>
@@ -587,6 +616,12 @@ export function CoachProfileView({
                 <span className="text-[14px] text-[#A3A6AB]">None set</span>
               )}
             </div>
+            {pathwayTags.length > 0 ? (
+              <>
+                <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">Pathway</p>
+                <PathwayTagChips selected={pathwayTags} readOnly />
+              </>
+            ) : null}
             <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">Training format</p>
             <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{trainingFormat}</p>
           </CoachProfileCard>
@@ -629,7 +664,11 @@ export function CoachProfileView({
           <CoachProfileCard>
             <CoachProfileCardHeader
               title="FAQ"
-              actions={<CoachProfileButton onClick={onEdit}>Edit</CoachProfileButton>}
+              actions={
+                readOnly ? undefined : (
+                  <CoachProfileButton onClick={onEdit}>Edit</CoachProfileButton>
+                )
+              }
             />
             <div className="flex flex-col gap-[10px]">
               {faqItems.map((faq) => {

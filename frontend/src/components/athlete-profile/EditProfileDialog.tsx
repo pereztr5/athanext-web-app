@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Image as ImageIcon, Loader2, X } from "lucide-react";
+import { Loader2 } from "lucide-react";
 import Cropper, { type Area } from "react-easy-crop";
 import { useToast } from "@/hooks/use-toast";
 import imageCompression from 'browser-image-compression';
@@ -1200,67 +1200,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
             </div>
           </div>
 
-          <div className="flex flex-col gap-2">
-            <Label className={labelClass}>Cover photos (up to {MAX_COVER_IMAGES})</Label>
-            <div className="grid grid-cols-3 gap-2">
-              {Array.isArray(coverImages) && coverImages.map((img, idx) => (
-                typeof img === 'string' && img.trim() !== '' && (
-                  <div
-                    key={`${idx}-${img.substring(0, 20)}`}
-                    className="group relative aspect-video cursor-pointer overflow-hidden rounded-[8px] bg-[#F4F4EB] animate-in fade-in-50"
-                    onClick={() => coverImageInputRef.current?.click()}
-                  >
-                    <img
-                      src={img}
-                      alt={`Cover ${idx + 1}`}
-                      className="h-full w-full object-cover transition-opacity duration-300"
-                    />
-                    <button
-                      type="button"
-                      aria-label="Remove cover image"
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        removeCoverImage(idx);
-                      }}
-                      className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-[5px] bg-[#1A202C]/60 text-[#F1F1E6] transition-opacity focus-visible:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-                    >
-                      <X className="size-3.5" strokeWidth={1.5} />
-                    </button>
-                  </div>
-                )
-              ))}
-              {(!Array.isArray(coverImages) || coverImages.length < MAX_COVER_IMAGES) && (
-                <button
-                  type="button"
-                  aria-label="Add cover photo"
-                  className="flex aspect-video items-center justify-center rounded-[8px] border border-dashed border-[#D9D9CF] bg-[#F4F4EB] transition-colors hover:bg-[#EAEADF] animate-in fade-in-50"
-                  onClick={() => coverImageInputRef.current?.click()}
-                >
-                  <ImageIcon className="size-5 text-[#A3A6AB]" strokeWidth={1.5} />
-                </button>
-              )}
-            </div>
-            <Input
-              ref={coverImageInputRef}
-              type="file"
-              accept="image/jpeg,image/jpg,image/png,image/webp"
-              multiple
-              disabled={Array.isArray(coverImages) && coverImages.length >= MAX_COVER_IMAGES}
-              onChange={(e) => handleFileChange(e, "cover")}
-              className="hidden"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              className="w-fit"
-              onClick={() => coverImageInputRef.current?.click()}
-              disabled={Array.isArray(coverImages) && coverImages.length >= MAX_COVER_IMAGES}
-            >
-              Add cover photos
-            </Button>
-            <p className={hintClass}>JPG, PNG or WebP, up to 10MB each and {MAX_COVER_IMAGES} photos. Wide 3:1 photos work best.</p>
-            <FieldError message={errors.coverImageUrls} />
-          </div>
+          {/* Cover upload UI hidden (ATH-46); cover_image_urls column retained */}
 
           <div className={fieldClass}>
             <Label htmlFor="fullName" className={labelClass}>Full name</Label>

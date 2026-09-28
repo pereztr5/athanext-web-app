@@ -8,6 +8,7 @@ import {
     CertificationsSection,
     TrainingSpecialization,
 } from "@/components/coach-profile";
+import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
 import { CoachAvailabilitySection } from "@/components/coach-profile/CoachAvailabilitySection";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { ProfileSkeleton } from "@/components/athlete-profile";
@@ -36,6 +37,7 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { supabase } from "@/integrations/supabase/client";
 import { PackagesModal } from "@/components/coach/PackagesModal";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
+import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useQueryClient } from "@tanstack/react-query";
@@ -43,8 +45,10 @@ import { detectCoachSport } from "@/utils/coachSport";
 import { Plus, X } from "lucide-react";
 import { CoachingPackages } from "@/components/coach-profile/CoachingPackages";
 import { CoachProfileView } from "@/components/coach-profile/CoachProfileView";
+import { PackageEditorDialog } from "@/components/coach-profile/PackageEditorDialog";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { ROUTES } from "@/routes";
+import { sanitizePathwayTags } from "@/constants/pathwayTags";
 
 const Profile = () => {
     const { toast } = useToast();
@@ -78,6 +82,8 @@ const Profile = () => {
 
     const [showReviewModal, setShowReviewModal] = useState(false);
     const [showPackagesModal, setShowPackagesModal] = useState(false);
+    const [packageEditorOpen, setPackageEditorOpen] = useState(false);
+    const [editingPackage, setEditingPackage] = useState<CoachPackage | null>(null);
 
     // Edit mode state
     const [isSaving, setIsSaving] = useState(false);
@@ -296,12 +302,20 @@ const Profile = () => {
                 company: editedCoach.company,
                 bio: editedCoach.bio,
                 specialties: editedCoach.specialties,
+                pathway_tags: sanitizePathwayTags(editedCoach.pathway_tags),
                 positions: editedCoach.favourite_positions ?? coach.favourite_positions,
                 favourite_positions: editedCoach.favourite_positions ?? coach.favourite_positions,
                 locations: editedCoach.locations,
                 instagram_handle: editedCoach.instagram_handle,
                 hourly_rate: editedCoach.hourly_rate,
                 years_experience: editedCoach.years_experience,
+                response_time_hours: editedCoach.response_time_hours ?? coach.response_time_hours,
+                languages: editedCoach.languages ?? coach.languages,
+                session_types: editedCoach.session_types ?? coach.session_types,
+                cancellation_policy: editedCoach.cancellation_policy ?? coach.cancellation_policy,
+                profile_faqs: normalizeCoachFaqs(
+                  editedCoach.profile_faqs ?? coach.profile_faqs
+                ) as unknown as import("@/integrations/supabase/types").Json,
                 ...(uploadedImageUrl ? { image_url: uploadedImageUrl } : {}),
                 ...(shouldUpdateCoverUrls ? { cover_image_urls: newCoverUrls } : {}),
             });
@@ -537,6 +551,18 @@ const Profile = () => {
                 coachName={coach.name}
             />
 
+            {coachId ? (
+                <PackageEditorDialog
+                    open={packageEditorOpen}
+                    onOpenChange={(open) => {
+                        setPackageEditorOpen(open);
+                        if (!open) setEditingPackage(null);
+                    }}
+                    coachId={coachId}
+                    packageToEdit={editingPackage}
+                />
+            ) : null}
+
             <Dialog open={certDialogOpen} onOpenChange={setCertDialogOpen}>
                 <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
                     <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
@@ -650,7 +676,10 @@ const Profile = () => {
                         ratingDistribution={ratingDistribution}
                         reviews={reviews}
                         onEdit={handleEdit}
-                        onEditPackages={() => setShowPackagesModal(true)}
+                        onEditPackages={(pkg) => {
+                            setEditingPackage(pkg ?? null);
+                            setPackageEditorOpen(true);
+                        }}
                         onEditCertifications={() => setCertDialogOpen(true)}
                         onLeaveReview={() => setShowReviewModal(true)}
                     />
@@ -712,7 +741,6 @@ const Profile = () => {
                                 coachId={coach.id}
                                 coachName={coach.name}
                                 coachSport={coach.sport}
-                                showSharePricing
                             />
                         </ErrorBoundary>
 
@@ -750,15 +778,27 @@ const Profile = () => {
 
                     <div className="flex min-w-0 flex-col gap-6">
                         <QuickInfo
-                            responseTime={coach.response_time_hours}
-                            sessionTypes={coach.session_types}
-                            languages={coach.languages}
-                            locations={coach.locations}
-                            zipCode={coach.zip_code}
-                            cancellationPolicy={coach.cancellation_policy}
+                            responseTime={
+                              editedCoach?.response_time_hours ?? coach.response_time_hours
+                            }
+                            sessionTypes={editedCoach?.session_types ?? coach.session_types}
+                            languages={editedCoach?.languages ?? coach.languages}
+                            locations={editedCoach?.locations ?? coach.locations}
+                            zipCode={editedCoach?.zip_code ?? coach.zip_code}
+                            cancellationPolicy={
+                              editedCoach?.cancellation_policy ?? coach.cancellation_policy
+                            }
+                            isEditMode
+                            onFieldChange={handleFieldChange}
                         />
 
-                        <FAQSection />
+                        <FAQSection
+                            coachFaqs={normalizeCoachFaqs(
+                              editedCoach?.profile_faqs ?? coach.profile_faqs
+                            )}
+                            isEditMode
+                            onChange={(faqs) => handleFieldChange("profile_faqs", faqs)}
+                        />
                     </div>
                 </div>
             </div>

@@ -25,10 +25,12 @@ export type Database = {
           phone_number: string | null
           location: string | null
           tags: string[]
+          pathway_tags: string[]
           profile_image_url: string | null
           cover_image_urls: string[]
           bio: string | null
           graduation_year: number | null
+          current_year: string | null
           high_school: string | null
           gpa: number | null
           height: string | null
@@ -49,10 +51,12 @@ export type Database = {
           phone_number?: string | null
           location?: string | null
           tags?: string[]
+          pathway_tags?: string[]
           profile_image_url?: string | null
           cover_image_urls?: string[]
           bio?: string | null
           graduation_year?: number | null
+          current_year?: string | null
           high_school?: string | null
           gpa?: number | null
           height?: string | null
@@ -73,11 +77,13 @@ export type Database = {
           phone_number?: string | null
           location?: string | null
           tags?: string[]
+          pathway_tags?: string[]
           profile_image_url?: string | null
           cover_image_urls?: string[]
           email?: string
           bio?: string | null
           graduation_year?: number | null
+          current_year?: string | null
           high_school?: string | null
           gpa?: number | null
           height?: string | null
@@ -470,17 +476,22 @@ export type Database = {
           bio: string | null
           cancellation_policy: string | null
           company: string | null
+          cover_image_urls: string[] | null
           created_at: string
           email: string | null
+          favourite_positions: string[] | null
           hourly_rate: number
           id: string
           image_url: string | null
           instagram_handle: string | null
+          is_verified: boolean | null
           languages: string[] | null
           locations: string[]
           name: string
           coach_position: string | null
+          pathway_tags: string[]
           positions: string[] | null
+          profile_faqs: Json
           profile_image_url: string | null
           rating: number | null
           response_time_hours: number | null
@@ -497,17 +508,22 @@ export type Database = {
           bio?: string | null
           cancellation_policy?: string | null
           company?: string | null
+          cover_image_urls?: string[] | null
           created_at?: string
           email?: string | null
+          favourite_positions?: string[] | null
           hourly_rate?: number
           id?: string
           image_url?: string | null
           instagram_handle?: string | null
+          is_verified?: boolean | null
           languages?: string[] | null
           locations?: string[]
           name: string
           position?: string | null
+          pathway_tags?: string[]
           positions?: string[] | null
+          profile_faqs?: Json
           profile_image_url?: string | null
           rating?: number | null
           response_time_hours?: number | null
@@ -524,17 +540,22 @@ export type Database = {
           bio?: string | null
           cancellation_policy?: string | null
           company?: string | null
+          cover_image_urls?: string[] | null
           created_at?: string
           email?: string | null
+          favourite_positions?: string[] | null
           hourly_rate?: number
           id?: string
           image_url?: string | null
           instagram_handle?: string | null
+          is_verified?: boolean | null
           languages?: string[] | null
           locations?: string[]
           name?: string
           position?: string | null
+          pathway_tags?: string[]
           positions?: string[] | null
+          profile_faqs?: Json
           profile_image_url?: string | null
           rating?: number | null
           response_time_hours?: number | null
@@ -1191,6 +1212,8 @@ export type Database = {
           response_time_hours: number
           session_types: string[]
           specialties: string[]
+          pathway_tags: string[]
+          zip_code: string
           status: string
           total_reviews: number
           updated_at: string

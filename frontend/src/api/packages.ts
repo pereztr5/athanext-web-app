@@ -4,17 +4,25 @@
  */
 
 import { apiClient, type ApiResponse } from '@/api/client';
+import type { Database } from '@/integrations/supabase/types';
+
+export type CoachPackageRow = Database['public']['Tables']['coach_packages']['Row'];
+export type CoachPackageInsert = Database['public']['Tables']['coach_packages']['Insert'];
+export type CoachPackageUpdate = Database['public']['Tables']['coach_packages']['Update'];
 
 export interface Package {
   id: string;
   coach_id: string;
   package_name: string;
+  description?: string | null;
   session_count: number;
   duration_minutes: number;
   total_price: number;
+  price_per_session?: number | null;
   validity_days: number;
   features: string[];
   is_active: boolean;
+  display_order?: number | null;
 }
 
 export interface PackagePurchase {
@@ -168,6 +176,42 @@ export const packagesAPI = {
         .eq('id', packageId)
         .single(),
       `Fetch package: ${packageId}`
+    );
+  },
+
+  /**
+   * Create a coach package (owning coach or admin; requires RLS write policy)
+   */
+  async createCoachPackage(
+    payload: CoachPackageInsert
+  ): Promise<ApiResponse<CoachPackageRow>> {
+    return apiClient.mutate<CoachPackageRow>(
+      async (client) =>
+        client
+          .from('coach_packages')
+          .insert(payload)
+          .select()
+          .single(),
+      `Create coach package for coach: ${payload.coach_id}`
+    );
+  },
+
+  /**
+   * Update a coach package (owning coach or admin; requires RLS write policy)
+   */
+  async updateCoachPackage(
+    packageId: string,
+    updates: CoachPackageUpdate
+  ): Promise<ApiResponse<CoachPackageRow>> {
+    return apiClient.mutate<CoachPackageRow>(
+      async (client) =>
+        client
+          .from('coach_packages')
+          .update({ ...updates, updated_at: new Date().toISOString() })
+          .eq('id', packageId)
+          .select()
+          .single(),
+      `Update coach package: ${packageId}`
     );
   },
 

@@ -15,3 +15,4 @@ export { AvailabilitySummaryCard } from './AvailabilitySummaryCard';
 export { CoachProfileCard } from './CoachProfileCard';
 export { SharePricingDialog } from './SharePricingDialog';
 export { PricingShareCard } from './PricingShareCard';
+export { PackageEditorDialog } from './PackageEditorDialog';

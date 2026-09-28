@@ -54,7 +54,6 @@ import footballCover from "@/assets/images/footballs.png";
 import type { ProfileData } from "@/utils/profileCompletion";
 import footballIcon from "@/assets/images/colored-soccer.png";
 import rowingIcon from "@/assets/images/colored-rowing.png";
-import { Carousel } from "@/components/coach-profile/Carousel";
 import { calculateProfileCompletion } from "@/utils/profileCompletion";
 import { ProfileStrengthMeter } from "@/components/coach-profile/ProfileStrengthMeter";
 import { EditProfileDialog, ProfileSkeleton } from "@/components/athlete-profile";
@@ -930,7 +929,6 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
   }
 
   const profileTags = Array.isArray(activeProfile.tags) ? activeProfile.tags.filter(Boolean) : [];
-  const coverPhotos = activeProfile.coverImageUrls?.length ? activeProfile.coverImageUrls : [];
   const computedAge = getAgeFromDate(activeProfile.dateOfBirth);
   const formattedDob = getFormattedDate(activeProfile.dateOfBirth);
   const portalTarget = typeof document !== "undefined" ? document.body : null;
@@ -983,14 +981,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
             onEdit={() => setIsEditOpen(true)}
             className="pb-0"
           />
-          {/* Photo Carousel */}
-          <Carousel
-            photos={coverPhotos}
-            altTextPrefix={activeProfile.fullName}
-            enablePreview
-            aspect="cover3x1"
-            containUntilLg
-          />
+          {/* Cover photo carousel hidden (ATH-46); cover_image_urls retained in DB */}
 
           <div className="flex flex-col items-start gap-5 md:flex-row md:items-center">
             {/* Athlete Avatar */}

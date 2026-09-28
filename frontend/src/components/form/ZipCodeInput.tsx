@@ -35,29 +35,30 @@ export const ZipCodeInput = ({
 
   const fetchAndSetLocation = async (zip: string) => {
     // Safety checks: ensure zip is a valid string
-    if (!zip || typeof zip !== 'string' || zip.trim().length < 3) {
+    if (!zip || typeof zip !== "string" || zip.trim().length < 3) {
       setLocationInfo(null);
       setHasAttemptedFetch(false);
-      onLocationResolved?.(null, false);
+      // Incomplete zip is not a hard fail — parent decides Save rules.
+      onLocationResolved?.(null, zip.trim().length === 0);
       return;
     }
 
     setIsLoadingLocation(true);
     try {
       // Safety check: ensure fetchLocationFromZipCode is available
-      if (typeof fetchLocationFromZipCode !== 'function') {
-        throw new Error('Location fetch function is not available');
+      if (typeof fetchLocationFromZipCode !== "function") {
+        throw new Error("Location fetch function is not available");
       }
-      
+
       const location = await fetchLocationFromZipCode(zip);
-      
+
       // Safety check: validate location response
-      const isValid = location && typeof location === 'object' && hasValidLocationData(location);
+      const isValid = location && typeof location === "object" && hasValidLocationData(location);
       setLocationInfo(isValid ? location : null);
       onLocationResolved?.(isValid ? location : null, Boolean(isValid));
       setHasAttemptedFetch(true);
     } catch (error) {
-      console.error('Error fetching location:', error);
+      console.error("Error fetching location:", error);
       setLocationInfo(null);
       onLocationResolved?.(null, false);
       setHasAttemptedFetch(true);
@@ -70,12 +71,13 @@ export const ZipCodeInput = ({
   useEffect(() => {
     const timer = setTimeout(() => {
       // Safety checks: ensure value is valid before processing
-      if (value && typeof value === 'string' && value.trim().length >= 3) {
+      if (value && typeof value === "string" && value.trim().length >= 3) {
         fetchAndSetLocation(value);
-      } else if (!value || typeof value !== 'string' || value.trim() === '') {
+      } else if (!value || typeof value !== "string" || value.trim() === "") {
         setLocationInfo(null);
         setHasAttemptedFetch(false);
-        onLocationResolved?.(null, false);
+        // Empty zip: signal "no failed lookup" so parents with existing locations can still save.
+        onLocationResolved?.(null, true);
       }
     }, 500);
 

@@ -446,6 +446,7 @@ const MySessions = () => {
     created_at: string;
     feedback_to_athlete: string | null;
     athlete_rated_at: string | null;
+    edit_count: number | null;
   } | null>(null);
   const [isLoadingExistingFeedback, setIsLoadingExistingFeedback] = useState(false);
   const { platformFeePerc, stripeFeePerc } = useFeeConfig();
@@ -656,6 +657,14 @@ const MySessions = () => {
 
   const handleSubmitCoachFeedback = () => {
     if (!rateSession || !userProfile?.id) return;
+    if ((existingFeedback?.edit_count ?? 0) >= 1 && existingFeedback?.athlete_rated_at) {
+      toast({
+        title: "Feedback locked",
+        description: "This rating is locked after one edit. Contact support for further changes.",
+        duration: 4000,
+      });
+      return;
+    }
     if (rating < 1) {
       toast({
         title: "Rating Required",

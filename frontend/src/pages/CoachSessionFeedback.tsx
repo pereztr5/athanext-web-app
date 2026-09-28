@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams, Link } from "react-router-dom";
 import {
   ArrowLeft,
   CalendarDays,
@@ -23,6 +23,7 @@ import { useCoachSessionFeedback, useUpsertSlotAttendance, useUpsertSlotFeedback
 import { mapRpcRowToAthlete, buildAttendancePayload, buildFeedbackPayload, buildSessionFeedbackPayload } from "@/utils/sessionFeedbackHelpers";
 import { useToast } from "@/hooks/use-toast";
 import { useProfile } from "@/contexts/ProfileContext";
+import { ROUTES } from "@/routes";
 
 import { BrandPill, BrandStar } from "@/components/brand";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -170,6 +171,8 @@ const CoachSessionFeedback = () => {
   const [completionDialogOpen, setCompletionDialogOpen] = useState(false);
   const [sessionFeedbackCompleted, setSessionFeedbackCompleted] = useState(false);
   const [athleteFeedbackSubmitted, setAthleteFeedbackSubmitted] = useState<Record<string, boolean>>({});
+  const [athleteFeedbackLocked, setAthleteFeedbackLocked] = useState<Record<string, boolean>>({});
+  const [sessionFeedbackLocked, setSessionFeedbackLocked] = useState(false);
   const [walkInOpen, setWalkInOpen] = useState(false);
   const [unpaidAthleteIds, setUnpaidAthleteIds] = useState<Set<string>>(new Set());
 
@@ -285,10 +288,12 @@ const CoachSessionFeedback = () => {
     const privateFeedbackData: Record<string, string> = {};
     const bookingMap: Record<string, string> = {};
     const submittedMap: Record<string, boolean> = {};
+    const lockedMap: Record<string, boolean> = {};
 
     let sessionRatingFromDB: number | null = null;
     let sessionSummaryFromDB: string | null = null;
     let coachNotesFromDB: string | null = null;
+    let sessionEditCountFromDB = 0;
     const scoresData: Record<string, number> = {};
     const notesData: Record<string, string> = {};
 
@@ -332,6 +337,10 @@ const CoachSessionFeedback = () => {
         submittedMap[athlete.id] = true;
       }
 
+      if ((row.coach_edit_count ?? 0) >= 1) {
+        lockedMap[athlete.id] = true;
+      }
+
       if (row.session_rating !== null) {
         sessionRatingFromDB = row.session_rating;
       }
@@ -342,6 +351,10 @@ const CoachSessionFeedback = () => {
 
       if (row.coach_notes) {
         coachNotesFromDB = row.coach_notes;
+      }
+
+      if (typeof row.session_edit_count === "number") {
+        sessionEditCountFromDB = row.session_edit_count;
       }
     });
 
@@ -355,6 +368,8 @@ const CoachSessionFeedback = () => {
     setAthleteFeedbackMap(feedbackData_);
     setPrivateFeedbackMap(privateFeedbackData);
     setAthleteFeedbackSubmitted(submittedMap);
+    setAthleteFeedbackLocked(lockedMap);
+    setSessionFeedbackLocked(sessionEditCountFromDB >= 1);
 
     if (sessionRatingFromDB !== null) {
       setSessionRating(sessionRatingFromDB);
@@ -586,6 +601,16 @@ const CoachSessionFeedback = () => {
   const handleSubmitFeedback = useCallback(() => {
     if (!slotId || feedbackDialogAthletes.length === 0) return;
 
+    const lockedAthletes = feedbackDialogAthletes.filter((athlete) => athleteFeedbackLocked[athlete.id]);
+    if (lockedAthletes.length > 0) {
+      toast({
+        title: "Feedback locked",
+        description: "Feedback is locked after one edit. Contact support for further changes.",
+        variant: "destructive",
+      });
+      return;
+    }
+
     const payloadItems = feedbackDialogAthletes.map((athlete) => {
       const bookingId = bookingIdMap[athlete.id];
       if (!bookingId) {
@@ -612,20 +637,43 @@ const CoachSessionFeedback = () => {
           });
           return next;
         });
+        // After an edit of already-submitted feedback, lock that athlete entry.
+        setAthleteFeedbackLocked((prev) => {
+          const next = { ...prev };
+          feedbackDialogAthletes.forEach((athlete) => {
+            if (athleteFeedbackSubmitted[athlete.id]) {
+              next[athlete.id] = true;
+            }
+          });
+          return next;
+        });
         closeDialogs();
       },
       onError: (error) => {
+        const message =
+          error instanceof Error && error.message.toLowerCase().includes("locked")
+            ? error.message
+            : "Failed to submit feedback.";
         toast({
           title: 'Something went wrong',
-          description: 'Failed to submit feedback.',
+          description: message,
           variant: 'destructive',
         });
       },
     });
-  }, [slotId, feedbackDialogAthletes, bookingIdMap, athleteRatingMap, athleteFeedbackMap, privateFeedbackMap, upsertFeedback, toast]);
+  }, [slotId, feedbackDialogAthletes, bookingIdMap, athleteRatingMap, athleteFeedbackMap, privateFeedbackMap, athleteFeedbackLocked, athleteFeedbackSubmitted, upsertFeedback, toast]);
 
   const handleCompleteSession = useCallback(() => {
     if (!sessionRating || !slotId) return;
+
+    if (sessionFeedbackLocked) {
+      toast({
+        title: "Feedback locked",
+        description: "Session feedback is locked after one edit. Contact support for further changes.",
+        variant: "destructive",
+      });
+      return;
+    }
 
     const sessionPayload = buildSessionFeedbackPayload(slotId, sessionRating, sessionSummary, coachNotes);
 
@@ -633,16 +681,23 @@ const CoachSessionFeedback = () => {
       onSuccess: () => {
         setCompletionDialogOpen(true);
         setSessionFeedbackCompleted(true);
+        if (sessionFeedbackCompleted) {
+          setSessionFeedbackLocked(true);
+        }
       },
       onError: (error) => {
+        const message =
+          error instanceof Error && error.message.toLowerCase().includes("locked")
+            ? error.message
+            : "Failed to save session feedback.";
         toast({
           title: 'Something went wrong',
-          description: 'Failed to save session feedback.',
+          description: message,
           variant: 'destructive',
         });
       },
     });
-  }, [sessionRating, slotId, sessionSummary, coachNotes, upsertSessionFeedbackMutation, toast]);
+  }, [sessionRating, slotId, sessionSummary, coachNotes, sessionFeedbackLocked, sessionFeedbackCompleted, upsertSessionFeedbackMutation, toast]);
 
   if (isLoadingData || profileLoading) {
     return (
@@ -840,7 +895,11 @@ const CoachSessionFeedback = () => {
                                 openFeedbackDialog([athlete]);
                               }}
                             >
-                              {athleteFeedbackSubmitted[athlete.id] ? "Edit feedback" : "Add feedback"}
+                              {athleteFeedbackLocked[athlete.id]
+                                ? "View feedback"
+                                : athleteFeedbackSubmitted[athlete.id]
+                                ? "Edit feedback"
+                                : "Add feedback"}
                             </Button>
                             <Button
                               size="sm"
@@ -876,6 +935,15 @@ const CoachSessionFeedback = () => {
                 <CardTitle className="text-[#1A202C]">Session feedback</CardTitle>
               </CardHeader>
               <CardContent className="flex flex-col gap-5 px-[25px] pb-[25px]">
+                {sessionFeedbackLocked ? (
+                  <p className={cn(bodyClass, "text-[#767980]")}>
+                    Session feedback is locked after one edit. Contact support if you need a further change.
+                  </p>
+                ) : sessionFeedbackCompleted ? (
+                  <p className={cn(bodyClass, "text-[#767980]")}>
+                    You can make one update to this session feedback.
+                  </p>
+                ) : null}
                 <div className="flex flex-col gap-[10px]">
                   <div className="flex items-center gap-2">
                     <span className={fieldLabelClass}>
@@ -884,18 +952,31 @@ const CoachSessionFeedback = () => {
                     <BrandPill tone="amber">Required</BrandPill>
                   </div>
                   <div className="flex items-center gap-3">
-                    <RatingStars
-                      label="Overall session rating"
-                      value={sessionRatingShown}
-                      onChange={(val) => setSessionRating(val)}
-                      onHover={(val) => setSessionHoverRating(val)}
-                      onLeave={() => setSessionHoverRating(null)}
-                    />
-                    {sessionRatingShown > 0 ? (
-                      <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
-                        {sessionRatingShown} of 5
-                      </span>
-                    ) : null}
+                    {sessionFeedbackLocked ? (
+                      <>
+                        <ReadOnlyStars value={sessionRatingShown} />
+                        {sessionRatingShown > 0 ? (
+                          <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                            {sessionRatingShown} of 5
+                          </span>
+                        ) : null}
+                      </>
+                    ) : (
+                      <>
+                        <RatingStars
+                          label="Overall session rating"
+                          value={sessionRatingShown}
+                          onChange={(val) => setSessionRating(val)}
+                          onHover={(val) => setSessionHoverRating(val)}
+                          onLeave={() => setSessionHoverRating(null)}
+                        />
+                        {sessionRatingShown > 0 ? (
+                          <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
+                            {sessionRatingShown} of 5
+                          </span>
+                        ) : null}
+                      </>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-col gap-[10px]">
@@ -907,7 +988,9 @@ const CoachSessionFeedback = () => {
                     value={sessionSummary}
                     onChange={(event) => setSessionSummary(event.target.value)}
                     placeholder="Key focus areas and general observations"
-                    className={cn(textareaClass, "min-h-[140px]")}
+                    readOnly={sessionFeedbackLocked}
+                    disabled={sessionFeedbackLocked}
+                    className={cn(textareaClass, "min-h-[140px]", sessionFeedbackLocked && "disabled:cursor-default disabled:opacity-100")}
                   />
                 </div>
               </CardContent>
@@ -954,24 +1037,34 @@ const CoachSessionFeedback = () => {
                 </div>
                 <div className="h-px bg-[#EAEADF]" />
                 <div className="flex flex-col gap-[10px]">
-                  <Button
-                    size="lg"
-                    className="w-full text-[16px] disabled:opacity-60"
-                    disabled={!sessionRating || isUpdatingSessionFeedback || sessionFeedbackCompleted}
-                    onClick={handleCompleteSession}
-                  >
-                    {sessionFeedbackCompleted ? (
-                      <Check className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                    ) : (
-                      <SendHorizontal className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                    )}
-                    {isUpdatingSessionFeedback
-                      ? "Saving..."
-                      : sessionFeedbackCompleted
-                      ? "Session submitted"
-                      : "Complete session and send"}
-                  </Button>
-                  {!sessionRating && (
+                  {sessionFeedbackLocked ? (
+                    <Button
+                      asChild
+                      size="lg"
+                      className="w-full text-[16px]"
+                    >
+                      <Link to={ROUTES.CONTACT_US}>Contact support</Link>
+                    </Button>
+                  ) : (
+                    <Button
+                      size="lg"
+                      className="w-full text-[16px] disabled:opacity-60"
+                      disabled={!sessionRating || isUpdatingSessionFeedback}
+                      onClick={handleCompleteSession}
+                    >
+                      {sessionFeedbackCompleted ? (
+                        <Check className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                      ) : (
+                        <SendHorizontal className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                      )}
+                      {isUpdatingSessionFeedback
+                        ? "Saving..."
+                        : sessionFeedbackCompleted
+                        ? "Update session feedback"
+                        : "Complete session and send"}
+                    </Button>
+                  )}
+                  {!sessionRating && !sessionFeedbackLocked && (
                     <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
                       Add an overall rating to complete the session.
                     </p>
@@ -995,7 +1088,9 @@ const CoachSessionFeedback = () => {
           <DialogHeader className={cn(dialogSectionClass, "space-y-1.5 pr-14 text-left")}>
             <DialogTitle className={dialogTitleClass}>Athlete feedback</DialogTitle>
             <DialogDescription className={dialogDescriptionClass}>
-              Share highlights and notes for each athlete.
+              {feedbackDialogAthletes.some((athlete) => athleteFeedbackLocked[athlete.id])
+                ? "Locked feedback is read-only. Contact support for further changes."
+                : "Share highlights and notes for each athlete."}
             </DialogDescription>
           </DialogHeader>
           <Divider />
@@ -1005,6 +1100,7 @@ const CoachSessionFeedback = () => {
                 const athleteRating = athleteRatingMap[athlete.id];
                 const athleteRatingShown = athleteHoverRatingMap[athlete.id] ?? athleteRating ?? 0;
                 const athleteScore = athleteScoreMap[athlete.id];
+                const isLocked = Boolean(athleteFeedbackLocked[athlete.id]);
                 const meta = getAthleteMeta(athlete);
                 return (
                   <div key={athlete.id}>
@@ -1021,6 +1117,12 @@ const CoachSessionFeedback = () => {
                           </BrandPill>
                         ) : null}
                       </div>
+
+                      {isLocked ? (
+                        <p className={cn(bodyClass, "text-[#767980]")}>
+                          This athlete feedback is locked after one edit.
+                        </p>
+                      ) : null}
 
                       <div className="flex flex-col gap-[10px] rounded-[8px] bg-[#F4F4EB] p-4">
                         <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">From the athlete</p>
@@ -1042,36 +1144,49 @@ const CoachSessionFeedback = () => {
                           Your rating of this athlete <span className="font-normal text-[#767980]">(optional)</span>
                         </p>
                         <div className="flex flex-wrap items-center gap-3">
-                          <RatingStars
-                            size="sm"
-                            label={`Rating for ${athlete.name}`}
-                            value={athleteRatingShown}
-                            onChange={(val) =>
-                              setAthleteRatingMap((prev) => ({ ...prev, [athlete.id]: val }))
-                            }
-                            onHover={(val) =>
-                              setAthleteHoverRatingMap((prev) => ({ ...prev, [athlete.id]: val }))
-                            }
-                            onLeave={() =>
-                              setAthleteHoverRatingMap((prev) => ({ ...prev, [athlete.id]: null }))
-                            }
-                          />
-                          {athleteRatingShown > 0 ? (
-                            <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
-                              {athleteRatingShown} of 5
-                            </span>
-                          ) : null}
-                          {athleteRating && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              className="px-2 text-[14px] text-[#767980]"
-                              onClick={() =>
-                                setAthleteRatingMap((prev) => ({ ...prev, [athlete.id]: undefined }))
-                              }
-                            >
-                              Clear
-                            </Button>
+                          {isLocked ? (
+                            <>
+                              <ReadOnlyStars value={athleteRatingShown} />
+                              {athleteRatingShown > 0 ? (
+                                <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                                  {athleteRatingShown} of 5
+                                </span>
+                              ) : null}
+                            </>
+                          ) : (
+                            <>
+                              <RatingStars
+                                size="sm"
+                                label={`Rating for ${athlete.name}`}
+                                value={athleteRatingShown}
+                                onChange={(val) =>
+                                  setAthleteRatingMap((prev) => ({ ...prev, [athlete.id]: val }))
+                                }
+                                onHover={(val) =>
+                                  setAthleteHoverRatingMap((prev) => ({ ...prev, [athlete.id]: val }))
+                                }
+                                onLeave={() =>
+                                  setAthleteHoverRatingMap((prev) => ({ ...prev, [athlete.id]: null }))
+                                }
+                              />
+                              {athleteRatingShown > 0 ? (
+                                <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                                  {athleteRatingShown} of 5
+                                </span>
+                              ) : null}
+                              {athleteRating && (
+                                <Button
+                                  variant="ghost"
+                                  size="sm"
+                                  className="px-2 text-[14px] text-[#767980]"
+                                  onClick={() =>
+                                    setAthleteRatingMap((prev) => ({ ...prev, [athlete.id]: undefined }))
+                                  }
+                                >
+                                  Clear
+                                </Button>
+                              )}
+                            </>
                           )}
                         </div>
                       </div>
@@ -1090,7 +1205,9 @@ const CoachSessionFeedback = () => {
                             }))
                           }
                           placeholder={`For example, ${athlete.name} commanded the box well and improved footwork`}
-                          className={cn(textareaClass, "min-h-[110px]")}
+                          readOnly={isLocked}
+                          disabled={isLocked}
+                          className={cn(textareaClass, "min-h-[110px]", isLocked && "disabled:cursor-default disabled:opacity-100")}
                         />
                       </div>
                       <div className="flex flex-col gap-[10px]">
@@ -1107,7 +1224,9 @@ const CoachSessionFeedback = () => {
                             }))
                           }
                           placeholder="Only you can see these notes"
-                          className={cn(textareaClass, "min-h-[90px]")}
+                          readOnly={isLocked}
+                          disabled={isLocked}
+                          className={cn(textareaClass, "min-h-[90px]", isLocked && "disabled:cursor-default disabled:opacity-100")}
                         />
                       </div>
                     </div>
@@ -1125,11 +1244,23 @@ const CoachSessionFeedback = () => {
             </Button>
             <div className="flex flex-col-reverse gap-[10px] sm:flex-row">
               <Button variant="outline" onClick={closeDialogs}>
-                Cancel
+                {feedbackDialogAthletes.some((athlete) => athleteFeedbackLocked[athlete.id]) ? "Close" : "Cancel"}
               </Button>
-              <Button onClick={handleSubmitFeedback} disabled={isSubmittingFeedback}>
-                {isSubmittingFeedback ? "Saving..." : "Save feedback"}
-              </Button>
+              {feedbackDialogAthletes.every((athlete) => athleteFeedbackLocked[athlete.id]) ? (
+                <Button asChild>
+                  <Link to={ROUTES.CONTACT_US}>Contact support</Link>
+                </Button>
+              ) : (
+                <Button
+                  onClick={handleSubmitFeedback}
+                  disabled={
+                    isSubmittingFeedback ||
+                    feedbackDialogAthletes.some((athlete) => athleteFeedbackLocked[athlete.id])
+                  }
+                >
+                  {isSubmittingFeedback ? "Saving..." : "Save feedback"}
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>

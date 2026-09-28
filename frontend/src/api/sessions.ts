@@ -610,12 +610,13 @@ export async function getExistingFeedback(
     created_at: string;
     feedback_to_athlete: string | null;
     athlete_rated_at: string | null;
+    edit_count: number | null;
   } | null>
 > {
   try {
     let query = supabase
       .from('slot_feedback_v2' as any)
-      .select('rating, comment, created_at, feedback_to_athlete, athlete_rated_at')
+      .select('rating, comment, created_at, feedback_to_athlete, athlete_rated_at, edit_count')
       .eq('booking_id', bookingId)
       .eq('athlete_id', athleteId);
 

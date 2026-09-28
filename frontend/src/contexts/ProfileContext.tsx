@@ -129,7 +129,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         const { data: athleteData, error: athleteError } = await supabase
           .from("athlete_profiles")
           .select(
-            "id, user_id, full_name, date_of_birth, sport, position, phone_number, location, tags, profile_image_url, cover_image_urls, bio, profile_completed, created_at, updated_at, instagram_handle, graduation_year, current_year, high_school, gpa, height, weight, dominant_hand"
+            "id, user_id, full_name, date_of_birth, sport, position, phone_number, location, tags, pathway_tags, profile_image_url, cover_image_urls, bio, profile_completed, created_at, updated_at, instagram_handle, graduation_year, current_year, high_school, gpa, height, weight, dominant_hand"
           )
           .eq("user_id", user.id)
           .maybeSingle();
@@ -193,7 +193,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
         .from("athlete_profiles")
         .upsert(upsertPayload as any, { onConflict: "user_id" })
         .select(
-          "id, user_id, full_name, date_of_birth, sport, position, phone_number, location, tags, profile_image_url, cover_image_urls, bio, profile_completed, created_at, updated_at, instagram_handle, graduation_year, current_year, high_school, gpa, height, weight, dominant_hand"
+          "id, user_id, full_name, date_of_birth, sport, position, phone_number, location, tags, pathway_tags, profile_image_url, cover_image_urls, bio, profile_completed, created_at, updated_at, instagram_handle, graduation_year, current_year, high_school, gpa, height, weight, dominant_hand"
         )
         .single();
 

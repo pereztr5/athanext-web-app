@@ -10,6 +10,7 @@ import { GenderSelect } from "@/components/form/GenderSelect";
 import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
 import { CoachProfileChip } from "./CoachProfileCard";
 import { BrandPill, BrandStar } from "@/components/brand";
+import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatLocationDisplay, type LocationInfo } from "@/utils/geolocation";
 import { BadgeCheck, MapPin, Instagram, Camera, Plus, Trash2, X, Loader2 } from "lucide-react";
@@ -1018,55 +1019,8 @@ export function CoachHeader({
                 <ProfileStrengthMeter coach={coach} onEdit={isEditMode ? undefined : onEdit} />
             )}
 
-            <CoverCarouselManager
-                coachName={coach.name}
-                coverPreviews={coverPreviews}
-                isEditMode={isEditMode}
-                coverImagesInputRef={coverImagesInputRef}
-                toast={toast}
-                onCoverImagesSelect={(files) => {
-                    // validate files
-                    const validFiles: File[] = [];
-                    for (const file of files) {
-                        if (!file.type.startsWith("image/")) {
-                            toast({
-                                title: "Invalid file type",
-                                description: `${file.name} is not an image file.`,
-                                variant: "destructive",
-                            });
-                            continue;
-                        }
-                        if (file.size > MAX_FILE_SIZE) {
-                            toast({
-                                title: "Image too large",
-                                description: `${file.name} is too large. Maximum size is 10MB.`,
-                                variant: "destructive",
-                            });
-                            continue;
-                        }
-                        validFiles.push(file);
-                    }
-                    if (validFiles.length === 0) return;
-                    
-                    // Check current count + new files
-                    const currentCount = coverPreviews.length;
-                    if (currentCount + validFiles.length > MAX_COVER_IMAGES) {
-                        toast({
-                            title: "Too many cover images",
-                            description: `You can upload a maximum of ${MAX_COVER_IMAGES} cover images.`,
-                            variant: "destructive",
-                        });
-                        return;
-                    }
-                    
-                    // Trigger cropper for sequential processing
-                    setPendingCoverFiles(validFiles);
-                    setCurrentCoverFile(validFiles[0]);
-                    setCropCoverFile(validFiles[0]);
-                    setShowCoverCropper(true);
-                }}
-                onCoverImageRemove={handleRemoveCoverImage}
-            />
+            {/* Cover carousel hidden (ATH-46); cover_image_urls column retained */}
+            {null}
 
             <div className="flex flex-col items-start gap-5 md:flex-row md:gap-6">
                 <div className="relative flex-shrink-0">
@@ -1187,6 +1141,14 @@ export function CoachHeader({
                             </div>
 
                             <div className="flex flex-col gap-1.5">
+                                <Label className={fieldLabelClass}>Pathway tags</Label>
+                                <PathwayTagChips
+                                    selected={editedCoach?.pathway_tags ?? coach.pathway_tags ?? []}
+                                    onChange={(tags) => onFieldChange?.("pathway_tags", tags)}
+                                />
+                            </div>
+
+                            <div className="flex flex-col gap-1.5">
                                 <Label className={fieldLabelClass}>
                                     Positions coached
                                     <span className={requiredMarkClass}>*</span>
@@ -1221,18 +1183,30 @@ export function CoachHeader({
                                         setIsLocationValid(!nextValue.trim());
                                         onFieldChange?.("zip_code", nextValue);
                                         if (!nextValue.trim()) {
+                                            // Clearing the zip keeps the saved location; a new zip replaces it.
                                             setLocationInfo(null);
-                                            onFieldChange?.("locations", []);
                                         }
                                     }}
                                     onLocationResolved={(info, isValid) => {
                                         setLocationInfo(info);
-                                        setIsLocationValid(isValid);
-                                        if (!isValid || !info) return;
-                                        const formatted = formatLocationDisplay(info)?.trim();
-                                        if (formatted) {
-                                            onFieldChange?.("locations", [formatted]);
+                                        if (isValid && info) {
+                                            setIsLocationValid(true);
+                                            const formatted = formatLocationDisplay(info)?.trim();
+                                            if (formatted) {
+                                                onFieldChange?.("locations", [formatted]);
+                                            }
+                                            return;
                                         }
+                                        if (isValid && !info) {
+                                            // Empty zip (no failed lookup) — allow Save if a location already exists.
+                                            const hasExisting = Boolean(
+                                                (editedCoach as { locations?: string[] } | undefined)
+                                                    ?.locations?.[0] || coach.locations?.[0]
+                                            );
+                                            setIsLocationValid(hasExisting);
+                                            return;
+                                        }
+                                        setIsLocationValid(false);
                                     }}
                                     disabled={isSaving}
                                     id="coach-zipCode"
@@ -1325,7 +1299,7 @@ export function CoachHeader({
                             {coach.gender ? <GenderPill gender={coach.gender} showLabel={false} /> : null}
                         </div>
 
-                        {(specialties.length > 0 || favoritePositions.length > 0 || coach.company) && (
+                        {(specialties.length > 0 || favoritePositions.length > 0 || coach.company || (coach.pathway_tags?.length ?? 0) > 0) && (
                             <div className="flex flex-col gap-[10px]">
                                 {specialties.length > 0 && (
                                     <div className="flex flex-wrap gap-2">
@@ -1334,6 +1308,7 @@ export function CoachHeader({
                                         ))}
                                     </div>
                                 )}
+                                <PathwayTagChips selected={coach.pathway_tags} readOnly />
                                 {(favoritePositions.length > 0 || coach.company) && (
                                     <div className="flex flex-wrap gap-[6px]">
                                         {favoritePositions.map((position, index) => (

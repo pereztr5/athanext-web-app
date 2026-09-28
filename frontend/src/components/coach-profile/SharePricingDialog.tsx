@@ -1,11 +1,13 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -201,17 +203,24 @@ export function SharePricingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[920px] overflow-y-auto border-[#EAEADF] bg-[#F7F7F0] p-0 sm:rounded-[12px]">
+      <DialogContent className="max-h-[90vh] max-w-[920px] overflow-y-auto border-[#EAEADF] bg-[#F7F7F0] p-0 sm:rounded-[12px] [&>button]:hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-[#EAEADF] px-6 py-4">
+          <DialogHeader className="space-y-1 text-left">
+            <DialogTitle className="text-[24px] font-semibold tracking-[-0.05em] text-[#1A202C]">
+              Share pricing
+            </DialogTitle>
+            <DialogDescription className="text-[14px] tracking-[-0.03em] text-[#767980]">
+              Pick a format, choose what to show, then download or copy your link.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogClose className="shrink-0 rounded-[5px] p-2 text-[#767980] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+            <X className="h-5 w-5" strokeWidth={1.5} />
+            <span className="sr-only">Close</span>
+          </DialogClose>
+        </div>
+
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
           <div className="flex flex-col gap-5 border-b border-[#EAEADF] p-6 lg:border-b-0 lg:border-r">
-            <DialogHeader className="space-y-1 text-left">
-              <DialogTitle className="text-[24px] font-semibold tracking-[-0.05em] text-[#1A202C]">
-                Share pricing
-              </DialogTitle>
-              <DialogDescription className="text-[14px] tracking-[-0.03em] text-[#767980]">
-                Pick a format, choose what to show, then download or copy your link.
-              </DialogDescription>
-            </DialogHeader>
 
             <div className="flex gap-2">
               {(
