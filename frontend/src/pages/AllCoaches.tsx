@@ -38,6 +38,8 @@ import type { Enums } from "@/integrations/supabase/types";
 import { useSlowLoading } from "@/hooks/useSlowLoading";
 import { stripRichTextToPlainText } from "@/utils/richText";
 import { publicCoachRatingLabel } from "@/utils/publicRating";
+import { BrandPill } from "@/components/brand";
+import { ALL_ACADEMIES, coachAcademy, getAcademyOptions, matchesAcademy } from "@/utils/coachAcademy";
 import {
   PATHWAY_TAGS,
   zipProximityRank,
@@ -83,6 +85,7 @@ const AthleteBrowseCard = ({
   const showScore = rating !== "New";
   const price = coach.hourly_rate ? `$${Math.round(Number(coach.hourly_rate))}` : null;
   const pillars = (coach.specialties || []).filter(Boolean);
+  const academy = coachAcademy(coach.company);
 
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
@@ -117,7 +120,14 @@ const AthleteBrowseCard = ({
             <BadgeCheck className="size-4 shrink-0 fill-[#0054B4] text-white" strokeWidth={2} />
           ) : null}
         </div>
-        <p className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]">{position}</p>
+        <div className="flex min-w-0 items-center gap-[6px]">
+          <p className="shrink-0 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]">{position}</p>
+          {academy ? (
+            <BrandPill tone="muted" className="min-w-0 max-w-full">
+              <span className="truncate">{academy}</span>
+            </BrandPill>
+          ) : null}
+        </div>
         {location || rating ? (
           <div className="flex items-center gap-[6px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
             {location ? <span className="truncate">{location}</span> : null}
@@ -183,6 +193,7 @@ const AllCoaches = () => {
   const [selectedPillar, setSelectedPillar] = useState("All Pillars");
   const [selectedFavoritePosition, setSelectedFavoritePosition] = useState("All Positions");
   const [selectedPathway, setSelectedPathway] = useState("All Pathways");
+  const [selectedAcademy, setSelectedAcademy] = useState(ALL_ACADEMIES);
   const [zipQuery, setZipQuery] = useState("");
 
   const [sortBy, setSortBy] = useState("Highest Rated");
@@ -320,6 +331,7 @@ const AllCoaches = () => {
     setSelectedPillar("All Pillars");
     setSelectedFavoritePosition("All Positions");
     setSelectedPathway("All Pathways");
+    setSelectedAcademy(ALL_ACADEMIES);
   }, [selectedSport]);
 
   useEffect(() => {
@@ -370,6 +382,11 @@ const AllCoaches = () => {
           }
         }
 
+        // Check academy / company
+        if (coachAcademy(coach.company).toLowerCase().includes(query)) {
+          return true;
+        }
+
         // Check pathway tags
         if (Array.isArray(coach.pathway_tags) && coach.pathway_tags.length > 0) {
           if (coach.pathway_tags.some((tag) =>
@@ -405,6 +422,11 @@ const AllCoaches = () => {
         return Array.isArray(coach.pathway_tags) &&
           coach.pathway_tags.includes(selectedPathway);
       });
+    }
+
+    // Filter by academy (coaches.company)
+    if (selectedAcademy !== ALL_ACADEMIES) {
+      filtered = filtered.filter((coach) => coach && matchesAcademy(coach.company, selectedAcademy));
     }
 
     // Filter by favorite position
@@ -491,6 +513,8 @@ const AllCoaches = () => {
     selectedFavoritePosition,
 
     selectedPathway,
+
+    selectedAcademy,
 
     zipQuery,
 
@@ -845,6 +869,13 @@ const AllCoaches = () => {
 
   const filterTriggerClass =
     "!h-auto w-full !rounded-[8px] !border-[#EAEADF] !bg-[#F7F7F0] !px-[10px] !py-[10px] !text-[12px] !font-normal !leading-[14px] !tracking-[-0.36px] shadow-none focus:!ring-0 focus:!ring-offset-0 [&>svg]:!size-4 [&>svg]:!opacity-100 [&>svg]:!text-[#767980]";
+  // Academies offered for the chosen sport, so the list stays relevant after switching sport.
+  const academyOptions = getAcademyOptions(
+    selectedSport === "All Sports"
+      ? coaches
+      : coaches.filter((coach) => coach && getCoachSport(coach) === selectedSport.toLowerCase())
+  );
+
   const filterLabel = (value: string) => {
     switch (value) {
       case "All Sports":
@@ -855,6 +886,8 @@ const AllCoaches = () => {
         return "All positions";
       case "All Pathways":
         return "All pathways";
+      case ALL_ACADEMIES:
+        return "All academies";
       case "Highest Rated":
         return "Highest rated";
       case "Lowest Rated":
@@ -864,7 +897,7 @@ const AllCoaches = () => {
     }
   };
   const isDefaultFilter = (value: string) =>
-    ["All Sports", "All Pillars", "All Positions", "All Pathways", "Highest Rated"].includes(value);
+    ["All Sports", "All Pillars", "All Positions", "All Pathways", ALL_ACADEMIES, "Highest Rated"].includes(value);
   const triggerClass = (value: string, width: string) =>
     `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
   const coachCountLabel = `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found`;
@@ -962,7 +995,7 @@ const AllCoaches = () => {
               />
             </div>
 
-            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-4" : "grid min-w-0 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:flex lg:flex-none"}>
+            <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-2 " + (academyOptions.length > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4") : "grid min-w-0 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:flex lg:flex-none"}>
               {!isAuthenticated && (
                 <Select value={selectedSport} onValueChange={setSelectedSport}>
                   <SelectTrigger className={triggerClass(selectedSport, "lg:!w-[130px]")} aria-label="Sport">
@@ -1006,6 +1039,22 @@ const AllCoaches = () => {
                   ))}
                 </SelectContent>
               </Select>
+
+              {academyOptions.length > 0 && (
+                <Select value={selectedAcademy} onValueChange={setSelectedAcademy}>
+                  <SelectTrigger className={triggerClass(selectedAcademy, "lg:!w-[160px]")} aria-label="Academy">
+                    <SelectValue>{filterLabel(selectedAcademy)}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent className="z-50">
+                    <SelectItem value={ALL_ACADEMIES}>{filterLabel(ALL_ACADEMIES)}</SelectItem>
+                    {academyOptions.map((academy) => (
+                      <SelectItem key={academy} value={academy}>
+                        {academy}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
 
               <Select value={selectedFavoritePosition} onValueChange={setSelectedFavoritePosition}>
                 <SelectTrigger className={triggerClass(selectedFavoritePosition, "lg:!w-[170px]")} aria-label="Favorite position">
@@ -1066,6 +1115,7 @@ const AllCoaches = () => {
                   setSelectedPillar("All Pillars");
                   setSelectedFavoritePosition("All Positions");
                   setSelectedPathway("All Pathways");
+                  setSelectedAcademy(ALL_ACADEMIES);
                   setZipQuery("");
                   setSortBy("Highest Rated");
                 }}

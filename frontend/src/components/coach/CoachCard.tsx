@@ -9,6 +9,7 @@ import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import type { Coach } from '@/types/coachProfile'
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { BrandPill, BrandStar } from "@/components/brand";
+import { coachAcademy } from "@/utils/coachAcademy";
 
 interface CoachCardProps {
     coach: Coach;
@@ -70,6 +71,7 @@ const CoachCard = ({
         : typeof rawFavoritePositions === "string"
             ? rawFavoritePositions.split(",").map((item) => item.trim()).filter(Boolean)
             : [];
+    const academy = coachAcademy(coach?.company);
     const primarySpecialty = specialtyList[0]
         ? (() => {
             const label = toSentenceCase(specialtyList[0]);
@@ -186,9 +188,16 @@ const CoachCard = ({
                                     </a>
                                 )}
                             </div>
-                            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-                                {primarySpecialty}
-                            </p>
+                            <div className="flex min-w-0 flex-wrap items-center gap-[6px]">
+                                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                                    {primarySpecialty}
+                                </p>
+                                {academy && (
+                                    <BrandPill tone="muted" className="min-w-0 max-w-full">
+                                        <span className="truncate">{academy}</span>
+                                    </BrandPill>
+                                )}
+                            </div>
                             <p className="flex items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
                                 <MapPin className="size-3 flex-none" strokeWidth={2} aria-hidden="true" />
                                 <span className="truncate">{primaryLocation}</span>
