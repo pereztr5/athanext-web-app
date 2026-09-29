@@ -314,6 +314,11 @@ export const CoachAvailabilitySection = ({
     const start = parseISODateLocal(startISO);
     const end = parseISODateLocal(endISO);
 
+    // Single-session periods start and end on the same day.
+    if (startISO === endISO) {
+      return start.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+    }
+
     if (start.getFullYear() === end.getFullYear()) {
       const startStr = start.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
       const endStr = end.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });

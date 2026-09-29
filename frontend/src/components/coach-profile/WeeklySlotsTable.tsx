@@ -55,6 +55,8 @@ interface WeeklySlotsTableProps {
   currentWeekErrors: AvailabilityValidationErrors;
   weekErrorSet: Set<string>;
   isRecurring: boolean;
+  /** Single session: exactly one slot, so hide the add-slot controls. */
+  singleSlot?: boolean;
   isEditMode: boolean;
   formStartDate: Date;
   formEndDate: Date;
@@ -91,6 +93,7 @@ export const WeeklySlotsTable = ({
   currentWeekErrors,
   weekErrorSet,
   isRecurring,
+  singleSlot = false,
   isEditMode,
   formStartDate,
   formEndDate,
@@ -544,8 +547,8 @@ export const WeeklySlotsTable = ({
                           slotIndex={idx}
                           onToggle={(d) => handleSlotToggle(d, idx, weekISO)}
                           onChange={(d, field, value) => handleSlotChange(d, field, value, weekISO, idx)}
-                          onAddSlot={() => addSlotToDay(day, weekISO, slot)}
-                          showAddIcon
+                          onAddSlot={singleSlot ? undefined : () => addSlotToDay(day, weekISO, slot)}
+                          showAddIcon={!singleSlot}
                           onDeleteSlot={() => handleDeleteSlot(day, idx, weekISO)}
                           canDelete={(day !== 1 && slots.length > 1) || (day === 1 && idx > 0)}
                           pillars={sportPillars || []}
@@ -575,6 +578,7 @@ export const WeeklySlotsTable = ({
           </table>
         )}
       </div>
+      {!singleSlot && (
       <button
         type="button"
         onClick={() => {
@@ -592,6 +596,7 @@ export const WeeklySlotsTable = ({
         <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
         Add slot
       </button>
+      )}
 
       {currentWeekErrors.overlap && (
         <Alert

@@ -43,6 +43,8 @@ interface UseAvailabilitySubmitArgs {
   weeks: Date[];
   occurrenceSlots: Record<string, Record<DayOfWeek, SlotFormData[]>>;
   enabledSlots: SlotFormData[];
+  /** Inclusive day gap required between start and end; 0 for a single session. */
+  minRangeDays?: number;
   onValidationFailure: (r: {
     errors: AvailabilityValidationErrors;
     weekErrors: Record<string, AvailabilityValidationErrors>;
@@ -61,6 +63,7 @@ export const useAvailabilitySubmit = ({
   weeks,
   occurrenceSlots,
   enabledSlots: enabledSlotsMemo,
+  minRangeDays = MIN_RANGE_DAYS,
   onValidationFailure,
   onSuccess,
 }: UseAvailabilitySubmitArgs) => {
@@ -118,8 +121,8 @@ export const useAvailabilitySubmit = ({
         baseErrors.dateRange = 'End date must be after start date';
       }
       const minEnd = new Date(formData.start_date);
-      minEnd.setDate(minEnd.getDate() + MIN_RANGE_DAYS);
-      if (formData.end_date < minEnd) {
+      minEnd.setDate(minEnd.getDate() + minRangeDays);
+      if (minRangeDays > 0 && formData.end_date < minEnd) {
         baseErrors.dateRange = 'Availability must span at least 7 days';
       }
 
@@ -292,7 +295,10 @@ export const useAvailabilitySubmit = ({
           .map(slot => DAY_OF_WEEK_MAP[slot.day_of_week])
           .filter((day, index, self) => self.indexOf(day) === index)
           .join(', ');
-        const dateRange = `${new Date(formData.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${new Date(formData.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        const startLabel = new Date(formData.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+        const dateRange = formStartISO === formEndISO
+          ? startLabel
+          : `${startLabel} - ${new Date(formData.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
         toast({
           title: 'Availability Added Successfully!',
@@ -320,7 +326,7 @@ export const useAvailabilitySubmit = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, coachId, toast, onSuccess, onValidationFailure, isEditMode, editData, existingAvailabilities, enabledSlotsMemo, formStartISO, formEndISO, weeks, occurrenceSlots, upsertOccurrences, upsertOccurrencesEdit, cleanupExtraOccurrences]);
+  }, [formData, coachId, toast, onSuccess, onValidationFailure, isEditMode, editData, existingAvailabilities, enabledSlotsMemo, formStartISO, formEndISO, weeks, occurrenceSlots, upsertOccurrences, upsertOccurrencesEdit, cleanupExtraOccurrences, minRangeDays]);
 
   return { handleSubmit, isSubmitting };
 };

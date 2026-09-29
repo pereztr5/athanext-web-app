@@ -32,7 +32,7 @@ import { capitalizeFirst } from '@/utils/helperFunctions';
 import { useCoachDetails } from '@/hooks/useCoachDetails';
 import { useSportPillars } from '@/hooks/useSportPillars';
 import { useLockedOccurrenceIds } from '@/hooks/useLockedOccurrenceIds';
-import { formatWeekRange, parseISODateLocal, toLocalISODate } from '@/utils/dateHelpers';
+import { formatWeekRange, getWeekStart, parseISODateLocal, toLocalISODate } from '@/utils/dateHelpers';
 import {
   DEFAULT_SLOT,
   buildWeeksRange,
@@ -41,8 +41,10 @@ import {
   applyTemplateToWeek,
   filterWeekSlotsWithinRange,
   buildWeekSlotsFromOccurrences,
+  createEmptyWeekSlots,
+  isDateWithinRange,
 } from '@/utils/availabilityModalHelpers';
-import { DateRangeHeader } from './DateRangeHeader';
+import { DateRangeHeader, type ScheduleMode } from './DateRangeHeader';
 import { WeeklySlotsTable } from './WeeklySlotsTable';
 import type { Enums } from '@/integrations/supabase/types';
 import { useOccurrencesV3 } from '@/hooks/useAvailabilityOccurrences';
@@ -95,6 +97,8 @@ export const ManageAvailabilityModal = ({
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
   const issueScrollRef = React.useRef<HTMLDivElement | null>(null);
   const resetDatesRef = React.useRef(false);
+  // Slot carried to a newly picked single-session date; a ref so consuming it doesn't re-run seeding.
+  const singleSlotCarryRef = React.useRef<Record<string, Record<DayOfWeek, SlotFormData[]>> | null>(null);
   const [currentWeekIndex, setCurrentWeekIndex] = useState(0);
   const [occurrenceSlots, setOccurrenceSlots] = useState<Record<string, Record<DayOfWeek, SlotFormData[]>>>({});
   const [hasUserChanges, setHasUserChanges] = useState(false);
@@ -129,6 +133,12 @@ export const ManageAvailabilityModal = ({
     open && isEditMode
   );
   const MIN_RANGE_DAYS = 6; // inclusive: start + 6 days = 7-day span
+  // Single session: one date, one slot, no week minimum. Edit mode infers it from a one-day period.
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('repeating');
+  const isSingleSession = isEditMode
+    ? Boolean(editData && editData.start_date === editData.end_date)
+    : scheduleMode === 'single';
+  const minRangeDays = isSingleSession ? 0 : MIN_RANGE_DAYS;
 
   // Memoized derived values
   const enabledSlotsMemo = useMemo(() => {
@@ -256,6 +266,7 @@ export const ManageAvailabilityModal = ({
         setAwaitingOccurrences(true);
       }
       setIsRecurring(!isEditMode);
+      setScheduleMode('repeating');
       setHasUserChanges(false);
       setWeekInitialized(false);
       setCustomizedWeeks(new Set());
@@ -454,7 +465,10 @@ export const ManageAvailabilityModal = ({
     } else {
       // New availability: seed each week with default daily slots (all days enabled)
       // If we have preserved slots from a date change, start with them
-      if (usePreservedSlots && preservedSlotsForRange) {
+      if (singleSlotCarryRef.current) {
+        byWeek = { ...singleSlotCarryRef.current };
+        singleSlotCarryRef.current = null;
+      } else if (usePreservedSlots && preservedSlotsForRange) {
         byWeek = { ...preservedSlotsForRange };
       }
 
@@ -621,7 +635,7 @@ export const ManageAvailabilityModal = ({
       }
 
       const minEnd = new Date(nextStart);
-      minEnd.setDate(minEnd.getDate() + MIN_RANGE_DAYS);
+      minEnd.setDate(minEnd.getDate() + minRangeDays);
       if (nextEnd < minEnd) {
         nextEnd = minEnd;
       }
@@ -634,16 +648,70 @@ export const ManageAvailabilityModal = ({
     setWeekInitialized(false);
     setPendingDateRange(null);
     setShowDateChangeConfirm(false);
-  }, [MIN_RANGE_DAYS, customizedWeeks, getMinStartDate, isEditMode, occurrenceSlots]);
+  }, [customizedWeeks, getMinStartDate, isEditMode, minRangeDays, occurrenceSlots]);
+
+  // Carry the coach's single slot over to the newly picked date.
+  const applySingleSessionDate = useCallback((date: Date) => {
+    const minStartDate = getMinStartDate();
+    const nextDate = date < minStartDate ? minStartDate : date;
+    const currentSlot = Object.values(occurrenceSlots)
+      .flatMap((weekSlots) => Object.values(weekSlots).flat())
+      .find((slot) => slot && isDateWithinRange(slot.occurrence_date, formData.start_date, formData.end_date));
+    if (currentSlot) {
+      const weekISO = toLocalISODate(getWeekStart(nextDate));
+      const day = (((nextDate.getDay() + 6) % 7) + 1) as DayOfWeek;
+      const week = createEmptyWeekSlots();
+      week[day] = [{ ...currentSlot, day_of_week: day, occurrence_date: toLocalISODate(nextDate) }];
+      singleSlotCarryRef.current = { [weekISO]: week };
+    }
+    setFormData((prev) => ({ ...prev, start_date: nextDate, end_date: nextDate }));
+    setErrors((prev) => ({ ...prev, dateRange: undefined }));
+    setDuplicateError(null);
+    setCurrentWeekIndex(0);
+    setWeekInitialized(false);
+  }, [formData.end_date, formData.start_date, getMinStartDate, occurrenceSlots]);
+
+  const applyScheduleMode = useCallback((mode: ScheduleMode) => {
+    const start = formData.start_date;
+    const end = new Date(start);
+    if (mode === 'repeating') end.setDate(end.getDate() + 30);
+    setScheduleMode(mode);
+    setIsRecurring(mode === 'repeating');
+    setHasUserChanges(false);
+    setCustomizedWeeks(new Set());
+    setPendingDateRange(null);
+    setShowDateChangeConfirm(false);
+    setFormData((prev) => ({ ...prev, start_date: start, end_date: end }));
+    setErrors({});
+    setWeekErrors({});
+    setDuplicateError(null);
+    setCurrentWeekIndex(0);
+    setWeekInitialized(false);
+  }, [formData.start_date]);
+
+  // Switching type rebuilds the slots, so confirm first when the coach has edits.
+  const [pendingScheduleMode, setPendingScheduleMode] = useState<ScheduleMode | null>(null);
+  const handleScheduleModeChange = useCallback((mode: ScheduleMode) => {
+    if (isEditMode || mode === scheduleMode) return;
+    if (hasUserChanges) {
+      setPendingScheduleMode(mode);
+      return;
+    }
+    applyScheduleMode(mode);
+  }, [applyScheduleMode, hasUserChanges, isEditMode, scheduleMode]);
 
   const handleRangeChange = useCallback((start: Date, end: Date) => {
+    if (!isEditMode && isSingleSession) {
+      applySingleSessionDate(start);
+      return;
+    }
     if (!isEditMode && hasUserChanges) {
       setPendingDateRange({ start, end });
       setShowDateChangeConfirm(true);
       return;
     }
     applyDateRange(start, end);
-  }, [applyDateRange, hasUserChanges, isEditMode]);
+  }, [applyDateRange, applySingleSessionDate, hasUserChanges, isEditMode, isSingleSession]);
 
   const firstWeekISO = weeks.length ? toLocalISODate(weeks[0]) : '';
 
@@ -807,6 +875,7 @@ export const ManageAvailabilityModal = ({
     weeks,
     occurrenceSlots,
     enabledSlots: enabledSlotsMemo,
+    minRangeDays,
     onValidationFailure: ({ errors: nextErrors, weekErrors: nextWeekErrors, firstProblemWeekIndex, duplicateError: nextDuplicateError }) => {
       setErrors(nextErrors);
       setWeekErrors(nextWeekErrors);
@@ -846,7 +915,9 @@ export const ManageAvailabilityModal = ({
             formData={formData}
             isEditMode={isEditMode}
             isRecurring={isRecurring}
-            minDays={MIN_RANGE_DAYS}
+            scheduleMode={isSingleSession ? 'single' : 'repeating'}
+            onScheduleModeChange={handleScheduleModeChange}
+            minDays={minRangeDays}
             minStartDate={getMinStartDate()}
             pendingDateRange={pendingDateRange}
             showDateChangeConfirm={showDateChangeConfirm}
@@ -911,6 +982,7 @@ export const ManageAvailabilityModal = ({
             weekErrorSet={weekErrorSet}
             isRecurring={isRecurring}
             isEditMode={isEditMode}
+            singleSlot={isSingleSession}
             formStartDate={formData.start_date}
             formEndDate={formData.end_date}
             lockedOccurrenceIds={lockedOccurrenceIds}
@@ -948,6 +1020,20 @@ export const ManageAvailabilityModal = ({
           </Button>
         </div>
       </DialogContent>
+      <ConfirmationDialog
+        open={pendingScheduleMode !== null}
+        onOpenChange={(openState) => {
+          if (!openState) setPendingScheduleMode(null);
+        }}
+        title="Switch schedule type?"
+        description="Your current slot changes will be reset."
+        confirmLabel="Switch"
+        contentClassName="max-w-md"
+        onConfirm={() => {
+          if (pendingScheduleMode) applyScheduleMode(pendingScheduleMode);
+          setPendingScheduleMode(null);
+        }}
+      />
       <ConfirmationDialog
         open={showRecurringConfirm}
         onOpenChange={setShowRecurringConfirm}

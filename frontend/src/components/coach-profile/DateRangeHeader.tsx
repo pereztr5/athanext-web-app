@@ -10,12 +10,25 @@ import { Switch } from '@/components/ui/switch';
 import { AlertCircle, Info } from 'lucide-react';
 import { SETUP_INSTRUCTIONS } from '@/utils/db';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
+import { Input } from '@/components/ui/input';
+import { cn } from '@/lib/utils';
+import { formatDateForInput } from '@/utils/helperFunctions';
+import { parseISODateLocal } from '@/utils/dateHelpers';
 import type { AvailabilityFormData } from '@/types/availability';
+
+export type ScheduleMode = 'single' | 'repeating';
+
+const SCHEDULE_MODES: { value: ScheduleMode; label: string }[] = [
+  { value: 'single', label: 'Single session' },
+  { value: 'repeating', label: 'Repeating weeks' },
+];
 
 interface DateRangeHeaderProps {
   formData: AvailabilityFormData;
   isEditMode: boolean;
   isRecurring: boolean;
+  scheduleMode: ScheduleMode;
+  onScheduleModeChange: (mode: ScheduleMode) => void;
   minDays: number;
   minStartDate: Date;
   pendingDateRange: { start: Date; end: Date } | null;
@@ -30,6 +43,8 @@ export const DateRangeHeader = ({
   formData,
   isEditMode,
   isRecurring,
+  scheduleMode,
+  onScheduleModeChange,
   minDays,
   minStartDate,
   pendingDateRange,
@@ -58,21 +73,66 @@ export const DateRangeHeader = ({
   return (
     <>
       <div className="flex flex-col gap-3">
+        {!isEditMode && (
+          <div
+            role="radiogroup"
+            aria-label="Schedule type"
+            className="inline-flex w-fit rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] p-[3px]"
+          >
+            {SCHEDULE_MODES.map((mode) => {
+              const selected = scheduleMode === mode.value;
+              return (
+                <button
+                  key={mode.value}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => onScheduleModeChange(mode.value)}
+                  className={cn(
+                    "h-[30px] rounded-[6px] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] transition-colors",
+                    selected ? "bg-[#F7F7F0] text-[#1A202C] shadow-[0_0_4px_rgba(0,0,0,0.06)]" : "text-[#767980] hover:text-[#1A202C]"
+                  )}
+                >
+                  {mode.label}
+                </button>
+              );
+            })}
+          </div>
+        )}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">
-            Availability period
+            {scheduleMode === 'single' ? 'Session date' : 'Availability period'}
           </span>
-          <DateRangePicker
-            startDate={formData.start_date}
-            endDate={formData.end_date}
-            onChange={onRangeChange}
-            minDays={minDays}
-            minStartDate={minStartDate}
-            disabled={isEditMode}
-            badgeText="Min 1 week"
-            variant="modal"
-          />
+          {scheduleMode === 'single' ? (
+            <Input
+              type="date"
+              aria-label="Session date"
+              value={formatDateForInput(formData.start_date)}
+              min={formatDateForInput(minStartDate)}
+              disabled={isEditMode}
+              onChange={(event) => {
+                if (!event.target.value) return;
+                const date = parseISODateLocal(event.target.value);
+                // Ignore partial years while the date is being typed (e.g. "0002-10-05").
+                if (isNaN(date.getTime()) || date.getFullYear() < 1900) return;
+                onRangeChange(date, date);
+              }}
+              className="h-[38px] w-[150px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none focus-visible:ring-0"
+            />
+          ) : (
+            <DateRangePicker
+              startDate={formData.start_date}
+              endDate={formData.end_date}
+              onChange={onRangeChange}
+              minDays={minDays}
+              minStartDate={minStartDate}
+              disabled={isEditMode}
+              badgeText="Min 1 week"
+              variant="modal"
+            />
+          )}
         </div>
+        {scheduleMode === 'repeating' && (
         <div className="flex flex-wrap items-center gap-[10px]">
           <Switch
             checked={isRecurring}
@@ -117,6 +177,7 @@ export const DateRangeHeader = ({
             )}
           </div>
         </div>
+        )}
       </div>
       {showDateChangeConfirm && pendingDateRange && (
         <div className="flex flex-col gap-3 rounded-[8px] bg-[#FDF7EC] px-[15px] py-3 sm:flex-row sm:items-center sm:justify-between">
