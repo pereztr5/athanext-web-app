@@ -76,7 +76,7 @@ export const AppTopBar = () => {
           : [];
         const other = participants.find((p) => p.user_id !== user?.id);
         const mine = participants.find((p) => p.user_id === user?.id);
-        const name = other?.user_profiles?.name || "Someone";
+        const name = c.is_group ? c.title || "Community" : other?.user_profiles?.name || "Someone";
         const unread = mine?.last_read_at
           ? new Date(c.last_message_at as string).getTime() > new Date(mine.last_read_at).getTime()
           : true;

@@ -577,6 +577,7 @@ export type Database = {
           id: string
           created_by: string | null
           is_group: boolean | null
+          owner_coach_id: string | null
           title: string | null
           last_message_text: string | null
           last_message_at: string | null
@@ -586,6 +587,7 @@ export type Database = {
           id?: string
           created_by?: string | null
           is_group?: boolean | null
+          owner_coach_id?: string | null
           title?: string | null
           last_message_text?: string | null
           last_message_at?: string | null
@@ -595,6 +597,7 @@ export type Database = {
           id?: string
           created_by?: string | null
           is_group?: boolean | null
+          owner_coach_id?: string | null
           title?: string | null
           last_message_text?: string | null
           last_message_at?: string | null

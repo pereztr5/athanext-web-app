@@ -494,7 +494,7 @@ const Dashboard = () => {
                   ? conv.conversation_participants
                   : [];
                 const other = participants.find((p) => p.user_id !== user?.id);
-                const name = other?.user_profiles?.name || "Conversation";
+                const name = conv.is_group ? conv.title || "Community" : other?.user_profiles?.name || "Conversation";
                 const unread = isConversationUnread(conv, user?.id);
                 return (
                   <div key={conv.id} className="contents">

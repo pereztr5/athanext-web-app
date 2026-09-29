@@ -393,7 +393,9 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
           const other = participants.find((p) => p.user_id !== user.id) || null;
           return {
             id: conv.id,
-            sender: other?.user_profiles?.name || other?.user_id || "Conversation",
+            sender: conv.is_group
+              ? conv.title || "Community"
+              : other?.user_profiles?.name || other?.user_id || "Conversation",
             message: conv.last_message_text || "No messages yet",
             time: conv.last_message_at || conv.created_at || new Date().toISOString(),
           } satisfies ConversationCardItem;

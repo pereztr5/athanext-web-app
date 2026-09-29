@@ -6,7 +6,7 @@ import {
   useState,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft } from "lucide-react";
+import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Users } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { cn } from "@/lib/utils";
 import {
@@ -38,7 +38,7 @@ const CONVERSATION_PAGE_SIZE = 6;
 const ChatPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const { user, userImg, userName, setHasNewMessage } = useAuth();
+  const { user, userProfile, userImg, userName, setHasNewMessage } = useAuth();
   const isMobile = useIsMobile();
 
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
@@ -80,6 +80,18 @@ const ChatPage = () => {
         const participants = Array.isArray(conv.conversation_participants)
           ? conv.conversation_participants
           : [];
+        // Coach community channel (ATH-21): named by title, shown with the owner coach's photo.
+        if (conv.is_group) {
+          const owner = participants.find((p) => p.role === "owner");
+          return {
+            ...conv,
+            otherUserId: null,
+            otherUserName: conv.title || "Community",
+            otherCoachId: owner && owner.user_id !== user?.id ? owner.user_profiles?.coach_id || null : null,
+            otherUserImage: owner?.user_profiles?.image_url || null,
+            otherUserHandle: null,
+          };
+        }
         const member = participants.find(
           (p) => p.role === "member" && p.user_id !== user?.id
         );
@@ -130,7 +142,15 @@ const ChatPage = () => {
     const mappedAll = mapConversationRows(Array.isArray(data) ? data : []);
 
     const hasMore = mappedAll.length > requestedLimit;
-    const mapped = hasMore ? mappedAll.slice(0, requestedLimit) : mappedAll;
+    let mapped = hasMore ? mappedAll.slice(0, requestedLimit) : mappedAll;
+
+    // A linked conversation (e.g. a quiet community channel) may sit outside the loaded page.
+    if (requestedConversationId && !mapped.some((c) => c.id === requestedConversationId)) {
+      const { data: linked } = await chatAPI.getConversationsByIds([requestedConversationId]);
+      if (Array.isArray(linked) && linked.length) {
+        mapped = [...mapConversationRows(linked), ...mapped];
+      }
+    }
 
     setConversationLimit(requestedLimit);
     setHasMoreConversations(hasMore);
@@ -620,6 +640,35 @@ const ChatPage = () => {
     [user?.id]
   );
 
+  // Coach opens (or creates) their community channel (ATH-21).
+  const handleOpenMyChannel = async () => {
+    try {
+      const channelId = await chatAPI.openMyCoachChannel();
+      await fetchConversations({ silent: true });
+      // Make sure the channel is in the list even if it's older than the loaded page.
+      const { data: linked } = await chatAPI.getConversationsByIds([channelId]);
+      if (Array.isArray(linked) && linked.length) {
+        const [channel] = mapConversationRows(linked);
+        setConversations((prev) => (prev.some((c) => c.id === channel.id) ? prev : [channel, ...prev]));
+      }
+      setSelectedConversationId(channelId);
+      if (isMobile) setIsSidebarOpen(false);
+    } catch (error) {
+      console.error("Failed to open community channel", error);
+    }
+  };
+
+  const handleLeaveChannel = async (conversationId: string) => {
+    try {
+      await chatAPI.leaveCoachChannel(conversationId);
+      setSelectedConversationId(null);
+      setConversations((prev) => prev.filter((conv) => conv.id !== conversationId));
+      await fetchConversations({ silent: true });
+    } catch (error) {
+      console.error("Failed to leave community channel", error);
+    }
+  };
+
   const handleChatSelect = (chatId: string) => {
     if (!conversations.some((chat) => chat.id === chatId)) {
       const fromSearch = searchConversations?.find((chat) => chat.id === chatId);
@@ -642,6 +691,10 @@ const ChatPage = () => {
 
   const conversationHandle = (conversation: ChatConversation | null) => {
     if (!conversation) return "";
+    if (conversation.is_group) {
+      const members = (conversation.conversation_participants || []).filter((p) => p.role !== "owner").length;
+      return `Community · ${members} ${members === 1 ? "member" : "members"}`;
+    }
     if (conversation.otherUserHandle) return conversation.otherUserHandle.replace(/^@/, "");
     const name = getConversationName(conversation);
     return name.toLowerCase().split(/\s+/).filter(Boolean).join(".");
@@ -755,7 +808,9 @@ const ChatPage = () => {
         })
       );
 
-      if (
+      if (selectedConversation.is_group) {
+        // Community channels send no notifications (ATH-21).
+      } else if (
         isFirstMessageInConversation &&
         !firstMessageNotifiedRef.current.has(selectedConversation.id)
       ) {
@@ -798,7 +853,19 @@ const ChatPage = () => {
           style={{ transform: isMobile && !isSidebarOpen ? "translateX(-100%)" : "translateX(0)" }}
         >
           <div className="flex flex-col gap-5 border-b border-[#EAEADF] px-[25px] py-[30px]">
-            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Messages</h2>
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Messages</h2>
+              {userProfile?.coach_id ? (
+                <button
+                  type="button"
+                  onClick={() => void handleOpenMyChannel()}
+                  className="inline-flex h-[30px] shrink-0 items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                >
+                  <Users className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                  My community
+                </button>
+              ) : null}
+            </div>
             <div className="flex items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px]">
               <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} />
               <input
@@ -1024,6 +1091,18 @@ const ChatPage = () => {
                       </p>
                     </div>
                   </div>
+                  {selectedConversation?.is_group &&
+                  selectedConversation.conversation_participants?.some(
+                    (p) => p.user_id === user?.id && p.role !== "owner"
+                  ) ? (
+                    <button
+                      type="button"
+                      className="inline-flex h-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                      onClick={() => void handleLeaveChannel(selectedConversation.id)}
+                    >
+                      Leave
+                    </button>
+                  ) : null}
                   {selectedConversation?.otherCoachId ? (
                     <button
                       type="button"
@@ -1062,8 +1141,14 @@ const ChatPage = () => {
                     <div className="mt-auto flex flex-col gap-[14px]">
                     {messages.map((message) => {
                       const isUser = message.sender_id === user?.id;
+                      const isGroup = Boolean(selectedConversation?.is_group);
+                      const sender = isGroup
+                        ? selectedConversation?.conversation_participants?.find((p) => p.user_id === message.sender_id)
+                        : null;
                       const senderName =
-                        typeof message.sender?.name === "string" ? message.sender.name : "";
+                        (typeof message.sender?.name === "string" ? message.sender.name : "") ||
+                        sender?.user_profiles?.name ||
+                        "";
                       const initials = getInitials(
                         isUser ? userName || senderName || "You" : senderName || getConversationName(selectedConversation)
                       );
@@ -1074,8 +1159,9 @@ const ChatPage = () => {
                           time={formatTime(message.created_at)}
                           isUser={isUser}
                           initials={initials}
-                          status={isUser ? "Sent" : "Read"}
-                          avatarUrl={isUser ? userImg : selectedConversation?.otherUserImage}
+                          status={isGroup ? undefined : isUser ? "Sent" : "Read"}
+                          avatarUrl={isUser ? userImg : isGroup ? sender?.user_profiles?.image_url : selectedConversation?.otherUserImage}
+                          senderName={isGroup && !isUser ? formatDisplayName(senderName || "Member") : undefined}
                           variant="thread"
                         />
                       );

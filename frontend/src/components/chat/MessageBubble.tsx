@@ -9,6 +9,8 @@ type MessageBubbleProps = {
   initials: string;
   status?: string;
   avatarUrl?: string | null;
+  /** Shown above the bubble in group channels (ATH-21). */
+  senderName?: string;
   variant?: "default" | "thread";
 };
 
@@ -31,6 +33,7 @@ const MessageBubble = ({
   initials,
   status,
   avatarUrl,
+  senderName,
   variant = "default",
 }: MessageBubbleProps) => {
   if (variant === "thread") {
@@ -41,13 +44,18 @@ const MessageBubble = ({
           {isUser && status ? (
             <span className="shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{status}</span>
           ) : null}
-          <div
-            className={cn(
-              "min-w-0 break-words rounded-[8px] px-[10px] py-2 text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]",
-              isUser ? "bg-[#CCDDF0]" : "bg-[#F1F1E6]"
-            )}
-          >
-            {text}
+          <div className="flex min-w-0 flex-col gap-[3px]">
+            {senderName ? (
+              <span className="text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#767980]">{senderName}</span>
+            ) : null}
+            <div
+              className={cn(
+                "min-w-0 break-words rounded-[8px] px-[10px] py-2 text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]",
+                isUser ? "bg-[#CCDDF0]" : "bg-[#F1F1E6]"
+              )}
+            >
+              {text}
+            </div>
           </div>
           {!isUser ? (
             <span className="shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">

@@ -532,4 +532,46 @@ export const chatAPI = {
     const supabase = apiClient.getSupabaseClient();
     void supabase.removeChannel(channel);
   },
+
+  // ---- Coach community channels (ATH-21) ----
+
+  async getCoachChannel(coachId: string): Promise<CoachChannelInfo | null> {
+    const supabase = apiClient.getSupabaseClient();
+    const { data, error } = await (supabase as any).rpc("get_coach_channel", { p_coach_id: coachId });
+    if (error) throw error;
+    const row = Array.isArray(data) ? data[0] : data;
+    if (!row?.conversation_id) return null;
+    return {
+      conversationId: row.conversation_id,
+      title: row.title ?? null,
+      memberCount: Number(row.member_count) || 0,
+      isMember: Boolean(row.is_member),
+    };
+  },
+
+  async openMyCoachChannel(): Promise<string> {
+    const supabase = apiClient.getSupabaseClient();
+    const { data, error } = await (supabase as any).rpc("get_or_create_my_coach_channel");
+    if (error) throw error;
+    return data as string;
+  },
+
+  async joinCoachChannel(conversationId: string): Promise<void> {
+    const supabase = apiClient.getSupabaseClient();
+    const { error } = await (supabase as any).rpc("join_coach_channel", { p_conversation_id: conversationId });
+    if (error) throw error;
+  },
+
+  async leaveCoachChannel(conversationId: string): Promise<void> {
+    const supabase = apiClient.getSupabaseClient();
+    const { error } = await (supabase as any).rpc("leave_coach_channel", { p_conversation_id: conversationId });
+    if (error) throw error;
+  },
 };
+
+export interface CoachChannelInfo {
+  conversationId: string;
+  title: string | null;
+  memberCount: number;
+  isMember: boolean;
+}
