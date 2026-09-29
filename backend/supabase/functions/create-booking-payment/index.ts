@@ -771,14 +771,34 @@ serve(async (req) => {
     // exact (coach, athlete) pair. This client is service-role (RLS bypassed);
     // the query is scoped by the explicit filters. A query error falls through
     // to the full fee (fails safe toward charging, never toward a discount).
-    const { data: waiverRow } = await supabaseClient
-      .from("coach_client_referrals" as any)
-      .select("id")
-      .eq("coach_id", coachId)
-      .eq("athlete_id", athleteId)
-      .eq("status", "confirmed")
+    // athlete_id comes from the request body, so only waive when it is the
+    // caller's own athlete profile; otherwise anyone could borrow a confirmed
+    // pair's waiver by sending that athlete's id.
+    const { data: ownProfile } = await supabaseClient
+      .from("user_profiles" as any)
+      .select("athlete_id")
+      .eq("id", user.id)
       .maybeSingle();
-    const platformFeePerc = waiverRow ? 0 : basePlatformFeePerc;
+    const { data: ownAthleteRows } = await supabaseClient
+      .from("athlete_profiles" as any)
+      .select("id")
+      .eq("id", athleteId)
+      .eq("user_id", user.id)
+      .limit(1);
+    const callerOwnsAthlete =
+      (ownProfile as { athlete_id?: string | null } | null)?.athlete_id === athleteId ||
+      Boolean(ownAthleteRows?.length);
+    // limit(1) rather than maybeSingle(): a duplicate row must not error into the full fee.
+    const { data: waiverRows } = callerOwnsAthlete
+      ? await supabaseClient
+          .from("coach_client_referrals" as any)
+          .select("id")
+          .eq("coach_id", coachId)
+          .eq("athlete_id", athleteId)
+          .eq("status", "confirmed")
+          .limit(1)
+      : { data: [] };
+    const platformFeePerc = waiverRows?.length ? 0 : basePlatformFeePerc;
     const feeFactor = 1 + platformFeePerc / 100 + stripeFeePerc / 100;
 
     const totalBase = occurrences.reduce((sum, occ) => sum + Number(occ.price || 0), 0);

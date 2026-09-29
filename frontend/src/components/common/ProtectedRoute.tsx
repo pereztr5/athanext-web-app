@@ -1,17 +1,26 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useRole } from "@/hooks/useRole";
+import { useIsAdmin } from "@/hooks/useIsAdmin";
 
-export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
+interface ProtectedRouteProps {
+  children: ReactNode;
+  requireAdmin?: boolean;
+}
+
+const Spinner = () => (
+  <div className="min-h-screen flex items-center justify-center">
+    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+  </div>
+);
+
+export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) => {
   const { isAuthenticated, isProfileComplete, ready } = useRole();
+  const { isAdmin, ready: adminReady } = useIsAdmin();
   const location = useLocation();
 
   if (!ready) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
-      </div>
-    );
+    return <Spinner />;
   }
 
   if (!isAuthenticated) {
@@ -20,6 +29,11 @@ export const ProtectedRoute = ({ children }: { children: ReactNode }) => {
 
   if (!isProfileComplete) {
     return <Navigate to="/auth?mode=complete-profile" replace />;
+  }
+
+  if (requireAdmin) {
+    if (!adminReady) return <Spinner />;
+    if (!isAdmin) return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

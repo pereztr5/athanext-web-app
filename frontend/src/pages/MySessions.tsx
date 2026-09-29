@@ -32,6 +32,8 @@ import { useCoachAvatarsByIds } from "@/hooks/useCoachAvatars";
 import { useToast } from "@/hooks/use-toast";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useMyReferrals } from "@/hooks/useReferrals";
+import { computeSessionPrice } from "@/utils/referralHelpers";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
@@ -185,24 +187,24 @@ const PayNowAction = ({
 const calculatePlatformFee = (
   rate: number | null | undefined,
   platformFeePerc = 0,
-  stripeFeePerc = 0
+  stripeFeePerc = 0,
+  waived = false
 ) => {
-  const baseRate = Number(rate) || 0;
-  const totalFeePerc = (platformFeePerc || 0) + (stripeFeePerc || 0);
-  const platformFee = baseRate * (totalFeePerc / 100);
-  const totalRate = baseRate + platformFee;
-  return { baseRate, platformFee, totalRate };
+  // Same total create-booking-payment sends to Stripe (platform fee waived for existing clients).
+  const p = computeSessionPrice(Number(rate) || 0, platformFeePerc || 0, stripeFeePerc || 0, waived);
+  return { baseRate: p.base, platformFee: p.platformFee + p.stripeFee, totalRate: p.total };
 };
 
 const sessionPriceLabel = (
   session: UISession,
   role: UserRole,
   platformFeePerc: number,
-  stripeFeePerc: number
+  stripeFeePerc: number,
+  waived = false
 ) =>
   formatWholePrice(
     role === PROFILE_TYPE.athlete
-      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc).totalRate
+      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc, waived).totalRate
       : session.rate,
     session.currency
   );
@@ -235,6 +237,7 @@ const SessionCard = ({
   role,
   platformFeePerc = 0,
   stripeFeePerc = 0,
+  waived = false,
   canPay = false,
   paying = false,
   onPay,
@@ -245,6 +248,7 @@ const SessionCard = ({
   role: UserRole;
   platformFeePerc?: number;
   stripeFeePerc?: number;
+  waived?: boolean;
   canPay?: boolean;
   paying?: boolean;
   onPay?: () => void;
@@ -256,7 +260,7 @@ const SessionCard = ({
       : startMeta?.startsIn
         ? `Starts in ${startMeta.startsIn}`
         : null;
-  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc);
+  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
   const showPay = canPay && Boolean(onPay);
 
   return (
@@ -267,6 +271,7 @@ const SessionCard = ({
           {role !== PROFILE_TYPE.coach && sessionNeedsPayment(session) ? (
             <BrandPill tone="amber">Awaiting payment</BrandPill>
           ) : null}
+          {role === PROFILE_TYPE.athlete && waived ? <BrandPill tone="green">No service fee</BrandPill> : null}
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Date" value={formatWeekdayDate(session.dateOnly, now)} />
@@ -300,6 +305,7 @@ const PastDraftCard = ({
   showFeedbackAction,
   platformFeePerc = 0,
   stripeFeePerc = 0,
+  waived = false,
   canPay = false,
   paying = false,
   onPay,
@@ -313,11 +319,12 @@ const PastDraftCard = ({
   showFeedbackAction: boolean;
   platformFeePerc?: number;
   stripeFeePerc?: number;
+  waived?: boolean;
   canPay?: boolean;
   paying?: boolean;
   onPay?: () => void;
 }) => {
-  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc);
+  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
   const showPay = canPay && Boolean(onPay);
   const openDetails = () => {
     if (session.computedStatus === "past" || session.computedStatus === "completed") {
@@ -455,6 +462,14 @@ const MySessions = () => {
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
 
   const { role: persona } = useRole();
+  // Coaches this athlete is a confirmed existing client of: no platform fee.
+  const { data: myReferrals = [] } = useMyReferrals(
+    persona === PROFILE_TYPE.athlete ? userProfile?.athlete_id ?? undefined : undefined
+  );
+  const waivedCoachIds = useMemo(
+    () => new Set(myReferrals.filter((r) => r.status === "confirmed").map((r) => r.coach_id)),
+    [myReferrals]
+  );
   const athleteProfileId = userProfile?.athlete_id || userProfile?.id || null;
   const coachProfileId = userProfile?.coach_id || null;
   const role = useMemo<UserRole>(() => {
@@ -1057,6 +1072,7 @@ const MySessions = () => {
               role={role}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
+              waived={waivedCoachIds.has(session.coachId)}
               canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
               paying={payingBookingId === session.bookingId}
               onPay={() => void handlePay(session)}
@@ -1080,6 +1096,7 @@ const MySessions = () => {
               role={role}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
+              waived={waivedCoachIds.has(session.coachId)}
               canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
               paying={payingBookingId === session.bookingId}
               onPay={() => void handlePay(session)}
@@ -1106,6 +1123,7 @@ const MySessions = () => {
               showFeedbackAction={role === PROFILE_TYPE.coach || persona === PROFILE_TYPE.athlete}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
+              waived={waivedCoachIds.has(session.coachId)}
               canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
               paying={payingBookingId === session.bookingId}
               onPay={() => void handlePay(session)}
@@ -1126,7 +1144,12 @@ const MySessions = () => {
           {selectedSessionSafe && (() => {
             const isAthleteView = role === PROFILE_TYPE.athlete;
             const perAthleteRate = isAthleteView
-              ? calculatePlatformFee(selectedSessionSafe.rate, platformFeePerc, stripeFeePerc).totalRate
+              ? calculatePlatformFee(
+                  selectedSessionSafe.rate,
+                  platformFeePerc,
+                  stripeFeePerc,
+                  waivedCoachIds.has(selectedSessionSafe.coachId)
+                ).totalRate
               : Number(selectedSessionSafe.rate) || 0;
             const athleteCount = Number(selectedSessionSafe.totalAthletes) || 0;
             const totalLabel = `${formatWholePrice(perAthleteRate * athleteCount, selectedSessionSafe.currency)} for ${athleteCount} ${

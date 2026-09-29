@@ -9,6 +9,8 @@ import {
   Search,
   Shield,
   User,
+  UserCheck,
+  Users,
 } from "lucide-react";
 import {
   Sidebar,
@@ -28,6 +30,7 @@ import { cn } from "@/lib/utils";
 const ATHLETE_NAV = [
   { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
+  { title: "My Coaches", url: ROUTES.MY_COACHES, icon: UserCheck },
   { title: "Browse coaches", url: ROUTES.COACHES, icon: Search },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "Development", url: "", icon: BadgeCheck },
@@ -37,6 +40,7 @@ const COACH_NAV = [
   { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Availability", url: ROUTES.AVAILABILITY, icon: CalendarClock },
+  { title: "My Clients", url: ROUTES.MY_CLIENTS, icon: Users },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "Analytics", url: ROUTES.ANALYTICS, icon: BarChart3 },
   { title: "Profile", url: ROUTES.PROFILE, icon: User },
@@ -53,7 +57,12 @@ export const AppSidebar = () => {
   const { setOpenMobile } = useSidebar();
   const items = [
     ...(isCoach ? COACH_NAV : ATHLETE_NAV),
-    ...(isAdmin ? [{ title: "Accounts", url: ROUTES.ADMIN_ACCOUNTS, icon: Shield }] : []),
+    ...(isAdmin
+      ? [
+          { title: "Accounts", url: ROUTES.ADMIN_ACCOUNTS, icon: Shield },
+          { title: "Referrals", url: ROUTES.ADMIN_REFERRALS, icon: Users },
+        ]
+      : []),
   ];
 
   const displayName = userName || userProfile?.name || "Account";

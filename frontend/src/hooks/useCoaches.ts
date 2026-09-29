@@ -13,9 +13,10 @@ export type PublicCoach = Omit<Tables<"coaches">, "email" | "slug" | "profile_fa
   profile_faqs?: Tables<"coaches">["profile_faqs"];
 };
 
-export const useCoaches = () => {
+export const useCoaches = (enabled: boolean = true) => {
   const query = useQuery<PublicCoach[]>({
     queryKey: ["coaches"],
+    enabled,
     queryFn: async () => {
       try {
         const { data, error } = await supabase.rpc("get_coaches_public");

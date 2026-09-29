@@ -17,6 +17,8 @@ interface AvailabilityTableProps {
   slotStatusMap?: Record<string, SlotBookingStatus>;
   slotStatusLoading?: boolean;
   platformFeePerc?: number;
+  stripeFeePerc?: number;
+  platformFeeWaived?: boolean;
   appearance: "athlete" | "coach";
   onDelete?: (slot: CoachAvailabilitySlot) => void;
 }
@@ -29,6 +31,8 @@ export const AvailabilityTable = ({
   slotStatusMap,
   slotStatusLoading = false,
   platformFeePerc = 0,
+  stripeFeePerc = 0,
+  platformFeeWaived = false,
   appearance,
   onDelete,
 }: AvailabilityTableProps) => {
@@ -51,6 +55,8 @@ export const AvailabilityTable = ({
               slotStatus={slotStatusMap?.[slot.id]}
               isStatusLoading={slotStatusLoading && slotStatusMap?.[slot.id] === undefined}
               platformFeePerc={platformFeePerc}
+              stripeFeePerc={stripeFeePerc}
+              platformFeeWaived={platformFeeWaived}
               appearance={appearance}
               onDelete={onDelete}
             />

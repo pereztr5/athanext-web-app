@@ -24,6 +24,8 @@ import { getZonedISODate, isBookingWindowClosed, toLocalISODate } from "@/utils/
 import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
+import { useReferralWaiver } from "@/hooks/useReferrals";
+import { computeSessionPrice } from "@/utils/referralHelpers";
 
 interface Coach {
   id?: string;
@@ -92,6 +94,10 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const { toast } = useToast();
   const { user, session } = useAuth();
   const { profile } = useProfile();
+  const modalAthleteId =
+    profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as any).id : undefined;
+  // Existing client of this coach: create-booking-payment charges no platform fee.
+  const { waived: platformFeeWaived } = useReferralWaiver(modalAthleteId, coach?.id);
   const navigate = useNavigate();
   const isPrefilled = Boolean(prefillSlot);
   const toTitleCase = (text?: string | null) => {
@@ -368,15 +374,8 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     : typeof slotPrice === 'number'
       ? slotPrice
       : Math.round((hourlyRate / 60) * parseInt(duration));
-  const totalWithFees = isFreeConsultation
-    ? 0
-    : Number((sessionCost * (1 + platformFeePerc / 100 + stripeFeePerc / 100)).toFixed(2));
-  const platformFeeAmount = isFreeConsultation
-    ? 0
-    : Number((sessionCost * (platformFeePerc / 100)).toFixed(2));
-  const stripeFeeAmount = isFreeConsultation
-    ? 0
-    : Number((sessionCost * (stripeFeePerc / 100)).toFixed(2));
+  const sessionPrice = computeSessionPrice(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived);
+  const totalWithFees = isFreeConsultation ? 0 : sessionPrice.total;
 
   const displayDateValue = selectedDate
     ? selectedDate
@@ -421,13 +420,15 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   // the last fee shown absorbs any rounding cent.
   const roundCents = (value: number) => Math.round(value * 100) / 100;
   const hasProcessingFee = stripeFeePerc > 0;
-  const platformFeeDisplay = hasProcessingFee ? platformFeeAmount : roundCents(totalWithFees - sessionCost);
-  const processingFeeDisplay = roundCents(totalWithFees - sessionCost - platformFeeAmount);
+  const platformFeeDisplay = hasProcessingFee
+    ? sessionPrice.platformFee
+    : roundCents(totalWithFees - sessionCost);
+  const processingFeeDisplay = roundCents(totalWithFees - sessionCost - sessionPrice.platformFee);
   const priceBreakdown = isFreeConsultation
     ? "Free"
-    : `${formatCurrency(sessionCost)} session + ${formatCurrency(platformFeeDisplay)} platform fee${
-        hasProcessingFee ? ` + ${formatCurrency(processingFeeDisplay)} processing fee` : ""
-      }`;
+    : `${formatCurrency(sessionCost)} session + ${
+        platformFeeWaived ? "no platform fee (existing client)" : `${formatCurrency(platformFeeDisplay)} platform fee`
+      }${hasProcessingFee ? ` + ${formatCurrency(processingFeeDisplay)} processing fee` : ""}`;
   const hideSelectionFields = Boolean(prefillSlot);
 
   const modalSurface =
@@ -511,6 +512,9 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                 <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
                   {isFreeConsultation ? "Total" : "Total, fees included"}
                 </p>
+                {!isFreeConsultation && platformFeeWaived ? (
+                  <BrandPill tone="green">No service fee</BrandPill>
+                ) : null}
               </div>
             </div>
 

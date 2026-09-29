@@ -30,6 +30,10 @@ import type { Enums } from "@/integrations/supabase/types";
 import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCoachProfileActions } from "@/hooks/useCoachProfileActions";
 import { useAthleteProfileActions } from "@/hooks/useAthleteProfileActions";
+import { useCoaches } from "@/hooks/useCoaches";
+import { createAthleteInitiatedReferral } from "@/api/referrals";
+import { useReferralInvite } from "@/hooks/useReferrals";
+import { INVITE_TOKEN_STORAGE_KEY } from "@/utils/referralHelpers";
 import { ROUTES } from "@/routes";
 
 import { fetchLocationFromZipCode, formatLocationDisplay, hasValidLocationData, type LocationInfo } from "@/utils/geolocation";
@@ -139,6 +143,7 @@ const Auth = () => {
   const [graduationYear, setGraduationYear] = useState("2025");
   const [isCurrentlyStudying, setIsCurrentlyStudying] = useState(false);
   const [currentYearLevel, setCurrentYearLevel] = useState("");
+  const [existingCoachId, setExistingCoachId] = useState<string | null>(null);
   const { user, signIn, refreshUserProfile } = useAuth();
   const isGoogleUser = useMemo(() => {
     const provider = user?.app_metadata?.provider;
@@ -151,6 +156,15 @@ const Auth = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [searchParams] = useSearchParams();
+  const inviteParam = searchParams.get('invite');
+  useEffect(() => {
+    if (inviteParam) sessionStorage.setItem(INVITE_TOKEN_STORAGE_KEY, inviteParam);
+  }, [inviteParam]);
+  const inviteToken = inviteParam ?? sessionStorage.getItem(INVITE_TOKEN_STORAGE_KEY);
+  const { invite: pendingInvite } = useReferralInvite(inviteToken);
+  const inviteCoachName = pendingInvite?.state === "valid" ? pendingInvite.coach_name : null;
+  // An invited athlete accepts on the invite page once signed in (email must match there).
+  const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
   const {
     items: signupPasswordValidationItems,
     allValid: isSignupPasswordStrong,
@@ -169,6 +183,9 @@ const Auth = () => {
   const { updateProfile } = useUserProfile();
   const { createCoach, updateCoach } = useCoachProfileActions();
   const { createAthleteProfile, updateAthleteProfile } = useAthleteProfileActions();
+  const { coaches, coachesLoading } = useCoaches(
+    needsProfileCompletion && persona === PROFILE_TYPE.athlete && !inviteToken
+  );
   const justCompletedProfileRef = useRef(false);
   const clearFieldError = (field: string) => {
     if (!errors[field]) return;
@@ -459,7 +476,7 @@ const Auth = () => {
           setNeedsProfileCompletion(false);
           setHasShownGoogleWarning(false);
           const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from;
-          navigate(from ? `${from.pathname}${from.search ?? ""}` : ROUTES.DASHBOARD, { replace: true });
+          navigate(from ? `${from.pathname}${from.search ?? ""}` : invitePath ?? ROUTES.DASHBOARD, { replace: true });
         }
       } finally {
         if (isMounted) {
@@ -718,7 +735,9 @@ const Auth = () => {
         password,
         name: name || normalizedEmail.split('@')[0],
         metadata: signupData,
-        emailRedirectTo: `${window.location.origin}/auth?mode=complete-profile`,
+        emailRedirectTo: `${window.location.origin}/auth?mode=complete-profile${
+          inviteToken ? `&invite=${inviteToken}` : ""
+        }`,
       });
 
       if (authError) {
@@ -755,8 +774,8 @@ const Auth = () => {
     try {
       const redirectTo =
         mode === 'signup'
-          ? `${window.location.origin}/auth?mode=complete-profile`
-          : `${window.location.origin}/`;
+          ? `${window.location.origin}/auth?mode=complete-profile${inviteToken ? `&invite=${inviteToken}` : ""}`
+          : `${window.location.origin}${invitePath ?? "/"}`;
 
       const { error } = await authAPI.signInWithOAuth('google', { redirectTo });
 
@@ -882,6 +901,16 @@ const Auth = () => {
           if (!linkedProfile) {
             throw new Error("Failed to link athlete profile to user.");
           }
+
+          // Coach referral fee-waiver: invited athletes accept on the invite page
+          // after this; otherwise record an athlete-initiated referral if one was
+          // picked. Parents completing a profile aren't the athlete, so skip it.
+          if (persona === PROFILE_TYPE.athlete) {
+            if (!inviteToken && existingCoachId) {
+              const { error: referralError } = await createAthleteInitiatedReferral(existingCoachId);
+              if (referralError) console.error("create athlete-initiated referral failed", referralError);
+            }
+          }
         }
       }
 
@@ -943,7 +972,11 @@ const Auth = () => {
       await refreshUserProfile();
 
       setTimeout(() => {
-        navigate(ROUTES.PROFILE, { replace: true });
+        const destination =
+          persona === PROFILE_TYPE.coach
+            ? `${ROUTES.MY_CLIENTS}?onboarding=1`
+            : invitePath ?? ROUTES.PROFILE;
+        navigate(destination, { replace: true });
       }, 500);
 
       setNeedsProfileCompletion(false);
@@ -1350,8 +1383,38 @@ const Auth = () => {
                     )}
                   </div>
                 )}
+
+                {persona === PROFILE_TYPE.athlete && !inviteToken && (
+                  <div className="space-y-2">
+                    <Label htmlFor="complete-existing-coach">Already working with a coach? (optional)</Label>
+                    <Select
+                      value={existingCoachId ?? undefined}
+                      onValueChange={setExistingCoachId}
+                      disabled={isLoading || coachesLoading}
+                    >
+                      <SelectTrigger id="complete-existing-coach">
+                        <SelectValue placeholder={coachesLoading ? "Loading coaches..." : "Select your coach"} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {coaches.map((coachOption) => (
+                          <SelectItem key={coachOption.id} value={coachOption.id}>
+                            {coachOption.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
                 </div>
-                <Button type="submit" size="lg" className="w-full" disabled={isLoading || !isCompleteProfileReady}>
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="w-full"
+                  disabled={
+                    isLoading ||
+                    !isCompleteProfileReady
+                  }
+                >
                   {isLoading ? "Saving profile…" : "Save profile"}
                 </Button>
               </form>
@@ -1378,6 +1441,13 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {inviteCoachName && (
+              <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                <span className="font-medium">Coach {inviteCoachName}</span>{" "}
+                invited you to {strings.brand.name}. Use the email the invite was sent to
+                ({pendingInvite?.masked_email}) to book with them with no platform service fee.
+              </div>
+            )}
             <Tabs value={activeTab} onValueChange={(value) => {
               setActiveTab(value);
               navigate(`/auth?mode=${value}`, { replace: true, state: location.state });

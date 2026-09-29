@@ -1,5 +1,5 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,23 +12,106 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const inviteEmailHtml = (coachName: string, link: string) => `
+const INVITE_TTL_DAYS = 14;
+const MAX_CLIENTS_PER_REQUEST = 50;
+const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Invite links go to third parties, so never build them from an arbitrary
+// caller-supplied Origin header (a coach could otherwise point the email at
+// their own site). Local dev and athanext.com hosts are allowed; anything else
+// falls back to SITE_URL.
+const DEFAULT_SITE_URL = Deno.env.get("SITE_URL") ?? "https://athanext.com";
+const resolveSiteUrl = (origin: string | null): string => {
+  if (!origin) return DEFAULT_SITE_URL;
+  try {
+    const url = new URL(origin);
+    const host = url.hostname;
+    if (host === "localhost" || host === "127.0.0.1") return url.origin;
+    if (host === "athanext.com" || host.endsWith(".athanext.com")) return url.origin;
+  } catch {
+    // fall through
+  }
+  return DEFAULT_SITE_URL;
+};
+
+const escapeHtml = (value: string) =>
+  value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+
+const inviteEmailHtml = (coachName: string, clientName: string | null, link: string) => `
   <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-    <h2 style="color:#0054B4;">${coachName} added you as a client on AthaNext</h2>
-    <p>${coachName} manages their sessions on AthaNext. As an existing client,
+    <h2 style="color:#0054B4;">${escapeHtml(coachName)} invited you to AthaNext</h2>
+    <p>${clientName ? `Hi ${escapeHtml(clientName)},` : "Hi,"}</p>
+    <p>${escapeHtml(coachName)} manages their sessions on AthaNext. As an existing client,
     you book with them with <strong>no platform service fee</strong>.</p>
     <p><a href="${link}" style="background:#0054B4;color:#fff;padding:12px 20px;
-    border-radius:6px;text-decoration:none;">Create your account</a></p>
+    border-radius:6px;text-decoration:none;">Accept invite</a></p>
+    <p style="color:#767980;font-size:13px;">Use this email address when you sign up or log in.
+    This invite expires in ${INVITE_TTL_DAYS} days.</p>
   </div>`;
 
-const notifyEmailHtml = (coachName: string, link: string) => `
-  <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-    <h2 style="color:#0054B4;">${coachName} added you as an existing client</h2>
-    <p>Confirm the relationship to remove the platform service fee from your
-    bookings with ${coachName}.</p>
-    <p><a href="${link}" style="background:#0054B4;color:#fff;padding:12px 20px;
-    border-radius:6px;text-decoration:none;">Review in My Coaches</a></p>
-  </div>`;
+type ClientInput = { email: string; name: string | null };
+
+const parseClients = (body: Record<string, unknown>): ClientInput[] => {
+  const raw: ClientInput[] = [];
+  if (Array.isArray(body?.clients)) {
+    for (const c of body.clients as Array<Record<string, unknown>>) {
+      if (typeof c?.email !== "string") continue;
+      const name = typeof c?.name === "string" ? c.name.trim().slice(0, 100) : "";
+      raw.push({ email: c.email, name: name || null });
+    }
+  }
+  // Legacy payload: plain email list.
+  if (Array.isArray(body?.client_emails)) {
+    for (const e of body.client_emails as unknown[]) {
+      if (typeof e === "string") raw.push({ email: e, name: null });
+    }
+  }
+  const seen = new Set<string>();
+  const clients: ClientInput[] = [];
+  for (const c of raw) {
+    const email = c.email.trim().toLowerCase();
+    if (!EMAIL_RE.test(email) || seen.has(email)) continue;
+    seen.add(email);
+    clients.push({ email, name: c.name });
+  }
+  return clients.slice(0, MAX_CLIENTS_PER_REQUEST);
+};
+
+const sendInviteEmail = async (
+  service: SupabaseClient,
+  to: string,
+  coachName: string,
+  clientName: string | null,
+  link: string,
+) => {
+  const { data: cfgRows } = await service
+    .from("configurations")
+    .select("key,value")
+    .in("key", ["smtp_email"]);
+  const fromEmail = cfgRows?.find((r: { key: string }) => r.key === "smtp_email")?.value;
+  if (!fromEmail) return false;
+  // Fire-and-forget via the deployed send-email function (same pattern as
+  // create-booking-payment -> reconcile-stripe-fees).
+  fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
+    },
+    body: JSON.stringify({
+      to,
+      from: fromEmail,
+      subject: `${coachName} invited you to AthaNext`,
+      html: inviteEmailHtml(coachName, clientName, link),
+    }),
+  }).catch((e) => console.error("send-email failed", e));
+  return true;
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -45,18 +128,43 @@ serve(async (req) => {
       Deno.env.get("SUPABASE_URL") ?? "",
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "",
     );
+    const siteUrl = resolveSiteUrl(req.headers.get("origin"));
+    const inviteLink = (token: string) => `${siteUrl}/invite/${token}`;
+    const body = (await req.json()) as Record<string, unknown>;
 
-    const body = await req.json();
-    const rawEmails: unknown = body?.client_emails;
-    if (!Array.isArray(rawEmails) || rawEmails.length === 0) {
-      return json({ error: "client_emails must be a non-empty array" }, 400);
+    const coachNameFor = async (coachId: string) => {
+      const { data } = await service.from("coaches").select("name").eq("id", coachId).maybeSingle();
+      return (data?.name as string | undefined) ?? "Your coach";
+    };
+
+    // Resend: the RPC checks the caller owns the invite (or is admin) and
+    // rotates the token, which kills the previous link.
+    if (body?.action === "resend") {
+      if (typeof body.referral_id !== "string") {
+        return json({ error: "referral_id is required" }, 400);
+      }
+      const { data: token, error: resendError } = await authClient.rpc("resend_coach_referral", {
+        _referral_id: body.referral_id,
+      });
+      if (resendError || !token) {
+        return json({ error: resendError?.message ?? "Invite cannot be resent" }, 400);
+      }
+      const { data: row } = await service
+        .from("coach_client_referrals")
+        .select("coach_id, client_email, client_name")
+        .eq("id", body.referral_id)
+        .single();
+      const link = inviteLink(token as string);
+      const emailed = row
+        ? await sendInviteEmail(service, row.client_email, await coachNameFor(row.coach_id), row.client_name, link)
+        : false;
+      return json({ invite_link: link, emailed });
     }
-    const emails = [...new Set(
-      rawEmails
-        .filter((e): e is string => typeof e === "string")
-        .map((e) => e.trim().toLowerCase())
-        .filter((e) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e)),
-    )].slice(0, 50); // ponytail: hard cap, no pagination; raise if coaches complain
+
+    const clients = parseClients(body);
+    if (clients.length === 0) {
+      return json({ error: "Add at least one valid client email" }, 400);
+    }
 
     // Resolve acting coach: admin may act on any coach_id, coaches only on their own.
     let coachId: string | null = null;
@@ -78,23 +186,10 @@ serve(async (req) => {
       coachId = profile?.coach_id ?? null;
     }
     if (!coachId) return json({ error: "Caller has no coach profile" }, 403);
+    const coachName = await coachNameFor(coachId);
 
-    const { data: coachRow } = await service
-      .from("coaches")
-      .select("name")
-      .eq("id", coachId)
-      .maybeSingle();
-    const coachName = coachRow?.name ?? "Your coach";
-
-    const { data: cfgRows } = await service
-      .from("configurations")
-      .select("key,value")
-      .in("key", ["smtp_email"]);
-    const fromEmail = cfgRows?.find((r: { key: string }) => r.key === "smtp_email")?.value;
-    const origin = req.headers.get("origin") ?? "https://athanext.com";
-
-    const results: Array<{ email: string; status: string }> = [];
-    for (const email of emails) {
+    const results: Array<{ email: string; status: string; invite_link?: string; emailed?: boolean }> = [];
+    for (const { email, name } of clients) {
       const { data: existing } = await service
         .from("coach_client_referrals")
         .select("id")
@@ -113,53 +208,57 @@ serve(async (req) => {
         .maybeSingle();
       const athleteId = targetProfile?.athlete_id ?? null;
 
+      // Admin override on a known athlete confirms straight away (book of
+      // business import). Everything else waits for the athlete to claim.
+      const confirmedNow = adminCreated && Boolean(athleteId);
       const status = adminCreated
         ? "confirmed"
         : athleteId
           ? "pending_confirmation"
           : "invited";
 
+      if (confirmedNow) {
+        const { data: already } = await service
+          .from("coach_client_referrals")
+          .select("id")
+          .eq("coach_id", coachId)
+          .eq("athlete_id", athleteId)
+          .eq("status", "confirmed")
+          .limit(1);
+        if (already?.length) {
+          results.push({ email, status: "already_exists" });
+          continue;
+        }
+      }
+
       const { data: inserted, error: insertError } = await service
         .from("coach_client_referrals")
         .insert({
           coach_id: coachId,
           client_email: email,
+          client_name: name,
           athlete_id: athleteId,
           initiated_by: adminCreated ? "admin" : "coach",
           status,
           confirmed_at: adminCreated ? new Date().toISOString() : null,
+          expires_at: new Date(Date.now() + INVITE_TTL_DAYS * 86_400_000).toISOString(),
+          invite_token: confirmedNow ? null : crypto.randomUUID(),
         })
         .select("invite_token")
         .single();
       if (insertError || !inserted) {
+        console.error("insert referral failed", insertError);
         results.push({ email, status: "error" });
         continue;
       }
 
-      if (fromEmail && (!adminCreated || !athleteId)) {
-        const link = athleteId
-          ? `${origin}/my-coaches`
-          : `${origin}/auth?mode=signup&persona=athlete&invite=${inserted.invite_token}`;
-        const html = athleteId
-          ? notifyEmailHtml(coachName, link)
-          : inviteEmailHtml(coachName, link);
-        // Fire-and-forget via the deployed send-email function (same pattern as
-        // create-booking-payment -> reconcile-stripe-fees).
-        fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}`,
-          },
-          body: JSON.stringify({
-            to: email,
-            from: fromEmail,
-            subject: `${coachName} added you as a client on AthaNext`,
-            html,
-          }),
-        }).catch((e) => console.error("send-email failed", e));
+      if (!inserted.invite_token) {
+        results.push({ email, status });
+        continue;
       }
-      results.push({ email, status });
+      const link = inviteLink(inserted.invite_token);
+      const emailed = await sendInviteEmail(service, email, coachName, name, link);
+      results.push({ email, status, invite_link: link, emailed });
     }
 
     return json({ results });

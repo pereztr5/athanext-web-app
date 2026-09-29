@@ -9,6 +9,7 @@ import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import { BrandPill } from '@/components/brand';
 import { formatTimeSpan, formatWholePrice } from '@/utils/sessionFormatting';
 import { getTodayISODate, isBookingWindowClosed, parseISODateLocal } from '@/utils/dateHelpers';
+import { computeSessionPrice } from "@/utils/referralHelpers";
 
 interface AvailabilityTableRowProps {
   slot: CoachAvailabilitySlot;
@@ -18,6 +19,9 @@ interface AvailabilityTableRowProps {
   slotStatus?: SlotBookingStatus;
   isStatusLoading?: boolean;
   platformFeePerc?: number;
+  stripeFeePerc?: number;
+  /** Confirmed coach-client pair: no platform fee (card processing still applies). */
+  platformFeeWaived?: boolean;
   appearance: "athlete" | "coach";
   onDelete?: (slot: CoachAvailabilitySlot) => void;
 }
@@ -30,6 +34,8 @@ export function AvailabilityTableRow({
   slotStatus,
   isStatusLoading = false,
   platformFeePerc = 0,
+  stripeFeePerc = 0,
+  platformFeeWaived = false,
   appearance,
   onDelete,
 }: AvailabilityTableRowProps) {
@@ -56,8 +62,9 @@ export function AvailabilityTableRow({
     ? parseISODateLocal(slot.occurrence_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
   const basePrice = Number(slot.price) || 0;
+  // Athletes see what Stripe will charge; coaches managing slots see their base price.
   const displayPrice = onBookSlot
-    ? basePrice * (1 + (platformFeePerc || 0) / 100)
+    ? computeSessionPrice(basePrice, platformFeePerc || 0, stripeFeePerc || 0, platformFeeWaived).total
     : basePrice;
 
   let disableBooking = isDisabled || isChecking;
@@ -112,6 +119,9 @@ export function AvailabilityTableRow({
       </TableCell>
       <TableCell className={textCell}>
         {formatWholePrice(displayPrice)}
+        {onBookSlot && platformFeeWaived ? (
+          <div className="mt-[2px] text-[12px] leading-[14px] text-[#1E7431]">No service fee</div>
+        ) : null}
       </TableCell>
       <TableCell className={`${textCell} whitespace-nowrap`}>
         {timeLabel}

@@ -596,7 +596,12 @@ const Dashboard = () => {
           </DashCard>
         ) : (
           <DashCard className="h-full">
-            <h2 className={cardTitleClass}>Your coaches</h2>
+            <div className="flex items-center justify-between">
+              <h2 className={cardTitleClass}>Your coaches</h2>
+              <Link to={ROUTES.MY_COACHES} className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#0054B4]">
+                View all
+              </Link>
+            </div>
             <div className="flex flex-col gap-3">
               {coaches.length ? (
                 coaches.map((c) => (

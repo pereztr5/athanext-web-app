@@ -13,7 +13,10 @@ import { formatDateToUSA } from "@/utils/helperFunctions";
 import BookingReceipt from "@/components/receipts/BookingReceipt";
 import { BrandPill } from "@/components/brand";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
-import { FALLBACK_CONTACT_METHODS } from "@/utils/db";
+import { useReferralWaiver } from "@/hooks/useReferrals";
+import { computeSessionPrice } from "@/utils/referralHelpers";
+import { useProfile } from "@/contexts/ProfileContext";
+import { FALLBACK_CONTACT_METHODS, PROFILE_TYPE } from "@/utils/db";
 
 // Support address shown in the receipt footer (same source the Contact page falls back to).
 const RECEIPT_SUPPORT_EMAIL = FALLBACK_CONTACT_METHODS.find((method) => method.icon === "email")?.value;
@@ -34,6 +37,9 @@ const BookingConfirmation = () => {
   const [loading, setLoading] = useState(false);
   const receiptRef = useRef<HTMLDivElement>(null);
   const { platformFeePerc, stripeFeePerc } = useFeeConfig();
+  const { profile } = useProfile();
+  const athleteProfileId =
+    profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as any).id : undefined;
   const currencyFormatter = useMemo(
     () => new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }),
     []
@@ -127,14 +133,11 @@ const BookingConfirmation = () => {
   const slot = bookingDetails?.slot;
   const sessionName = slot?.session_name || "Coaching session";
   const sessionType = slot?.session_type === "group" ? "Group" : "Individual";
+  // Existing client of this coach: create-booking-payment charged no platform fee.
+  const { waived: platformFeeWaived } = useReferralWaiver(athleteProfileId, bookingDetails?.coachId);
   const feeAdjustedPriceValue =
     typeof slot?.price === "number"
-      ? Number(
-          (
-            slot.price *
-            (1 + (platformFeePerc || 0) / 100 + (stripeFeePerc || 0) / 100)
-          ).toFixed(2)
-        )
+      ? computeSessionPrice(slot.price, platformFeePerc || 0, stripeFeePerc || 0, platformFeeWaived).total
       : 0;
   const price = feeAdjustedPriceValue ? formatCurrency(feeAdjustedPriceValue) : "-";
   const occurrenceDate = slot?.occurrence_date || null;
@@ -284,6 +287,7 @@ const BookingConfirmation = () => {
                 <p className="text-[32px] font-bold leading-[30px]">{price}</p>
               )}
               <p className="text-[12px] leading-[14px] text-[#767980]">Total, fees included</p>
+              {!loading && platformFeeWaived ? <BrandPill tone="green">No service fee</BrandPill> : null}
             </div>
           </div>
 

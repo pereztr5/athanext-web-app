@@ -21,6 +21,7 @@ import { strings } from '@/config/strings';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { PROFILE_TYPE } from "@/utils/db";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
+import { useReferralWaiver } from "@/hooks/useReferrals";
 const parseISODateUtc = (iso: string): Date => parseISODateLocal(iso);
 const toISODateUtc = (d: Date): string => toLocalISODate(d);
 const getWeekStartUtc = (date: Date): Date => getWeekStart(date);
@@ -172,7 +173,7 @@ export const CoachAvailabilitySection = ({
   const [dateRangeStart, setDateRangeStart] = useState<Date | null>(null);
   const [dateRangeEnd, setDateRangeEnd] = useState<Date | null>(null);
   const [hasManualWeekSelection, setHasManualWeekSelection] = useState(false);
-  const { platformFeePerc } = useFeeConfig();
+  const { platformFeePerc, stripeFeePerc } = useFeeConfig();
   const { data: availabilities, isLoading, error, refetch } = useCoachAvailabilityWithOccurrences(coachId);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -454,6 +455,12 @@ export const CoachAvailabilitySection = ({
     }
     return null;
   }, [profile]);
+
+  // Fee display (incl. the existing-client waiver) only applies in athlete booking mode.
+  const { waived: referralWaived } = useReferralWaiver(
+    onBookSlot ? athleteProfileId ?? undefined : undefined,
+    onBookSlot ? coachId : undefined
+  );
 
   // Compute booking state for each slot (full, booked by user, pending payment)
   useEffect(() => {
@@ -914,6 +921,8 @@ export const CoachAvailabilitySection = ({
                   slotStatusMap={slotStatusMap}
                   slotStatusLoading={slotStatusLoading && !slotStatusError}
                   platformFeePerc={platformFeePerc}
+                  stripeFeePerc={stripeFeePerc}
+                  platformFeeWaived={referralWaived}
                   appearance="coach"
                 />
               </section>
@@ -956,6 +965,8 @@ export const CoachAvailabilitySection = ({
                   slotStatusMap={slotStatusMap}
                   slotStatusLoading={slotStatusLoading && !slotStatusError}
                   platformFeePerc={platformFeePerc}
+                  stripeFeePerc={stripeFeePerc}
+                  platformFeeWaived={referralWaived}
                   appearance="athlete"
                 />
               )}

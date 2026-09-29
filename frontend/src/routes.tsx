@@ -32,6 +32,10 @@ import CreateAthleteProfile from "./pages/CreateAthleteProfile";
 import Dashboard from "./pages/Dashboard";
 import AdminAccounts from "./pages/AdminAccounts";
 import { HomeSwitch } from "./layouts/HomeSwitch";
+import MyClients from "./pages/MyClients";
+import MyCoaches from "./pages/MyCoaches";
+import AdminReferrals from "./pages/AdminReferrals";
+import InviteClaim from "./pages/InviteClaim";
 
 export const ROUTES = {
   HOME: "/",
@@ -53,6 +57,8 @@ export const ROUTES = {
   PACKAGE_CONFIRMATION: "/package-confirmation",
   COACH_SESSION_FEEDBACK: "/coach-session-feedback",
   MY_SESSIONS: "/my-sessions",
+  MY_CLIENTS: "/my-clients",
+  MY_COACHES: "/my-coaches",
   CREATE_ATHLETE_PROFILE: "/athlete-profile/create",
   SETTINGS: "/settings",
   ADMIN_ACCOUNTS: "/admin/accounts",
@@ -65,6 +71,8 @@ export const ROUTES = {
   CONTACT_US: "/contact",
   PROFILE: "/profile",
   CHAT: "/chat",
+  ADMIN_REFERRALS: "/admin/referrals",
+  INVITE: "/invite/:token",
   NOT_FOUND: "*",
 } as const;
 
@@ -92,6 +100,7 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.COACHES, element: <AllCoaches /> },
   { path: ROUTES.COACH_PRICING, element: <CoachProfile /> },
   { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
+  { path: ROUTES.INVITE, element: <InviteClaim /> },
 ];
 
 export const AUTH_FLOW_ROUTES: AppRoute[] = [
@@ -106,6 +115,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.DASHBOARD, element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
   { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
+  { path: ROUTES.MY_CLIENTS, element: <ProtectedRoute><MyClients /></ProtectedRoute> },
+  { path: ROUTES.MY_COACHES, element: <ProtectedRoute><MyCoaches /></ProtectedRoute> },
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
@@ -116,6 +127,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><CoachSessionFeedback /></ProtectedRoute> },
   { path: ROUTES.BOOKING_CONFIRMATION, element: <ProtectedRoute><BookingConfirmation /></ProtectedRoute> },
   { path: ROUTES.PACKAGE_CONFIRMATION, element: <ProtectedRoute><PackageConfirmation /></ProtectedRoute> },
+  { path: ROUTES.ADMIN_REFERRALS, element: <ProtectedRoute requireAdmin><AdminReferrals /></ProtectedRoute> },
 ];
 
 export const NOT_FOUND_ROUTE: AppRoute = {
