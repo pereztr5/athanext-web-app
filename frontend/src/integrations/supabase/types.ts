@@ -393,7 +393,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           package_name: string
-          price_per_session?: number | null
           session_count: number
           total_price: number
           updated_at?: string
@@ -409,7 +408,6 @@ export type Database = {
           id?: string
           is_active?: boolean
           package_name?: string
-          price_per_session?: number | null
           session_count?: number
           total_price?: number
           updated_at?: string

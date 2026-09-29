@@ -120,7 +120,6 @@ export function PackageEditorDialog({
     const sessions = Number.parseInt(sessionCount, 10);
     const duration = Number.parseInt(durationMinutes, 10);
     const validity = Number.parseInt(validityDays, 10);
-    const pricePerSession = dollarsToCents(pricePerSessionDollars);
     const totalPrice = dollarsToCents(totalPriceDollars);
 
     if (!sessions || sessions < 1) {
@@ -165,7 +164,6 @@ export function PackageEditorDialog({
         description: description.trim() || null,
         session_count: sessions,
         duration_minutes: duration,
-        price_per_session: pricePerSession,
         total_price: totalPrice,
         validity_days: validity,
         features,
