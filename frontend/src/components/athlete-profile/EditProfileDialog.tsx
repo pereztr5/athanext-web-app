@@ -43,7 +43,6 @@ import {
 } from "@/config/security";
 import { createCroppedPreview, fileToDataUrl, loadImageElement } from "@/utils/imageUtils";
 import {
-  normalizePhone,
   sanitizeImages,
   sanitizeTagsFromString,
   deriveInitials,
@@ -55,6 +54,8 @@ import {
   MAX_COVER_IMAGES,
   MAX_TAGS,
 } from "@/utils/validations";
+import { PhoneInput } from "@/components/common/PhoneInput";
+import { normalizeStoredPhone } from "@/utils/phone";
 import { formatLocationDisplay, hasValidLocationData, type LocationInfo } from "@/utils/geolocation";
 import {
   ACADEMIC_YEAR_OPTIONS,
@@ -121,7 +122,8 @@ const hydrateProfile = (profile: AthleteProfileFormData | null): AthleteProfileF
       ? normalizeAthletePosition(profile.sport, profile.position)
       : '',
     dateOfBirth: typeof profile.dateOfBirth === 'string' ? profile.dateOfBirth : '',
-    phoneNumber: typeof profile.phoneNumber === 'string' ? profile.phoneNumber : '',
+    // Normalize legacy free-text / bare "+" values so they don't block saving (ATH-32).
+    phoneNumber: typeof profile.phoneNumber === 'string' ? normalizeStoredPhone(profile.phoneNumber) : '',
     location: typeof profile.location === 'string' ? profile.location : '',
     tags: Array.isArray(profile.tags) ? profile.tags.filter((tag) => typeof tag === 'string' && tag.trim() !== '') : [],
     pathwayTags: sanitizePathwayTags(profile.pathwayTags),
@@ -567,12 +569,9 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
   };
   
   const handlePhoneChange = (value: string) => {
-    const safeValue = typeof value === 'string' ? value : '';
-    const normalizedPhone = normalizePhone(safeValue);
-    
     setFormData((prev) => {
       if (!prev) return emptyProfile;
-      return { ...prev, phoneNumber: normalizedPhone };
+      return { ...prev, phoneNumber: value };
     });
     
     if (errors?.phoneNumber) {
@@ -1286,13 +1285,11 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
 
           <div className={fieldClass}>
             <Label htmlFor="phoneNumber" className={labelClass}>Phone number</Label>
-            <Input
+            <PhoneInput
               id="phoneNumber"
-              type="tel"
-              placeholder="+1234567890"
-              value={formData?.phoneNumber || ''}
-              onChange={(e) => handlePhoneChange(e.target.value)}
-              aria-invalid={Boolean(errors?.phoneNumber)}
+              value={formData?.phoneNumber}
+              onChange={handlePhoneChange}
+              invalid={Boolean(errors?.phoneNumber)}
             />
             <FieldError message={errors?.phoneNumber} />
           </div>

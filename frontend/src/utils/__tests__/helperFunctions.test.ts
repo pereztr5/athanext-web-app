@@ -1,6 +1,5 @@
 import { describe, it, expect } from "vitest";
 import {
-  normalizePhone,
   capitalize,
   formatDateToUSA,
   capitalizeFirst,
@@ -10,18 +9,6 @@ import {
   deriveInitials,
 } from "@/utils/helperFunctions";
 import { MAX_TAGS, MAX_COVER_IMAGES } from "@/utils/validations";
-
-describe("normalizePhone", () => {
-  it("strips non-digits and prefixes +", () => {
-    expect(normalizePhone("(555) 123-4567")).toBe("+5551234567");
-  });
-  it("returns bare + for empty input", () => {
-    expect(normalizePhone("")).toBe("+");
-  });
-  it("caps at 15 digits", () => {
-    expect(normalizePhone("1".repeat(20))).toBe("+" + "1".repeat(15));
-  });
-});
 
 describe("capitalize", () => {
   it("capitalizes first letter, lowercases rest", () => {

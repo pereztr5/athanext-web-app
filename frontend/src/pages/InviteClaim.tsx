@@ -13,7 +13,8 @@ const titleClass = "text-[24px] font-semibold leading-[28px] tracking-[-0.05em] 
 const bodyClass = "text-[16px] font-normal leading-[20px] tracking-[-0.48px] text-[#767980]";
 
 const Shell = ({ children }: { children: ReactNode }) => (
-  <div className="px-4 py-12 md:px-10">
+  // Fill the marketing chrome so a short invite card doesn't float above a huge empty footer gap.
+  <div className="flex min-h-[calc(100dvh-12rem)] items-center justify-center px-4 py-12 md:px-10">
     <div className="mx-auto flex w-full max-w-[520px] flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-[25px] md:p-[30px]">
       {children}
     </div>

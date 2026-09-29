@@ -2,9 +2,9 @@ import { z } from "zod";
 import {
   FILE_UPLOAD_CONFIG,
   INPUT_LIMITS,
-  isValidPhoneNumber,
   isValidAge,
 } from "@/config/security";
+import { isValidE164 } from "@/utils/phone";
 import { ValidationResult } from "@/types/common";
 import { strings } from "@/config/strings";
 import { PERSONA_TYPES } from "@/utils/db";
@@ -77,7 +77,7 @@ export const profileSchema = z.object({
     .string()
     .trim()
     .min(1, "Phone number is required")
-    .refine(isValidPhoneNumber, "Enter a valid phone number"),
+    .refine(isValidE164, "Enter a valid phone number for the selected country"),
   tags: z
     .array(z.string().trim().min(1, "Tag cannot be empty").max(INPUT_LIMITS?.MAX_TAG_LENGTH ?? 50, "Tag too long"))
     .max(MAX_TAGS, `You can only add up to ${MAX_TAGS} tags`)

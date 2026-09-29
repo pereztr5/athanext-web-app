@@ -24,6 +24,8 @@ import { ATHLETE_SPORTS_OPTIONS } from "@/utils/db";
 import { ROUTES } from "@/routes";
 import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import { suggestPathwayTags } from "@/constants/pathwayTags";
+import { PhoneInput } from "@/components/common/PhoneInput";
+import { isValidE164 } from "@/utils/phone";
 
 const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
 const optionalClass = "font-normal text-[#A3A6AB]";
@@ -93,6 +95,15 @@ const CreateAthleteProfile = () => {
       toast({
         title: "Missing details",
         description: "Full name, sport, and date of birth are required.",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (form.phoneNumber && !isValidE164(form.phoneNumber)) {
+      toast({
+        title: "Check your phone number",
+        description: "Enter a valid phone number for the selected country, or leave it blank.",
         variant: "destructive",
       });
       return;
@@ -242,11 +253,10 @@ const CreateAthleteProfile = () => {
                 <Label htmlFor="phoneNumber" className={labelClass}>
                   Phone <span className={optionalClass}>(optional)</span>
                 </Label>
-                <Input
+                <PhoneInput
                   id="phoneNumber"
                   value={form.phoneNumber}
-                  onChange={(event) => handleInputChange("phoneNumber", event.target.value)}
-                  placeholder="123-456-7890"
+                  onChange={(value) => handleInputChange("phoneNumber", value)}
                 />
               </div>
             </div>

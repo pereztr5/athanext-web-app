@@ -2,18 +2,6 @@ import { INPUT_LIMITS, sanitizeHtml, truncateString } from "@/config/security";
 import { MAX_COVER_IMAGES, MAX_TAGS } from "@/utils/validations";
 
 /**
- * Normalizes a phone number to ensure it always starts with a '+' prefix.
- * Limits the total length to 16 characters (+ followed by 15 digits max).
- * @param value - The phone number string to normalize
- * @returns The normalized phone number with '+' prefix
- */
-export const normalizePhone = (value: string): string => {
-  const safeValue = typeof value === "string" ? value : "";
-  const digitsOnly = safeValue.replace(/\D/g, "").slice(0, 15);
-  return digitsOnly.length > 0 ? `+${digitsOnly}` : "+";
-};
-
-/**
  * Capitalizes the first letter of a string.
  * @param str - The string to capitalize
  * @returns The string with the first letter capitalized
