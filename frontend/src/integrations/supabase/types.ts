@@ -485,6 +485,7 @@ export type Database = {
           image_url: string | null
           instagram_handle: string | null
           is_verified: boolean | null
+          requires_booking_confirmation: boolean
           languages: string[] | null
           locations: string[]
           name: string
@@ -517,6 +518,7 @@ export type Database = {
           image_url?: string | null
           instagram_handle?: string | null
           is_verified?: boolean | null
+          requires_booking_confirmation?: boolean
           languages?: string[] | null
           locations?: string[]
           name: string
@@ -549,6 +551,7 @@ export type Database = {
           image_url?: string | null
           instagram_handle?: string | null
           is_verified?: boolean | null
+          requires_booking_confirmation?: boolean
           languages?: string[] | null
           locations?: string[]
           name?: string

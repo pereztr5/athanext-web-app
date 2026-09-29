@@ -262,14 +262,14 @@ async function getPendingAthleteSessions(athleteId: string, now: Date): Promise<
   const { data, error } = await supabase
     .from('coach_slot_bookings' as any)
     .select(
-      `id, coach_id, notes,
+      `id, coach_id, notes, status,
        coach_availability_slot_occurrences (
          id, weekly_slot_id, session_name, session_type, location, price,
          duration_minutes, occurrence_date, start_time, end_time
        )`
     )
     .eq('athlete_id', athleteId)
-    .eq('status', 'pending_payment');
+    .in('status', ['pending_payment', 'requested']);
 
   if (error || !Array.isArray(data)) {
     console.error('Failed to load unpaid sessions:', error);
@@ -315,7 +315,7 @@ async function getPendingAthleteSessions(athleteId: string, now: Date): Promise<
     return [
       {
         ...mapped,
-        dbStatus: 'pending_payment' as BookingStatus,
+        dbStatus: (row.status === 'requested' ? 'requested' : 'pending_payment') as BookingStatus,
         paymentStatus: 'unpaid' as PaymentStatus,
         notes: row.notes ?? null,
       },

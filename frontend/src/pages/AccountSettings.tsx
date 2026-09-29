@@ -15,6 +15,7 @@ import { PasswordRequirements } from "@/components/password/PasswordRequirements
 import { getInitials } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
+import { BookingConfirmationToggle } from "@/components/common/BookingConfirmationToggle";
 
 const rowLabelClass = "w-[180px] shrink-0 text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C]";
 const fieldLabelClass = "text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
@@ -469,6 +470,19 @@ const AccountSettings = () => {
             </CardContent>
           </Card>
         </section>
+
+        {isCoach && (
+          <section>
+            <Card>
+              <CardHeader>
+                <CardTitle className="tracking-[-0.05em]">Bookings</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <BookingConfirmationToggle />
+              </CardContent>
+            </Card>
+          </section>
+        )}
 
         {isAthleteLike && (
           <section>

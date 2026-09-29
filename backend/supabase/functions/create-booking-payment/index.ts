@@ -283,6 +283,9 @@ const updateBookingPaymentStatus = async (
 };
 
 const SESSION_TIME_ZONE = "America/New_York";
+// Statuses that hold a spot. "requested" = waiting for the coach to confirm (ATH-49).
+const ACTIVE_BOOKING_STATUSES = ["requested", "pending_payment", "booked", "completed"];
+
 const BOOKING_GRACE_MS = 10 * 60 * 1000;
 
 const readZonedParts = (date: Date, timeZone: string) => {
@@ -458,7 +461,7 @@ const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => 
       .from("coach_slot_bookings" as any)
       .select("id, athlete_id, status, payment_status")
       .eq("occurrence_id", occurrence.id)
-      .in("status", ["pending_payment", "booked", "completed"]);
+      .in("status", ACTIVE_BOOKING_STATUSES);
     if (error) throw error;
     const athleteIds = (bookings || []).map((row: any) => row.athlete_id).filter(Boolean);
     const { data: profiles } = athleteIds.length
@@ -470,7 +473,7 @@ const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => 
         id: row.athlete_id,
         name: names.get(row.athlete_id) || "Athlete",
         bookingId: row.id,
-        requiresPayment: row.status === "pending_payment",
+        requiresPayment: row.status === "pending_payment" || row.status === "requested",
       })),
     });
   }
@@ -495,9 +498,28 @@ const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => 
     .select("id, status")
     .eq("occurrence_id", occurrence.id)
     .eq("athlete_id", athleteId)
-    .in("status", ["pending_payment", "booked", "completed"])
+    .in("status", ACTIVE_BOOKING_STATUSES)
     .maybeSingle();
   if (existingError) throw existingError;
+  if (existing?.status === "requested") {
+    // Adding a walk-in for an athlete with an open request counts as the coach accepting it (ATH-49).
+    const paid = Number(occurrence.price || 0) <= 0;
+    const { error: acceptError } = await client
+      .from("coach_slot_bookings" as any)
+      .update({
+        status: paid ? "booked" : "pending_payment",
+        payment_status: paid ? "paid" : "unpaid",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id);
+    if (acceptError) throw acceptError;
+    return jsonResponse({
+      bookingId: existing.id,
+      athlete: { id: athlete.id, name: athlete.full_name },
+      requiresPayment: !paid,
+      alreadyAdded: true,
+    });
+  }
   if (existing) {
     return jsonResponse({
       bookingId: existing.id,
@@ -716,7 +738,7 @@ serve(async (req) => {
       .from("coach_slot_bookings" as any)
       .select("id, occurrence_id, athlete_id, status, stripe_session_id")
       .in("occurrence_id", occurrenceIds)
-      .in("status", ["pending_payment", "booked", "completed"]);
+      .in("status", ACTIVE_BOOKING_STATUSES);
     if (bookingsErr) throw bookingsErr;
 
     const bookingsByOccurrence = new Map<string, any[]>();
@@ -745,6 +767,9 @@ serve(async (req) => {
     const hasPaidBooking = myBookings.some((b) => b.status === "booked" || b.status === "completed");
     if (hasPaidBooking) {
       throw new Error("You already have a booking for this session.");
+    }
+    if (myBookings.some((b) => b.status === "requested")) {
+      throw new Error("You already requested this session. The coach will confirm it soon.");
     }
 
     const myPendingBookings = myBookings.filter((b) => b.status === "pending_payment");
@@ -806,6 +831,40 @@ serve(async (req) => {
     const amountInCents = Math.round(totalWithFees * 100);
     if (amountInCents <= 0) {
       throw new Error("Total amount must be greater than zero");
+    }
+
+    // Coach confirms first (ATH-49): hold individual sessions as a request, no Stripe yet.
+    // Accepted requests become pending_payment and are paid through the branch below.
+    if (!coversAllPending && occurrences.every((occ) => occ.session_type !== "group")) {
+      const { data: coachSettings } = await supabaseClient
+        .from("coaches" as any)
+        .select("requires_booking_confirmation")
+        .eq("id", coachId)
+        .maybeSingle();
+      if ((coachSettings as { requires_booking_confirmation?: boolean } | null)?.requires_booking_confirmation) {
+        if (myPendingBookings.length) {
+          throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
+        }
+        const { data: requestRows, error: requestErr } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .insert(occurrences.map((occ) => ({
+            occurrence_id: occ.id,
+            weekly_slot_id: occ.weekly_slot_id,
+            availability_id: occ.availability_id,
+            coach_id: occ.coach_id,
+            athlete_id: athleteId,
+            status: "requested",
+            payment_status: "unpaid",
+            notes: notes || null,
+            created_by: user.id,
+          })))
+          .select("id");
+        if (requestErr) throw requestErr;
+        return new Response(
+          JSON.stringify({ requested: true, booking_ids: (requestRows || []).map((row: any) => row.id) }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
     }
 
     let bookingIds: string[] = [];

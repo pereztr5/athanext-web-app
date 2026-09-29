@@ -495,7 +495,7 @@ export const CoachAvailabilitySection = ({
           .from('coach_slot_bookings' as any)
           .select('occurrence_id, athlete_id, status')
           .in('occurrence_id', slotIds)
-          .in('status', ['pending_payment', 'booked', 'completed']);
+          .in('status', ['requested', 'pending_payment', 'booked', 'completed']);
 
         if (requestId !== slotStatusRequestRef.current) return;
 
@@ -521,7 +521,9 @@ export const CoachAvailabilitySection = ({
             (row) => row.athlete_id === (athleteProfileId || user?.id)
           );
           const myPendingPayment = myBooking?.status === 'pending_payment';
-          const bookedByMe = Boolean(myBooking) && myBooking.status !== 'pending_payment';
+          // Held requests count toward capacity but aren't a booking yet (ATH-49).
+          const myRequested = myBooking?.status === 'requested';
+          const bookedByMe = Boolean(myBooking) && !myPendingPayment && !myRequested;
           const hasPendingPayment = pendingCount > 0;
           const isFull = slot.session_type === 'group'
             ? bookingCount >= capacity
@@ -532,6 +534,7 @@ export const CoachAvailabilitySection = ({
             bookedByMe,
             hasPendingPayment,
             myPendingPayment: Boolean(myPendingPayment),
+            myRequested,
             totalCount: bookingCount,
             capacity,
           };
@@ -610,7 +613,7 @@ export const CoachAvailabilitySection = ({
         .from('coach_slot_bookings' as any)
         .select('id', { count: 'exact', head: true })
         .eq('availability_id', deleteTargetId)
-        .in('status', ['pending_payment', 'booked', 'completed']);
+        .in('status', ['requested', 'pending_payment', 'booked', 'completed']);
 
       if (countError) throw countError;
 

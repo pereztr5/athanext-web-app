@@ -82,6 +82,9 @@ export function AvailabilityTableRow({
     disableBooking = true;
   } else if (isPayNow) {
     bookLabel = "Pay now";
+  } else if (slotStatus?.myRequested) {
+    statusPill = "Requested";
+    disableBooking = true;
   } else if (bookedByMe) {
     statusPill = "Already booked";
     disableBooking = true;

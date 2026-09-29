@@ -37,6 +37,8 @@ export interface SlotBookingStatus {
   bookedByMe: boolean;
   hasPendingPayment: boolean;
   myPendingPayment: boolean;
+  /** The viewer asked for this slot and the coach hasn't answered yet (ATH-49). */
+  myRequested?: boolean;
   totalCount: number;
   capacity: number;
 }

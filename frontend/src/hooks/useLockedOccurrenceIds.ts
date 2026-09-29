@@ -3,7 +3,7 @@ import { useQuery } from '@tanstack/react-query';
 import { supabase } from '@/integrations/supabase/client';
 
 const QUERY_KEY = (availabilityId: string) => ['locked-occurrence-ids', availabilityId] as const;
-const LOCKED_BOOKING_STATUSES = ['pending_payment', 'booked'] as const;
+const LOCKED_BOOKING_STATUSES = ['requested', 'pending_payment', 'booked'] as const;
 
 export const useLockedOccurrenceIds = (
   availabilityId: string | null,

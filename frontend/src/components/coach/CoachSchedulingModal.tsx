@@ -10,6 +10,7 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { CalendarIcon, Clock, MapPin, Lock, AlertCircle } from "lucide-react";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -78,6 +79,7 @@ const bookingSchema = z.object({
 
 const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot }: CoachSchedulingModalProps) => {
   const viewerTimeZone = useViewerTimeZone();
+  const queryClient = useQueryClient();
   const isFreeConsultation = serviceType === BookingType.FreeConsultation;
   const slotPrice = prefillSlot?.slot?.price ?? undefined;
   const [platformFeePerc, setPlatformFeePerc] = useState(0);
@@ -97,6 +99,38 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const { toast } = useToast();
   const { user, session } = useAuth();
   const { profile } = useProfile();
+  // Individual sessions with coaches who confirm first are requested, not paid (ATH-49).
+  // After the coach accepts, the athlete's row is pending_payment and this modal pays for it.
+  const viewerAthleteId =
+    profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as any).id ?? null : null;
+  const { data: confirmationState } = useQuery({
+    queryKey: ["booking-confirmation-state", coach?.id, prefillSlot?.occurrenceId, viewerAthleteId],
+    enabled: isOpen && Boolean(coach?.id),
+    queryFn: async () => {
+      const { data } = await supabase
+        .from("coaches")
+        .select("requires_booking_confirmation")
+        .eq("id", coach!.id)
+        .maybeSingle();
+      let hasAcceptedRequest = false;
+      if (viewerAthleteId && prefillSlot?.occurrenceId) {
+        const { data: pending } = await supabase
+          .from("coach_slot_bookings" as any)
+          .select("id")
+          .eq("occurrence_id", prefillSlot.occurrenceId)
+          .eq("athlete_id", viewerAthleteId)
+          .eq("status", "pending_payment")
+          .limit(1);
+        hasAcceptedRequest = Boolean(pending?.length);
+      }
+      return { requiresConfirmation: Boolean(data?.requires_booking_confirmation), hasAcceptedRequest };
+    },
+  });
+  const needsCoachConfirmation =
+    Boolean(confirmationState?.requiresConfirmation) &&
+    !confirmationState?.hasAcceptedRequest &&
+    !isFreeConsultation &&
+    prefillSlot?.slot?.session_type !== "group";
   const modalAthleteId =
     profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as any).id : undefined;
   // Existing client of this coach: create-booking-payment charges no platform fee.
@@ -339,6 +373,17 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       });
 
       if (paymentError) throw paymentError;
+
+      // Coach confirms first (ATH-49): the request is held, no checkout yet.
+      if (paymentData?.requested) {
+        toast({
+          title: "Request sent",
+          description: "The coach will accept or decline it. You'll pay once it's accepted, from My Sessions.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["sessions"] });
+        onClose();
+        return;
+      }
 
       // Track free consultation if successful
       if (isFreeConsultation && paymentData.appointmentId) {
@@ -687,6 +732,8 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                   ? strings.appointments.processing
                   : isFreeConsultation
                   ? "Book free consultation"
+                  : needsCoachConfirmation
+                  ? "Request session"
                   : `Book and pay ${formatCurrency(totalWithFees)}`}
               </Button>
             )}

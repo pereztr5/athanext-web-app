@@ -6,7 +6,7 @@
 /**
  * Session status values from coach_slot_bookings.status
  */
-export type BookingStatus = 'pending_payment' | 'booked' | 'completed' | 'canceled' | 'no_show' | 'refunded';
+export type BookingStatus = 'requested' | 'pending_payment' | 'booked' | 'completed' | 'canceled' | 'no_show' | 'refunded';
 
 /**
  * Session type from coach_slot_bookings.session_type

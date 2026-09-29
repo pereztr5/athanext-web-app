@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   AlertCircle,
   Calendar,
@@ -9,6 +9,7 @@ import {
   ChevronDown,
   Filter,
   History,
+  Inbox,
   Info,
   MapPin,
   PlayCircle,
@@ -60,6 +61,7 @@ import { PROFILE_TYPE } from "@/utils/db";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { bookingRequestsAPI, type BookingRequest } from "@/api/bookingRequests";
 import { formatDateInZone } from "@/utils/viewerTime";
 
 type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
@@ -164,10 +166,21 @@ const SessionTypePill = ({ type }: { type: UISession["type"] }) => (
   <BrandPill tone={type === "group" ? "teal" : "blue"}>{type === "group" ? "Group" : "Individual"}</BrandPill>
 );
 
+/** Waiting for the coach to accept or decline (ATH-49); no payment yet. */
+const sessionIsRequested = (session: UISession) => session.dbStatus === "requested";
+
 const sessionNeedsPayment = (session: UISession) =>
-  session.dbStatus === "pending_payment" ||
-  session.paymentStatus === "unpaid" ||
-  session.paymentStatus === "requires_action";
+  !sessionIsRequested(session) &&
+  (session.dbStatus === "pending_payment" ||
+    session.paymentStatus === "unpaid" ||
+    session.paymentStatus === "requires_action");
+
+const BookingStatePill = ({ session }: { session: UISession }) =>
+  sessionIsRequested(session) ? (
+    <BrandPill tone="blue">Awaiting coach</BrandPill>
+  ) : sessionNeedsPayment(session) ? (
+    <BrandPill tone="amber">Awaiting payment</BrandPill>
+  ) : null;
 
 /** Rendered inside a card-level <button>, so it's a span with button semantics. */
 const PayNowAction = ({
@@ -282,9 +295,7 @@ const SessionCard = ({
       <div className="flex min-w-0 flex-col gap-5">
         <SessionTitleRow session={session}>
           {statusLabel ? <BrandPill tone="amber">{statusLabel}</BrandPill> : null}
-          {role !== PROFILE_TYPE.coach && sessionNeedsPayment(session) ? (
-            <BrandPill tone="amber">Awaiting payment</BrandPill>
-          ) : null}
+          {role !== PROFILE_TYPE.coach ? <BookingStatePill session={session} /> : null}
           {role === PROFILE_TYPE.athlete && waived ? <BrandPill tone="green">No service fee</BrandPill> : null}
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
@@ -355,7 +366,7 @@ const PastDraftCard = ({
     <div className={cn(cardShellClass, "cursor-pointer")} onClick={openDetails}>
       <div className="flex min-w-0 flex-col gap-5">
         <SessionTitleRow session={session}>
-          {sessionNeedsPayment(session) ? <BrandPill tone="amber">Awaiting payment</BrandPill> : null}
+          <BookingStatePill session={session} />
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Date" value={formatWeekdayDate(session.start, new Date(), timeZone)} />
@@ -412,6 +423,46 @@ const EmptySessionNote = ({ children }: { children: string }) => (
     <p className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#767980]">{children}</p>
   </div>
 );
+
+/** A held individual-session request the coach must accept or decline (ATH-49). */
+const BookingRequestCard = ({
+  request,
+  busy,
+  onRespond,
+}: {
+  request: BookingRequest;
+  busy: boolean;
+  onRespond: (accept: boolean) => void;
+}) => {
+  const timeZone = useViewerTimeZone();
+  return (
+    <div className={cardShellClass}>
+      <div className="flex min-w-0 flex-col gap-5">
+        <div className="flex flex-wrap items-center gap-[10px]">
+          <p className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{request.sessionName}</p>
+          <BrandPill tone="blue">Requested</BrandPill>
+        </div>
+        <div className="flex flex-wrap gap-x-6 gap-y-3">
+          <CardField label="Athlete" value={request.athleteName} />
+          <CardField label="Date" value={formatWeekdayDate(request.start, new Date(), timeZone)} />
+          <CardField label="Time" value={formatTimeSpan(request.start, request.end, timeZone)} />
+          {request.notes ? <CardField label="Note" value={request.notes} /> : null}
+        </div>
+      </div>
+      <div className={cardAsideClass}>
+        <PriceBlock price={formatWholePrice(request.price)} />
+        <div className="flex gap-2">
+          <Button variant="outline" size="sm" disabled={busy} onClick={() => onRespond(false)}>
+            Decline
+          </Button>
+          <Button size="sm" disabled={busy} onClick={() => onRespond(true)}>
+            Accept
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
 
 const SessionGroup = ({
   iconBg,
@@ -493,6 +544,34 @@ const MySessions = () => {
     if (persona === PROFILE_TYPE.athlete || persona === PROFILE_TYPE.parent) return PROFILE_TYPE.athlete;
     return null;
   }, [persona]);
+
+  // Held requests for coaches who confirm before booking (ATH-49).
+  const { data: bookingRequests = [] } = useQuery({
+    queryKey: ["booking-requests"],
+    enabled: role === PROFILE_TYPE.coach,
+    queryFn: () => bookingRequestsAPI.listForCoach(),
+  });
+  const respondToRequest = useMutation({
+    mutationFn: ({ bookingId, accept }: { bookingId: string; accept: boolean }) =>
+      bookingRequestsAPI.respond(bookingId, accept),
+    onSuccess: (_status, { accept }) => {
+      toast({
+        title: accept ? "Request accepted" : "Request declined",
+        description: accept
+          ? "The athlete can now pay to confirm the booking."
+          : "The slot is open again.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["booking-requests"] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+    },
+    onError: (error: unknown) => {
+      toast({
+        title: "Couldn't update the request",
+        description: error instanceof Error ? error.message : "Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   const sessionSport = useMemo<Enums<'sport_type'> | undefined>(() => {
     const sportValue = (profile?.data as any)?.sport || (profile?.userProfile as any)?.sport;
@@ -1072,6 +1151,25 @@ const MySessions = () => {
           </div>
         </div>
 
+        {role === PROFILE_TYPE.coach && bookingRequests.length > 0 ? (
+          <SessionGroup
+            iconBg="bg-[#E5EDF7] text-[#0054B4]"
+            icon={<Inbox className="size-4" strokeWidth={1.5} />}
+            title="Booking requests"
+            count={bookingRequests.length}
+            empty="No booking requests"
+          >
+            {bookingRequests.map((request) => (
+              <BookingRequestCard
+                key={request.bookingId}
+                request={request}
+                busy={respondToRequest.isPending}
+                onRespond={(accept) => respondToRequest.mutate({ bookingId: request.bookingId, accept })}
+              />
+            ))}
+          </SessionGroup>
+        ) : null}
+
         <SessionGroup
           iconBg="bg-[#E5EDF7] text-[#0054B4]"
           icon={<PlayCircle className="size-4" strokeWidth={1.5} />}
@@ -1217,9 +1315,7 @@ const MySessions = () => {
                         {selectedSessionSafe.computedStatus === "in-progress" ? (
                           <BrandPill tone="amber">In progress</BrandPill>
                         ) : null}
-                        {isAthleteView && sessionNeedsPayment(selectedSessionSafe) ? (
-                          <BrandPill tone="amber">Awaiting payment</BrandPill>
-                        ) : null}
+                        {isAthleteView ? <BookingStatePill session={selectedSessionSafe} /> : null}
                       </div>
                     </div>
                     <div className="flex flex-none flex-col items-end gap-1.5 text-right">
