@@ -22,6 +22,7 @@ import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
+import { CommunityChannelButton } from "@/components/chat/CommunityChannelButton";
 import { coachProfileUrl } from "@/utils/coachSlug";
 import { recordCoachShareEvent } from "@/api/coachShare";
 import { SharePricingDialog } from "./SharePricingDialog";
@@ -237,6 +238,8 @@ export function CoachProfileView({
                   {headerRating}
                 </p>
               ) : null}
+              {/* Signed-in athletes join the coach's community here; renders nothing for coaches (ATH-21). */}
+              <CommunityChannelButton coachId={coach.id} />
             </div>
 
             <div className="flex flex-col gap-6 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">

@@ -45,15 +45,17 @@ export const CommunityChannelButton = ({ coachId }: { coachId: string }) => {
 
   if (!channel.isMember) {
     return (
-      <Button variant="outline" disabled={membership.isPending} onClick={() => membership.mutate(true)}>
-        {membership.isPending ? <Loader2 className="animate-spin" strokeWidth={1.5} /> : <Users strokeWidth={1.5} />}
-        Join community
-      </Button>
+      <div className="flex flex-wrap gap-[10px]">
+        <Button variant="outline" disabled={membership.isPending} onClick={() => membership.mutate(true)}>
+          {membership.isPending ? <Loader2 className="animate-spin" strokeWidth={1.5} /> : <Users strokeWidth={1.5} />}
+          Join community
+        </Button>
+      </div>
     );
   }
 
   return (
-    <>
+    <div className="flex flex-wrap gap-[10px]">
       <Button variant="outline" onClick={() => navigate(`/chat?conversationId=${channel.conversationId}`)}>
         <Users strokeWidth={1.5} />
         Open community
@@ -61,6 +63,6 @@ export const CommunityChannelButton = ({ coachId }: { coachId: string }) => {
       <Button variant="ghost" disabled={membership.isPending} onClick={() => membership.mutate(false)}>
         Leave
       </Button>
-    </>
+    </div>
   );
 };

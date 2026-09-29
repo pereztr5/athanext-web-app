@@ -26,7 +26,6 @@ import { detectCoachSport, normalizeCoachSport } from "@/utils/coachSport";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { getInitials } from "@/lib/utils";
 import { useToast } from "@/hooks/use-toast";
-import { CommunityChannelButton } from "@/components/chat/CommunityChannelButton";
 
 const MAX_COVER_IMAGES = 5;
 const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
@@ -1343,7 +1342,6 @@ export function CoachHeader({
                                         "Send a message"
                                     )}
                                 </Button>
-                                {coach?.id ? <CommunityChannelButton coachId={coach.id} /> : null}
                             </div>
                         )}
                     </div>
