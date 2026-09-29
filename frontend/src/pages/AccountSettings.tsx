@@ -14,6 +14,7 @@ import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswor
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { getInitials } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
 
 const rowLabelClass = "w-[180px] shrink-0 text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C]";
 const fieldLabelClass = "text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
@@ -241,6 +242,15 @@ const AccountSettings = () => {
             </section>
 
             <section className="flex flex-col gap-[30px]">
+              <SectionTitle title="Time zone" />
+              <div className="flex flex-col gap-[10px]">
+                <SettingRow label="Show session times in" divider={false}>
+                  <TimeZoneSelect className="w-full max-w-[360px]" />
+                </SettingRow>
+              </div>
+            </section>
+
+            <section className="flex flex-col gap-[30px]">
               <SectionTitle title="Guardian" action={<EditButton disabled />} />
               <div className="flex flex-col gap-[10px]">
                 <SettingRow label="Name" />
@@ -442,6 +452,20 @@ const AccountSettings = () => {
                   </>
                 )}
               </div>
+            </CardContent>
+          </Card>
+        </section>
+
+        <section>
+          <Card>
+            <CardHeader>
+              <CardTitle className="tracking-[-0.05em]">Time zone</CardTitle>
+              <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                Session times show in this zone. Availability is still entered in Eastern Time.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <TimeZoneSelect className="w-full max-w-[360px]" />
             </CardContent>
           </Card>
         </section>

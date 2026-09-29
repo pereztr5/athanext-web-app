@@ -8,6 +8,7 @@ import React, { useCallback, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
 import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { timeZoneAbbreviation } from '@/utils/viewerTime';
 import { BrandPill } from '@/components/brand';
 
 const weekNavButtonClass =
@@ -25,7 +26,7 @@ import type {
 } from '@/types/availability';
 import { ManageAvailabilityTableHeader } from '@/components/availability/ManageAvailabilityTableHeader';
 import { ManageAvailabilityTableRow } from '@/components/availability/ManageAvailabilityTableRow';
-import { toLocalISODate, getTodayISODate } from '@/utils/dateHelpers';
+import { toLocalISODate, getTodayISODate, SESSION_TIME_ZONE } from '@/utils/dateHelpers';
 import {
   DEFAULT_SLOT,
   isPastOrToday,
@@ -472,7 +473,10 @@ export const WeeklySlotsTable = ({
           >
             {weekStartLabel ? `Week of ${weekStartLabel}` : "Weekly time slots"}
           </h3>
-          <BrandPill tone="amber">EST</BrandPill>
+          {/* Times are entered and stored in Eastern; show EST or EDT for this week. */}
+          <span title="Session times are entered in Eastern Time">
+            <BrandPill tone="amber">{timeZoneAbbreviation(SESSION_TIME_ZONE, currentWeek ?? new Date())}</BrandPill>
+          </span>
           {currentWeekISO && weekErrorSet.has(currentWeekISO) && (
             <span className="inline-flex size-2 rounded-full bg-[#FB4747]" title="Issues in this week">
               <span className="sr-only">Issues in this week</span>

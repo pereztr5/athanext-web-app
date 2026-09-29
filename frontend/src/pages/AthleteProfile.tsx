@@ -65,6 +65,8 @@ import { supabase } from "@/integrations/supabase/client";
 import { ATHLETE_PROFILE_BASE_STATS, ATHLETE_PROFILE_CONSTANTS, ATHLETE_IMAGE_LIMITS } from "@/utils/db";
 import { getAcademicYearLabel } from "@/utils/academicYear";
 import { getStoragePathFromPublicUrl } from "@/utils/storage";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { formatDateInZone } from "@/utils/viewerTime";
 import type { AthleteProfileProps, AthleteStatMetrics, ConversationCardItem, ViewAllSection } from "@/types/athlete-profile";
 
 const { MAX_COVER_IMAGES } = ATHLETE_PROFILE_CONSTANTS;
@@ -124,13 +126,11 @@ const StatusPill = ({ status }: { status: string }) => (
   </BrandPill>
 );
 
-const formatSessionDay = (dateOnly: string) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", year: "numeric" }).format(
-    parseISODateLocal(dateOnly)
-  );
-
-const formatSessionWhen = (session: SessionUIModel) =>
-  `${formatSessionDay(session.dateOnly)}, ${formatTimeSpan(session.start, session.end) || session.timeRange}`;
+// Session date + time in the viewer's zone (ATH-22).
+const formatSessionWhen = (session: SessionUIModel, timeZone: string) =>
+  `${formatDateInZone(new Date(session.start), timeZone, { month: "short", day: "numeric", year: "numeric" })}, ${
+    formatTimeSpan(session.start, session.end, timeZone) || session.timeRange
+  }`;
 
 const SectionCard = ({
   icon: Icon,
@@ -186,6 +186,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
   const queryClient = useQueryClient();
   const { updateProfile } = useUserProfile();
   const { setUserImg, setUserName, refreshUserProfile, userProfile: authUserProfile } = useAuth();
+  const viewerTimeZone = useViewerTimeZone();
   const { role } = useRole();
   const navigate = useNavigate();
 
@@ -1114,7 +1115,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                 {safeUpcomingSessions.map((session) => (
                   <div key={`${session.bookingId}`} className={cn(rowClass, "flex items-center justify-between gap-3")}>
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                      <p className={rowTitleClass}>{formatSessionWhen(session)}</p>
+                      <p className={rowTitleClass}>{formatSessionWhen(session, viewerTimeZone)}</p>
                       <p className={cn(rowMetaClass, "truncate")}>
                         {session.coachName || "Coach"}, {capitalizeFirst(session.type)}
                       </p>
@@ -1178,7 +1179,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                         </p>
                       </div>
                       <span className={cn(rowMetaClass, "whitespace-nowrap")}>
-                        {new Date(session.start).toLocaleDateString("en-US", {
+                        {formatDateInZone(new Date(session.start), viewerTimeZone, {
                           month: "short",
                           day: "numeric",
                           year: "numeric",
@@ -1259,7 +1260,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                       <p className={rowMetaClass}>{capitalizeFirst(session.type)}</p>
                       <p className={cn(rowMetaClass, "flex items-center gap-1.5")}>
                         <Calendar className="size-3.5 flex-none" strokeWidth={1.5} aria-hidden="true" />
-                        <span>{formatSessionWhen(session)}</span>
+                        <span>{formatSessionWhen(session, viewerTimeZone)}</span>
                       </p>
                     </div>
                   ))

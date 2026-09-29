@@ -3,6 +3,7 @@
  * Helper functions for formatting session data for display
  */
 import { parseISODateLocal } from "@/utils/dateHelpers";
+import { formatInstantSpan } from "@/utils/viewerTime";
 
 /**
  * Format amount as currency string
@@ -199,7 +200,12 @@ const timeParts = (date: Date) => {
  * times share it ("11:30 AM to 12:30 PM" otherwise).
  * Accepts Date objects, ISO datetimes, or "HH:mm[:ss]" time strings.
  */
-export const formatTimeSpan = (start: Date | string, end: Date | string): string => {
+export const formatTimeSpan = (start: Date | string, end: Date | string, timeZone?: string): string => {
+  const isClock = (value: Date | string) => typeof value === 'string' && /^\d{1,2}:\d{2}/.test(value);
+  // Instants (Date / ISO datetime) can be shown in the viewer's zone; bare clock strings cannot.
+  if (timeZone && !isClock(start) && !isClock(end)) {
+    return formatInstantSpan(new Date(start), new Date(end), timeZone);
+  }
   const toDate = (value: Date | string) =>
     value instanceof Date
       ? value

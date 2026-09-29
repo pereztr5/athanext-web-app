@@ -13,7 +13,7 @@ import type {
   BookingStatus,
   PaymentStatus,
 } from '@/types/sessions-api';
-import { buildISODateTime } from '@/utils/sessionFormatting';
+import { sessionInstantISO } from '@/utils/viewerTime';
 
 const buildApiError = (
   code: string,
@@ -38,18 +38,16 @@ function mapRPCResponseToSessionUI(booking: BookingRPCResponse, now: Date): Sess
   const startTime = booking.slot_start_time; // HH:MM:SS
   const endTime = booking.slot_end_time; // HH:MM:SS
 
-  // Combine date and time to create ISO 8601 datetime strings
-  // e.g., "2025-01-15" + "14:30:00" = "2025-01-15T14:30:00"
-  const start = `${sessionDate}T${startTime}`;
-  const end = `${sessionDate}T${endTime}`;
+  // Stored times are Eastern wall-clock; turn them into real instants so status,
+  // countdowns and viewer-zone display are correct anywhere (ATH-22).
+  const start = sessionInstantISO(sessionDate, startTime);
+  const end = sessionInstantISO(sessionDate, endTime);
 
   // Determine computed status based on current time
   const computedStatus = determineComputedStatus(start, end, now);
 
-  // Build time range display string from times
-  const startTimeFormatted = formatISOTime(start);
-  const endTimeFormatted = formatISOTime(end);
-  const timeRange = `${startTimeFormatted} - ${endTimeFormatted}`;
+  // Fallback label from the stored Eastern clock times (start/end are UTC instants now).
+  const timeRange = `${formatTime(startTime)} - ${formatTime(endTime)}`;
 
   // Format athlete names for display
   const athleteNamesDisplay = booking.athletes_names && booking.athletes_names.length > 0
@@ -95,8 +93,8 @@ function mapRPCResponseToSessionUI(booking: BookingRPCResponse, now: Date): Sess
  */
 function mapBookingToSessionUI(booking: CoachSlotBooking, now: Date): SessionUIModel {
   // Build ISO datetime strings from date + time components
-  const start = buildISODateTime(booking.occurrence_date, booking.start_time);
-  const end = buildISODateTime(booking.occurrence_date, booking.end_time);
+  const start = sessionInstantISO(booking.occurrence_date, booking.start_time);
+  const end = sessionInstantISO(booking.occurrence_date, booking.end_time);
 
   // Determine computed status based on current time and DB status
   const computedStatus = determineComputedStatusFromBooking(booking, start, end, now);

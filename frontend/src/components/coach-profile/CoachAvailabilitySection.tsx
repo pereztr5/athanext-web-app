@@ -22,6 +22,8 @@ import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { PROFILE_TYPE } from "@/utils/db";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useReferralWaiver } from "@/hooks/useReferrals";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { timeZoneAbbreviation } from "@/utils/viewerTime";
 const parseISODateUtc = (iso: string): Date => parseISODateLocal(iso);
 const toISODateUtc = (d: Date): string => toLocalISODate(d);
 const getWeekStartUtc = (date: Date): Date => getWeekStart(date);
@@ -81,12 +83,14 @@ interface WeekHeaderProps {
   weekIndex: number;
   weekCount: number;
   openCount: number | null;
+  zoneLabel: string;
+  zoneTitle: string;
   onPrevious: () => void;
   onNext: () => void;
 }
 
-/** Brand week header: "Week of Mar 9" + EST pill, open-slot count and compact week pager. */
-const WeekHeader = ({ title, rangeLabel, weekIndex, weekCount, openCount, onPrevious, onNext }: WeekHeaderProps) => (
+/** Brand week header: "Week of Mar 9" + viewer time-zone pill, open-slot count and compact week pager. */
+const WeekHeader = ({ title, rangeLabel, weekIndex, weekCount, openCount, zoneLabel, zoneTitle, onPrevious, onNext }: WeekHeaderProps) => (
   <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
     <div className="flex items-center gap-2">
       <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
@@ -96,7 +100,9 @@ const WeekHeader = ({ title, rangeLabel, weekIndex, weekCount, openCount, onPrev
       >
         {title}
       </h2>
-      <BrandPill tone="amber">EST</BrandPill>
+      <span title={zoneTitle}>
+        <BrandPill tone="amber">{zoneLabel}</BrandPill>
+      </span>
     </div>
     <div className="flex items-center justify-between gap-3 sm:justify-end">
       {openCount !== null ? (
@@ -158,6 +164,7 @@ export const CoachAvailabilitySection = ({
   allowEditing = true,
   onBookSlot,
 }: CoachAvailabilitySectionProps) => {
+  const viewerTimeZone = useViewerTimeZone();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editData, setEditData] = useState<CoachAvailability | CoachAvailabilityWithOccurrences | null>(null);
   const [focusDay, setFocusDay] = useState<DayOfWeek | null>(null);
@@ -795,6 +802,8 @@ export const CoachAvailabilitySection = ({
       weekIndex={currentWeekIndex}
       weekCount={weeks.length}
       openCount={openSlotCount}
+      zoneLabel={timeZoneAbbreviation(viewerTimeZone, weeks[currentWeekIndex] ?? new Date())}
+      zoneTitle={`Times shown in ${viewerTimeZone.replace(/_/g, " ")}`}
       onPrevious={handlePreviousWeek}
       onNext={handleNextWeek}
     />

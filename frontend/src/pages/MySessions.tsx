@@ -59,6 +59,8 @@ import { parseISODateLocal } from "@/utils/dateHelpers";
 import { PROFILE_TYPE } from "@/utils/db";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { formatDateInZone } from "@/utils/viewerTime";
 
 type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
 
@@ -66,7 +68,18 @@ type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
  * "Thu, Mar 12" for dates in the reference year, "Thu, Mar 12, 2027" otherwise.
  * Accepts a YYYY-MM-DD date or an ISO datetime.
  */
-const formatWeekdayDate = (dateOrIso: string, reference: Date = new Date()): string => {
+const formatWeekdayDate = (dateOrIso: string, reference: Date = new Date(), timeZone?: string): string => {
+  // Session instants are shown on the viewer's calendar day (ATH-22).
+  if (timeZone && dateOrIso.includes("T")) {
+    const instant = new Date(dateOrIso);
+    const sameYear = formatDateInZone(instant, timeZone, { year: "numeric" }) === String(reference.getFullYear());
+    return formatDateInZone(instant, timeZone, {
+      weekday: "short",
+      month: "short",
+      day: "numeric",
+      ...(sameYear ? {} : { year: "numeric" as const }),
+    });
+  }
   const date = parseISODateLocal(dateOrIso.split("T")[0]);
   if (isNaN(date.getTime())) return "";
   return date.toLocaleDateString("en-US", {
@@ -253,6 +266,7 @@ const SessionCard = ({
   paying?: boolean;
   onPay?: () => void;
 }) => {
+  const timeZone = useViewerTimeZone();
   const startMeta = session.computedStatus === "upcoming" ? getStartMeta(session.start, now) : null;
   const statusLabel =
     session.computedStatus === "in-progress"
@@ -274,8 +288,8 @@ const SessionCard = ({
           {role === PROFILE_TYPE.athlete && waived ? <BrandPill tone="green">No service fee</BrandPill> : null}
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <CardField label="Date" value={formatWeekdayDate(session.dateOnly, now)} />
-          <CardField label="Time" value={formatTimeSpan(session.start, session.end)} />
+          <CardField label="Date" value={formatWeekdayDate(session.start, now, timeZone)} />
+          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone)} />
           {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
         </div>
         {role === PROFILE_TYPE.coach ? (
@@ -324,6 +338,7 @@ const PastDraftCard = ({
   paying?: boolean;
   onPay?: () => void;
 }) => {
+  const timeZone = useViewerTimeZone();
   const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
   const showPay = canPay && Boolean(onPay);
   const openDetails = () => {
@@ -343,8 +358,8 @@ const PastDraftCard = ({
           {sessionNeedsPayment(session) ? <BrandPill tone="amber">Awaiting payment</BrandPill> : null}
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <CardField label="Date" value={formatWeekdayDate(session.dateOnly)} />
-          <CardField label="Time" value={formatTimeSpan(session.start, session.end)} />
+          <CardField label="Date" value={formatWeekdayDate(session.start, new Date(), timeZone)} />
+          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone)} />
           {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
           {session.pillarSlot ? <CardField label="Pillar" value={session.pillarSlot} /> : null}
         </div>
@@ -427,6 +442,7 @@ const SessionGroup = ({
 
 const MySessions = () => {
   const navigate = useNavigate();
+  const timeZone = useViewerTimeZone();
   const { userProfile, loading: authLoading } = useAuth();
   const { profile } = useProfile();
   const queryClient = useQueryClient();
@@ -1159,8 +1175,8 @@ const MySessions = () => {
               ? resolvePillarIconForSession(selectedSessionSafe.pillarSlot)
               : null;
             const details: { label: string; value: ReactNode }[] = [
-              { label: "Date", value: formatWeekdayDate(selectedSessionSafe.dateOnly, now) || "-" },
-              { label: "Time", value: formatTimeSpan(selectedSessionSafe.start, selectedSessionSafe.end) || "-" },
+              { label: "Date", value: formatWeekdayDate(selectedSessionSafe.start, now, timeZone) || "-" },
+              { label: "Time", value: formatTimeSpan(selectedSessionSafe.start, selectedSessionSafe.end, timeZone) || "-" },
               { label: "Location", value: formatLocationSentence(selectedSessionSafe.location) || "-" },
               { label: "Total", value: totalLabel },
             ];
@@ -1309,7 +1325,7 @@ const MySessions = () => {
         onHoverChange={setHoverRating}
         onHoverLeave={() => setHoverRating(null)}
         onCommentChange={setCoachComment}
-        formatDate={(iso) => formatWeekdayDate(iso, now)}
+        formatDate={(iso) => formatWeekdayDate(iso, now, timeZone)}
       />
     </div>
   );

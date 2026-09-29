@@ -20,12 +20,14 @@ import { strings } from "@/config/strings";
 import { BookingType } from "@/types/common";
 import { CoachAvailabilitySlot } from "@/types/availability";
 import { PROFILE_TYPE } from "@/utils/db";
-import { getZonedISODate, isBookingWindowClosed, toLocalISODate } from "@/utils/dateHelpers";
+import { getZonedISODate, isBookingWindowClosed, toLocalISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { useReferralWaiver } from "@/hooks/useReferrals";
 import { computeSessionPrice } from "@/utils/referralHelpers";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { formatDateInZone, formatSlotForViewer } from "@/utils/viewerTime";
 
 interface Coach {
   id?: string;
@@ -75,6 +77,7 @@ const bookingSchema = z.object({
 });
 
 const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot }: CoachSchedulingModalProps) => {
+  const viewerTimeZone = useViewerTimeZone();
   const isFreeConsultation = serviceType === BookingType.FreeConsultation;
   const slotPrice = prefillSlot?.slot?.price ?? undefined;
   const [platformFeePerc, setPlatformFeePerc] = useState(0);
@@ -382,7 +385,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     : prefillSlot?.date
     ? new Date(`${prefillSlot.date}T00:00:00`)
     : null;
-  const displayDate = displayDateValue ? format(displayDateValue, "EEEE, MMM d") : "--";
+  const easternDisplayDate = displayDateValue ? format(displayDateValue, "EEEE, MMM d") : "--";
   const startTimeValue = selectedTime
     ? normalizeTimeValue(selectedTime)
     : prefillSlot?.slot?.start_time
@@ -393,7 +396,14 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     : prefillSlot?.slot?.end_time
     ? normalizeTimeValue(prefillSlot.slot.end_time)
     : "";
-  const timeSpan = startTimeValue && endTimeValue ? formatTimeSpan(startTimeValue, endTimeValue) : "";
+  // Slot times are Eastern wall-clock; show date + time in the viewer's zone (ATH-22).
+  const occurrenceISO = displayDateValue ? toLocalISODate(displayDateValue) : null;
+  const viewerStart = occurrenceISO && startTimeValue ? zonedWallTimeToUtc(occurrenceISO, startTimeValue) : null;
+  const viewerSlot = formatSlotForViewer(occurrenceISO, startTimeValue, endTimeValue, viewerTimeZone);
+  const displayDate = viewerStart
+    ? formatDateInZone(viewerStart, viewerTimeZone, { weekday: "long", month: "short", day: "numeric" })
+    : easternDisplayDate;
+  const timeSpan = viewerSlot.span || (startTimeValue && endTimeValue ? formatTimeSpan(startTimeValue, endTimeValue) : "");
   const displayTime = timeSpan ? `${timeSpan}, ${duration} min` : "--";
   const rawLocation = selectedLocation || prefillSlot?.slot?.location || "";
   const locationLabel = safeText(

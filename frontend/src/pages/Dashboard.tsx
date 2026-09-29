@@ -11,16 +11,19 @@ import { useDashboardData, type DashboardActivity } from "@/hooks/useDashboardDa
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { formatTimeSpan } from "@/utils/sessionFormatting";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 
-const longDate = (iso: string) =>
-  new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric" }).format(
+// Session dates/times render in the viewer's zone (ATH-22).
+const longDate = (iso: string, timeZone?: string) =>
+  new Intl.DateTimeFormat("en-US", { month: "long", day: "numeric", year: "numeric", timeZone }).format(
     new Date(iso)
   );
 
-const shortDate = (iso: string) =>
-  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(new Date(iso));
+const shortDate = (iso: string, timeZone?: string) =>
+  new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone }).format(new Date(iso));
 
-const timeRange12h = (startIso: string, endIso: string) => formatTimeSpan(startIso, endIso);
+const timeRange12h = (startIso: string, endIso: string, timeZone?: string) =>
+  formatTimeSpan(startIso, endIso, timeZone);
 
 const relativeDay = (iso: string) => {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -47,8 +50,8 @@ const initials = (name: string) =>
     .join("")
     .slice(0, 2);
 
-const activityLabel = (a: DashboardActivity) =>
-  a.label === "Booked session" ? `Booked session for ${shortDate(a.when)}` : a.label;
+const activityLabel = (a: DashboardActivity, timeZone?: string) =>
+  a.label === "Booked session" ? `Booked session for ${shortDate(a.when, timeZone)}` : a.label;
 
 const isConversationUnread = (conv: ConversationWithParticipants, userId?: string | null) => {
   if (!conv.last_message_at) return false;
@@ -186,9 +189,11 @@ const SessionRow = ({
   attendingNames = [],
   attendingCount = 0,
   namePhotos,
+  timeZone,
 }: {
   dateIso: string;
   endIso: string;
+  timeZone?: string;
   type: string;
   personName?: string | null;
   personPhoto?: string | null;
@@ -199,10 +204,10 @@ const SessionRow = ({
   <div className="flex items-end justify-between gap-3 rounded-[10px] bg-[#F1F1E6] px-[15px] py-3">
     <div className="flex min-w-0 flex-col gap-[5px]">
       <p className="text-[16px] font-medium leading-[18px] tracking-[-0.8px] text-[#1A202C]">
-        {longDate(dateIso)}
+        {longDate(dateIso, timeZone)}
       </p>
       <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-        {timeRange12h(dateIso, endIso)}
+        {timeRange12h(dateIso, endIso, timeZone)}
       </p>
     </div>
     <div className="flex shrink-0 items-center gap-[5px]">
@@ -239,6 +244,7 @@ const captionClass =
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const timeZone = useViewerTimeZone();
   const { userName, user } = useAuth();
   const { isCoach } = useRole();
   const { isLoading, error, nextSession, upcoming, stats, activities, coaches, athletes } =
@@ -303,10 +309,10 @@ const Dashboard = () => {
             <div className="flex flex-col gap-[15px]">
               <div className="flex flex-col gap-[10px]">
                 <p className="text-[28px] font-bold leading-[30px] tracking-[-1.4px] text-[#1A202C]">
-                  {longDate(nextSession.start)}
+                  {longDate(nextSession.start, timeZone)}
                 </p>
                 <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-                  {timeRange12h(nextSession.start, nextSession.end)}
+                  {timeRange12h(nextSession.start, nextSession.end, timeZone)}
                 </p>
               </div>
               <div className="flex flex-wrap items-center gap-[5px]">
@@ -439,6 +445,7 @@ const Dashboard = () => {
                 <SessionRow
                   key={s.id}
                   dateIso={s.start}
+                  timeZone={timeZone}
                   endIso={s.end}
                   type={s.type}
                   personName={
@@ -553,7 +560,7 @@ const Dashboard = () => {
                       <Activity className="size-4" strokeWidth={1.5} />
                     </span>
                     <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
-                      {activityLabel(a)}
+                      {activityLabel(a, timeZone)}
                     </p>
                   </span>
                   <span className={cn("shrink-0", captionClass)}>{relativeDay(a.when)}</span>

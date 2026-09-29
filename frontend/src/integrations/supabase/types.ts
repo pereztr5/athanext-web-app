@@ -1047,6 +1047,7 @@ export type Database = {
           image_url: string | null
           website: string | null
           zip_code: string | null
+          timezone: string | null
         }
         Insert: {
           athlete_id?: string | null
@@ -1066,6 +1067,7 @@ export type Database = {
           updated_at?: string | null
           website?: string | null
           zip_code?: string | null
+          timezone?: string | null
         }
         Update: {
           athlete_id?: string | null
@@ -1085,6 +1087,7 @@ export type Database = {
           updated_at?: string | null
           website?: string | null
           zip_code?: string | null
+          timezone?: string | null
         }
         Relationships: [
           {

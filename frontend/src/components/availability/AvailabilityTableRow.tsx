@@ -8,6 +8,8 @@ import { CoachAvailabilitySlot, DAY_OF_WEEK_MAP, SlotBookingStatus } from '@/typ
 import { Loader2, Pencil, Trash2 } from 'lucide-react';
 import { BrandPill } from '@/components/brand';
 import { formatTimeSpan, formatWholePrice } from '@/utils/sessionFormatting';
+import { formatSlotForViewer } from '@/utils/viewerTime';
+import { useViewerTimeZone } from '@/hooks/useViewerTimeZone';
 import { getTodayISODate, isBookingWindowClosed, parseISODateLocal } from '@/utils/dateHelpers';
 import { computeSessionPrice } from "@/utils/referralHelpers";
 
@@ -39,6 +41,7 @@ export function AvailabilityTableRow({
   appearance,
   onDelete,
 }: AvailabilityTableRowProps) {
+  const timeZone = useViewerTimeZone();
   const todayISO = getTodayISODate();
   const isBookingClosed = isBookingWindowClosed(slot?.occurrence_date, slot?.start_time);
   const isEditDateLocked = slot?.occurrence_date ? slot.occurrence_date < todayISO : false;
@@ -101,7 +104,9 @@ export function AvailabilityTableRow({
   const locationLabel = slot.location === "online" ? "Online" : "In person";
   const isIndividual = slot.session_type === 'individual';
   const typeTone = isMutedRow ? "muted" : isIndividual ? "blue" : "teal";
-  const timeLabel = formatTimeSpan(slot.start_time, slot.end_time);
+  // Stored as Eastern wall-clock; show it in the viewer's zone (ATH-22).
+  const viewerSlot = formatSlotForViewer(slot.occurrence_date, slot.start_time, slot.end_time, timeZone);
+  const timeLabel = viewerSlot.span || formatTimeSpan(slot.start_time, slot.end_time);
 
   return (
     <TableRow className="border-0 hover:bg-transparent">
@@ -126,7 +131,7 @@ export function AvailabilityTableRow({
       <TableCell className={`${textCell} whitespace-nowrap`}>
         {timeLabel}
         <div className={`mt-[2px] text-[12px] leading-[14px] ${subTone}`}>
-          {slot.duration_minutes} min
+          {viewerSlot.dayShift ? `${viewerSlot.dayShift} · ` : ""}{slot.duration_minutes} min
         </div>
       </TableCell>
       <TableCell className={cell}>

@@ -9,6 +9,8 @@ import { getMySessions, cancelSession } from '@/api/sessions';
 import type { SessionUIModel, SessionGrouped, SessionFilters } from '@/types/sessions-api';
 import { useMemo, useCallback, useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
+import { useViewerTimeZone } from '@/hooks/useViewerTimeZone';
+import { isoDateInZone } from '@/utils/viewerTime';
 
 /**
  * Query key factory for sessions
@@ -26,6 +28,7 @@ const SESSIONS_QUERY_KEYS = {
  */
 export const useMySessions = (userRole?: 'coach' | 'athlete') => {
   const { user, userProfile } = useAuth();
+  const timeZone = useViewerTimeZone();
   const userMetadata = user?.user_metadata as Record<string, unknown> | undefined;
 
   const coachId = userProfile?.coach_id ?? (userMetadata?.coach_id as string | undefined);
@@ -131,8 +134,9 @@ export const useMySessions = (userRole?: 'coach' | 'athlete') => {
         }
 
         // Date filter
+        // Cards show the viewer's calendar day, so filter on it too (ATH-22).
         if (filters.date) {
-          if (session.dateOnly !== filters.date) return false;
+          if (isoDateInZone(new Date(session.start), timeZone) !== filters.date) return false;
         }
 
         // Session type filter
@@ -158,7 +162,7 @@ export const useMySessions = (userRole?: 'coach' | 'athlete') => {
         return true;
       });
     },
-    [sessions]
+    [sessions, timeZone]
   );
 
   return {

@@ -1,3 +1,4 @@
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { Check } from "lucide-react";
 import { Link } from "react-router-dom";
 
@@ -106,12 +107,13 @@ export const RateCoachDialog = ({
   onCommentChange,
   formatDate,
 }: RateCoachDialogProps) => {
+  const timeZone = useViewerTimeZone();
   const hasExistingFeedback = Boolean(existingFeedback?.athlete_rated_at);
   const isFeedbackLocked = hasExistingFeedback && (existingFeedback?.edit_count ?? 0) >= 1;
   const locationLabel = formatLocationSentence(session?.locationType || session?.location).toLowerCase();
   const displayedRating = hoverRating ?? rating;
   const metaLine = session
-    ? [session.title, formatDate(session.start), formatTimeSpan(session.start, session.end), locationLabel]
+    ? [session.title, formatDate(session.start), formatTimeSpan(session.start, session.end, timeZone), locationLabel]
         .filter(Boolean)
         .join(", ")
     : "";

@@ -8,7 +8,9 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/routes";
 import { bookingsAPI, type BookingConfirmationData } from "@/api/bookings";
 import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
-import { parseISODateLocal } from "@/utils/dateHelpers";
+import { parseISODateLocal, zonedWallTimeToUtc } from "@/utils/dateHelpers";
+import { formatDateInZone, formatSlotForViewer } from "@/utils/viewerTime";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDateToUSA } from "@/utils/helperFunctions";
 import BookingReceipt from "@/components/receipts/BookingReceipt";
 import { BrandPill } from "@/components/brand";
@@ -27,6 +29,7 @@ interface CoachInfo {
 }
 
 const BookingConfirmation = () => {
+  const viewerTimeZone = useViewerTimeZone();
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
@@ -159,6 +162,15 @@ const BookingConfirmation = () => {
       return { formattedDate: "-", dayOfWeek: "-" };
     }
 
+    // Show the viewer's calendar day for the Eastern start time (ATH-22).
+    const viewerStart = slot?.start_time ? zonedWallTimeToUtc(occurrenceDate, slot.start_time) : null;
+    if (viewerStart) {
+      return {
+        formattedDate: formatDateInZone(viewerStart, viewerTimeZone, { month: "short", day: "numeric", year: "numeric" }),
+        dayOfWeek: formatDateInZone(viewerStart, viewerTimeZone, { weekday: "long" }),
+      };
+    }
+
     return {
       formattedDate: parsedDate.toLocaleDateString("en-US", {
         month: "short",
@@ -167,7 +179,7 @@ const BookingConfirmation = () => {
       }),
       dayOfWeek: parsedDate.toLocaleDateString("en-US", { weekday: "long" }),
     };
-  }, [occurrenceDate]);
+  }, [occurrenceDate, slot?.start_time, viewerTimeZone]);
 
   const coachName = coachInfo.name?.trim() || "";
   const coachTitle = coachInfo.title?.trim() || "";
@@ -179,10 +191,11 @@ const BookingConfirmation = () => {
   }, [coachName]);
 
   const receiptTimeLabel = useMemo(() => {
-    const span = slot?.start_time && slot?.end_time ? formatTimeSpan(slot.start_time, slot.end_time) : "";
+    const viewerSpan = formatSlotForViewer(occurrenceDate, slot?.start_time, slot?.end_time, viewerTimeZone).span;
+    const span = viewerSpan || (slot?.start_time && slot?.end_time ? formatTimeSpan(slot.start_time, slot.end_time) : "");
     const minutes = slot?.duration_minutes != null ? `${slot.duration_minutes} min` : "";
     return [span, minutes].filter(Boolean).join(", ") || "—";
-  }, [slot?.start_time, slot?.end_time, slot?.duration_minutes]);
+  }, [occurrenceDate, slot?.start_time, slot?.end_time, slot?.duration_minutes, viewerTimeZone]);
 
   const receiptIssuedLabel = useMemo(() => {
     if (!bookingDetails?.createdAt) return "—";
