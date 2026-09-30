@@ -8,6 +8,7 @@ import {
 } from "react";
 import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Users } from "lucide-react";
 import MessageBubble from "@/components/chat/MessageBubble";
+import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
 import { cn } from "@/lib/utils";
 import {
   chatAPI,
@@ -58,6 +59,7 @@ const ChatPage = () => {
   const [oldestMessageCursor, setOldestMessageCursor] = useState<string | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [isAtBottom, setIsAtBottom] = useState(true);
+  const [isMembersOpen, setIsMembersOpen] = useState(false);
   const lastConversationMarkerRef = useRef<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const firstMessageNotifiedRef = useRef<Set<string>>(new Set());
@@ -489,6 +491,10 @@ const ChatPage = () => {
     if (!Array.isArray(conversations)) return null;
     return conversations.find((chat) => chat.id === selectedConversationId) || null;
   }, [conversations, selectedConversationId]);
+
+  useEffect(() => {
+    setIsMembersOpen(false);
+  }, [selectedConversationId]);
 
   // Keep open conversation in sync when its sidebar preview changes
   useEffect(() => {
@@ -1086,9 +1092,19 @@ const ChatPage = () => {
                       <p className="truncate text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
                         {getConversationName(selectedConversation)}
                       </p>
-                      <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
-                        {conversationHandle(selectedConversation)}
-                      </p>
+                      {selectedConversation?.is_group ? (
+                        <button
+                          type="button"
+                          onClick={() => setIsMembersOpen(true)}
+                          className="block max-w-full truncate text-left text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB] underline-offset-2 hover:text-[#484D56] hover:underline"
+                        >
+                          {conversationHandle(selectedConversation)}
+                        </button>
+                      ) : (
+                        <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+                          {conversationHandle(selectedConversation)}
+                        </p>
+                      )}
                     </div>
                   </div>
                   {selectedConversation?.is_group &&
@@ -1207,6 +1223,13 @@ const ChatPage = () => {
           </div>
         </section>
       </div>
+      {selectedConversation?.is_group ? (
+        <CommunityMembersDialog
+          conversationId={selectedConversation.id}
+          open={isMembersOpen}
+          onOpenChange={setIsMembersOpen}
+        />
+      ) : null}
     </div>
   );
 };

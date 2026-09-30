@@ -43,6 +43,7 @@ import {
   getExistingFeedback,
   getSubmittedFeedbackIds,
   getCoachSubmittedSessionIds,
+  getSessionRoster,
 } from "@/api/sessions";
 import { startOccurrenceCheckout } from "@/api/bookings";
 import { ERROR_CODES } from "@/constants/errorCodes";
@@ -111,7 +112,17 @@ const CardField = ({ label, value }: { label: string; value: string }) => (
   </div>
 );
 
-const PersonPill = ({ name, avatar, toneIndex = 0 }: { name: string; avatar?: string | null; toneIndex?: number }) => {
+const PersonPill = ({
+  name,
+  label,
+  avatar,
+  toneIndex = 0,
+}: {
+  name: string;
+  label?: string;
+  avatar?: string | null;
+  toneIndex?: number;
+}) => {
   const photo = realPhoto(avatar);
   return (
     <span className="inline-flex max-w-full items-center gap-1.5 rounded-[4px] bg-[#F1F1E6] py-[3px] pl-[3px] pr-2 text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#484D56]">
@@ -123,7 +134,7 @@ const PersonPill = ({ name, avatar, toneIndex = 0 }: { name: string; avatar?: st
       >
         {photo ? <img src={photo} alt="" className="size-full object-cover" /> : getInitialsFromName(name)}
       </span>
-      <span className="truncate">{name}</span>
+      <span className="truncate">{label ?? name}</span>
     </span>
   );
 };
@@ -161,6 +172,46 @@ const CoachBlock = ({ name, avatar }: { name: string; avatar?: string | null }) 
     </div>
   </div>
 );
+
+/** Group-session co-attendees for athletes (ATH-58): first name + last initial, no photos. */
+const SessionRoster = ({ occurrenceId }: { occurrenceId: string }) => {
+  const { data: roster = [], isLoading, isError } = useQuery({
+    queryKey: ["session-roster", occurrenceId],
+    queryFn: () => getSessionRoster(occurrenceId),
+    retry: false,
+  });
+  const noteClass = "text-[12px] leading-[14px] text-[#767980]";
+
+  return (
+    <div className="flex flex-col gap-2">
+      <span className={labelClass}>
+        Who's coming
+        {!isLoading && !isError ? ` · ${roster.length} ${roster.length === 1 ? "athlete" : "athletes"}` : null}
+      </span>
+      {isLoading ? (
+        <p className={noteClass}>Loading athletes...</p>
+      ) : isError ? (
+        <p className={noteClass}>Couldn't load who's coming.</p>
+      ) : (
+        <>
+          {roster.length > 0 ? (
+            <div className={cn("flex flex-wrap gap-1.5", roster.length > 12 && "max-h-40 overflow-y-auto pr-1")}>
+              {roster.map((athlete, index) => (
+                <PersonPill
+                  key={`${athlete.displayName}-${index}`}
+                  name={athlete.displayName}
+                  label={athlete.isYou ? "You" : undefined}
+                  toneIndex={index}
+                />
+              ))}
+            </div>
+          ) : null}
+          {roster.every((athlete) => athlete.isYou) ? <p className={noteClass}>No other athletes yet.</p> : null}
+        </>
+      )}
+    </div>
+  );
+};
 
 const SessionTypePill = ({ type }: { type: UISession["type"] }) => (
   <BrandPill tone={type === "group" ? "teal" : "blue"}>{type === "group" ? "Group" : "Individual"}</BrandPill>
@@ -1357,6 +1408,14 @@ const MySessions = () => {
                     </div>
                   ) : selectedSessionSafe.coachName ? (
                     <CoachBlock name={selectedSessionSafe.coachName} avatar={selectedSessionSafe.coachAvatar} />
+                  ) : null}
+                  {/* Only confirmed bookings can see the roster; unpaid or requested ones can't. */}
+                  {isAthleteView &&
+                  selectedSessionSafe.type === "group" &&
+                  selectedSessionSafe.occurrenceId &&
+                  !sessionIsRequested(selectedSessionSafe) &&
+                  !sessionNeedsPayment(selectedSessionSafe) ? (
+                    <SessionRoster occurrenceId={selectedSessionSafe.occurrenceId} />
                   ) : null}
 
                   <p className="text-[12px] leading-[14px] text-[#767980]">

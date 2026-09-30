@@ -569,7 +569,29 @@ export const chatAPI = {
     const { error } = await (supabase as any).rpc("leave_coach_channel", { p_conversation_id: conversationId });
     if (error) throw error;
   },
+
+  // Owner coach first, then members A-Z as first name + last initial (ATH-58).
+  async getCommunityMembers(conversationId: string): Promise<CommunityMember[]> {
+    const supabase = apiClient.getSupabaseClient();
+    const { data, error } = await (supabase as any).rpc("get_community_members", {
+      p_conversation_id: conversationId,
+    });
+    if (error) throw error;
+    return (Array.isArray(data) ? data : []).map((row: any) => ({
+      displayName: row.display_name || "Member",
+      role: row.role === "owner" ? "owner" : "member",
+      isYou: Boolean(row.is_you),
+      avatarUrl: row.avatar_url ?? null,
+    }));
+  },
 };
+
+export interface CommunityMember {
+  displayName: string;
+  role: "owner" | "member";
+  isYou: boolean;
+  avatarUrl: string | null;
+}
 
 export interface CoachChannelInfo {
   conversationId: string;
