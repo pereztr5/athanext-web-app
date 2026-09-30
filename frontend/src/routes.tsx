@@ -36,6 +36,8 @@ import MyClients from "./pages/MyClients";
 import MyCoaches from "./pages/MyCoaches";
 import AdminReferrals from "./pages/AdminReferrals";
 import InviteClaim from "./pages/InviteClaim";
+import Gear from "./pages/Gear";
+import GearProduct from "./pages/GearProduct";
 
 export const ROUTES = {
   HOME: "/",
@@ -47,6 +49,8 @@ export const ROUTES = {
   FORGOT_PASSWORD: "/forgot-password",
   RESET_PASSWORD: "/reset-password",
   COACHES: "/coaches",
+  GEAR: "/gear",
+  GEAR_PRODUCT: "/gear/:handle",
   PARTNERSHIPS: "/partnerships",
   PARTNERSHIP_SUCCESS: "/partnership-success",
   SOCCER: "/soccer",
@@ -101,6 +105,8 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.COACH_PRICING, element: <CoachProfile /> },
   { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
   { path: ROUTES.INVITE, element: <InviteClaim /> },
+  { path: ROUTES.GEAR, element: <Gear /> },
+  { path: ROUTES.GEAR_PRODUCT, element: <GearProduct /> },
 ];
 
 export const AUTH_FLOW_ROUTES: AppRoute[] = [

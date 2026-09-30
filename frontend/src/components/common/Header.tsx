@@ -120,6 +120,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
   const isOnSoccerPage = location.pathname.includes('/soccer');
   const isOnRowingPage = location.pathname.includes('/rowing');
   const isOnCoachesPage = location.pathname.includes('/coaches');
+  const isOnGearPage = location.pathname === ROUTES.GEAR || location.pathname.startsWith(`${ROUTES.GEAR}/`);
   const isOnResourcesPage = location.pathname === '/partnerships';
   const isOnHomePage = location.pathname === '/';
   const isOnHowItWorksPage = location.pathname === '/why-athalink';
@@ -355,6 +356,13 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                 </button>
                 <button
                   type="button"
+                  onClick={() => handleNavClick(() => navigate(ROUTES.GEAR))}
+                  className={cn(MOBILE_ITEM, isOnGearPage && "text-[#0054B4]")}
+                >
+                  Gear
+                </button>
+                <button
+                  type="button"
                   onClick={() => handleNavClick(() => navigate("/partnerships"))}
                   className={cn(MOBILE_ITEM, isOnResourcesPage && "text-[#0054B4]")}
                 >
@@ -509,6 +517,19 @@ export const Header = ({ onSportClick }: HeaderProps) => {
                     className={cn(NAV_ITEM, isOnCoachesPage && NAV_ITEM_ACTIVE)}
                   >
                     Coaches
+                  </button>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+
+              {/* Gear */}
+              <NavigationMenuItem>
+                <NavigationMenuLink asChild>
+                  <button
+                    type="button"
+                    onClick={() => navigate(ROUTES.GEAR)}
+                    className={cn(NAV_ITEM, isOnGearPage && NAV_ITEM_ACTIVE)}
+                  >
+                    Gear
                   </button>
                 </NavigationMenuLink>
               </NavigationMenuItem>

@@ -8,6 +8,7 @@ import {
   MessageCircle,
   Search,
   Shield,
+  ShoppingBag,
   User,
   UserCheck,
   Users,
@@ -32,6 +33,7 @@ const ATHLETE_NAV = [
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "My Coaches", url: ROUTES.MY_COACHES, icon: UserCheck },
   { title: "Browse coaches", url: ROUTES.COACHES, icon: Search },
+  { title: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "Development", url: "", icon: BadgeCheck },
 ];
@@ -41,6 +43,7 @@ const COACH_NAV = [
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Availability", url: ROUTES.AVAILABILITY, icon: CalendarClock },
   { title: "My Clients", url: ROUTES.MY_CLIENTS, icon: Users },
+  { title: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "Analytics", url: ROUTES.ANALYTICS, icon: BarChart3 },
   { title: "Profile", url: ROUTES.PROFILE, icon: User },
