@@ -75,3 +75,35 @@ export const claimErrorMessage = (message: string | undefined) => {
   const key = Object.keys(CLAIM_ERROR_MESSAGES).find((k) => message?.includes(k));
   return key ? CLAIM_ERROR_MESSAGES[key] : "Could not accept this invite. Please try again.";
 };
+
+// Unpaid checkouts and requests the coach hasn't accepted aren't bookings yet.
+const INACTIVE_BOOKING_STATUSES = new Set(["canceled", "refunded", "pending_payment", "requested"]);
+
+/**
+ * Coaches the athlete has a confirmed booking with, minus coaches already listed
+ * through a pending/confirmed referral (the referral row wins). First-seen order.
+ */
+export const bookedOnlyCoaches = (
+  sessions: {
+    coachId: string;
+    coachName?: string | null;
+    dbStatus: string;
+    computedStatus: string;
+  }[],
+  referrals: { coach_id: string; status: ReferralStatus }[],
+) => {
+  const listed = new Set(
+    referrals
+      .filter((r) => r.status === "pending_confirmation" || r.status === "confirmed")
+      .map((r) => r.coach_id),
+  );
+  const booked = new Map<string, { coachId: string; coachName: string | null }>();
+  for (const s of sessions) {
+    if (!s.coachId || listed.has(s.coachId)) continue;
+    if (INACTIVE_BOOKING_STATUSES.has(s.dbStatus) || s.computedStatus === "canceled") continue;
+    const existing = booked.get(s.coachId);
+    if (!existing) booked.set(s.coachId, { coachId: s.coachId, coachName: s.coachName ?? null });
+    else if (!existing.coachName && s.coachName) existing.coachName = s.coachName;
+  }
+  return [...booked.values()];
+};

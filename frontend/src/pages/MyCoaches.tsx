@@ -6,13 +6,20 @@ import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAttestReferral, useMyReferrals } from "@/hooks/useReferrals";
 import { useCoaches } from "@/hooks/useCoaches";
-import { isInviteExpired, type AttestationAnswer } from "@/utils/referralHelpers";
+import { useMySessions } from "@/hooks/useMySessions";
+import {
+  bookedOnlyCoaches, isInviteExpired, type AttestationAnswer,
+} from "@/utils/referralHelpers";
 
 const MyCoaches = () => {
   const { profile } = useProfile();
   const athleteId = profile?.userProfile?.athlete_id ?? undefined;
-  const { data: referrals = [], isLoading } = useMyReferrals(athleteId);
-  const { coaches } = useCoaches(referrals.length > 0);
+  const { data: referrals = [], isLoading: referralsLoading } = useMyReferrals(athleteId);
+  const { sessions, isLoading: sessionsLoading } = useMySessions("athlete");
+  // Coaches the athlete has booked but has no referral with (ATH-54).
+  const booked = bookedOnlyCoaches(sessions, referrals);
+  const { coaches } = useCoaches(referrals.length > 0 || booked.length > 0);
+  const isLoading = referralsLoading || sessionsLoading;
   const attest = useAttestReferral();
   const [answers, setAnswers] = useState<Record<string, AttestationAnswer>>({});
 
@@ -119,7 +126,9 @@ const MyCoaches = () => {
       <section>
         <h2 className="mb-3 text-lg font-medium">Confirmed coaches</h2>
         {confirmed.length === 0 ? (
-          <p className="text-sm text-muted-foreground">No confirmed coaches yet.</p>
+          <p className="text-sm text-muted-foreground">
+            {booked.length > 0 ? "No coach referrals yet." : "No confirmed coaches yet."}
+          </p>
         ) : (
           <ul className="divide-y rounded-lg border">
             {confirmed.map((r) => (
@@ -131,6 +140,22 @@ const MyCoaches = () => {
           </ul>
         )}
       </section>
+
+      {booked.length > 0 && (
+        <section className="mt-8">
+          <h2 className="mb-3 text-lg font-medium">Coaches you've booked</h2>
+          <ul className="divide-y rounded-lg border">
+            {booked.map((c) => (
+              <li key={c.coachId} className="flex items-center justify-between p-4">
+                <span className="font-medium">
+                  {c.coachName ?? coachNames[c.coachId] ?? "A coach"}
+                </span>
+                <span className="text-sm text-muted-foreground">Booked sessions</span>
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
     </div>
   );
 };

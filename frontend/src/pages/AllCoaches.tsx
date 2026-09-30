@@ -173,8 +173,8 @@ const AthleteBrowseCard = ({
 const AllCoaches = () => {
   const navigate = useNavigate();
   const { profile, loading: profileLoading } = useProfile();
-  const { user } = useAuth();
-  const { isAuthenticated } = useRole();
+  const { user, userProfile } = useAuth();
+  const { isAuthenticated, isAthleteLike } = useRole();
   const { toast } = useToast();
 
   const [coaches, setCoaches] = useState<Coach[]>([]);
@@ -195,6 +195,7 @@ const AllCoaches = () => {
   const [selectedPathway, setSelectedPathway] = useState("All Pathways");
   const [selectedAcademy, setSelectedAcademy] = useState(ALL_ACADEMIES);
   const [zipQuery, setZipQuery] = useState("");
+  const [hasPrefilledZip, setHasPrefilledZip] = useState(false);
 
   const [sortBy, setSortBy] = useState("Highest Rated");
 
@@ -325,6 +326,16 @@ const AllCoaches = () => {
 
     setHasSetInitialSport(true);
   }, [profile, profileLoading, hasSetInitialSport]);
+
+  // Sort athletes' results near their own ZIP by default (once; they can edit or clear it).
+  useEffect(() => {
+    if (hasPrefilledZip || !userProfile) return;
+    // US ZIPs only: stripping a postal code like "M5V 2T6" down to digits would sort by noise.
+    const storedZip = (userProfile.zip_code || "").trim();
+    const ownZip = /^\d{5}(-?\d{4})?$/.test(storedZip) ? storedZip.replace(/\D/g, "") : "";
+    if (isAthleteLike && ownZip) setZipQuery((current) => current || ownZip);
+    setHasPrefilledZip(true);
+  }, [userProfile, isAthleteLike, hasPrefilledZip]);
 
   // Reset pillar when sport changes
   useEffect(() => {
@@ -900,7 +911,8 @@ const AllCoaches = () => {
     ["All Sports", "All Pillars", "All Positions", "All Pathways", ALL_ACADEMIES, "Highest Rated"].includes(value);
   const triggerClass = (value: string, width: string) =>
     `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
-  const coachCountLabel = `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found`;
+  const zipDigits = zipQuery.replace(/\D/g, "");
+  const coachCountLabel = `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found${zipDigits ? ` · closest to ZIP ${zipDigits} first` : ""}`;
   const heroStats = [
     { value: verifiedCoachesCount.toLocaleString(), label: "Verified coaches" },
     { value: String(sportCount), label: sportLabel },
@@ -990,7 +1002,8 @@ const AllCoaches = () => {
                 onChange={(e) => setZipQuery(e.target.value.replace(/[^\d]/g, "").slice(0, 10))}
                 placeholder="ZIP"
                 inputMode="numeric"
-                aria-label="Filter by ZIP code"
+                aria-label="Sort by ZIP code"
+                title="Coaches closest to this ZIP are shown first"
                 className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
               />
             </div>
