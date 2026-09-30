@@ -15,6 +15,8 @@ import { cn } from "@/lib/utils";
 import { strings } from "@/config/strings";
 import { PERSONA_TYPES, SPORTS_OPTIONS, ATHLETE_SPORTS_OPTIONS, PROFILE_TYPE } from "@/utils/db";
 import { authSchema, signupSchema, profileCompletionSchema } from "@/utils/validations";
+import { PhoneInput } from "@/components/common/PhoneInput";
+import { normalizeStoredPhone } from "@/utils/phone";
 import { Loader2, Eye, EyeOff, MapPin } from "lucide-react";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswordValidation";
@@ -120,7 +122,7 @@ const Auth = () => {
   const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [name, setName] = useState("");
   const [persona, setPersona] = useState<PersonaType | null>(null);
-  const [phone, setPhone] = useState("+");
+  const [phone, setPhone] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState("");
   const [sport, setSport] = useState("");
   const [position, setPosition] = useState("");
@@ -207,13 +209,8 @@ const Auth = () => {
   };
 
   const handlePhoneChange = (value: string) => {
-    const digitsOnly = value.replace(/\D/g, "");
-    const limitedDigits = digitsOnly.slice(0, 15); // E.164 max digits
-    const normalized = limitedDigits.length === 0 ? "+" : `+${limitedDigits}`;
-    setPhone(normalized);
-    if (normalized) {
-      clearFieldError("phone");
-    }
+    setPhone(value);
+    clearFieldError("phone");
   };
 
   const fetchAndSetLocation = async (zip: string) => {
@@ -445,7 +442,8 @@ const Auth = () => {
           setEmail(defaultEmail);
           setPersona(defaultPersona);
           setName(defaultName);
-          setPhone(defaultPhone ? (defaultPhone.startsWith('+') ? defaultPhone : '+' + defaultPhone) : '+');
+          // Signup stored free text with its country code, so a missing "+" is restored, not assumed US.
+          setPhone(normalizeStoredPhone(defaultPhone && !defaultPhone.trim().startsWith("+") ? `+${defaultPhone}` : defaultPhone));
           setSport(normalizedSport);
           setPosition(normalizedPosition);
           setCoachSpecializations(
@@ -1125,13 +1123,13 @@ const Auth = () => {
 
                 <div className="space-y-1.5">
                   <Label htmlFor="complete-phone" className={fieldLabel}>Phone number</Label>
-                  <Input
+                  <PhoneInput
                     id="complete-phone"
-                    type="tel"
-                    placeholder="+1234567890"
                     value={phone}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    disabled={isLoading || (!isGoogleUser && Boolean(user))}
+                    onChange={handlePhoneChange}
+                    invalid={Boolean(errors.phone)}
+                    // Unlock a stored number that no longer passes validation, or the profile can't be saved.
+                    disabled={isLoading || (!isGoogleUser && Boolean(user) && isValidE164(phone))}
                   />
                   {errors.phone && (
                     <p className={fieldError}>{errors.phone}</p>
@@ -1626,12 +1624,11 @@ const Auth = () => {
                   
                       <div className="space-y-1.5">
                       <Label htmlFor="phone" className={fieldLabel}>Phone number</Label>
-                      <Input
+                      <PhoneInput
                         id="phone"
-                        type="tel"
-                        placeholder="+1234567890"
                         value={phone}
-                        onChange={(e) => handlePhoneChange(e.target.value)}
+                        onChange={handlePhoneChange}
+                        invalid={Boolean(errors.phone)}
                         disabled={isLoading}
                       />
                       {errors.phone && (

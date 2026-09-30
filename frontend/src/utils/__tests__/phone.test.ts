@@ -28,6 +28,11 @@ describe("parsePhone", () => {
     expect(parsePhone("+353861234567")).toEqual({ iso: "IE", national: "861234567" });
     expect(parsePhone("+998901234567")).toEqual({ iso: "UZ", national: "901234567" });
   });
+  it("recognizes every country instead of falling back to the US", () => {
+    expect(parsePhone("+996555123456")).toEqual({ iso: "KG", national: "555123456" });
+    expect(parsePhone("+37255512345")).toEqual({ iso: "EE", national: "55512345" });
+    expect(parsePhone("+251911234567")).toEqual({ iso: "ET", national: "911234567" });
+  });
   it("treats legacy values without + as a national number", () => {
     expect(parsePhone("123-456-7890")).toEqual({ iso: "US", national: "1234567890" });
   });

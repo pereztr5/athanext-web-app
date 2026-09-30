@@ -127,11 +127,8 @@ export const signupSchema = z.object({
     .optional(),
   sport: z.string().min(1, "Sport is required"),
   position: z.string().min(1, "Position is required"),
-  phone: z.string().min(1, "Phone number is required").refine((val) => {
-    // International format: must start with + and contain 7-15 digits.
-    const digitsCount = val.replace(/[^\d]/g, '').length;
-    return /^\+[\d\s\-()]+$/.test(val) && digitsCount >= 7 && digitsCount <= 15;
-  }, { message: "Phone number must start with + and contain 7 to 15 digits" }),
+  // Same E.164 rule as the profile editor, so sign-up numbers stay editable there.
+  phone: profileSchema.shape.phoneNumber,
   email: z
     .string()
     .trim()
