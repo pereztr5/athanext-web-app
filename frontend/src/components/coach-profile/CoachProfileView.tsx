@@ -28,6 +28,12 @@ import { recordCoachShareEvent } from "@/api/coachShare";
 import { SharePricingDialog } from "./SharePricingDialog";
 import { useToast } from "@/hooks/use-toast";
 import { Badge } from "@/components/ui/badge";
+import { useCoachBrands } from "@/hooks/useBrands";
+import type { Brand } from "@/utils/brands";
+import { BrandLogos } from "./BrandLogos";
+import { ManageBrandsDialog } from "./ManageBrandsDialog";
+
+const NO_BRANDS: Brand[] = [];
 
 interface Review {
   id: string;
@@ -98,6 +104,7 @@ export function CoachProfileView({
   );
   const [openFaq, setOpenFaq] = useState<string | null>(null);
   const [sharePricingOpen, setSharePricingOpen] = useState(false);
+  const [brandsOpen, setBrandsOpen] = useState(false);
   const [slug, setSlug] = useState(coach.slug || "");
   const { data: faqs = [] } = useFAQItems("general");
   const bioHtml = formatRichTextForRender(coach.bio);
@@ -107,7 +114,8 @@ export function CoachProfileView({
   const photoUrl = coach.profile_image_url || coach.image_url;
   const pillars = (coach.specialties || []).slice(0, 6);
   const pathwayTags = coach.pathway_tags || [];
-  const brands = coach.company ? [coach.company] : [];
+  // Brands are linked brand records with logos (ATH-56), separate from the coaches.company academy.
+  const { data: brands = NO_BRANDS } = useCoachBrands(coach.id);
   const verified = Boolean(coach.is_verified);
 
   useEffect(() => {
@@ -262,9 +270,7 @@ export function CoachProfileView({
 
             <div className="flex flex-col gap-6 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
               <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Brands</p>
-              <p className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#484D56]">
-                {brands.length > 0 ? brands.join(", ") : "—"}
-              </p>
+              <BrandLogos brands={brands} />
             </div>
           </div>
 
@@ -478,10 +484,11 @@ export function CoachProfileView({
         </CoachProfileCard>
 
         <CoachProfileCard className="gap-6">
-          <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Brands</span>
-          <p className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#484D56]">
-            {brands.length > 0 ? brands.join(", ") : "—"}
-          </p>
+          <div className="flex items-start justify-between gap-2">
+            <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">Brands</span>
+            <CoachProfileButton onClick={() => setBrandsOpen(true)}>Edit</CoachProfileButton>
+          </div>
+          <BrandLogos brands={brands} />
         </CoachProfileCard>
       </div>
 
@@ -703,6 +710,13 @@ export function CoachProfileView({
         </div>
       </div>
       </div>
+
+      <ManageBrandsDialog
+        open={brandsOpen}
+        onOpenChange={setBrandsOpen}
+        coachId={coach.id}
+        currentBrands={brands}
+      />
 
       {slug ? (
         <SharePricingDialog
