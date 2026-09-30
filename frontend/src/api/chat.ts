@@ -556,10 +556,12 @@ export const chatAPI = {
     return data as string;
   },
 
-  async joinCoachChannel(conversationId: string): Promise<void> {
+  // Creates the coach's channel on first join (ATH-53); returns its conversation id.
+  async joinCoachChannel(coachId: string): Promise<string> {
     const supabase = apiClient.getSupabaseClient();
-    const { error } = await (supabase as any).rpc("join_coach_channel", { p_conversation_id: conversationId });
+    const { data, error } = await (supabase as any).rpc("join_coach_community", { p_coach_id: coachId });
     if (error) throw error;
+    return data as string;
   },
 
   async leaveCoachChannel(conversationId: string): Promise<void> {
