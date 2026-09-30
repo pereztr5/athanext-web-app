@@ -1,8 +1,9 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Activity, Calendar, CircleDollarSign, Clock, UserRound, Users } from "lucide-react";
+import { Activity, AlertCircle, Calendar, CircleDollarSign, Clock, UserRound, Users } from "lucide-react";
 import { useMemo, type ReactNode } from "react";
 import { chatAPI, type ConversationWithParticipants } from "@/api/chat";
+import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { useAuth } from "@/contexts/AuthContext";
 import { useAthleteAvatarsByNames } from "@/hooks/useAthleteAvatars";
 import { useCoachAvatarsByIds } from "@/hooks/useCoachAvatars";
@@ -12,6 +13,7 @@ import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { formatTimeSpan } from "@/utils/sessionFormatting";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { countOverdueRequests } from "@/utils/requestWaiting";
 
 // Session dates/times render in the viewer's zone (ATH-22).
 const longDate = (iso: string, timeZone?: string) =>
@@ -256,6 +258,14 @@ const Dashboard = () => {
     enabled: Boolean(user?.id),
   });
   const conversations = conversationsQuery.data?.data ?? [];
+
+  // Requests never expire, so remind the coach about ones waiting over a day (ATH-28).
+  const requestsQuery = useQuery({
+    queryKey: ["booking-requests"],
+    queryFn: () => bookingRequestsAPI.listForCoach(),
+    enabled: isCoach,
+  });
+  const overdueRequests = countOverdueRequests(requestsQuery.data ?? []);
   const unreadCount = conversations.filter((c) => isConversationUnread(c, user?.id)).length;
 
   const firstName = (userName || "").split(" ")[0] || "there";
@@ -299,6 +309,21 @@ const Dashboard = () => {
           {isCoach ? "Keep growing your coaching business." : "Keep building on your game."}
         </p>
       </header>
+
+      {isCoach && overdueRequests > 0 ? (
+        <div role="status" className="flex flex-col gap-3 rounded-[10px] bg-[#FDF7EC] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
+          <div className="flex items-start gap-2">
+            <AlertCircle className="mt-[1px] size-4 flex-none text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
+            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#906A29]">
+              {overdueRequests === 1 ? "1 booking request has" : `${overdueRequests} booking requests have`} waited over
+              24 hours for your answer.
+            </p>
+          </div>
+          <Link to={ROUTES.CALENDAR} className={cn(secondaryButtonClass, "w-fit text-[14px]")}>
+            Review requests
+          </Link>
+        </div>
+      ) : null}
 
       <DashCard className="md:flex-row md:items-end md:justify-between">
         <div className="flex min-w-0 flex-col gap-5">

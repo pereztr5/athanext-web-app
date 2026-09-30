@@ -25,6 +25,7 @@ export interface CoachAvailabilityWithOccurrences {
   coach_id: string;
   start_date: string;
   end_date: string;
+  repeats_weekly?: boolean;
   created_at: string;
   updated_at: string;
   weekly_slots: CoachAvailabilitySlot[];

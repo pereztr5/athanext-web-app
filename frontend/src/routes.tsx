@@ -14,6 +14,7 @@ import CoachProfile from "./pages/CoachProfile";
 import ChangePassword from "./pages/ChangePassword";
 import AccountSettings from "./pages/AccountSettings";
 import Availability from "./pages/Availability";
+import CoachCalendar from "./pages/CoachCalendar";
 import Analytics from "./pages/Analytics";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -68,6 +69,7 @@ export const ROUTES = {
   ADMIN_ACCOUNTS: "/admin/accounts",
   CHANGE_PASSWORD: "/settings/password",
   AVAILABILITY: "/availability",
+  CALENDAR: "/calendar",
   ANALYTICS: "/analytics",
   ABOUT: "/about",
   PRIVACY_POLICY: "/privacy-policy",
@@ -128,6 +130,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
   { path: ROUTES.AVAILABILITY, element: <ProtectedRoute><Availability /></ProtectedRoute> },
+  { path: ROUTES.CALENDAR, element: <ProtectedRoute><CoachCalendar /></ProtectedRoute> },
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },
   { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><CoachSessionFeedback /></ProtectedRoute> },

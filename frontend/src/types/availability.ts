@@ -51,6 +51,8 @@ export interface CoachAvailability {
   coach_id: string;
   start_date: string; // YYYY-MM-DD format
   end_date: string; // YYYY-MM-DD format
+  /** Repeats weekly with no end date; end_date is how far occurrences are generated (ATH-28). */
+  repeats_weekly?: boolean;
   slots: CoachAvailabilitySlot[];
   created_at: string;
   updated_at: string;

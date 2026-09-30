@@ -337,6 +337,12 @@ export const CoachAvailabilitySection = ({
     return `${startStr} - ${endStr}`;
   };
 
+  // A weekly repeat has no end date; its end_date is only how far it's generated (ATH-28).
+  const formatPeriodLabel = (period: { start_date: string; end_date: string; repeats_weekly?: boolean }) =>
+    period.repeats_weekly
+      ? `From ${parseISODateLocal(period.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}, repeats weekly`
+      : formatRangeWithYear(period.start_date, period.end_date);
+
   // Resolve weekly overrides for display
   // Resolve slots for the current week using occurrences
   const resolvedWeeklySlots = useMemo(() => {
@@ -825,7 +831,7 @@ export const CoachAvailabilitySection = ({
           }}
           className={periodChipClass(selectedPeriod?.id === period.id)}
         >
-          {formatRangeWithYear(period.start_date, period.end_date)}
+          {formatPeriodLabel(period)}
         </button>
       ))}
     </div>
@@ -890,7 +896,7 @@ export const CoachAvailabilitySection = ({
                   <div className="flex flex-col gap-[5px]">
                     <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">Selected period</span>
                     <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
-                      {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
+                      {formatPeriodLabel(selectedPeriod)}
                     </span>
                   </div>
                   {weeklySlotCount > 0 && (
@@ -956,7 +962,7 @@ export const CoachAvailabilitySection = ({
                     <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
                       Booking period{" "}
                       <span className="font-medium text-[#1A202C]">
-                        {formatRangeWithYear(selectedPeriod.start_date, selectedPeriod.end_date)}
+                        {formatPeriodLabel(selectedPeriod)}
                       </span>
                     </p>
                   )}
@@ -1028,7 +1034,7 @@ export const CoachAvailabilitySection = ({
                   <div className="space-y-1">
                     <div className="py-5 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
                       {deleteTargetPeriod
-                        ? formatRangeWithYear(deleteTargetPeriod.start_date, deleteTargetPeriod.end_date)
+                        ? formatPeriodLabel(deleteTargetPeriod)
                         : 'Selected period'}
                     </div>
                     <div className="text-left text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">

@@ -59,7 +59,28 @@ interface ManageAvailabilityModalProps {
   editData?: CoachAvailability | null;
   initialFocusDay?: DayOfWeek | null;
   existingAvailabilities?: CoachAvailability[] | null;
+  /** Schedule type selected when adding (e.g. 'single' for a one-off session). */
+  defaultScheduleMode?: ScheduleMode;
 }
+
+// A weekly repeat with no end date is laid out as its first 8 weeks; the server keeps it 8 weeks ahead (ATH-28).
+const ROLLING_RANGE_DAYS = 8 * 7 - 1;
+const INITIAL_RANGE_DAYS: Record<ScheduleMode, number> = { single: 0, repeating: 30, rolling: ROLLING_RANGE_DAYS };
+
+// Initial form state for a new availability of the given type
+const getInitialFormData = (mode: ScheduleMode): AvailabilityFormData => ({
+  start_date: new Date(),
+  end_date: new Date(Date.now() + INITIAL_RANGE_DAYS[mode] * 24 * 60 * 60 * 1000),
+  slots: {
+    1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [],
+  },
+});
+
+const addDays = (date: Date, days: number) => {
+  const next = new Date(date);
+  next.setDate(next.getDate() + days);
+  return next;
+};
 
 
 const errorAlertClass =
@@ -72,6 +93,7 @@ export const ManageAvailabilityModal = ({
   editData = null,
   initialFocusDay = null,
   existingAvailabilities = null,
+  defaultScheduleMode = 'repeating',
 }: ManageAvailabilityModalProps) => {
   const isEditMode = !!editData;
   const { coach } = useCoachDetails(coachId);
@@ -82,16 +104,7 @@ export const ManageAvailabilityModal = ({
   }, [coach?.sport]);
   const { sportPillars } = useSportPillars({ sport: coachSport, autoFetch: !!coachSport });
 
-  // Initialize form state
-  const getInitialFormData = (): AvailabilityFormData => ({
-    start_date: new Date(),
-    end_date: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
-    slots: {
-      1: [], 2: [], 3: [], 4: [], 5: [], 6: [], 7: [],
-    },
-  });
-
-  const [formData, setFormData] = useState<AvailabilityFormData>(() => getInitialFormData());
+  const [formData, setFormData] = useState<AvailabilityFormData>(() => getInitialFormData(defaultScheduleMode));
   const [errors, setErrors] = useState<AvailabilityValidationErrors>({});
   const [weekErrors, setWeekErrors] = useState<Record<string, AvailabilityValidationErrors>>({});
   const [duplicateError, setDuplicateError] = useState<string | null>(null);
@@ -115,7 +128,7 @@ export const ManageAvailabilityModal = ({
     slotIndex: number;
     field: keyof SlotFormData;
   } | null>(null);
-  const [isRecurring, setIsRecurring] = useState(!isEditMode);
+  const [isRecurring, setIsRecurring] = useState(!isEditMode && defaultScheduleMode !== 'single');
   const [showRecurringConfirm, setShowRecurringConfirm] = useState(false);
   const [editHydrated, setEditHydrated] = useState(false);
   const [awaitingOccurrences, setAwaitingOccurrences] = useState(false);
@@ -134,11 +147,14 @@ export const ManageAvailabilityModal = ({
   );
   const MIN_RANGE_DAYS = 6; // inclusive: start + 6 days = 7-day span
   // Single session: one date, one slot, no week minimum. Edit mode infers it from a one-day period.
-  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>('repeating');
+  const [scheduleMode, setScheduleMode] = useState<ScheduleMode>(defaultScheduleMode);
   const isSingleSession = isEditMode
     ? Boolean(editData && editData.start_date === editData.end_date)
     : scheduleMode === 'single';
   const minRangeDays = isSingleSession ? 0 : MIN_RANGE_DAYS;
+  // Editing a repeating period: the coach can stop it by switching this off and picking an end date.
+  const isRollingPeriod = isEditMode && Boolean(editData?.repeats_weekly);
+  const [repeatsWeekly, setRepeatsWeekly] = useState(false);
 
   // Memoized derived values
   const enabledSlotsMemo = useMemo(() => {
@@ -251,7 +267,7 @@ export const ManageAvailabilityModal = ({
   useEffect(() => {
     if (open) {
       if (!isEditMode) {
-        setFormData(getInitialFormData());
+        setFormData(getInitialFormData(defaultScheduleMode));
         setOccurrenceSlots({});
         resetDatesRef.current = true;
         setAddResetKey((prev) => prev + 1);
@@ -265,8 +281,9 @@ export const ManageAvailabilityModal = ({
         setEditHydrated(false);
         setAwaitingOccurrences(true);
       }
-      setIsRecurring(!isEditMode);
-      setScheduleMode('repeating');
+      setIsRecurring(!isEditMode && defaultScheduleMode !== 'single');
+      setScheduleMode(defaultScheduleMode);
+      setRepeatsWeekly(Boolean(isEditMode && editData?.repeats_weekly));
       setHasUserChanges(false);
       setWeekInitialized(false);
       setCustomizedWeeks(new Set());
@@ -281,7 +298,7 @@ export const ManageAvailabilityModal = ({
       setCurrentWeekIndex(0);
       setPendingFocusTarget(null);
     }
-  }, [editData, isEditMode, open]);
+  }, [defaultScheduleMode, editData, isEditMode, open]);
 
   useEffect(() => {
     if (!open) return;
@@ -336,7 +353,7 @@ export const ManageAvailabilityModal = ({
       : null;
 
     const resetDefaults = !isEditMode && resetDatesRef.current;
-    const freshDefaults = resetDefaults ? getInitialFormData() : null;
+    const freshDefaults = resetDefaults ? getInitialFormData(defaultScheduleMode) : null;
     const effectiveStart = isEditMode && editData
       ? parseISODateLocal(editData.start_date)
       : occurrencesStart || freshDefaults?.start_date || formData.start_date;
@@ -486,7 +503,10 @@ export const ManageAvailabilityModal = ({
           {
             ...DEFAULT_SLOT,
             day_of_week: i as DayOfWeek,
-            is_enabled: true,
+            // Days before the start date are hidden in week 1 but still serve as the
+            // recurring template, so they start off; otherwise later weeks inherit
+            // enabled, unnamed slots the coach can't see and saving fails.
+            is_enabled: occDate >= toLocalISODate(effectiveStart),
             pillar_slot: '',
             occurrence_date: occDate,
             max_bookings_per_slot: DEFAULT_SLOT.max_bookings_per_slot,
@@ -673,10 +693,9 @@ export const ManageAvailabilityModal = ({
 
   const applyScheduleMode = useCallback((mode: ScheduleMode) => {
     const start = formData.start_date;
-    const end = new Date(start);
-    if (mode === 'repeating') end.setDate(end.getDate() + 30);
+    const end = addDays(start, INITIAL_RANGE_DAYS[mode]);
     setScheduleMode(mode);
-    setIsRecurring(mode === 'repeating');
+    setIsRecurring(mode !== 'single');
     setHasUserChanges(false);
     setCustomizedWeeks(new Set());
     setPendingDateRange(null);
@@ -700,18 +719,51 @@ export const ManageAvailabilityModal = ({
     applyScheduleMode(mode);
   }, [applyScheduleMode, hasUserChanges, isEditMode, scheduleMode]);
 
-  const handleRangeChange = useCallback((start: Date, end: Date) => {
+  const handleRangeChange = useCallback((start: Date, rangeEnd: Date) => {
     if (!isEditMode && isSingleSession) {
       applySingleSessionDate(start);
       return;
     }
+    // A weekly repeat only picks its start; its first 8 weeks follow.
+    const end = !isEditMode && scheduleMode === 'rolling' ? addDays(start, ROLLING_RANGE_DAYS) : rangeEnd;
     if (!isEditMode && hasUserChanges) {
       setPendingDateRange({ start, end });
       setShowDateChangeConfirm(true);
       return;
     }
     applyDateRange(start, end);
-  }, [applyDateRange, applySingleSessionDate, hasUserChanges, isEditMode, isSingleSession]);
+  }, [applyDateRange, applySingleSessionDate, hasUserChanges, isEditMode, isSingleSession, scheduleMode]);
+
+  // Stopping a repeat: the end date can't drop a booked or requested session.
+  const rollingEndBounds = useMemo(() => {
+    if (!isRollingPeriod || !editData) return null;
+    const max = parseISODateLocal(editData.end_date);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    let min = addDays(parseISODateLocal(editData.start_date), MIN_RANGE_DAYS);
+    if (today > min) min = today;
+    (occurrencesData || []).forEach((occ) => {
+      if (!lockedOccurrenceIds.has(occ.id)) return;
+      const date = parseISODateLocal(occ.occurrence_date);
+      if (date > min) min = date;
+    });
+    return { min: min > max ? max : min, max };
+  }, [editData, isRollingPeriod, lockedOccurrenceIds, occurrencesData]);
+
+  const handleRepeatingChange = useCallback((repeating: boolean) => {
+    setRepeatsWeekly(repeating);
+    setHasUserChanges(true);
+    if (repeating && editData) {
+      setFormData((prev) => ({ ...prev, end_date: parseISODateLocal(editData.end_date) }));
+    }
+  }, [editData]);
+
+  const handleRollingEndChange = useCallback((date: Date) => {
+    if (!rollingEndBounds) return;
+    const next = date < rollingEndBounds.min ? rollingEndBounds.min : date > rollingEndBounds.max ? rollingEndBounds.max : date;
+    setFormData((prev) => ({ ...prev, end_date: next }));
+    setHasUserChanges(true);
+  }, [rollingEndBounds]);
 
   const firstWeekISO = weeks.length ? toLocalISODate(weeks[0]) : '';
 
@@ -876,6 +928,7 @@ export const ManageAvailabilityModal = ({
     occurrenceSlots,
     enabledSlots: enabledSlotsMemo,
     minRangeDays,
+    repeatsWeekly: isEditMode ? repeatsWeekly : scheduleMode === 'rolling',
     onValidationFailure: ({ errors: nextErrors, weekErrors: nextWeekErrors, firstProblemWeekIndex, duplicateError: nextDuplicateError }) => {
       setErrors(nextErrors);
       setWeekErrors(nextWeekErrors);
@@ -915,7 +968,7 @@ export const ManageAvailabilityModal = ({
             formData={formData}
             isEditMode={isEditMode}
             isRecurring={isRecurring}
-            scheduleMode={isSingleSession ? 'single' : 'repeating'}
+            scheduleMode={isSingleSession ? 'single' : isRollingPeriod || (!isEditMode && scheduleMode === 'rolling') ? 'rolling' : 'repeating'}
             onScheduleModeChange={handleScheduleModeChange}
             minDays={minRangeDays}
             minStartDate={getMinStartDate()}
@@ -938,6 +991,14 @@ export const ManageAvailabilityModal = ({
               setPendingDateRange(null);
               setShowDateChangeConfirm(false);
             }}
+            rollingEdit={rollingEndBounds ? {
+              repeating: repeatsWeekly,
+              onRepeatingChange: handleRepeatingChange,
+              endDate: formData.end_date,
+              minEndDate: rollingEndBounds.min,
+              maxEndDate: rollingEndBounds.max,
+              onEndDateChange: handleRollingEndChange,
+            } : null}
           />
 
           {hasAnyErrors && (

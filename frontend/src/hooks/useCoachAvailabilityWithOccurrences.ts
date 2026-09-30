@@ -17,7 +17,16 @@ export const useCoachAvailabilityWithOccurrences = (coachId: string | null) => {
         console.error('Error fetching availability:', error);
         throw new Error(error.message);
       }
-      return (data || []) as CoachAvailabilityWithOccurrences[];
+      const periods = (data || []) as CoachAvailabilityWithOccurrences[];
+      // The RPC predates ATH-28, so read the repeat flag separately (a missing column reads as off).
+      const { data: flags } = await supabase
+        .from('coach_availability' as any)
+        .select('id, repeats_weekly')
+        .eq('coach_id', coachId);
+      const repeating = new Set(
+        ((flags as any[] | null) || []).filter((row) => row?.repeats_weekly).map((row) => row.id)
+      );
+      return periods.map((period) => ({ ...period, repeats_weekly: repeating.has(period.id) }));
     },
   });
 };

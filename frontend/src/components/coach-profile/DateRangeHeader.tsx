@@ -16,12 +16,23 @@ import { formatDateForInput } from '@/utils/helperFunctions';
 import { parseISODateLocal } from '@/utils/dateHelpers';
 import type { AvailabilityFormData } from '@/types/availability';
 
-export type ScheduleMode = 'single' | 'repeating';
+export type ScheduleMode = 'single' | 'repeating' | 'rolling';
 
 const SCHEDULE_MODES: { value: ScheduleMode; label: string }[] = [
   { value: 'single', label: 'Single session' },
   { value: 'repeating', label: 'Repeating weeks' },
+  { value: 'rolling', label: 'Repeats weekly' },
 ];
+
+/** Edit controls for a period that repeats weekly with no end date (ATH-28). */
+export interface RollingEditControls {
+  repeating: boolean;
+  onRepeatingChange: (repeating: boolean) => void;
+  endDate: Date;
+  minEndDate: Date;
+  maxEndDate: Date;
+  onEndDateChange: (date: Date) => void;
+}
 
 interface DateRangeHeaderProps {
   formData: AvailabilityFormData;
@@ -37,7 +48,18 @@ interface DateRangeHeaderProps {
   onRecurringToggle: (enabled: boolean) => void;
   onConfirmDateChange: () => void;
   onCancelDateChange: () => void;
+  rollingEdit?: RollingEditControls | null;
 }
+
+const dateInputClass =
+  "h-[38px] w-[150px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none focus-visible:ring-0";
+
+/** Parses a date input's value, ignoring partial years while it's being typed (e.g. "0002-10-05"). */
+const parseDateInput = (value: string): Date | null => {
+  if (!value) return null;
+  const date = parseISODateLocal(value);
+  return isNaN(date.getTime()) || date.getFullYear() < 1900 ? null : date;
+};
 
 export const DateRangeHeader = ({
   formData,
@@ -53,6 +75,7 @@ export const DateRangeHeader = ({
   onRecurringToggle,
   onConfirmDateChange,
   onCancelDateChange,
+  rollingEdit = null,
 }: DateRangeHeaderProps) => {
   const [showInfoPopover, setShowInfoPopover] = useState(false);
   const infoPopoverRef = React.useRef<HTMLDivElement | null>(null);
@@ -101,23 +124,20 @@ export const DateRangeHeader = ({
         )}
         <div className="flex flex-wrap items-center gap-3">
           <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">
-            {scheduleMode === 'single' ? 'Session date' : 'Availability period'}
+            {scheduleMode === 'single' ? 'Session date' : scheduleMode === 'rolling' ? 'Starts on' : 'Availability period'}
           </span>
-          {scheduleMode === 'single' ? (
+          {scheduleMode === 'single' || scheduleMode === 'rolling' ? (
             <Input
               type="date"
-              aria-label="Session date"
+              aria-label={scheduleMode === 'single' ? 'Session date' : 'Start date'}
               value={formatDateForInput(formData.start_date)}
               min={formatDateForInput(minStartDate)}
               disabled={isEditMode}
               onChange={(event) => {
-                if (!event.target.value) return;
-                const date = parseISODateLocal(event.target.value);
-                // Ignore partial years while the date is being typed (e.g. "0002-10-05").
-                if (isNaN(date.getTime()) || date.getFullYear() < 1900) return;
-                onRangeChange(date, date);
+                const date = parseDateInput(event.target.value);
+                if (date) onRangeChange(date, date);
               }}
-              className="h-[38px] w-[150px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none focus-visible:ring-0"
+              className={dateInputClass}
             />
           ) : (
             <DateRangePicker
@@ -132,7 +152,49 @@ export const DateRangeHeader = ({
             />
           )}
         </div>
-        {scheduleMode === 'repeating' && (
+        {scheduleMode === 'rolling' && !isEditMode && (
+          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">
+            Repeats weekly, no end date. Sessions stay open 8 weeks ahead.
+          </p>
+        )}
+        {rollingEdit && (
+          <div className="flex flex-col gap-2">
+            <div className="flex flex-wrap items-center gap-[10px]">
+              <Switch
+                checked={rollingEdit.repeating}
+                onCheckedChange={rollingEdit.onRepeatingChange}
+                id="repeats-weekly-toggle"
+                className="h-5 w-9 border-0 data-[state=checked]:bg-[#0054B4] data-[state=unchecked]:bg-[#D9D9CF] [&>span]:h-4 [&>span]:w-4 [&>span]:bg-[#F7F7F0] [&>span]:data-[state=checked]:translate-x-4"
+              />
+              <label htmlFor="repeats-weekly-toggle" className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                Repeats weekly, no end date
+              </label>
+              {!rollingEdit.repeating && (
+                <>
+                  <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">Ends on</span>
+                  <Input
+                    type="date"
+                    aria-label="End date"
+                    value={formatDateForInput(rollingEdit.endDate)}
+                    min={formatDateForInput(rollingEdit.minEndDate)}
+                    max={formatDateForInput(rollingEdit.maxEndDate)}
+                    onChange={(event) => {
+                      const date = parseDateInput(event.target.value);
+                      if (date) rollingEdit.onEndDateChange(date);
+                    }}
+                    className={dateInputClass}
+                  />
+                </>
+              )}
+            </div>
+            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">
+              {rollingEdit.repeating
+                ? 'Sessions stay open 8 weeks ahead.'
+                : 'Sessions after the end date are removed. It can’t be before your last booked session.'}
+            </p>
+          </div>
+        )}
+        {scheduleMode !== 'single' && (scheduleMode === 'repeating' || isEditMode) && (
         <div className="flex flex-wrap items-center gap-[10px]">
           <Switch
             checked={isRecurring}

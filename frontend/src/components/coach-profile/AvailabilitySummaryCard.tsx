@@ -84,10 +84,13 @@ export function AvailabilitySummaryCard({ coachId, sessionTypes }: AvailabilityS
 
     let periodLabel = "Selected period";
     try {
-      periodLabel = `${format(parseISO(active.start_date), "MMM d")} - ${format(
-        parseISO(active.end_date),
-        "MMM d, yyyy"
-      )}`;
+      // A weekly repeat has no end date (ATH-28).
+      periodLabel = active.repeats_weekly
+        ? `From ${format(parseISO(active.start_date), "MMM d, yyyy")}, repeats weekly`
+        : `${format(parseISO(active.start_date), "MMM d")} - ${format(
+            parseISO(active.end_date),
+            "MMM d, yyyy"
+          )}`;
     } catch {
       periodLabel = `${active.start_date} - ${active.end_date}`;
     }

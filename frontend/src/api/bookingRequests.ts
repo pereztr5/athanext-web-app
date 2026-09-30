@@ -20,6 +20,8 @@ export interface BookingRequest {
   start: string;
   end: string;
   notes: string | null;
+  /** When the athlete asked; requests never expire, so this drives the 24h reminder (ATH-28). */
+  requestedAt: string | null;
 }
 
 export const bookingRequestsAPI = {
@@ -40,6 +42,7 @@ export const bookingRequestsAPI = {
       start: sessionInstantISO(row.occurrence_date, row.start_time),
       end: sessionInstantISO(row.occurrence_date, row.end_time),
       notes: row.notes ?? null,
+      requestedAt: row.requested_at ?? null,
     }));
   },
 

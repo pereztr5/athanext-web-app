@@ -45,6 +45,8 @@ interface UseAvailabilitySubmitArgs {
   enabledSlots: SlotFormData[];
   /** Inclusive day gap required between start and end; 0 for a single session. */
   minRangeDays?: number;
+  /** Repeats weekly with no end date: saved on the period and topped up 8 weeks ahead (ATH-28). */
+  repeatsWeekly?: boolean;
   onValidationFailure: (r: {
     errors: AvailabilityValidationErrors;
     weekErrors: Record<string, AvailabilityValidationErrors>;
@@ -64,6 +66,7 @@ export const useAvailabilitySubmit = ({
   occurrenceSlots,
   enabledSlots: enabledSlotsMemo,
   minRangeDays = MIN_RANGE_DAYS,
+  repeatsWeekly = false,
   onValidationFailure,
   onSuccess,
 }: UseAvailabilitySubmitArgs) => {
@@ -108,6 +111,15 @@ export const useAvailabilitySubmit = ({
     },
     []
   );
+
+  // Generate the weeks past the modal's range now instead of waiting for the daily job.
+  const extendRollingAvailability = useCallback(async (availabilityId: string) => {
+    const { error } = await supabase.rpc('extend_rolling_availability' as any, {
+      p_availability_id: availabilityId,
+    });
+    // The daily job retries, so the save still counts.
+    if (error) console.error('Failed to extend repeating availability', error);
+  }, []);
 
   // Handle form submission
   const handleSubmit = useCallback(async () => {
@@ -248,6 +260,8 @@ export const useAvailabilitySubmit = ({
           .update({
             start_date: toLocalISODate(formData.start_date),
             end_date: toLocalISODate(formData.end_date),
+            // Only periods that already repeat have the flag to change (setting an end date stops it).
+            ...(editData.repeats_weekly ? { repeats_weekly: repeatsWeekly } : {}),
           })
           .eq('id', editData.id);
 
@@ -261,6 +275,9 @@ export const useAvailabilitySubmit = ({
         });
 
         await cleanupExtraOccurrences(editData.id, enabledSlots);
+        if (editData.repeats_weekly && repeatsWeekly) {
+          await extendRollingAvailability(editData.id);
+        }
 
         toast({
           title: 'Success',
@@ -274,6 +291,7 @@ export const useAvailabilitySubmit = ({
             coach_id: coachId,
             start_date: toLocalISODate(formData.start_date),
             end_date: toLocalISODate(formData.end_date),
+            ...(repeatsWeekly ? { repeats_weekly: true } : {}),
           })
           .select('id')
           .single();
@@ -290,15 +308,20 @@ export const useAvailabilitySubmit = ({
         });
 
         await cleanupExtraOccurrences((inserted as any).id, enabledSlots);
+        if (repeatsWeekly) {
+          await extendRollingAvailability((inserted as any).id);
+        }
 
         const enabledDays = enabledSlots
           .map(slot => DAY_OF_WEEK_MAP[slot.day_of_week])
           .filter((day, index, self) => self.indexOf(day) === index)
           .join(', ');
         const startLabel = new Date(formData.start_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
-        const dateRange = formStartISO === formEndISO
-          ? startLabel
-          : `${startLabel} - ${new Date(formData.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
+        const dateRange = repeatsWeekly
+          ? `from ${startLabel}, repeats weekly`
+          : formStartISO === formEndISO
+            ? startLabel
+            : `${startLabel} - ${new Date(formData.end_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}`;
 
         toast({
           title: 'Availability Added Successfully!',
@@ -326,7 +349,7 @@ export const useAvailabilitySubmit = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [formData, coachId, toast, onSuccess, onValidationFailure, isEditMode, editData, existingAvailabilities, enabledSlotsMemo, formStartISO, formEndISO, weeks, occurrenceSlots, upsertOccurrences, upsertOccurrencesEdit, cleanupExtraOccurrences, minRangeDays]);
+  }, [formData, coachId, toast, onSuccess, onValidationFailure, isEditMode, editData, existingAvailabilities, enabledSlotsMemo, formStartISO, formEndISO, weeks, occurrenceSlots, upsertOccurrences, upsertOccurrencesEdit, cleanupExtraOccurrences, extendRollingAvailability, minRangeDays, repeatsWeekly]);
 
   return { handleSubmit, isSubmitting };
 };
