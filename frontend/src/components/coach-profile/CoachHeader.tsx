@@ -299,6 +299,7 @@ export function CoachHeader({
     sport,
     coach,
     onBook,
+    bookAction,
     sportTheme,
     onSendMessage,
     onFieldChange,
@@ -1325,7 +1326,7 @@ export function CoachHeader({
 
                         {!isCoachProfile && (
                             <div className="flex flex-wrap gap-[10px]">
-                                <Button onClick={onBook}>Book a session</Button>
+                                {bookAction ?? <Button onClick={onBook}>Book a session</Button>}
                                 <Button variant="outline" onClick={onViewPackages}>
                                     View packages
                                 </Button>

@@ -26,7 +26,7 @@ import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormattin
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { useReferralWaiver } from "@/hooks/useReferrals";
-import { computeSessionPrice } from "@/utils/referralHelpers";
+import { computeSessionPrice, formatPriceBreakdown } from "@/utils/referralHelpers";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDateInZone, formatSlotForViewer } from "@/utils/viewerTime";
 
@@ -471,19 +471,9 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       ? "Individual"
       : toTitleCase(serviceType?.toString()) || "Session";
   const sportLabel = coach.sport?.trim();
-  // Break the total down so the parts always add up to the charged total:
-  // the last fee shown absorbs any rounding cent.
-  const roundCents = (value: number) => Math.round(value * 100) / 100;
-  const hasProcessingFee = stripeFeePerc > 0;
-  const platformFeeDisplay = hasProcessingFee
-    ? sessionPrice.platformFee
-    : roundCents(totalWithFees - sessionCost);
-  const processingFeeDisplay = roundCents(totalWithFees - sessionCost - sessionPrice.platformFee);
   const priceBreakdown = isFreeConsultation
     ? "Free"
-    : `${formatCurrency(sessionCost)} session + ${
-        platformFeeWaived ? "no platform fee (existing client)" : `${formatCurrency(platformFeeDisplay)} platform fee`
-      }${hasProcessingFee ? ` + ${formatCurrency(processingFeeDisplay)} processing fee` : ""}`;
+    : formatPriceBreakdown(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived);
   const hideSelectionFields = Boolean(prefillSlot);
 
   const modalSurface =

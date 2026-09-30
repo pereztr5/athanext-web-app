@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import CoachSchedulingModal from "@/components/coach/CoachSchedulingModal";
+import { BookSessionButton } from "@/components/coach/BookSessionFlow";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { FreeConsultationInfoDialog } from "@/components/coach/FreeConsultationInfoDialog";
 import { useReviews } from "@/hooks/useReviews";
@@ -282,6 +283,14 @@ const CoachProfile = () => {
           onEdit={() => undefined}
           onEditPackages={() => undefined}
           onEditCertifications={() => undefined}
+          bookAction={
+            <BookSessionButton
+              coachId={coach.id}
+              coachName={coach.name}
+              onBookSlot={canBookSlots ? handleBookSlot : undefined}
+              onMessageCoach={handleSendMessage}
+            />
+          }
           availability={
             <div ref={availabilitySectionRef}>
               <CoachAvailabilitySection
@@ -310,6 +319,13 @@ const CoachProfile = () => {
               coachName={coach.name}
               onSubmit={submitReview}
             />
+            {showChatPanel && (
+              <CoachChatPanel
+                coach={coach}
+                conversationId={chatConversationId ?? undefined}
+                onClose={() => setShowChatPanel(false)}
+              />
+            )}
           </>
         ) : null}
       </div>
@@ -339,6 +355,7 @@ const CoachProfile = () => {
             onBook={() => {
               scrollToSection(availabilitySectionRef);
             }}
+            bookAction={<BookSessionButton coachId={coach.id} coachName={coach.name} />}
             onViewPackages={() => {
               scrollToSection(packagesSectionRef);
             }}

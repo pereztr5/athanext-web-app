@@ -1,3 +1,5 @@
+import type { ReactNode } from "react";
+
 export type Coach = {
   id: string;
   name: string;
@@ -39,6 +41,8 @@ export interface CoachHeaderProps {
   sportTheme: SportTheme;
   sport: string;
   onBook: () => void;
+  /** Replaces the default "Book a session" button, e.g. with the guided booking flow (ATH-28). */
+  bookAction?: ReactNode;
   onViewPackages: () => void;
   onSendMessage: () => void;
   canSendMessage?: boolean;

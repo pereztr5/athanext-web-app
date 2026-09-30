@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
-  bookedOnlyCoaches, claimErrorMessage, computeSessionPrice, referralStatusLabel,
+  bookedOnlyCoaches, claimErrorMessage, computeSessionPrice, formatPriceBreakdown, referralStatusLabel,
 } from "../referralHelpers";
 
 // What create-booking-payment sends to Stripe for one session, in dollars.
@@ -32,6 +32,22 @@ describe("computeSessionPrice", () => {
     expect(computeSessionPrice(50, 0, 0)).toEqual({
       base: 50, platformFee: 0, stripeFee: 0, total: 50,
     });
+  });
+});
+
+describe("formatPriceBreakdown", () => {
+  it("lists session, platform and processing fees", () => {
+    expect(formatPriceBreakdown(50, 10, 3)).toBe("$50.00 session + $5.00 platform fee + $1.50 processing fee");
+  });
+
+  it("notes the waived platform fee for existing clients", () => {
+    expect(formatPriceBreakdown(50, 10, 3, true)).toBe(
+      "$50.00 session + no platform fee (existing client) + $1.50 processing fee"
+    );
+  });
+
+  it("puts the whole markup on the platform fee when there is no processing fee", () => {
+    expect(formatPriceBreakdown(50, 10, 0)).toBe("$50.00 session + $5.00 platform fee");
   });
 });
 

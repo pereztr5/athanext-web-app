@@ -83,6 +83,8 @@ interface CoachProfileViewProps {
   onLeaveReview?: () => void;
   readOnly?: boolean;
   availability?: ReactNode;
+  /** Guided "Book a session" action for the read-only header (ATH-28). */
+  bookAction?: ReactNode;
 }
 
 export function CoachProfileView({
@@ -97,6 +99,7 @@ export function CoachProfileView({
   onEditCertifications,
   readOnly = false,
   availability,
+  bookAction,
 }: CoachProfileViewProps) {
   const { toast } = useToast();
   const [locationLabel, setLocationLabel] = useState<string>(
@@ -247,8 +250,11 @@ export function CoachProfileView({
                   {headerRating}
                 </p>
               ) : null}
-              {/* Signed-in athletes join the coach's community here; renders nothing for coaches (ATH-21). */}
-              <CommunityChannelButton coachId={coach.id} />
+              <div className="flex flex-wrap gap-[10px]">
+                {bookAction}
+                {/* Signed-in athletes join the coach's community here; renders nothing for coaches (ATH-21). */}
+                <CommunityChannelButton coachId={coach.id} />
+              </div>
             </div>
 
             <div className="flex flex-col gap-6 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">

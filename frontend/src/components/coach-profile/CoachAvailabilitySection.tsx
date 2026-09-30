@@ -24,6 +24,7 @@ import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useReferralWaiver } from "@/hooks/useReferrals";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { timeZoneAbbreviation } from "@/utils/viewerTime";
+import { ACTIVE_BOOKING_STATUSES, buildSlotStatusMap, occurrenceToSlot, type SlotBookingRow } from "@/utils/slotBooking";
 const parseISODateUtc = (iso: string): Date => parseISODateLocal(iso);
 const toISODateUtc = (d: Date): string => toLocalISODate(d);
 const getWeekStartUtc = (date: Date): Date => getWeekStart(date);
@@ -355,28 +356,7 @@ export const CoachAvailabilitySection = ({
     const occs = (selectedPeriod as CoachAvailabilityWithOccurrences).occurrences || [];
     return occs
       .filter((occ) => occ.occurrence_date >= weekStartISO && occ.occurrence_date <= weekEndISO)
-      .map((occ) => {
-        const dateObj = parseISODateUtc(occ.occurrence_date);
-        const isoDay = ((dateObj.getDay() + 6) % 7) + 1 as DayOfWeek; // convert Sunday=0 to 7 using local time
-        return {
-          id: occ.id,
-          weekly_slot_id: occ.weekly_slot_id,
-          day_of_week: isoDay,
-          session_name: occ.session_name,
-          price: occ.price,
-          duration_minutes: occ.duration_minutes as any,
-          start_time: occ.start_time,
-          end_time: occ.end_time,
-          session_type: occ.session_type as any,
-          location: occ.location as any,
-          pillar_slot: occ.pillar_slot || null,
-          is_enabled: occ.is_enabled,
-          max_bookings_per_slot: occ.max_bookings_per_slot,
-          availability_id: occ.availability_id,
-          coach_id: occ.coach_id,
-          occurrence_date: occ.occurrence_date,
-        } as CoachAvailabilitySlot;
-      })
+      .map(occurrenceToSlot)
       .sort((a, b) => a.day_of_week - b.day_of_week || a.start_time.localeCompare(b.start_time));
   }, [selectedPeriod, currentWeek]);
 
@@ -501,7 +481,7 @@ export const CoachAvailabilitySection = ({
           .from('coach_slot_bookings' as any)
           .select('occurrence_id, athlete_id, status')
           .in('occurrence_id', slotIds)
-          .in('status', ['requested', 'pending_payment', 'booked', 'completed']);
+          .in('status', ACTIVE_BOOKING_STATUSES);
 
         if (requestId !== slotStatusRequestRef.current) return;
 
@@ -513,38 +493,12 @@ export const CoachAvailabilitySection = ({
         }
         setSlotStatusError(false);
 
-        const statusMap: Record<string, SlotBookingStatus> = {};
-        currentSlots.forEach((slot) => {
-          const rowsForSlot = (data as unknown as Array<{ occurrence_id: string; athlete_id: string; status: string }> || []).filter((row) => row.occurrence_id === slot.id);
-          const capacityFromSlot = (slot as any).max_bookings_per_slot ?? (slot as any).max_bookings_per_slot;
-          const capacity = slot.session_type === 'group'
-            ? (capacityFromSlot && capacityFromSlot > 0 ? capacityFromSlot : defaultGroupCapacity)
-            : (capacityFromSlot && capacityFromSlot > 0 ? capacityFromSlot : 1);
-
-          const bookingCount = rowsForSlot.length;
-          const pendingCount = rowsForSlot.filter((row) => row.status === 'pending_payment').length;
-          const myBooking = rowsForSlot.find(
-            (row) => row.athlete_id === (athleteProfileId || user?.id)
-          );
-          const myPendingPayment = myBooking?.status === 'pending_payment';
-          // Held requests count toward capacity but aren't a booking yet (ATH-49).
-          const myRequested = myBooking?.status === 'requested';
-          const bookedByMe = Boolean(myBooking) && !myPendingPayment && !myRequested;
-          const hasPendingPayment = pendingCount > 0;
-          const isFull = slot.session_type === 'group'
-            ? bookingCount >= capacity
-            : bookingCount > 0; // any booking occupies an individual slot
-
-          statusMap[slot.id] = {
-            isFull,
-            bookedByMe,
-            hasPendingPayment,
-            myPendingPayment: Boolean(myPendingPayment),
-            myRequested,
-            totalCount: bookingCount,
-            capacity,
-          };
-        });
+        const statusMap = buildSlotStatusMap(
+          currentSlots,
+          (data as unknown as SlotBookingRow[]) || [],
+          defaultGroupCapacity,
+          athleteProfileId || user?.id
+        );
 
         setSlotStatusMap(statusMap);
       } catch (err) {

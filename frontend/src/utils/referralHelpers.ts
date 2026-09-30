@@ -30,6 +30,26 @@ export const computeSessionPrice = (
   return { base, platformFee, stripeFee, total };
 };
 
+/**
+ * "$50.00 session + $5.00 platform fee + $1.65 processing fee", adding up to
+ * computeSessionPrice's total: the last fee shown absorbs any rounding cent.
+ */
+export const formatPriceBreakdown = (
+  base: number,
+  platformFeePerc: number,
+  stripeFeePerc: number,
+  platformFeeWaived = false,
+) => {
+  const money = (value: number) => `$${value.toFixed(2)}`;
+  const roundCents = (value: number) => Math.round(value * 100) / 100;
+  const price = computeSessionPrice(base, platformFeePerc, stripeFeePerc, platformFeeWaived);
+  const hasProcessingFee = stripeFeePerc > 0;
+  const platformFee = hasProcessingFee ? price.platformFee : roundCents(price.total - base);
+  const platformPart = platformFeeWaived ? "no platform fee (existing client)" : `${money(platformFee)} platform fee`;
+  const processingPart = hasProcessingFee ? ` + ${money(roundCents(price.total - base - price.platformFee))} processing fee` : "";
+  return `${money(base)} session + ${platformPart}${processingPart}`;
+};
+
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   invited: "Invited",
   pending_confirmation: "Pending confirmation",
