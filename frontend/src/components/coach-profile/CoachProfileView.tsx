@@ -27,6 +27,7 @@ import { coachProfileUrl } from "@/utils/coachSlug";
 import { recordCoachShareEvent } from "@/api/coachShare";
 import { SharePricingDialog } from "./SharePricingDialog";
 import { useToast } from "@/hooks/use-toast";
+import { Badge } from "@/components/ui/badge";
 
 interface Review {
   id: string;
@@ -498,9 +499,6 @@ export function CoachProfileView({
                       Share pricing
                     </CoachProfileButton>
                   ) : null}
-                  <CoachProfileButton onClick={() => onEditPackages(packages[0] ?? null)}>
-                    Edit
-                  </CoachProfileButton>
                   <CoachProfileButton variant="primary" onClick={() => onEditPackages(null)}>
                     Add
                   </CoachProfileButton>
@@ -524,10 +522,13 @@ export function CoachProfileView({
                       key={pkg.id}
                       className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F1F1E6] p-5 sm:flex-row sm:items-center sm:justify-between"
                     >
-                      <div className="min-w-0">
-                        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
-                          {pkg.package_name}
-                        </p>
+                      <div className={cn("min-w-0", !pkg.is_active && "opacity-60")}>
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+                            {pkg.package_name}
+                          </p>
+                          {!pkg.is_active ? <Badge variant="outline">Inactive</Badge> : null}
+                        </div>
                         {pkg.description ? (
                           <p className="mt-[6px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
                             {pkg.description}
@@ -541,6 +542,7 @@ export function CoachProfileView({
                         {saveCents > 0 ? (
                           <CoachProfileChip label={`Save $${Math.round(saveCents / 100)}`} />
                         ) : null}
+                        <CoachProfileButton onClick={() => onEditPackages(pkg)}>Edit</CoachProfileButton>
                       </div>
                     </div>
                   );
@@ -720,7 +722,7 @@ export function CoachProfileView({
             image_url: coach.image_url,
             is_verified: coach.is_verified,
           }}
-          packages={packages}
+          packages={packages.filter((pkg) => pkg.is_active)}
           averageRating={averageRating}
           totalReviews={totalReviews}
           canEditSlug={!readOnly}

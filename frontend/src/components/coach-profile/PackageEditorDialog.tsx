@@ -38,6 +38,18 @@ function dollarsToCents(value: string): number {
   return Math.round(parsed * 100);
 }
 
+// Raw PostgREST messages for permission failures are cryptic; explain them instead.
+function describeSaveError(error: { code?: string; message?: string }): string {
+  // 42501: RLS rejected the insert. PGRST116: RLS hid the row, so update().single() matched nothing.
+  if (error.code === "42501") {
+    return "You don't have permission to save packages for this coach profile.";
+  }
+  if (error.code === "PGRST116") {
+    return "This package no longer exists or you don't have permission to edit it.";
+  }
+  return error.message || "Please try again.";
+}
+
 function parseFeatures(raw: string): string[] {
   return raw
     .split(/[,\n]/)
@@ -180,7 +192,7 @@ export function PackageEditorDialog({
       if (response.error) {
         toast({
           title: isEdit ? "Could not update package" : "Could not create package",
-          description: response.error.message || "Please try again.",
+          description: describeSaveError(response.error),
           variant: "destructive",
         });
         return;

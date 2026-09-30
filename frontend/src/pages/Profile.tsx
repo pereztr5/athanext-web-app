@@ -77,7 +77,9 @@ const Profile = () => {
         }
     };
 
-    const { data: packages = [] } = useCoachPackages(coachId || '');
+    // Own profile: include inactive packages so the coach can still edit/reactivate them.
+    const { data: packages = [] } = useCoachPackages(coachId || '', { includeInactive: true });
+    const activePackages = useMemo(() => packages.filter((pkg) => pkg.is_active), [packages]);
     const { averageRating, reviews, ratingDistribution, totalReviews, submitReview } = useReviews(coachId || '');
 
     const [showReviewModal, setShowReviewModal] = useState(false);
@@ -547,7 +549,7 @@ const Profile = () => {
             <PackagesModal
                 isOpen={showPackagesModal}
                 onClose={() => setShowPackagesModal(false)}
-                packages={packages}
+                packages={activePackages}
                 coachName={coach.name}
             />
 
@@ -737,7 +739,7 @@ const Profile = () => {
                     <div className="flex min-w-0 flex-col gap-6">
                         <ErrorBoundary>
                             <CoachingPackages
-                                packages={packages}
+                                packages={activePackages}
                                 coachId={coach.id}
                                 coachName={coach.name}
                                 coachSport={coach.sport}

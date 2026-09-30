@@ -57,16 +57,22 @@ export const packagesAPI = {
   /**
    * Get packages for a coach
    * @param coachId - Coach ID to fetch packages for
-   * @returns ApiResponse with coach's active packages
+   * @param options.includeInactive - Owner view only; RLS limits inactive rows to the owning coach
+   * @returns ApiResponse with coach's packages (active only unless includeInactive)
    */
-  async getCoachPackages(coachId: string): Promise<ApiResponse<Package[]>> {
+  async getCoachPackages(
+    coachId: string,
+    options: { includeInactive?: boolean } = {}
+  ): Promise<ApiResponse<Package[]>> {
     return apiClient.query(
-      async (client) => client
-        .from('coach_packages')
-        .select('*')
-        .eq('coach_id', coachId)
-        .eq('is_active', true)
-        .order('created_at'),
+      async (client) => {
+        let query = client
+          .from('coach_packages')
+          .select('*')
+          .eq('coach_id', coachId);
+        if (!options.includeInactive) query = query.eq('is_active', true);
+        return query.order('created_at');
+      },
       `Fetch packages for coach: ${coachId}`
     );
   },

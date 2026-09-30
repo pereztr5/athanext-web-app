@@ -16,13 +16,17 @@ export interface CoachPackage {
   display_order: number;
 }
 
-export const useCoachPackages = (coachId: string | undefined) => {
+/** Pass includeInactive only for the signed-in coach's own profile. */
+export const useCoachPackages = (
+  coachId: string | undefined,
+  { includeInactive = false }: { includeInactive?: boolean } = {}
+) => {
   return useQuery({
-    queryKey: ["coach-packages", coachId],
+    queryKey: ["coach-packages", coachId, { includeInactive }],
     queryFn: async () => {
       if (!coachId) return [];
 
-      const response = await packagesAPI.getCoachPackages(coachId);
+      const response = await packagesAPI.getCoachPackages(coachId, { includeInactive });
       
       if (response.error) {
         throw response.error;
