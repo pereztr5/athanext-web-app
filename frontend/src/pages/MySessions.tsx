@@ -300,7 +300,7 @@ const SessionCard = ({
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Date" value={formatWeekdayDate(session.start, now, timeZone)} />
-          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone)} />
+          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone, true)} />
           {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
         </div>
         {role === PROFILE_TYPE.coach ? (
@@ -370,7 +370,7 @@ const PastDraftCard = ({
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Date" value={formatWeekdayDate(session.start, new Date(), timeZone)} />
-          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone)} />
+          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone, true)} />
           {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
           {session.pillarSlot ? <CardField label="Pillar" value={session.pillarSlot} /> : null}
         </div>
@@ -396,7 +396,7 @@ const PastDraftCard = ({
                 }
               }}
             >
-              {hasFeedbackSubmitted ? "Edit feedback" : "Add feedback"}
+              {hasFeedbackSubmitted ? (role === PROFILE_TYPE.coach ? "Edit feedback" : "View feedback") : "Add feedback"}
             </button>
           ) : null}
           <button
@@ -445,7 +445,7 @@ const BookingRequestCard = ({
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Athlete" value={request.athleteName} />
           <CardField label="Date" value={formatWeekdayDate(request.start, new Date(), timeZone)} />
-          <CardField label="Time" value={formatTimeSpan(request.start, request.end, timeZone)} />
+          <CardField label="Time" value={formatTimeSpan(request.start, request.end, timeZone, true)} />
           {request.notes ? <CardField label="Note" value={request.notes} /> : null}
         </div>
       </div>
@@ -767,10 +767,10 @@ const MySessions = () => {
 
   const handleSubmitCoachFeedback = () => {
     if (!rateSession || !userProfile?.id) return;
-    if ((existingFeedback?.edit_count ?? 0) >= 1 && existingFeedback?.athlete_rated_at) {
+    if (existingFeedback?.athlete_rated_at) {
       toast({
-        title: "Feedback locked",
-        description: "This rating is locked after one edit. Contact support for further changes.",
+        title: "Rating submitted",
+        description: "Ratings are final once submitted.",
         duration: 4000,
       });
       return;
@@ -1274,7 +1274,7 @@ const MySessions = () => {
               : null;
             const details: { label: string; value: ReactNode }[] = [
               { label: "Date", value: formatWeekdayDate(selectedSessionSafe.start, now, timeZone) || "-" },
-              { label: "Time", value: formatTimeSpan(selectedSessionSafe.start, selectedSessionSafe.end, timeZone) || "-" },
+              { label: "Time", value: formatTimeSpan(selectedSessionSafe.start, selectedSessionSafe.end, timeZone, true) || "-" },
               { label: "Location", value: formatLocationSentence(selectedSessionSafe.location) || "-" },
               { label: "Total", value: totalLabel },
             ];

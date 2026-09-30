@@ -3,7 +3,7 @@
  * Helper functions for formatting session data for display
  */
 import { parseISODateLocal } from "@/utils/dateHelpers";
-import { formatInstantSpan } from "@/utils/viewerTime";
+import { formatInstantSpan, timeZoneAbbreviation } from "@/utils/viewerTime";
 
 /**
  * Format amount as currency string
@@ -199,12 +199,19 @@ const timeParts = (date: Date) => {
  * Format a start/end pair as "4:00 to 5:00 PM", keeping one AM/PM when both
  * times share it ("11:30 AM to 12:30 PM" otherwise).
  * Accepts Date objects, ISO datetimes, or "HH:mm[:ss]" time strings.
+ * With `showZone`, instants shown in `timeZone` get its abbreviation ("4:00 to 5:00 PM EDT").
  */
-export const formatTimeSpan = (start: Date | string, end: Date | string, timeZone?: string): string => {
+export const formatTimeSpan = (
+  start: Date | string,
+  end: Date | string,
+  timeZone?: string,
+  showZone = false,
+): string => {
   const isClock = (value: Date | string) => typeof value === 'string' && /^\d{1,2}:\d{2}/.test(value);
   // Instants (Date / ISO datetime) can be shown in the viewer's zone; bare clock strings cannot.
   if (timeZone && !isClock(start) && !isClock(end)) {
-    return formatInstantSpan(new Date(start), new Date(end), timeZone);
+    const span = formatInstantSpan(new Date(start), new Date(end), timeZone);
+    return span && showZone ? `${span} ${timeZoneAbbreviation(timeZone, new Date(start))}` : span;
   }
   const toDate = (value: Date | string) =>
     value instanceof Date

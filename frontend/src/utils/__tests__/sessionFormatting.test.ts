@@ -17,6 +17,20 @@ describe("formatTimeSpan", () => {
   it("returns an empty string for invalid input", () => {
     expect(formatTimeSpan("nope", "17:00")).toBe("");
   });
+
+  it("appends the zone abbreviation when asked", () => {
+    const start = "2026-07-15T20:00:00Z";
+    const end = "2026-07-15T21:00:00Z";
+    expect(formatTimeSpan(start, end, "America/New_York")).toBe("4:00 to 5:00 PM");
+    expect(formatTimeSpan(start, end, "America/New_York", true)).toBe("4:00 to 5:00 PM EDT");
+    expect(formatTimeSpan("2026-12-15T21:00:00Z", "2026-12-15T22:00:00Z", "America/Chicago", true)).toBe(
+      "3:00 to 4:00 PM CST",
+    );
+  });
+
+  it("leaves bare clock times without a zone", () => {
+    expect(formatTimeSpan("16:00", "17:00", "America/New_York", true)).toBe("4:00 to 5:00 PM");
+  });
 });
 
 describe("formatWholePrice", () => {

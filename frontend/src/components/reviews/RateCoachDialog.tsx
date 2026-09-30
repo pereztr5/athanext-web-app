@@ -108,12 +108,12 @@ export const RateCoachDialog = ({
   formatDate,
 }: RateCoachDialogProps) => {
   const timeZone = useViewerTimeZone();
-  const hasExistingFeedback = Boolean(existingFeedback?.athlete_rated_at);
-  const isFeedbackLocked = hasExistingFeedback && (existingFeedback?.edit_count ?? 0) >= 1;
+  // Ratings are final once submitted (ATH-57).
+  const isFeedbackLocked = Boolean(existingFeedback?.athlete_rated_at);
   const locationLabel = formatLocationSentence(session?.locationType || session?.location).toLowerCase();
   const displayedRating = hoverRating ?? rating;
   const metaLine = session
-    ? [session.title, formatDate(session.start), formatTimeSpan(session.start, session.end, timeZone), locationLabel]
+    ? [session.title, formatDate(session.start), formatTimeSpan(session.start, session.end, timeZone, true), locationLabel]
         .filter(Boolean)
         .join(", ")
     : "";
@@ -129,7 +129,7 @@ export const RateCoachDialog = ({
               </DialogTitle>
               <DialogDescription className="sr-only">
                 {isFeedbackLocked
-                  ? "Your feedback is locked after one edit. Contact support for further changes."
+                  ? "Your submitted rating for this session."
                   : "Share your experience to help coaches improve and guide other athletes."}
               </DialogDescription>
             </DialogHeader>
@@ -162,18 +162,18 @@ export const RateCoachDialog = ({
                 </div>
               ) : null}
 
-              {isFeedbackLocked ? (
+              {isFeedbackLocked && existingFeedback ? (
                 <p className="text-[14px] leading-[18px] text-[#767980]">
-                  This rating is locked after one edit. Contact support if you need a further change.
-                </p>
-              ) : hasExistingFeedback && existingFeedback ? (
-                <p className="text-[14px] leading-[18px] text-[#767980]">
-                  You can make one update to the rating you sent on{" "}
+                  You sent this rating on{" "}
                   {new Date(existingFeedback.athlete_rated_at || existingFeedback.created_at).toLocaleDateString(
                     "en-US",
                     { month: "short", day: "numeric", year: "numeric" }
                   )}
-                  .
+                  . Ratings are final once submitted.
+                </p>
+              ) : !isLoadingFeedback ? (
+                <p className="text-[14px] leading-[18px] text-[#767980]">
+                  Ratings are final once submitted and can't be changed.
                 </p>
               ) : null}
 
@@ -257,8 +257,6 @@ export const RateCoachDialog = ({
                         </>
                       ) : isSubmitting ? (
                         "Submitting..."
-                      ) : hasExistingFeedback ? (
-                        "Update rating"
                       ) : (
                         "Submit rating"
                       )}

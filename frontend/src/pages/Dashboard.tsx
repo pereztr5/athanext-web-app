@@ -23,7 +23,7 @@ const shortDate = (iso: string, timeZone?: string) =>
   new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric", timeZone }).format(new Date(iso));
 
 const timeRange12h = (startIso: string, endIso: string, timeZone?: string) =>
-  formatTimeSpan(startIso, endIso, timeZone);
+  formatTimeSpan(startIso, endIso, timeZone, true);
 
 const relativeDay = (iso: string) => {
   const diffMs = Date.now() - new Date(iso).getTime();
