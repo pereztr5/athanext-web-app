@@ -684,6 +684,7 @@ const Profile = () => {
                         }}
                         onEditCertifications={() => setCertDialogOpen(true)}
                         onLeaveReview={() => setShowReviewModal(true)}
+                        onCoachUpdated={refetchCoachData}
                     />
                 </ErrorBoundary>
                 {modals}

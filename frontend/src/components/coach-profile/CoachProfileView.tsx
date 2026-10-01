@@ -14,6 +14,7 @@ import {
   CoachProfileCardHeader,
   CoachProfileChip,
 } from "./CoachProfileCard";
+import { AffiliateLinksCard } from "./AffiliateLinksCard";
 import { AvailabilitySummaryCard } from "./AvailabilitySummaryCard";
 import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
 import { ReviewsCard } from "@/components/reviews/ReviewsCard";
@@ -62,6 +63,7 @@ interface CoachProfileViewProps {
     response_time_hours?: number;
     profile_faqs?: { id: string; question: string; answer: string }[] | null;
     company?: string;
+    affiliate_links?: unknown;
     is_verified?: boolean;
     hourly_rate?: number;
     sport?: string | null;
@@ -85,6 +87,8 @@ interface CoachProfileViewProps {
   availability?: ReactNode;
   /** Guided "Book a session" action for the read-only header (ATH-28). */
   bookAction?: ReactNode;
+  /** Called after a card saves its own coach field, so the owner view refetches. */
+  onCoachUpdated?: () => void;
 }
 
 export function CoachProfileView({
@@ -100,6 +104,7 @@ export function CoachProfileView({
   readOnly = false,
   availability,
   bookAction,
+  onCoachUpdated,
 }: CoachProfileViewProps) {
   const { toast } = useToast();
   const [locationLabel, setLocationLabel] = useState<string>(
@@ -374,6 +379,8 @@ export function CoachProfileView({
                   })}
                 </div>
               </CoachProfileCard>
+
+              <AffiliateLinksCard coachId={coach.id} links={coach.affiliate_links} />
             </div>
           </div>
 
@@ -713,6 +720,13 @@ export function CoachProfileView({
               })}
             </div>
           </CoachProfileCard>
+
+          <AffiliateLinksCard
+            coachId={coach.id}
+            links={coach.affiliate_links}
+            editable={!readOnly}
+            onSaved={onCoachUpdated}
+          />
         </div>
       </div>
       </div>

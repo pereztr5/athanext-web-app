@@ -3,6 +3,7 @@ import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
+import { AffiliateLinksCard } from "@/components/coach-profile/AffiliateLinksCard";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -413,6 +414,8 @@ const CoachProfile = () => {
             />
 
             <FAQSection />
+
+            <AffiliateLinksCard coachId={coach.id} links={coach.affiliate_links} />
           </div>
         </div>
       </div>

@@ -470,6 +470,7 @@ export type Database = {
       }
       coaches: {
         Row: {
+          affiliate_links: Json
           availability: Json | null
           bio: string | null
           cancellation_policy: string | null
@@ -503,6 +504,7 @@ export type Database = {
           years_experience: number | null
         }
         Insert: {
+          affiliate_links?: Json
           availability?: Json | null
           bio?: string | null
           cancellation_policy?: string | null
@@ -536,6 +538,7 @@ export type Database = {
           years_experience?: number | null
         }
         Update: {
+          affiliate_links?: Json
           availability?: Json | null
           bio?: string | null
           cancellation_policy?: string | null
