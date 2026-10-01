@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { ShopifyVariant } from "@/api/shopify";
 import {
+  pickCoachGear,
   ALL_BRANDS,
   ALL_TYPES,
   clampQuantity,
@@ -96,5 +97,20 @@ describe("gear helpers", () => {
   it("treats unavailable storage as no saved cart", () => {
     expect(readCartId()).toBeNull();
     expect(() => writeCartId("gid://shopify/Cart/abc")).not.toThrow();
+  });
+});
+
+describe("pickCoachGear", () => {
+  const product = (vendor: string, availableForSale = true) => ({ vendor, availableForSale, id: `${vendor}-${availableForSale}` });
+
+  it("puts the coach's brands first, matched like brand names, and skips sold-out items", () => {
+    const products = [product("Reusch"), product("SetGK"), product("setgk ", false), product(" SETGK "), product("Uhlsport")];
+    expect(pickCoachGear(products, ["SetGK"]).map((p) => p.vendor)).toEqual(["SetGK", " SETGK ", "Reusch", "Uhlsport"]);
+  });
+
+  it("falls back to in-stock gear and respects the limit", () => {
+    const products = [product("A"), product("B", false), product("C"), product("D"), product("E"), product("F")];
+    expect(pickCoachGear(products, []).map((p) => p.vendor)).toEqual(["A", "C", "D", "E"]);
+    expect(pickCoachGear(products, ["F"], 2).map((p) => p.vendor)).toEqual(["F", "A"]);
   });
 });

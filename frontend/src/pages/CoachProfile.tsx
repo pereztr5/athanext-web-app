@@ -4,6 +4,8 @@ import { useToast } from "@/hooks/use-toast";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { AffiliateLinksCard } from "@/components/coach-profile/AffiliateLinksCard";
+import { CoachGearCard } from "@/components/coach-profile/CoachGearCard";
+import { useCoachBrands } from "@/hooks/useBrands";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -52,6 +54,7 @@ const CoachProfile = () => {
 
   const { coach, loading, error } = useCoachDetails(resolvedCoachKey);
   const { data: packages = [], isLoading: packagesLoading } = useCoachPackages(coach?.id);
+  const { data: coachBrands = [] } = useCoachBrands(coach?.id);
   const [serviceType, setServiceType] = useState<BookingType>(BookingType.SingleSession);
   const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -418,6 +421,8 @@ const CoachProfile = () => {
             <AffiliateLinksCard coachId={coach.id} links={coach.affiliate_links} />
           </div>
         </div>
+
+        <CoachGearCard brandNames={coachBrands.map((brand) => brand.name)} />
       </div>
 
       {/* Modals */}

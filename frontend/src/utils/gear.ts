@@ -1,4 +1,5 @@
 import type { ShopifyMoney, ShopifyProduct, ShopifyVariant } from "@/api/shopify";
+import { brandKey } from "@/utils/brands";
 
 export const ALL_BRANDS = "All Brands";
 export const ALL_TYPES = "All Types";
@@ -89,4 +90,22 @@ export const writeCartId = (cartId: string | null) => {
   } catch {
     // Cart still works for this visit; it just won't survive a reload.
   }
+};
+
+export const COACH_GEAR_PREVIEW_LIMIT = 4;
+
+/**
+ * Products for the Gear preview on a coach profile (ATH-65): products from the
+ * coach's own brands first (matched on Shopify vendor), then other in-stock gear.
+ */
+export const pickCoachGear = <T extends Pick<ShopifyProduct, "vendor" | "availableForSale">>(
+  products: T[],
+  coachBrandNames: string[],
+  limit = COACH_GEAR_PREVIEW_LIMIT
+): T[] => {
+  const brandKeys = new Set(coachBrandNames.map((name) => brandKey(name)).filter(Boolean));
+  const inStock = products.filter((product) => product.availableForSale);
+  const fromBrands = inStock.filter((product) => brandKeys.has(brandKey(product.vendor)));
+  const others = inStock.filter((product) => !brandKeys.has(brandKey(product.vendor)));
+  return [...fromBrands, ...others].slice(0, limit);
 };

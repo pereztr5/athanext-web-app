@@ -16,6 +16,7 @@ import {
 } from "./CoachProfileCard";
 import { AffiliateLinksCard } from "./AffiliateLinksCard";
 import { AvailabilitySummaryCard } from "./AvailabilitySummaryCard";
+import { CoachGearCard } from "./CoachGearCard";
 import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
 import { ReviewsCard } from "@/components/reviews/ReviewsCard";
 import { BrandStar } from "@/components/brand";
@@ -384,6 +385,8 @@ export function CoachProfileView({
             </div>
           </div>
 
+          <CoachGearCard brandNames={brands.map((brand) => brand.name)} />
+
           <CoachProfileCard>
             <h2 className={sectionTitle}>Certifications & credentials</h2>
             {(coach.certifications || []).length === 0 ? (
@@ -729,6 +732,8 @@ export function CoachProfileView({
           />
         </div>
       </div>
+
+      <CoachGearCard brandNames={brands.map((brand) => brand.name)} />
       </div>
 
       <ManageBrandsDialog
