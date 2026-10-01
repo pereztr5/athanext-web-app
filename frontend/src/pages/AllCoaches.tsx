@@ -1,8 +1,8 @@
-import { useState, useEffect, useMemo } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useEffect, useMemo, useRef } from "react";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BadgeCheck, Search } from "lucide-react";
+import { BadgeCheck, Building2, Search, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -29,6 +29,7 @@ import starIcon from "../assets/images/star.png";
 import footballIcon from "../assets/images/colored-soccer.png";
 import rowerIcon from "../assets/images/colored-rowing.png";
 import CoachCard from "@/components/coach/CoachCard";
+import { OrganizationCard } from "@/components/coach/OrganizationCard";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { chatAPI } from "@/api";
 import { buildId } from "@/utils/chatHelpers";
@@ -39,7 +40,18 @@ import { useSlowLoading } from "@/hooks/useSlowLoading";
 import { stripRichTextToPlainText } from "@/utils/richText";
 import { publicCoachRatingLabel } from "@/utils/publicRating";
 import { BrandPill } from "@/components/brand";
-import { ALL_ACADEMIES, coachAcademy, getAcademyOptions, matchesAcademy } from "@/utils/coachAcademy";
+import {
+  ALL_ACADEMIES,
+  academySlug,
+  buildOrganizations,
+  coachAcademy,
+  getAcademyOptions,
+  matchesAcademy,
+  organizationPath,
+} from "@/utils/coachAcademy";
+import { organizationPartners } from "@/utils/brands";
+import { getCoachSport } from "@/utils/coachSport";
+import { useBrandsByCoach } from "@/hooks/useBrands";
 import {
   PATHWAY_TAGS,
   zipProximityRank,
@@ -61,6 +73,13 @@ type Coach = Omit<
   sport_type?: string | null;
   profile_faqs?: Tables<"coaches">["profile_faqs"];
 };
+
+type DirectoryView = "coaches" | "organizations";
+
+const DIRECTORY_VIEWS: { value: DirectoryView; label: string; icon: typeof Users }[] = [
+  { value: "coaches", label: "Coaches", icon: Users },
+  { value: "organizations", label: "Organizations", icon: Building2 },
+];
 
 const AthleteBrowseCard = ({
   coach,
@@ -123,9 +142,14 @@ const AthleteBrowseCard = ({
         <div className="flex min-w-0 items-center gap-[6px]">
           <p className="shrink-0 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]">{position}</p>
           {academy ? (
-            <BrandPill tone="muted" className="min-w-0 max-w-full">
-              <span className="truncate">{academy}</span>
-            </BrandPill>
+            <Link
+              to={organizationPath(academy)}
+              className="min-w-0 max-w-full rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+            >
+              <BrandPill tone="muted" className="min-w-0 max-w-full hover:text-[#0054B4]">
+                <span className="truncate">{academy}</span>
+              </BrandPill>
+            </Link>
           ) : null}
         </div>
         {location || rating ? (
@@ -176,6 +200,17 @@ const AllCoaches = () => {
   const { user, userProfile } = useAuth();
   const { isAuthenticated, isAthleteLike } = useRole();
   const { toast } = useToast();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const directoryView: DirectoryView = searchParams.get("view") === "organizations" ? "organizations" : "coaches";
+  const setDirectoryView = (view: DirectoryView) =>
+    setSearchParams(
+      (params) => {
+        if (view === "organizations") params.set("view", view);
+        else params.delete("view");
+        return params;
+      },
+      { replace: true }
+    );
 
   const [coaches, setCoaches] = useState<Coach[]>([]);
 
@@ -193,7 +228,33 @@ const AllCoaches = () => {
   const [selectedPillar, setSelectedPillar] = useState("All Pillars");
   const [selectedFavoritePosition, setSelectedFavoritePosition] = useState("All Positions");
   const [selectedPathway, setSelectedPathway] = useState("All Pathways");
-  const [selectedAcademy, setSelectedAcademy] = useState(ALL_ACADEMIES);
+  // Organization pages link here with ?academy=<name>. The ref survives the automatic
+  // filter reset that runs when the sport is set on load; any manual change clears it.
+  const deepLinkAcademy = useRef<string | null>(searchParams.get("academy"));
+  const [selectedAcademy, setSelectedAcademy] = useState(deepLinkAcademy.current ?? ALL_ACADEMIES);
+  const chooseAcademy = (academy: string) => {
+    deepLinkAcademy.current = null;
+    setSelectedAcademy(academy);
+  };
+  // Apply ?academy= once, then drop it from the URL.
+  useEffect(() => {
+    const academy = searchParams.get("academy");
+    if (!academy) return;
+    deepLinkAcademy.current = academy;
+    setSelectedAcademy(academy);
+    setSearchParams(
+      (params) => {
+        params.delete("academy");
+        return params;
+      },
+      { replace: true }
+    );
+  }, [searchParams, setSearchParams]);
+  const academyCoachIds = useMemo(
+    () => coaches.filter((coach) => coach && coachAcademy(coach.company)).map((coach) => coach.id),
+    [coaches]
+  );
+  const { data: brandsByCoach = {} } = useBrandsByCoach(academyCoachIds);
   const [zipQuery, setZipQuery] = useState("");
   const [hasPrefilledZip, setHasPrefilledZip] = useState(false);
 
@@ -342,7 +403,7 @@ const AllCoaches = () => {
     setSelectedPillar("All Pillars");
     setSelectedFavoritePosition("All Positions");
     setSelectedPathway("All Pathways");
-    setSelectedAcademy(ALL_ACADEMIES);
+    setSelectedAcademy(deepLinkAcademy.current ?? ALL_ACADEMIES);
   }, [selectedSport]);
 
   useEffect(() => {
@@ -587,38 +648,6 @@ const AllCoaches = () => {
   };
 
   // Helper function to determine coach sport
-  const getCoachSport = (coach: Coach) => {
-    if (!coach) return "soccer";
-
-    const rawSport = (coach as any).sport_type || (coach as any).sport;
-    if (typeof rawSport === "string") {
-      const normalized = rawSport.toLowerCase().trim();
-      if (normalized.includes("row")) return "rowing";
-      if (normalized.includes("soc") || normalized.includes("foot")) return "soccer";
-    }
-
-    // Fallback to derived cues
-    const positions = Array.isArray(coach.positions)
-      ? coach.positions.map((p) => String(p).toLowerCase())
-      : [];
-    const sessionTypes = Array.isArray(coach.session_types)
-      ? coach.session_types.map((s) => String(s).toLowerCase())
-      : [];
-    const specialties = Array.isArray(coach.specialties)
-      ? coach.specialties.map((s) => String(s).toLowerCase())
-      : [];
-
-    const hasRowingPosition =
-      positions.includes("rower") || positions.includes("coxswain");
-    const hasRowingSession = sessionTypes.some((s) => s.includes("rowing"));
-    const hasRowingSpecialty = specialties.some((s) => s.includes("rowing"));
-
-    if (hasRowingPosition || hasRowingSession || hasRowingSpecialty) {
-      return "rowing";
-    }
-
-    return "soccer";
-  };
 
   // Helper function to check if coach should appear in rowing category
   const isRowingCoach = (coach: Coach) => getCoachSport(coach) === "rowing";
@@ -887,6 +916,16 @@ const AllCoaches = () => {
       : coaches.filter((coach) => coach && getCoachSport(coach) === selectedSport.toLowerCase())
   );
 
+  const showOrganizations = directoryView === "organizations";
+  // Same search and filters in both views: an organization is listed when any of its
+  // coaches matches, while its card describes the whole organization.
+  const matchingAcademies = new Set(filteredCoaches.map((coach) => academySlug(coach?.company)));
+  const organizations = buildOrganizations(coaches, getCoachSport).filter((org) => matchingAcademies.has(org.slug));
+  const viewCounts: Record<DirectoryView, number> = {
+    coaches: filteredCoaches.length,
+    organizations: organizations.length,
+  };
+
   const filterLabel = (value: string) => {
     switch (value) {
       case "All Sports":
@@ -912,7 +951,9 @@ const AllCoaches = () => {
   const triggerClass = (value: string, width: string) =>
     `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
   const zipDigits = zipQuery.replace(/\D/g, "");
-  const coachCountLabel = `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found${zipDigits ? ` · closest to ZIP ${zipDigits} first` : ""}`;
+  const coachCountLabel = showOrganizations
+    ? `${organizations.length} ${organizations.length === 1 ? "organization" : "organizations"} found`
+    : `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"} found${zipDigits ? ` · closest to ZIP ${zipDigits} first` : ""}`;
   const heroStats = [
     { value: verifiedCoachesCount.toLocaleString(), label: "Verified coaches" },
     { value: String(sportCount), label: sportLabel },
@@ -982,6 +1023,37 @@ const AllCoaches = () => {
             </div>
           )}
 
+          <div
+            role="tablist"
+            aria-label="Directory view"
+            className="mb-[10px] inline-flex gap-[2px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] p-[3px]"
+          >
+            {DIRECTORY_VIEWS.map(({ value, label, icon: Icon }) => (
+              <button
+                key={value}
+                type="button"
+                role="tab"
+                aria-selected={directoryView === value}
+                onClick={() => setDirectoryView(value)}
+                className={
+                  "inline-flex h-[30px] items-center gap-[6px] rounded-[6px] px-[14px] text-[14px] font-medium tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] " +
+                  (directoryView === value ? "bg-[#0054B4] text-[#F1F1E6]" : "text-[#767980] hover:text-[#1A202C]")
+                }
+              >
+                <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                {label}
+                <span
+                  className={
+                    "rounded-[4px] px-[6px] py-px text-[12px] font-medium " +
+                    (directoryView === value ? "bg-[#004390] text-[#F1F1E6]" : "bg-[#F1F1E6] text-[#484D56]")
+                  }
+                >
+                  {viewCounts[value]}
+                </span>
+              </button>
+            ))}
+          </div>
+
           {/* Search and Filters */}
 
           <div className="flex flex-col gap-[10px] lg:flex-row lg:items-center">
@@ -990,8 +1062,14 @@ const AllCoaches = () => {
               <input
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder={isAuthenticated ? "Search coaches" : "Search coaches, specialties, locations"}
-                aria-label="Search coaches"
+                placeholder={
+                  showOrganizations
+                    ? "Search organizations"
+                    : isAuthenticated
+                      ? "Search coaches"
+                      : "Search coaches, specialties, locations"
+                }
+                aria-label={showOrganizations ? "Search organizations" : "Search coaches"}
                 className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
               />
             </div>
@@ -1010,7 +1088,13 @@ const AllCoaches = () => {
 
             <div className={isAuthenticated ? "grid min-w-0 flex-1 grid-cols-1 gap-[10px] sm:grid-cols-2 " + (academyOptions.length > 0 ? "lg:grid-cols-5" : "lg:grid-cols-4") : "grid min-w-0 grid-cols-1 gap-[10px] sm:grid-cols-2 lg:flex lg:flex-none"}>
               {!isAuthenticated && (
-                <Select value={selectedSport} onValueChange={setSelectedSport}>
+                <Select
+                  value={selectedSport}
+                  onValueChange={(sport) => {
+                    deepLinkAcademy.current = null;
+                    setSelectedSport(sport);
+                  }}
+                >
                   <SelectTrigger className={triggerClass(selectedSport, "lg:!w-[130px]")} aria-label="Sport">
                     <SelectValue placeholder="Sport">{filterLabel(selectedSport)}</SelectValue>
                   </SelectTrigger>
@@ -1054,7 +1138,7 @@ const AllCoaches = () => {
               </Select>
 
               {academyOptions.length > 0 && (
-                <Select value={selectedAcademy} onValueChange={setSelectedAcademy}>
+                <Select value={selectedAcademy} onValueChange={chooseAcademy}>
                   <SelectTrigger className={triggerClass(selectedAcademy, "lg:!w-[160px]")} aria-label="Academy">
                     <SelectValue>{filterLabel(selectedAcademy)}</SelectValue>
                   </SelectTrigger>
@@ -1106,9 +1190,46 @@ const AllCoaches = () => {
 
           <p className={isAuthenticated ? "mb-6 text-[14px] font-normal tracking-[-0.7px] text-[#767980]" : "mx-auto mb-6 max-w-[1000px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]"}>
             {coachCountLabel}
+            {!showOrganizations && selectedAcademy !== ALL_ACADEMIES ? (
+              <span className="ml-2 text-[12px] text-[#A3A6AB]">
+                Showing coaches at{" "}
+                <Link to={organizationPath(selectedAcademy)} className="text-[#0054B4] hover:underline">
+                  {selectedAcademy}
+                </Link>
+                .{" "}
+                <button
+                  type="button"
+                  onClick={() => chooseAcademy(ALL_ACADEMIES)}
+                  className="text-[#0054B4] hover:underline"
+                >
+                  Show all
+                </button>
+              </span>
+            ) : null}
           </p>
 
-          {filteredCoaches.length === 0 ? (
+          {showOrganizations ? (
+            organizations.length === 0 ? (
+              <div className="mx-auto flex max-w-[1000px] flex-col items-center gap-[6px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center">
+                <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                  No organizations found
+                </p>
+                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                  Organizations appear here once their coaches list an academy or club on their profile.
+                </p>
+              </div>
+            ) : (
+              <div className={isAuthenticated ? "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3" : "mx-auto grid max-w-[1000px] grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3"}>
+                {organizations.map((organization) => (
+                  <OrganizationCard
+                    key={organization.name}
+                    organization={organization}
+                    partners={organizationPartners(organization.coachIds, brandsByCoach, 3)}
+                  />
+                ))}
+              </div>
+            )
+          ) : filteredCoaches.length === 0 ? (
             <div className="mx-auto flex max-w-[1000px] flex-col items-center gap-[15px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center">
               <span className="inline-flex size-10 items-center justify-center rounded-[8px] bg-[#F4F4EB] text-[#767980]" aria-hidden="true">
                 <Search className="size-5" strokeWidth={1.5} />
@@ -1128,7 +1249,7 @@ const AllCoaches = () => {
                   setSelectedPillar("All Pillars");
                   setSelectedFavoritePosition("All Positions");
                   setSelectedPathway("All Pathways");
-                  setSelectedAcademy(ALL_ACADEMIES);
+                  chooseAcademy(ALL_ACADEMIES);
                   setZipQuery("");
                   setSortBy("Highest Rated");
                 }}

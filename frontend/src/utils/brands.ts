@@ -55,3 +55,24 @@ export const validateBrandLogo = (file: Pick<File, "type" | "size">): string | n
   if (file.size > BRAND_LOGO_MAX_BYTES) return "Logo must be 2MB or smaller.";
   return null;
 };
+
+/** An organization's partners: its coaches' brands, most shared first, deduped by id. */
+export const organizationPartners = <T extends Pick<Brand, "id" | "name">>(
+  coachIds: string[],
+  brandsByCoach: Record<string, T[]>,
+  limit = Infinity
+): T[] => {
+  const counts = new Map<string, { brand: T; count: number; first: number }>();
+  let order = 0;
+  coachIds.forEach((coachId) => {
+    (brandsByCoach[coachId] ?? []).forEach((brand) => {
+      const entry = counts.get(brand.id);
+      if (entry) entry.count += 1;
+      else counts.set(brand.id, { brand, count: 1, first: order++ });
+    });
+  });
+  return [...counts.values()]
+    .sort((a, b) => b.count - a.count || a.first - b.first)
+    .slice(0, limit)
+    .map(({ brand }) => brand);
+};

@@ -19,3 +19,12 @@ export const useCoachBrands = (coachId: string | undefined) =>
     queryFn: () => brandsAPI.getCoachBrands(coachId!),
     enabled: Boolean(coachId),
   });
+
+/** Brands of many coaches in one query, keyed by coach id. */
+export const useBrandsByCoach = (coachIds: string[]) =>
+  useQuery({
+    queryKey: ["brands-by-coach", [...coachIds].sort()],
+    queryFn: () => brandsAPI.getBrandsByCoach(coachIds),
+    enabled: coachIds.length > 0,
+    staleTime: 5 * 60 * 1000,
+  });

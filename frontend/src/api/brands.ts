@@ -76,6 +76,25 @@ export const brandsAPI = {
     return ((data as { brand: Brand | null }[]) || []).map((row) => row.brand).filter(Boolean) as Brand[];
   },
 
+  /** Brands for several coaches at once, keyed by coach id (organization cards and pages). */
+  async getBrandsByCoach(coachIds: string[]): Promise<Record<string, Brand[]>> {
+    // Batched so the coach_id=in.(...) filter keeps the request URL short.
+    const BATCH = 100;
+    const byCoach: Record<string, Brand[]> = {};
+    for (let i = 0; i < coachIds.length; i += BATCH) {
+      const { data, error } = await db
+        .from('coach_brands')
+        .select(`coach_id, display_order, brand:brands(${BRAND_COLUMNS})`)
+        .in('coach_id', coachIds.slice(i, i + BATCH))
+        .order('display_order');
+      if (error) throw error;
+      ((data as { coach_id: string; brand: Brand | null }[]) || []).forEach(({ coach_id, brand }) => {
+        if (brand) (byCoach[coach_id] ??= []).push(brand);
+      });
+    }
+    return byCoach;
+  },
+
   /** Replaces the coach's brands with brandIds, in that display order. */
   async setCoachBrands(coachId: string, brandIds: string[]): Promise<void> {
     let removal = db.from('coach_brands').delete().eq('coach_id', coachId);

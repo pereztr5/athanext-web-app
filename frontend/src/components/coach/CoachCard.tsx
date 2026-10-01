@@ -9,7 +9,8 @@ import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import type { Coach } from '@/types/coachProfile'
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { BrandPill, BrandStar } from "@/components/brand";
-import { coachAcademy } from "@/utils/coachAcademy";
+import { coachAcademy, organizationPath } from "@/utils/coachAcademy";
+import { Link } from "react-router-dom";
 
 interface CoachCardProps {
     coach: Coach;
@@ -193,9 +194,15 @@ const CoachCard = ({
                                     {primarySpecialty}
                                 </p>
                                 {academy && (
-                                    <BrandPill tone="muted" className="min-w-0 max-w-full">
-                                        <span className="truncate">{academy}</span>
-                                    </BrandPill>
+                                    <Link
+                                        to={organizationPath(academy)}
+                                        onClick={(e) => e.stopPropagation()}
+                                        className="min-w-0 max-w-full rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                                    >
+                                        <BrandPill tone="muted" className="min-w-0 max-w-full hover:text-[#0054B4]">
+                                            <span className="truncate">{academy}</span>
+                                        </BrandPill>
+                                    </Link>
                                 )}
                             </div>
                             <p className="flex items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">

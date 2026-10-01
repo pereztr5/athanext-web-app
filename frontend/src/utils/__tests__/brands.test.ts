@@ -7,6 +7,7 @@ import {
   findBrandByName,
   normalizeBrandWebsite,
   validateBrandLogo,
+  organizationPartners,
 } from "@/utils/brands";
 
 const brands = [
@@ -48,5 +49,21 @@ describe("validateBrandLogo", () => {
     expect(validateBrandLogo({ type: "image/svg+xml", size: 1000 })).toBeNull();
     expect(validateBrandLogo({ type: "image/gif", size: 1000 })).toMatch(/PNG/);
     expect(validateBrandLogo({ type: "image/png", size: BRAND_LOGO_MAX_BYTES + 1 })).toMatch(/2MB/);
+  });
+});
+
+describe("organizationPartners", () => {
+  const nike = { id: "n", name: "Nike" };
+  const setgk = { id: "s", name: "SetGK" };
+  const puma = { id: "p", name: "Puma" };
+
+  it("dedupes brands and ranks the most shared first", () => {
+    const byCoach = { a: [nike, setgk], b: [setgk], c: [puma, setgk] };
+    expect(organizationPartners(["a", "b", "c"], byCoach).map((b) => b.name)).toEqual(["SetGK", "Nike", "Puma"]);
+    expect(organizationPartners(["a", "b", "c"], byCoach, 2).map((b) => b.name)).toEqual(["SetGK", "Nike"]);
+  });
+
+  it("ignores coaches outside the organization or without brands", () => {
+    expect(organizationPartners(["x"], { a: [nike] })).toEqual([]);
   });
 });

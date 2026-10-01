@@ -20,6 +20,7 @@ import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ContactUs from "./pages/ContactUs";
+import OrganizationProfile from "./pages/OrganizationProfile";
 import SignupConfirmation from "./pages/SignupConfirmation";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -50,6 +51,7 @@ export const ROUTES = {
   FORGOT_PASSWORD: "/forgot-password",
   RESET_PASSWORD: "/reset-password",
   COACHES: "/coaches",
+  ORGANIZATION: "/organizations/:slug",
   GEAR: "/gear",
   GEAR_PRODUCT: "/gear/:handle",
   PARTNERSHIPS: "/partnerships",
@@ -102,6 +104,7 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.COACHES, element: <AllCoaches /> },
   { path: ROUTES.COACH_PRICING, element: <CoachProfile /> },
   { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
+  { path: ROUTES.ORGANIZATION, element: <OrganizationProfile /> },
   { path: ROUTES.INVITE, element: <InviteClaim /> },
   { path: ROUTES.GEAR, element: <Gear /> },
   { path: ROUTES.GEAR_PRODUCT, element: <GearProduct /> },

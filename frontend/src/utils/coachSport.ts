@@ -84,3 +84,33 @@ export const detectCoachSport = (
 
   return normalizeCoachSport(metadataSource);
 };
+
+const lowerAll = (values: Array<string | null> | null | undefined) =>
+  Array.isArray(values) ? values.map((value) => String(value).toLowerCase()) : [];
+
+/**
+ * Sport used by the coach directory and organization pages: the coach's sport field,
+ * else rowing cues in positions, session types or specialties, else soccer.
+ */
+export const getCoachSport = (coach?: CoachSportSource | null): CoachSportValue => {
+  if (!coach) return "soccer";
+
+  const rawSport = coach.sport_type || coach.sport;
+  if (typeof rawSport === "string") {
+    const normalized = rawSport.toLowerCase().trim();
+    if (normalized.includes("row")) return "rowing";
+    if (normalized.includes("soc") || normalized.includes("foot")) return "soccer";
+  }
+
+  const positions = lowerAll(coach.positions);
+  if (
+    positions.includes("rower") ||
+    positions.includes("coxswain") ||
+    lowerAll(coach.session_types).some((s) => s.includes("rowing")) ||
+    lowerAll(coach.specialties).some((s) => s.includes("rowing"))
+  ) {
+    return "rowing";
+  }
+
+  return "soccer";
+};
