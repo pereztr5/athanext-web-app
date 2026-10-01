@@ -219,7 +219,7 @@ export function CoachProfileView({
           </Link>
 
           <div className="grid w-full grid-cols-1 gap-6 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px] lg:items-stretch">
-            <div className="relative h-[165px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] lg:h-auto lg:min-h-[165px]">
+            <div className="relative aspect-square w-[165px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] lg:w-full lg:self-start">
               {photoUrl ? (
                 <img src={photoUrl} alt={coach.name} className="absolute inset-0 size-full object-cover" />
               ) : (
@@ -431,7 +431,7 @@ export function CoachProfileView({
       <ProfileStrengthMeter coach={coach} onEdit={onEdit} variant="card" />
 
       <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px] lg:items-stretch">
-        <div className="relative h-[179px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] lg:h-auto lg:min-h-[179px]">
+        <div className="relative aspect-square w-[179px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] lg:w-full lg:self-start">
           {photoUrl ? (
             <img src={photoUrl} alt={coach.name} className="absolute inset-0 size-full object-cover" />
           ) : (
