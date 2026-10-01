@@ -90,15 +90,11 @@ interface AppRoute {
 export const PUBLIC_ROUTES: AppRoute[] = [
   { path: ROUTES.HOME, element: <HomeSwitch /> },
   { path: ROUTES.WHY_ATHALINK, element: <WhyMyKonnect /> },
-  { path: ROUTES.BECOME_COACH, element: <BecomeACoach /> },
   { path: ROUTES.PARTNERSHIPS, element: <Partnerships /> },
   { path: ROUTES.PARTNERSHIP_SUCCESS, element: <PartnershipSuccess /> },
   { path: ROUTES.SOCCER, element: <SoccerPillars /> },
   { path: ROUTES.ROWING, element: <RowingPillars /> },
   { path: ROUTES.ABOUT, element: <About /> },
-  { path: ROUTES.PRIVACY_POLICY, element: <PrivacyPolicy /> },
-  { path: ROUTES.TERMS_AND_CONDITIONS, element: <TermsAndConditions /> },
-  { path: ROUTES.CONTACT_US, element: <ContactUs /> },
 ];
 
 // Public pages that render inside the app shell for signed-in users
@@ -109,6 +105,12 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.INVITE, element: <InviteClaim /> },
   { path: ROUTES.GEAR, element: <Gear /> },
   { path: ROUTES.GEAR_PRODUCT, element: <GearProduct /> },
+  // Support and legal pages: reachable from inside the app, so signed-in
+  // users must keep the app shell instead of landing in the marketing chrome.
+  { path: ROUTES.CONTACT_US, element: <ContactUs /> },
+  { path: ROUTES.PRIVACY_POLICY, element: <PrivacyPolicy /> },
+  { path: ROUTES.TERMS_AND_CONDITIONS, element: <TermsAndConditions /> },
+  { path: ROUTES.BECOME_COACH, element: <BecomeACoach /> },
 ];
 
 export const AUTH_FLOW_ROUTES: AppRoute[] = [

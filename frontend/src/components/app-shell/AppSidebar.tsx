@@ -51,6 +51,12 @@ const COACH_NAV = [
   { title: "Profile", url: ROUTES.PROFILE, icon: User },
 ];
 
+const FOOTER_LINKS = [
+  { title: "Support", url: ROUTES.CONTACT_US },
+  { title: "Privacy", url: ROUTES.PRIVACY_POLICY },
+  { title: "Terms", url: ROUTES.TERMS_AND_CONDITIONS },
+];
+
 const navItemClass =
   "!h-8 !gap-[5px] !rounded-[5px] !border !border-transparent !px-[10px] !py-0 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none transition-colors hover:!bg-transparent hover:!text-[#1A202C] focus-visible:!ring-2 focus-visible:!ring-[#6698D2] data-[active=true]:!border-[#EAEADF] data-[active=true]:!bg-[#F9F9F5] data-[active=true]:font-medium data-[active=true]:!text-[#0054B4] data-[active=true]:shadow-none data-[active=true]:hover:!bg-[#F9F9F5] data-[active=true]:hover:!text-[#0054B4] [&>svg]:!size-4 [&>svg]:shrink-0";
 
@@ -127,7 +133,19 @@ export const AppSidebar = () => {
             })}
           </SidebarMenu>
         </div>
-        <div className="mt-auto flex items-center gap-[10px]">
+        <nav aria-label="Support and legal" className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pb-4">
+          {FOOTER_LINKS.map((link) => (
+            <Link
+              key={link.url}
+              to={link.url}
+              onClick={() => setOpenMobile(false)}
+              className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980] transition-colors hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+            >
+              {link.title}
+            </Link>
+          ))}
+        </nav>
+        <div className="flex items-center gap-[10px]">
           <UserMenu variant="sidebar" useFallbackDelay avatarReady={profileReady} />
           <div className="min-w-0 text-left">
             <p className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56]">

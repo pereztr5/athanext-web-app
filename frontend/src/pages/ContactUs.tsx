@@ -1,6 +1,7 @@
 import { ContactHero, ContactInfoCard, ContactForm } from "@/components/contact";
 import { useContactSubmission } from "@/hooks/useContactSubmission";
 import { useContactInfo } from "@/hooks/useContactInfo";
+import { useRole } from "@/hooks/useRole";
 import { FALLBACK_CONTACT_METHODS } from "@/utils/db";
 import type { ContactMethod, ContactFormData } from "@/types/contact";
 import contactBanner from "@/assets/images/contact-us-hero-section.svg";
@@ -13,6 +14,7 @@ import contactMessageImg from "@/assets/images/Trophy.svg";
 const ContactUs = () => {
   const { submitContactForm, isSubmitting, errors } = useContactSubmission();
   const { contactInfo, loading: contactInfoLoading } = useContactInfo();
+  const { isAuthenticated, ready } = useRole();
 
   // Dynamic contact methods from database
   const contactMethods: ContactMethod[] = (contactInfo
@@ -48,7 +50,7 @@ const ContactUs = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pt-[3.8rem]">
+    <div className={ready && isAuthenticated ? "min-h-screen pt-6" : "min-h-screen bg-gradient-to-br from-slate-50 to-slate-100 pt-[3.8rem]"}>
       {/* Hero Section */}
       <ContactHero
         backgroundImage={contactBanner}

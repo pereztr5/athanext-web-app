@@ -8,13 +8,15 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import '@/styles/privacyPolicy-termsCondition.css';
 import PolicyLoadingSkeleton from '@/components/common/PolicyLoadingSkeleton';
+import { usePolicyPageClass } from '@/hooks/usePolicyPageClass';
 
 
 export default function PrivacyPolicy() {
   const { policy, loading, error, hasContent } = usePrivacyPolicy();
+  const pageClass = usePolicyPageClass();
 
   return (
-    <div className="min-h-screen pt-20 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-primary/5">
+    <div className={pageClass}>
       <ScrollToTop />
       <ErrorBoundary>
         {/* Loading State */}

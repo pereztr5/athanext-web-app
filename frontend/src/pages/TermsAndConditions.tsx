@@ -6,13 +6,15 @@ import { sanitizeHTML } from '@/utils/sanitize';
 import { formatDateToUSA } from '@/utils/helperFunctions';
 import '@/styles/privacyPolicy-termsCondition.css';
 import PolicyLoadingSkeleton from '@/components/common/PolicyLoadingSkeleton';
+import { usePolicyPageClass } from '@/hooks/usePolicyPageClass';
 
 const TermsAndConditions = () => {
   const { termsAndConditions, loading, error, refetch } = useTermsAndConditions();
+  const pageClass = usePolicyPageClass();
 
   if (loading) {
     return (
-      <div className="min-h-screen pt-20 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-primary/5">
+      <div className={pageClass}>
         <PolicyLoadingSkeleton />
       </div>
     );
@@ -20,7 +22,7 @@ const TermsAndConditions = () => {
 
   if (error || !termsAndConditions) {
     return (
-      <div className="min-h-screen pt-20 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-primary/5">
+      <div className={pageClass}>
         <div className="max-w-8xl mx-auto">
           <Card className="border border-red-500/20 bg-red-500/5 backdrop-blur-sm">
             <CardContent className="p-6">
@@ -51,7 +53,7 @@ const TermsAndConditions = () => {
   }
 
   return (
-    <div className="min-h-screen pt-20 pb-12 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-primary/5">
+    <div className={pageClass}>
       <div className="max-w-5xl mx-auto">
         <div className="mb-8">
           <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-slate-800 dark:text-slate-200">
