@@ -48,7 +48,7 @@ const DEMO_ABOUT_DATA = ABOUT_PAGE_DATA;
 export async function getAboutPageData(): Promise<ApiResponse<AboutData>> {
   try {
     // Try to fetch from Supabase tables
-    let storyData = DEMO_ABOUT_DATA.story;
+    let storyData: AboutStory | undefined = DEMO_ABOUT_DATA.story;
     let valuesData = DEMO_ABOUT_DATA.values;
     let teamData = DEMO_ABOUT_DATA.team;
 

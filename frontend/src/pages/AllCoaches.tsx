@@ -61,7 +61,16 @@ import {
 
 type Coach = Omit<
   Tables<"coaches">,
-  "email" | "slug" | "profile_faqs" | "cover_image_urls" | "favourite_positions" | "is_verified" | "pathway_tags"
+  | "email"
+  | "slug"
+  | "profile_faqs"
+  | "cover_image_urls"
+  | "favourite_positions"
+  | "is_verified"
+  | "pathway_tags"
+  // Not returned by get_coaches_public.
+  | "requires_booking_confirmation"
+  | "affiliate_links"
 > & {
   is_verified?: boolean;
   favourite_positions?: string[];

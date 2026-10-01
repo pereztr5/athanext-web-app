@@ -260,7 +260,8 @@ const CoachCalendarPage = () => {
           }
         }}
         coachId={coachId}
-        existingAvailabilities={(availabilities as CoachAvailability[] | null | undefined) ?? null}
+        // Occurrence periods carry weekly_slots; the modal reads them as-is.
+        existingAvailabilities={(availabilities as unknown as CoachAvailability[] | null | undefined) ?? null}
         defaultScheduleMode="single"
       />
     </div>

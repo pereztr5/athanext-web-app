@@ -205,8 +205,6 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         .filter((id): id is string => Boolean(id));
 
       conversationIds.forEach((convId) => subscribeToConversation(convId, user.id));
-    } else {
-      // console.log('[UserMenu] No existing conversations, but will subscribe to new ones');
     }
 
     // ALWAYS subscribe to new conversations being created (even if user has no conversations yet)

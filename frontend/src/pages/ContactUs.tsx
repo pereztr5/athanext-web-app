@@ -20,21 +20,21 @@ const ContactUs = () => {
   const contactMethods: ContactMethod[] = (contactInfo
     ? [
         {
-          icon: "email",
+          icon: "email" as const,
           title: "Email Us",
           value: contactInfo.email || FALLBACK_CONTACT_METHODS[0].value,
           description: "We typically respond within 24 hours",
           link: `mailto:${contactInfo.email || FALLBACK_CONTACT_METHODS[0].value}`,
         },
         {
-          icon: "phone",
+          icon: "phone" as const,
           title: "Call Us",
           value: contactInfo.contact_number || FALLBACK_CONTACT_METHODS[1].value,
           description: "Mon-Fri from 8am to 8pm PST",
           link: `tel:${contactInfo.contact_number?.replace(/\D/g, "") || "15551234568"}`,
         },
         {
-          icon: "location",
+          icon: "location" as const,
           title: "Visit Us",
           value: contactInfo.location || FALLBACK_CONTACT_METHODS[2].value,
           description: "Building the future of athletic development",

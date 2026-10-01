@@ -474,7 +474,6 @@ export const chatAPI = {
         }
       )
       .subscribe((status, err) => {
-        // console.log('[chatAPI] Participant subscription status:', { userId, status, err });
       });
   },
 
@@ -498,7 +497,6 @@ export const chatAPI = {
         }
       )
       .subscribe((status, err) => {
-        // console.log('[chatAPI] Subscription status for conversation:', conversationId, { status, err });
       });
     
     return channel;

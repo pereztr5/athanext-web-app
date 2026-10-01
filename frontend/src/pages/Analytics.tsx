@@ -93,10 +93,9 @@ const AnalyticsPage = () => {
     const lapseCutoff = now.getTime() - 60 * 24 * 60 * 60 * 1000;
     let lapsed = 0;
     for (const span of athleteSpan.values()) {
-      const first = new Date(span.first);
       const activeThisMonth = span.last >= monthStart.getTime();
-      if (activeThisMonth && first < monthStart) returning += 1;
-      if (activeThisMonth && first >= monthStart.getTime()) newcomers += 1;
+      if (activeThisMonth && span.first < monthStart.getTime()) returning += 1;
+      if (activeThisMonth && span.first >= monthStart.getTime()) newcomers += 1;
       if (span.last < lapseCutoff) lapsed += 1;
     }
     const activeThisMonth = returning + newcomers;

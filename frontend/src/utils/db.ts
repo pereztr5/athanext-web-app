@@ -5,6 +5,8 @@
  */
 
 import { Constants } from "@/integrations/supabase/types";
+import type { AthleteStatDefinition } from "@/types/athlete-profile";
+import type { ContactMethod } from "@/types/contact";
 
 export interface Option {
   value: string;
@@ -29,7 +31,7 @@ export const ATHLETE_IMAGE_LIMITS = {
   MAX_COVER_IMAGE_SIZE: 10 * 1024 * 1024, // 10MB
 };
 
-export const ATHLETE_PROFILE_BASE_STATS = [
+export const ATHLETE_PROFILE_BASE_STATS: AthleteStatDefinition[] = [
   {
     key: "sessions_completed",
     label: "Sessions Completed",
@@ -552,7 +554,7 @@ export const PROFILE_TYPE = {
   coach: "coach",
   athlete: "athlete",
   parent: "parent",
-};
+} as const;
 
 // ============================================================================
 // CONTACT INFORMATION FALLBACK
@@ -562,7 +564,7 @@ export const PROFILE_TYPE = {
  * Default contact methods used as fallback when database fetch fails
  * This ensures contact information is always available to users
  */
-export const FALLBACK_CONTACT_METHODS = [
+export const FALLBACK_CONTACT_METHODS: ContactMethod[] = [
   {
     icon: "email",
     title: "Email Us",

@@ -16,7 +16,7 @@ import { strings } from "@/config/strings";
 import { PERSONA_TYPES, SPORTS_OPTIONS, ATHLETE_SPORTS_OPTIONS, PROFILE_TYPE } from "@/utils/db";
 import { authSchema, signupSchema, profileCompletionSchema } from "@/utils/validations";
 import { PhoneInput } from "@/components/common/PhoneInput";
-import { normalizeStoredPhone } from "@/utils/phone";
+import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
 import { Loader2, Eye, EyeOff, MapPin } from "lucide-react";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswordValidation";

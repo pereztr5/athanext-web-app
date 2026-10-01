@@ -103,7 +103,8 @@ function AvatarArea({
                     alt={`${name}'s avatar`}
                     src={previewUrl || imageUrl || undefined}
                     className="size-full object-cover"
-                    {...({ fetchPriority: "high" } as any)}
+                    // React 18 only passes the lowercase attribute through to the DOM.
+                    {...({ fetchpriority: "high" } as Record<string, string>)}
                 />
             ) : (
                 <span className="text-[20px] font-medium text-[#484D56]">{initials}</span>

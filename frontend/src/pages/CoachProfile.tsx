@@ -66,7 +66,7 @@ const CoachProfile = () => {
     weekStart: string;
     occurrenceId: string;
   } | null>(null);
-  const { reviews = [], averageRating = 0, ratingDistribution = {}, totalReviews = 0 } = useReviews(coach?.id);
+  const { reviews = [], averageRating = 0, ratingDistribution = {}, totalReviews = 0, submitReview } = useReviews(coach?.id);
   const [startingChat, setStartingChat] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
   const [chatConversationId, setChatConversationId] = useState<string | null>(null);
@@ -267,10 +267,6 @@ const CoachProfile = () => {
         </div>
       </div>
     );
-  }
-
-  function submitReview(rating: number, reviewText: string): Promise<{ error: Error; }> {
-    throw new Error("Function not implemented.");
   }
 
   if (isAuthenticated) {

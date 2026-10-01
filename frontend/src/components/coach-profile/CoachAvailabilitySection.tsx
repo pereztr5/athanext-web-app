@@ -822,7 +822,7 @@ export const CoachAvailabilitySection = ({
                   <button
                     type="button"
                     disabled={!selectedPeriod}
-                    onClick={() => selectedPeriod && handleEdit(selectedPeriod)}
+                    onClick={() => selectedPeriod && handleEdit(selectedPeriod as unknown as CoachAvailability)}
                     className={secondaryButtonClass}
                   >
                     Edit

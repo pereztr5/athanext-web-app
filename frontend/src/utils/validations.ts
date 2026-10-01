@@ -110,7 +110,7 @@ export const authSchema = z.object({
  * Schema for sign up form validation
  */
 export const signupSchema = z.object({
-  persona: z.enum(PERSONA_TYPES as [PersonaType, ...PersonaType[]], { message: "Please select who you are" }),
+  persona: z.enum(PERSONA_TYPES, { message: "Please select who you are" }),
   name: z.string().min(1, "Name is required"),
   dateOfBirth: z.string()
     .regex(/^\d{2}\/\d{2}\/\d{4}$/, { message: "Date must be in DD/MM/YYYY format" })

@@ -161,11 +161,8 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       }
 
       const newProfile = {
-        type: resolvedPersonaHint === PROFILE_TYPE.athlete
-          ? PROFILE_TYPE.athlete
-          : resolvedPersonaHint === PROFILE_TYPE.coach
-          ? PROFILE_TYPE.coach
-          : null,
+        // Athletes returned above, so only a coach without a coach row reaches here.
+        type: resolvedPersonaHint === PROFILE_TYPE.coach ? PROFILE_TYPE.coach : null,
         data: null,
         userProfile: baseProfile || null,
       };
