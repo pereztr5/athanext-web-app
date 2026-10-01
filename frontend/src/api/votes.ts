@@ -37,30 +37,6 @@ export const votesAPI = {
   },
 
   /**
-   * Get vote statistics
-   * @returns ApiResponse with vote counts and percentages by sport
-   */
-  async getVoteStats(): Promise<ApiResponse<VoteStats[]>> {
-    return apiClient.rpc(
-      'get_vote_statistics',
-      undefined,
-      'Fetch vote statistics'
-    );
-  },
-
-  /**
-   * Get total vote count
-   * @returns ApiResponse with total number of votes
-   */
-  async getTotalVotes(): Promise<ApiResponse<{ total: number }>> {
-    return apiClient.rpc(
-      'get_total_votes',
-      undefined,
-      'Fetch total votes'
-    );
-  },
-
-  /**
    * Check if user already voted
    * @returns ApiResponse with boolean indicating vote status
    */
@@ -160,36 +136,5 @@ export const votesAPI = {
         .eq('user_id', user.data.user!.id),
       'Delete user vote'
     );
-  },
-
-  /**
-   * Get sport with highest votes
-   * @returns ApiResponse with sport with most votes
-   */
-  async getLeadingSport(): Promise<ApiResponse<{ sport: string; count: number } | null>> {
-    const response = await apiClient.rpc<VoteStats[]>(
-      'get_vote_statistics',
-      undefined,
-      'Fetch leading sport'
-    );
-
-    if (response.error || !response.data || response.data.length === 0) {
-      return {
-        data: null,
-        error: response.error,
-      };
-    }
-
-    const leading = response.data.reduce((prev, current) => 
-      (prev.count > current.count) ? prev : current
-    );
-
-    return {
-      data: {
-        sport: leading.sport,
-        count: leading.count,
-      },
-      error: null,
-    };
   },
 };

@@ -50,7 +50,7 @@ export const useMySessions = (userRole?: 'coach' | 'athlete') => {
     const fetchAthleteId = async () => {
       if (personaId || (!resolvedRole && coachId) || (resolvedRole && resolvedRole !== 'athlete') || !user?.id) return;
       const { data, error } = await supabase
-        .from('athlete_profiles' as any)
+        .from('athlete_profiles')
         .select('id')
         .eq('user_id', user.id)
         .maybeSingle();

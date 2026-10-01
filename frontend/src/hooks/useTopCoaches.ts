@@ -1,15 +1,8 @@
 import { useQuery } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
-import type { Tables } from "@/integrations/supabase/types";
+import type { PublicCoach } from "@/hooks/useCoaches";
 
-export type PublicCoach = Omit<Tables<"coaches">, "email" | "slug" | "profile_faqs"> & {
-  is_verified?: boolean;
-  zip_code?: string | null;
-  pathway_tags?: string[];
-  slug?: string | null;
-  position?: string | null;
-  profile_faqs?: Tables<"coaches">["profile_faqs"];
-};
+export type { PublicCoach };
 
 export const useTopCoaches = (limit: number = 3) => {
   const query = useQuery<PublicCoach[]>({

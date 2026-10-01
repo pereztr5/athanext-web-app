@@ -16,7 +16,8 @@ export type PublicCoach = Omit<Database['public']['Tables']['coaches']['Row'], "
   pathway_tags?: string[];
   slug?: string | null;
 };
-export type CoachInsert = Database['public']['Tables']['coaches']['Insert'];
+// slug is filled by the coaches_set_slug_on_insert trigger, so callers may omit it.
+export type CoachInsert = Omit<Database['public']['Tables']['coaches']['Insert'], 'slug'> & { slug?: string };
 export type CoachUpdate = Database['public']['Tables']['coaches']['Update'];
 
 /**
@@ -48,29 +49,6 @@ export const coachesAPI = {
     return {
       data: coach,
       error: response.error ? response.error : null,
-    };
-  },
-
-  /**
-   * Get coach count (admin use)
-   */
-  async getCoachCount(): Promise<ApiResponse<number>> {
-    const response = await apiClient.rpc<Array<{ count: number }>>(
-      'get_coach_count',
-      undefined,
-      'Get total coach count'
-    );
-
-    if (response.error || !response.data) {
-      return {
-        data: 0,
-        error: response.error,
-      };
-    }
-
-    return {
-      data: response.data.length,
-      error: null,
     };
   },
 

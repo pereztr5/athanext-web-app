@@ -35,6 +35,17 @@ const SOCCER_PATTERNS = [
 const matchesAnyPattern = (value: string, patterns: RegExp[]) =>
   patterns.some((pattern) => pattern.test(value));
 
+/**
+ * Loose sport match on a free-text sport field: "row" anywhere means rowing,
+ * "soccer"/"football"/"scoccer" anywhere means soccer, anything else is unknown.
+ */
+export const sportFromText = (value?: string | null): CoachSportValue | undefined => {
+  const text = (value ?? "").toString().toLowerCase();
+  if (text.includes("row")) return "rowing";
+  if (["soccer", "football", "scoccer"].some((sport) => text.includes(sport))) return "soccer";
+  return undefined;
+};
+
 export const normalizeCoachSport = (value?: string | null): CoachSportValue | undefined => {
   const normalized = value?.toLowerCase().trim() ?? "";
   if (!normalized) return undefined;

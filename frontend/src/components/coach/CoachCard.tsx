@@ -11,6 +11,7 @@ import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publ
 import { BrandPill, BrandStar } from "@/components/brand";
 import { coachAcademy, organizationPath } from "@/utils/coachAcademy";
 import { Link } from "react-router-dom";
+import { sportFromText } from '@/utils/coachSport';
 
 interface CoachCardProps {
     coach: Coach;
@@ -89,8 +90,7 @@ const CoachCard = ({
             normalizePosition(sportOption?.value || "", value)
         );
 
-    const sportSource = ((coach as any)?.sport || (coach as any)?.sport_type || '').toLowerCase();
-    const isRowing = sportSource.includes('row');
+    const isRowing = sportFromText((coach as any)?.sport || (coach as any)?.sport_type) === 'rowing';
     const sportIcon = isRowing ? rowerIcon : footballIcon;
 
     const maxBadgesToShow = 2;

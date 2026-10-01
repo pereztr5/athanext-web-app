@@ -61,7 +61,7 @@ const CoachCalendarPage = () => {
     enabled: Boolean(coachId),
     queryFn: async (): Promise<CalendarOccurrence[]> => {
       const { data, error } = await supabase
-        .from("coach_availability_slot_occurrences" as any)
+        .from("coach_availability_slot_occurrences")
         .select(
           "id, occurrence_date, start_time, end_time, session_name, session_type, location, pillar_slot, price, is_enabled, max_bookings_per_slot"
         )

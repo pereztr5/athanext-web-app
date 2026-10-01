@@ -29,6 +29,8 @@ export type CoachDetails = Omit<PublicCoach, "profile_faqs" | "is_verified" | "c
   certifications?: CoachCertification[];
   achievements?: CoachAchievement[];
   position?: string | null;
+  /** Only set when the coach came from get_coaches_public; the table column is position. */
+  coach_position?: string | null;
   is_verified?: boolean | null;
   cover_image_urls?: string[] | null;
   sport?: string | null;

@@ -65,6 +65,7 @@ import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { bookingRequestsAPI, type BookingRequest } from "@/api/bookingRequests";
 import { isRequestOverdue } from "@/utils/requestWaiting";
 import { formatDateInZone } from "@/utils/viewerTime";
+import { sportFromText } from "@/utils/coachSport";
 
 type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
 
@@ -628,12 +629,7 @@ const MySessions = () => {
   });
 
   const sessionSport = useMemo<Enums<'sport_type'> | undefined>(() => {
-    const sportValue = (profile?.data as any)?.sport || (profile?.userProfile as any)?.sport;
-    if (!sportValue) return undefined;
-    const normalized = sportValue.toString().toLowerCase();
-    if (normalized.includes("row")) return "rowing";
-    if (["soccer", "football", "scoccer"].some((s) => normalized.includes(s))) return "soccer";
-    return undefined;
+    return sportFromText((profile?.data as any)?.sport || (profile?.userProfile as any)?.sport);
   }, [profile?.data, profile?.userProfile]);
 
   const { sportPillars } = useSportPillars({ sport: sessionSport, autoFetch: !!sessionSport });

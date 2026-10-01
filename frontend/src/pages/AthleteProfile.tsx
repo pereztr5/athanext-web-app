@@ -68,6 +68,7 @@ import { getStoragePathFromPublicUrl } from "@/utils/storage";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDateInZone } from "@/utils/viewerTime";
 import type { AthleteProfileProps, AthleteStatMetrics, ConversationCardItem, ViewAllSection } from "@/types/athlete-profile";
+import type { Enums } from "@/integrations/supabase/types";
 
 const { MAX_COVER_IMAGES } = ATHLETE_PROFILE_CONSTANTS;
 
@@ -777,9 +778,9 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
         const updates: { 
           name?: string; 
           image_url?: string | null;
-          gender?: string | null;
+          gender?: Enums<"gender_type"> | null;
           zip_code?: string | null;
-          persona_type?: string | null;
+          persona_type?: Enums<"persona_type"> | null;
           athlete_id?: string | null;
           sport?: string | null;
           position?: string | null;
@@ -804,7 +805,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
         }
 
         if (updatedProfile.gender !== activeProfile.gender) {
-          updates.gender = updatedProfile.gender;
+          updates.gender = updatedProfile.gender as Enums<"gender_type">;
         }
 
         if (updatedProfile.zipCode !== activeProfile.zipCode) {

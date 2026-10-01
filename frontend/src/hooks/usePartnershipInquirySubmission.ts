@@ -113,7 +113,7 @@ export const usePartnershipInquirySubmission = () => {
       }
 
       const sendInquiryNotificationEmail = async () => {
-        const { data: configRows, error: configError } = await (supabase as any)
+        const { data: configRows, error: configError } = await supabase
           .from("configurations")
           .select("key,value")
           .in("key", ["contact_admin_email", "smtp_email"]);

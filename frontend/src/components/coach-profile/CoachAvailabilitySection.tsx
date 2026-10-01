@@ -478,7 +478,7 @@ export const CoachAvailabilitySection = ({
       setSlotStatusLoading(true);
       try {
         const { data, error } = await supabase
-          .from('coach_slot_bookings' as any)
+          .from('coach_slot_bookings')
           .select('occurrence_id, athlete_id, status')
           .in('occurrence_id', slotIds)
           .in('status', ACTIVE_BOOKING_STATUSES);
@@ -541,7 +541,7 @@ export const CoachAvailabilitySection = ({
           return;
         }
         const { error: slotError } = await supabase
-          .from('coach_availability_slot_occurrences' as any)
+          .from('coach_availability_slot_occurrences')
           .delete()
           .eq('id', deleteTargetSlotId);
         if (slotError) throw slotError;
@@ -570,7 +570,7 @@ export const CoachAvailabilitySection = ({
 
     try {
       const { count, error: countError } = await supabase
-        .from('coach_slot_bookings' as any)
+        .from('coach_slot_bookings')
         .select('id', { count: 'exact', head: true })
         .eq('availability_id', deleteTargetId)
         .in('status', ['requested', 'pending_payment', 'booked', 'completed']);
@@ -587,17 +587,17 @@ export const CoachAvailabilitySection = ({
       }
 
       await supabase
-        .from('coach_availability_slot_occurrences' as any)
+        .from('coach_availability_slot_occurrences')
         .delete()
         .eq('availability_id', deleteTargetId);
 
       await supabase
-        .from('coach_availability_weekly_slots' as any)
+        .from('coach_availability_weekly_slots')
         .delete()
         .eq('availability_id', deleteTargetId);
 
       const { error: delAvailError } = await supabase
-        .from('coach_availability' as any)
+        .from('coach_availability')
         .delete()
         .eq('id', deleteTargetId);
 

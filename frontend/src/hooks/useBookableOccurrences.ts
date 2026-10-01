@@ -37,7 +37,7 @@ export const useBookableOccurrences = (coachId: string | null) => {
       const rows: SlotBookingRow[] = [];
       for (let i = 0; i < upcomingIds.length; i += ID_CHUNK) {
         const { data, error } = await supabase
-          .from("coach_slot_bookings" as any)
+          .from("coach_slot_bookings")
           .select("occurrence_id, athlete_id, status")
           .in("occurrence_id", upcomingIds.slice(i, i + ID_CHUNK))
           .in("status", ACTIVE_BOOKING_STATUSES);

@@ -18,7 +18,7 @@ export async function getConfigurationValue(
 ): Promise<ApiResponse<string | null>> {
   try {
     const { data, error } = await supabase
-      .from('configurations' as any)
+      .from('configurations')
       .select('value')
       .eq('key', key)
       .maybeSingle();

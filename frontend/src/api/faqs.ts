@@ -44,7 +44,7 @@ export async function getFAQs(): Promise<ApiResponse<FAQsResponse>> {
     try {
       // Attempt to fetch FAQs from Supabase
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const result = await (supabase as any)
+      const result = await supabase
         .from('faqs')
         .select('*')
         .eq('is_active', true)
@@ -102,7 +102,7 @@ export async function getFAQs(): Promise<ApiResponse<FAQsResponse>> {
 export async function getFAQById(id: string): Promise<ApiResponse<FAQ>> {
   try {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (supabase as any)
+    const result = await supabase
       .from('faqs')
       .select('*')
       .eq('id', id)

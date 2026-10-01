@@ -81,6 +81,8 @@ type Coach = Omit<
   position?: string | null;
   sport_type?: string | null;
   profile_faqs?: Tables<"coaches">["profile_faqs"];
+  /** get_coaches_public returns the coaches.position column under this name. */
+  coach_position?: string | null;
 };
 
 type DirectoryView = "coaches" | "organizations";

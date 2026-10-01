@@ -128,20 +128,6 @@ export const appointmentsAPI = {
   },
 
   /**
-   * Get available slots for a coach
-   * @param coachId - Coach ID to get available slots for
-   * @param date - Date in ISO format to check availability
-   * @returns ApiResponse with available time slots
-   */
-  async getAvailableSlots(coachId: string, date: string): Promise<ApiResponse<AvailableSlot[]>> {
-    return apiClient.rpc(
-      'get_available_slots',
-      { coach_id: coachId, date: date },
-      `Get available slots for coach: ${coachId} on ${date}`
-    );
-  },
-
-  /**
    * Get appointment by ID
    * @param appointmentId - ID of appointment to fetch
    * @returns ApiResponse with appointment details

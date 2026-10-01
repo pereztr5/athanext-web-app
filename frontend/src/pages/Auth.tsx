@@ -825,7 +825,8 @@ const Auth = () => {
         sport,
         position: coachPositionValue,
         date_of_birth: dateForDb,
-        gender,
+        // Comes from the gender picker, whose options match the gender_type enum.
+        gender: gender as Enums<"gender_type">,
         zip_code: normalizedZipCode,
         is_profile_completed: true,
       };
@@ -882,7 +883,7 @@ const Auth = () => {
           phone_number: profilePayload.phone_number,
           tags: [],
           user_id: user.id,
-          graduation_year: isCurrentlyStudying ? null : (graduationYear ? parseInt(graduationYear) : null),
+          graduation_year: isCurrentlyStudying ? null : (graduationYear ? String(parseInt(graduationYear, 10)) : null),
           current_year: isCurrentlyStudying ? currentYearLevel : null as any,
           location: normalizedLocation,
         });
@@ -929,7 +930,7 @@ const Auth = () => {
           current_year: isCurrentlyStudying ? (currentYearLevel || null) : null,
           graduation_year: isCurrentlyStudying
             ? null
-            : (graduationYear ? parseInt(graduationYear, 10) : null),
+            : (graduationYear ? String(parseInt(graduationYear, 10)) : null),
         };
 
         const { error: updateAthleteError } = await updateAthleteProfile(

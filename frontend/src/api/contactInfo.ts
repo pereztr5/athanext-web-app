@@ -32,7 +32,7 @@ export const contactInfoAPI = {
   async getContactInfo(): Promise<ApiResponse<ContactInfo | null>> {
     return apiClient.query<ContactInfo>(
       async (client) => client
-        .from('contact_us' as any)
+        .from('contact_us')
         .select('id, email, contact_number, location, created_at, updated_at')
         .order('created_at', { ascending: false })
         .limit(1)

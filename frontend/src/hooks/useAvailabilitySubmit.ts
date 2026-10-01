@@ -91,7 +91,7 @@ export const useAvailabilitySubmit = ({
       });
 
       const { data: existing, error: fetchError } = await supabase
-        .from('coach_availability_slot_occurrences' as any)
+        .from('coach_availability_slot_occurrences')
         .select('id, occurrence_date, start_time, end_time')
         .eq('availability_id', availabilityId);
 
@@ -104,7 +104,7 @@ export const useAvailabilitySubmit = ({
 
       if (toDelete.length > 0) {
         await supabase
-          .from('coach_availability_slot_occurrences' as any)
+          .from('coach_availability_slot_occurrences')
           .delete()
           .in('id', toDelete);
       }
@@ -114,7 +114,7 @@ export const useAvailabilitySubmit = ({
 
   // Generate the weeks past the modal's range now instead of waiting for the daily job.
   const extendRollingAvailability = useCallback(async (availabilityId: string) => {
-    const { error } = await supabase.rpc('extend_rolling_availability' as any, {
+    const { error } = await supabase.rpc('extend_rolling_availability', {
       p_availability_id: availabilityId,
     });
     // The daily job retries, so the save still counts.
@@ -256,7 +256,7 @@ export const useAvailabilitySubmit = ({
 
       if (isEditMode && editData) {
         const { error: updateError } = await supabase
-          .from('coach_availability' as any)
+          .from('coach_availability')
           .update({
             start_date: toLocalISODate(formData.start_date),
             end_date: toLocalISODate(formData.end_date),
@@ -286,7 +286,7 @@ export const useAvailabilitySubmit = ({
       } else {
         // Track inserted ID so we can roll back if any downstream step fails
         const { data: inserted, error: insertError } = await supabase
-          .from('coach_availability' as any)
+          .from('coach_availability')
           .insert({
             coach_id: coachId,
             start_date: toLocalISODate(formData.start_date),
@@ -335,7 +335,7 @@ export const useAvailabilitySubmit = ({
       // Roll back newly created availability if occurrences/cleanup fail
       if (!isEditMode && newAvailabilityId) {
         try {
-          await supabase.from('coach_availability' as any).delete().eq('id', newAvailabilityId);
+          await supabase.from('coach_availability').delete().eq('id', newAvailabilityId);
         } catch (rollbackErr) {
           console.error('Rollback failed for availability', rollbackErr);
         }

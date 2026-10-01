@@ -25,6 +25,7 @@ import { chatAPI } from "@/api";
 import { buildId } from "@/utils/chatHelpers";
 import type { Coach } from "@/types/coachProfile";
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
+import { sportFromText } from "@/utils/coachSport";
 
 interface AthletePillarsGraphicProps {
   initialSport?: SportKey;
@@ -178,11 +179,8 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
 
   const getCoachSportValue = useCallback((coach: any) => {
     // First try sport or sport_type fields
-    const sportSource = (coach?.sport || coach?.sport_type || "").toLowerCase();
-    if (sportSource.includes("row")) return "rowing";
-    if (["soccer", "football", "scoccer"].some((s) => sportSource.includes(s))) {
-      return "soccer";
-    }
+    const fromField = sportFromText(coach?.sport || coach?.sport_type);
+    if (fromField) return fromField;
 
     // Fallback: infer sport from specialties if sport field is missing
     const specialties = Array.isArray(coach.specialties) ? coach.specialties : [];

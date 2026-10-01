@@ -157,19 +157,6 @@ export const packagesAPI = {
   },
 
   /**
-   * Deduct a session from package
-   * @param packagePurchaseId - Package purchase ID
-   * @returns ApiResponse with remaining sessions after deduction
-   */
-  async deductSession(packagePurchaseId: string): Promise<ApiResponse<number>> {
-    return apiClient.rpc(
-      'deduct_package_session',
-      { package_purchase_id: packagePurchaseId },
-      `Deduct session from package: ${packagePurchaseId}`
-    );
-  },
-
-  /**
    * Get package by ID
    * @param packageId - Package ID to fetch
    * @returns ApiResponse with package details

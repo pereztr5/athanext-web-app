@@ -1,13 +1,13 @@
 /**
  * Brands and coach brand links (ATH-56).
  * brands / coach_brands are publicly readable; coaches create brands and manage their own links,
- * and only a brand's creator or an admin can edit it (RLS). Tables aren't in the generated types yet.
+ * and only a brand's creator or an admin can edit it (RLS).
  */
 import { supabase } from '@/integrations/supabase/client';
 import { cleanBrandName, findBrandByName, type Brand } from '@/utils/brands';
 
 const BRAND_COLUMNS = 'id, name, logo_url, website, created_by';
-const db = supabase as any;
+const db = supabase;
 
 export interface BrandInput {
   name: string;

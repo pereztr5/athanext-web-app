@@ -115,7 +115,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       let hasAcceptedRequest = false;
       if (viewerAthleteId && prefillSlot?.occurrenceId) {
         const { data: pending } = await supabase
-          .from("coach_slot_bookings" as any)
+          .from("coach_slot_bookings")
           .select("id")
           .eq("occurrence_id", prefillSlot.occurrenceId)
           .eq("athlete_id", viewerAthleteId)
@@ -170,7 +170,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     const fetchFees = async () => {
       try {
         const { data, error } = await supabase
-          .from('configurations' as any)
+          .from('configurations')
           .select('key,value')
           .in('key', ['platform_fees', 'stripe_fees']);
         if (error) return;
@@ -273,7 +273,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
 
       if (occurrenceDate && occurrenceStart && isBookingWindowClosed(occurrenceDate, occurrenceStart)) {
         const { data: pendingBooking } = await supabase
-          .from("coach_slot_bookings" as any)
+          .from("coach_slot_bookings")
           .select("id")
           .eq("occurrence_id", prefillSlot?.occurrenceId || "")
           .eq("athlete_id", athleteProfileId)

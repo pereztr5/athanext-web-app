@@ -11,7 +11,7 @@ export const useOccurrencesV3 = (availabilityId: string | null) => {
     queryFn: async (): Promise<SlotOccurrence[]> => {
       if (!availabilityId) return [];
       const { data, error } = await supabase
-        .from('coach_availability_slot_occurrences' as any)
+        .from('coach_availability_slot_occurrences')
         .select('*')
         .eq('availability_id', availabilityId);
       if (error) {
@@ -26,7 +26,7 @@ export const useUpsertOccurrencesV3 = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { availabilityId: string; slots: any[] }) => {
-      const { data, error } = await supabase.rpc('upsert_occurrences' as any, {
+      const { data, error } = await supabase.rpc('upsert_occurrences', {
         p_availability_id: payload.availabilityId,
         p_slots: payload.slots,
       });
@@ -44,7 +44,7 @@ export const useUpsertOccurrencesEditV3 = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (payload: { availabilityId: string; slots: any[] }) => {
-      const { data, error } = await supabase.rpc('upsert_occurrences_edit' as any, {
+      const { data, error } = await supabase.rpc('upsert_occurrences_edit', {
         p_availability_id: payload.availabilityId,
         p_slots: payload.slots,
       });

@@ -14,7 +14,7 @@ export const useFAQItems = (type: string = 'general') => {
     queryKey: ['faq-items', type],
     queryFn: async (): Promise<FAQItem[]> => {
       const { data, error } = await supabase
-        .from('faq_items' as any)
+        .from('faq_items')
         .select('*')
         .eq('type', type)
         .order('position', { ascending: true });

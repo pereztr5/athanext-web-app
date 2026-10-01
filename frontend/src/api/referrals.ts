@@ -39,7 +39,7 @@ export interface AddClientResult {
   emailed?: boolean;
 }
 
-const table = () => supabase.from("coach_client_referrals" as any);
+const table = () => supabase.from("coach_client_referrals");
 
 export const getCoachReferrals = async (coachId: string) =>
   (await table()
@@ -78,19 +78,19 @@ export const resendReferral = async (referralId: string) =>
   });
 
 export const attestReferral = async (referralId: string, answer: AttestationAnswer) =>
-  supabase.rpc("attest_coach_referral" as any, {
+  supabase.rpc("attest_coach_referral", {
     _referral_id: referralId,
     _answer: answer,
   });
 
 export const claimReferral = async (token: string, answer: AttestationAnswer) =>
-  (await supabase.rpc("claim_coach_referral" as any, { _token: token, _answer: answer })) as unknown as {
+  (await supabase.rpc("claim_coach_referral", { _token: token, _answer: answer })) as unknown as {
     data: "confirmed" | "already_confirmed" | "declined" | null;
     error: { message: string } | null;
   };
 
 export const acknowledgeReferral = async (referralId: string, accept: boolean) =>
-  supabase.rpc("acknowledge_coach_referral" as any, {
+  supabase.rpc("acknowledge_coach_referral", {
     _referral_id: referralId,
     _accept: accept,
   });
@@ -110,10 +110,10 @@ export const removeReferral = async (referralId: string) =>
   table().delete().eq("id", referralId);
 
 export const createAthleteInitiatedReferral = async (coachId: string) =>
-  supabase.rpc("register_athlete_referral" as any, { _coach_id: coachId });
+  supabase.rpc("register_athlete_referral", { _coach_id: coachId });
 
 export const getReferralInvite = async (token: string) =>
-  (await supabase.rpc("get_referral_invite" as any, { _token: token })) as unknown as {
+  (await supabase.rpc("get_referral_invite", { _token: token })) as unknown as {
     data: ReferralInvite[] | null;
     error: { message: string } | null;
   };

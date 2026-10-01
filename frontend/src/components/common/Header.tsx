@@ -29,6 +29,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { ProfileIncompleteBanner } from "@/components/common/ProfileIncompleteBanner";
 import { PROFILE_TYPE } from "@/utils/db";
 import type { Role } from "@/utils/role";
+import { sportFromText } from "@/utils/coachSport";
 
 // Brand-kit class strings shared by the desktop nav, dropdowns and mobile menu.
 const NAV_ITEM =
@@ -167,19 +168,10 @@ export const Header = ({ onSportClick }: HeaderProps) => {
   };
   
   const userInfo = getUserInfo();
-  const personaSport = (
-    profile?.data?.sport ||
-    profile?.userProfile?.sport ||
-    userData?.user_metadata?.sport ||
-    ""
-  )
-    .toString()
-    .toLowerCase();
-  const personaSportIcon = personaSport.includes("row")
-    ? rowerIcon
-    : ["soccer", "football", "scoccer"].some((s) => personaSport.includes(s))
-    ? footballIcon
-    : null;
+  const personaSport = sportFromText(
+    profile?.data?.sport || profile?.userProfile?.sport || userData?.user_metadata?.sport
+  );
+  const personaSportIcon = personaSport === "rowing" ? rowerIcon : personaSport === "soccer" ? footballIcon : null;
 
   const handleLogoClick = () => {
     navigate("/");

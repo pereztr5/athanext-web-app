@@ -152,7 +152,7 @@ export function SlotEditModal({
       }
 
       const { error } = await supabase
-        .from('coach_availability_slot_occurrences' as any)
+        .from('coach_availability_slot_occurrences')
         .update(payload)
         .eq('id', slot.id);
 
@@ -160,7 +160,7 @@ export function SlotEditModal({
 
       if (slot.weekly_slot_id) {
         const { error: weeklySlotError } = await supabase
-          .from('coach_availability_weekly_slots' as any)
+          .from('coach_availability_weekly_slots')
           .update(payload)
           .eq('id', slot.weekly_slot_id);
 

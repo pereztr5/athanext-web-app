@@ -81,7 +81,7 @@ export const fetchBookingConfirmation = async (
 ): Promise<ApiResponse<BookingConfirmationData>> => {
   try {
     const { data, error } = await supabase
-      .from('coach_slot_bookings' as any)
+      .from('coach_slot_bookings')
       .select(
         `id, coach_id, athlete_id, status, payment_status, notes, created_at,
          coach_availability_slot_occurrences (

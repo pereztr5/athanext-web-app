@@ -535,7 +535,7 @@ export const chatAPI = {
 
   async getCoachChannel(coachId: string): Promise<CoachChannelInfo | null> {
     const supabase = apiClient.getSupabaseClient();
-    const { data, error } = await (supabase as any).rpc("get_coach_channel", { p_coach_id: coachId });
+    const { data, error } = await supabase.rpc("get_coach_channel", { p_coach_id: coachId });
     if (error) throw error;
     const row = Array.isArray(data) ? data[0] : data;
     if (!row?.conversation_id) return null;
@@ -549,7 +549,7 @@ export const chatAPI = {
 
   async openMyCoachChannel(): Promise<string> {
     const supabase = apiClient.getSupabaseClient();
-    const { data, error } = await (supabase as any).rpc("get_or_create_my_coach_channel");
+    const { data, error } = await supabase.rpc("get_or_create_my_coach_channel");
     if (error) throw error;
     return data as string;
   },
@@ -557,21 +557,21 @@ export const chatAPI = {
   // Creates the coach's channel on first join (ATH-53); returns its conversation id.
   async joinCoachChannel(coachId: string): Promise<string> {
     const supabase = apiClient.getSupabaseClient();
-    const { data, error } = await (supabase as any).rpc("join_coach_community", { p_coach_id: coachId });
+    const { data, error } = await supabase.rpc("join_coach_community", { p_coach_id: coachId });
     if (error) throw error;
     return data as string;
   },
 
   async leaveCoachChannel(conversationId: string): Promise<void> {
     const supabase = apiClient.getSupabaseClient();
-    const { error } = await (supabase as any).rpc("leave_coach_channel", { p_conversation_id: conversationId });
+    const { error } = await supabase.rpc("leave_coach_channel", { p_conversation_id: conversationId });
     if (error) throw error;
   },
 
   // Owner coach first, then members A-Z as first name + last initial (ATH-58).
   async getCommunityMembers(conversationId: string): Promise<CommunityMember[]> {
     const supabase = apiClient.getSupabaseClient();
-    const { data, error } = await (supabase as any).rpc("get_community_members", {
+    const { data, error } = await supabase.rpc("get_community_members", {
       p_conversation_id: conversationId,
     });
     if (error) throw error;

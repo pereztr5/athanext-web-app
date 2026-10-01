@@ -17,7 +17,7 @@ export const useLockedOccurrenceIds = (
       if (!availabilityId) return [];
 
       const { data, error } = await supabase
-        .from('coach_slot_bookings' as any)
+        .from('coach_slot_bookings')
         .select('occurrence_id')
         .eq('availability_id', availabilityId)
         .in('status', LOCKED_BOOKING_STATUSES as unknown as string[]);

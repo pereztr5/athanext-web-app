@@ -81,9 +81,8 @@ export const useContactSubmission = () => {
         status: "new" as const,
       };
 
-      // Submit to database (using type assertion until Supabase types are regenerated)
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = await (supabase as any)
+      // Submit to database
+      const { data, error } = await supabase
         .from("contact_submissions")
         .insert([sanitizedData])
         .select()
@@ -100,7 +99,7 @@ export const useContactSubmission = () => {
 
       // Try to send notification email to admin via Supabase Edge Function with fetch fallback
       const sendNotificationEmail = async () => {
-        const { data: configRows, error: configError } = await (supabase as any)
+        const { data: configRows, error: configError } = await supabase
           .from("configurations")
           .select("key,value")
           .in("key", ["contact_admin_email", "smtp_email"]);

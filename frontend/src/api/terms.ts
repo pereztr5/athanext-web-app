@@ -24,7 +24,7 @@ export async function getTermsAndConditionsContent(): Promise<
   try {
     // Try to fetch from Supabase table
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const result = await (supabase as any)
+    const result = await supabase
       .from('terms_and_conditions')
       .select('*')
       .eq('is_active', true)
