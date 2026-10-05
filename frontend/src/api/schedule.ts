@@ -115,6 +115,22 @@ export interface CreateSessionsInput {
   position?: SessionPosition | null;
   details?: SessionDetails;
   offeredTo?: string[];
+  /** One-time group drafts for the week planner; families can't see them until published. */
+  isDraft?: boolean;
+}
+
+export interface DraftUpdate {
+  date?: string;
+  start?: string;
+  durationMinutes?: number;
+  sessionName?: string;
+  price?: number;
+  capacity?: number;
+  location?: "online" | "in-person";
+  place?: string | null;
+  pillar?: string | null;
+  position?: SessionPosition | null;
+  details?: SessionDetails;
 }
 
 export interface CreateSessionsResult {
@@ -219,6 +235,7 @@ export const scheduleAPI = {
       position: input.position ?? null,
       details: (input.details ?? {}) as Json,
       offered_to: input.offeredTo ?? [],
+      is_draft: input.isDraft ?? false,
     };
     const { data, error } = await supabase.rpc("schedule_create_sessions", { p_session: payload as Json });
     if (error) throw error;
@@ -228,6 +245,56 @@ export const scheduleAPI = {
       series: raw.series ?? [],
       skipped: raw.skipped ?? [],
     };
+  },
+
+  async updateDraft(occurrenceId: string, update: DraftUpdate): Promise<void> {
+    const payload: Record<string, unknown> = {};
+    if (update.date) payload.date = update.date;
+    if (update.start) payload.start = update.start;
+    if (update.durationMinutes) payload.duration_minutes = update.durationMinutes;
+    if (update.sessionName !== undefined) payload.session_name = update.sessionName;
+    if (update.price !== undefined) payload.price = update.price;
+    if (update.capacity !== undefined) payload.capacity = update.capacity;
+    if (update.location) payload.location = update.location;
+    if (update.place !== undefined) payload.place = update.place ?? "";
+    if (update.pillar !== undefined) payload.pillar = update.pillar ?? "";
+    if (update.position !== undefined) payload.position = update.position ?? "";
+    if (update.details) payload.details = update.details;
+    const { error } = await supabase.rpc("schedule_update_draft", {
+      p_occurrence_id: occurrenceId,
+      p_session: payload as Json,
+    });
+    if (error) throw error;
+  },
+
+  /** Copies group sessions from `days` earlier into from..to (Eastern dates) as drafts. */
+  async copyGroups(from: string, to: string, days: number): Promise<number> {
+    const { data, error } = await supabase.rpc("schedule_copy_groups", { p_from: from, p_to: to, p_days: days });
+    if (error) throw error;
+    return Number(data) || 0;
+  },
+
+  /** Publishes drafts in from..to and creates the pick-and-pay card; returns its id. */
+  async publishGroups(input: {
+    from: string;
+    to: string;
+    title: string;
+    closesAt: string;
+    postToChannel: boolean;
+    message: string;
+    linkBase: string;
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc("schedule_publish_groups", {
+      p_from: input.from,
+      p_to: input.to,
+      p_title: input.title,
+      p_closes_at: input.closesAt,
+      p_post_to_channel: input.postToChannel,
+      p_message: input.message,
+      p_link_base: input.linkBase,
+    });
+    if (error) throw error;
+    return data as string;
   },
 
   async removeSession(occurrenceId: string): Promise<void> {
@@ -317,5 +384,78 @@ export const calendarSyncAPI = {
   async disconnect(): Promise<void> {
     const { error } = await supabase.functions.invoke("google-calendar", { body: { action: "disconnect" } });
     if (error) throw error;
+  },
+};
+
+export interface GroupOfferSession {
+  id: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  sessionName: string;
+  price: number;
+  capacity: number;
+  location: "online" | "in-person";
+  place: string | null;
+  bookedCount: number;
+  myStatus: string | null;
+  started: boolean;
+}
+
+export interface GroupOffer {
+  id: string;
+  title: string;
+  closesAt: string;
+  closed: boolean;
+  coachId: string;
+  coachName: string;
+  coachSlug: string | null;
+  sessions: GroupOfferSession[];
+}
+
+/** Pick-and-pay cards for published group weeks (ATH-72). */
+export const groupOffersAPI = {
+  async get(offerId: string): Promise<GroupOffer | null> {
+    const { data, error } = await supabase.rpc("get_group_offer", { p_offer_id: offerId });
+    if (error) throw error;
+    if (!data) return null;
+    const raw = data as Row;
+    return {
+      id: raw.id,
+      title: raw.title,
+      closesAt: raw.closes_at,
+      closed: Boolean(raw.closed),
+      coachId: raw.coach_id,
+      coachName: raw.coach_name || "Coach",
+      coachSlug: raw.coach_slug ?? null,
+      sessions: ((raw.sessions as Row[]) ?? []).map((s) => ({
+        id: s.id,
+        date: s.date,
+        startTime: s.start_time,
+        endTime: s.end_time,
+        sessionName: s.session_name || "Group session",
+        price: Number(s.price) || 0,
+        capacity: Number(s.capacity) || 1,
+        location: s.location === "online" ? "online" : "in-person",
+        place: s.place ?? null,
+        bookedCount: Number(s.booked_count) || 0,
+        myStatus: s.my_status ?? null,
+        started: Boolean(s.started),
+      })),
+    };
+  },
+
+  /** One checkout for the picked sessions; returns a Stripe URL, or requested when the coach confirms first. */
+  async checkout(occurrenceIds: string[], athleteId: string): Promise<{ url?: string; requested?: boolean }> {
+    const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
+      body: { occurrence_ids: occurrenceIds, athlete_id: athleteId },
+    });
+    if (error) {
+      const context = (error as { context?: Response }).context;
+      const message = context ? ((await context.json().catch(() => null)) as { error?: string } | null)?.error : null;
+      throw new Error(message || error.message);
+    }
+    if (data?.error) throw new Error(data.error);
+    return { url: data?.url, requested: Boolean(data?.requested) };
   },
 };

@@ -180,6 +180,7 @@ export const chatAPI = {
               created_at,
               edited_at,
               status,
+              offer_id,
               sender:user_profiles!messages_sender_id_fkey ( name )
             `
           )

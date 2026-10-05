@@ -15,6 +15,8 @@ import CoachProfile from "./pages/CoachProfile";
 import ChangePassword from "./pages/ChangePassword";
 import AccountSettings from "./pages/AccountSettings";
 import MySchedule from "./pages/MySchedule";
+import PlanGroups from "./pages/PlanGroups";
+import GroupOffer from "./pages/GroupOffer";
 import Analytics from "./pages/Analytics";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -71,6 +73,8 @@ export const ROUTES = {
   ADMIN_ACCOUNTS: "/admin/accounts",
   CHANGE_PASSWORD: "/settings/password",
   SCHEDULE: "/schedule",
+  SCHEDULE_PLAN: "/schedule/plan",
+  GROUP_OFFER: "/offers/:id",
   // Older links: both now open My Schedule (ATH-71).
   AVAILABILITY: "/availability",
   CALENDAR: "/calendar",
@@ -104,6 +108,7 @@ export const PUBLIC_ROUTES: AppRoute[] = [
 // Public pages that render inside the app shell for signed-in users
 export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.COACHES, element: <AllCoaches /> },
+  { path: ROUTES.GROUP_OFFER, element: <GroupOffer /> },
   { path: ROUTES.COACH_PRICING, element: <CoachProfile /> },
   { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
   { path: ROUTES.ORGANIZATION, element: <OrganizationProfile /> },
@@ -137,6 +142,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
+  { path: ROUTES.SCHEDULE_PLAN, element: <ProtectedRoute><PlanGroups /></ProtectedRoute> },
   { path: ROUTES.AVAILABILITY, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
   { path: ROUTES.CALENDAR, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },

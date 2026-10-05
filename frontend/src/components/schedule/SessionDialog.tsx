@@ -134,7 +134,7 @@ export const SessionDialog = ({
   const booked = bookedAthletes(session);
   const requests = requestsFor(session);
   const removable = !booked.length && !requests.length;
-  const shareable = kind === "open" || kind === "offered" || kind === "group";
+  const shareable = !session.isDraft && (kind === "open" || kind === "offered" || kind === "group");
   const weekday = WEEKDAY_NAMES[(repeating?.dayOfWeek ?? 1) - 1];
 
   const title =
@@ -207,6 +207,16 @@ export const SessionDialog = ({
               </span>
             </span>
           </div>
+
+          {session.isDraft ? (
+            <p className="rounded-[8px] bg-[#FCEFDA] px-3 py-2 text-[14px] text-[#906A29]">
+              Draft. Families can't see this yet.{" "}
+              <Link to={ROUTES.SCHEDULE_PLAN} className="font-medium underline">
+                Publish it from New schedule
+              </Link>
+              .
+            </p>
+          ) : null}
 
           {kind === "group" ? (
             <div className="flex flex-col gap-2">

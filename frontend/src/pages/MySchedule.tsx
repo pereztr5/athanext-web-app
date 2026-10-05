@@ -4,9 +4,9 @@
  * separate Calendar and Availability pages: weekly open times are repeating open sessions.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Inbox, Plus, Settings } from "lucide-react";
+import { ChevronLeft, ChevronRight, Inbox, Plus, Settings, Users } from "lucide-react";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -216,10 +216,16 @@ const MySchedulePage = () => {
               Times in {timeZone.replace(/_/g, " ")} ({timeZoneAbbreviation(timeZone, now)})
             </p>
           </div>
-          <button type="button" className={cn(primaryButton, "hidden sm:inline-flex")} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
-            <Plus strokeWidth={1.5} aria-hidden="true" />
-            Create session
-          </button>
+          <div className="flex gap-2">
+            <Link to={ROUTES.SCHEDULE_PLAN} className={cn(secondaryButton, "hidden sm:inline-flex")}>
+              <Users strokeWidth={1.5} aria-hidden="true" />
+              Plan group week
+            </Link>
+            <button type="button" className={cn(primaryButton, "hidden sm:inline-flex")} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
+              <Plus strokeWidth={1.5} aria-hidden="true" />
+              Create session
+            </button>
+          </div>
         </header>
 
         {requests.length ? (
@@ -237,10 +243,16 @@ const MySchedulePage = () => {
           </button>
         ) : null}
 
-        <button type="button" className={cn(primaryButton, "h-[42px] sm:hidden")} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
-          <Plus strokeWidth={1.5} aria-hidden="true" />
-          Create session
-        </button>
+        <div className="grid grid-cols-2 gap-2 sm:hidden">
+          <Link to={ROUTES.SCHEDULE_PLAN} className={cn(secondaryButton, "h-[42px]")}>
+            <Users strokeWidth={1.5} aria-hidden="true" />
+            Plan group week
+          </Link>
+          <button type="button" className={cn(primaryButton, "h-[42px]")} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
+            <Plus strokeWidth={1.5} aria-hidden="true" />
+            Create session
+          </button>
+        </div>
 
         <section className={card}>
           <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

@@ -1754,6 +1754,41 @@ export type Database = {
           },
         ]
       }
+      group_session_offers: {
+        Row: {
+          closes_at: string
+          coach_id: string
+          created_at: string
+          id: string
+          occurrence_ids: string[]
+          title: string
+        }
+        Insert: {
+          closes_at: string
+          coach_id: string
+          created_at?: string
+          id?: string
+          occurrence_ids: string[]
+          title: string
+        }
+        Update: {
+          closes_at?: string
+          coach_id?: string
+          created_at?: string
+          id?: string
+          occurrence_ids?: string[]
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "group_session_offers_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       messages: {
         Row: {
           body: string
@@ -1761,6 +1796,7 @@ export type Database = {
           created_at: string
           edited_at: string | null
           id: string
+          offer_id: string | null
           sender_id: string
           status: string | null
         }
@@ -1770,6 +1806,7 @@ export type Database = {
           created_at?: string
           edited_at?: string | null
           id?: string
+          offer_id?: string | null
           sender_id: string
           status?: string | null
         }
@@ -1779,6 +1816,7 @@ export type Database = {
           created_at?: string
           edited_at?: string | null
           id?: string
+          offer_id?: string | null
           sender_id?: string
           status?: string | null
         }
@@ -1788,6 +1826,13 @@ export type Database = {
             columns: ["conversation_id"]
             isOneToOne: false
             referencedRelation: "conversations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "messages_offer_id_fkey"
+            columns: ["offer_id"]
+            isOneToOne: false
+            referencedRelation: "group_session_offers"
             referencedColumns: ["id"]
           },
           {
@@ -2904,6 +2949,7 @@ export type Database = {
           role: string
         }[]
       }
+      get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
       get_or_create_my_coach_channel: { Args: never; Returns: string }
       get_partnership_summary: {
         Args: never
@@ -3037,6 +3083,10 @@ export type Database = {
         Args: { p_date: string; p_note?: string }
         Returns: number
       }
+      schedule_copy_groups: {
+        Args: { p_days: number; p_from: string; p_to: string }
+        Returns: number
+      }
       schedule_create_sessions: { Args: { p_session: Json }; Returns: Json }
       schedule_drop_future: { Args: { p_series_id: string }; Returns: number }
       schedule_offer_session: {
@@ -3048,6 +3098,18 @@ export type Database = {
         }
         Returns: Json
       }
+      schedule_publish_groups: {
+        Args: {
+          p_closes_at: string
+          p_from: string
+          p_link_base: string
+          p_message: string
+          p_post_to_channel: boolean
+          p_title: string
+          p_to: string
+        }
+        Returns: string
+      }
       schedule_remove_session: {
         Args: { p_occurrence_id: string }
         Returns: undefined
@@ -3058,6 +3120,10 @@ export type Database = {
         Returns: undefined
       }
       schedule_stop_series: { Args: { p_series_id: string }; Returns: number }
+      schedule_update_draft: {
+        Args: { p_occurrence_id: string; p_session: Json }
+        Returns: undefined
+      }
       schedule_update_series: {
         Args: {
           p_location: string

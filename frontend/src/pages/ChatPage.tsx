@@ -7,6 +7,7 @@ import {
   type WheelEvent as ReactWheelEvent,
 } from "react";
 import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Users } from "lucide-react";
+import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
 import { cn } from "@/lib/utils";
@@ -1168,7 +1169,7 @@ const ChatPage = () => {
                       const initials = getInitials(
                         isUser ? userName || senderName || "You" : senderName || getConversationName(selectedConversation)
                       );
-                      return (
+                      const bubble = (
                         <MessageBubble
                           key={message.id}
                           text={message.body}
@@ -1180,6 +1181,14 @@ const ChatPage = () => {
                           senderName={isGroup && !isUser ? formatDisplayName(senderName || "Member") : undefined}
                           variant="thread"
                         />
+                      );
+                      // A published week of group sessions (ATH-72) shows its pick-and-pay card.
+                      if (!message.offer_id) return bubble;
+                      return (
+                        <div key={message.id} className={cn("flex flex-col gap-2", isUser ? "items-end" : "items-start")}>
+                          {bubble}
+                          <GroupOfferCard offerId={message.offer_id} className={isUser ? "mr-[35px]" : "ml-[35px]"} />
+                        </div>
                       );
                     })}
                     </div>
