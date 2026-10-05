@@ -22,20 +22,20 @@ export type IconKey = keyof typeof ICON_MAP;
 
 export const DEFAULT_PILLARS: Record<SportKey, { title: string; iconKey: IconKey }[]> = {
   soccer: [
-    { title: "On Field Training", iconKey: "activity" },
-    { title: "Video Analysis", iconKey: "video" },
+    { title: "On-field training", iconKey: "activity" },
+    { title: "Video analysis", iconKey: "video" },
     { title: "Mentorship", iconKey: "users" },
-    { title: "Strength + Conditioning", iconKey: "dumbbell" },
-    { title: "Academic Tutoring", iconKey: "pencil" },
-    { title: "College Recruiting", iconKey: "trophy" },
+    { title: "Performance coaching", iconKey: "dumbbell" },
+    { title: "Academic tutoring", iconKey: "pencil" },
+    { title: "College recruiting", iconKey: "trophy" },
   ],
   rowing: [
-    { title: "Technical Development", iconKey: "ship" },
-    { title: "Race Preparation", iconKey: "activity" },
+    { title: "Technical development", iconKey: "ship" },
+    { title: "Race preparation", iconKey: "activity" },
     { title: "Mentorship", iconKey: "users" },
-    { title: "Strength + Conditioning", iconKey: "dumbbell" },
-    { title: "Academic Tutoring", iconKey: "pencil" },
-    { title: "College Recruiting", iconKey: "trophy" },
+    { title: "Performance coaching", iconKey: "dumbbell" },
+    { title: "Academic tutoring", iconKey: "pencil" },
+    { title: "College recruiting", iconKey: "trophy" },
   ],
 };
 

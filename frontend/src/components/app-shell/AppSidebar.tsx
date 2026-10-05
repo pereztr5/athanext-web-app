@@ -4,6 +4,7 @@ import {
   BarChart3,
   Calendar,
   CalendarDays,
+  CalendarPlus,
   LayoutGrid,
   MessageCircle,
   Search,
@@ -29,6 +30,7 @@ import { AthaNextLogo } from "@/assets";
 import { cn } from "@/lib/utils";
 
 const ATHLETE_NAV = [
+  { title: "Book a Session", url: ROUTES.BOOK, icon: CalendarPlus },
   { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "My Coaches", url: ROUTES.MY_COACHES, icon: UserCheck },

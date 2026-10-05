@@ -8,6 +8,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check } from "lucide-react";
 import { BrandPill } from "@/components/brand";
+import { bookAPI } from "@/api/book";
 import { groupOffersAPI, type GroupOfferSession } from "@/api/schedule";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -46,7 +47,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
   const offer = offerQuery.data;
 
   const pay = useMutation({
-    mutationFn: () => groupOffersAPI.checkout(picked, athleteId!),
+    mutationFn: () => bookAPI.checkout(picked, athleteId!),
     onSuccess: (result) => {
       if (result.url) {
         window.location.href = result.url;

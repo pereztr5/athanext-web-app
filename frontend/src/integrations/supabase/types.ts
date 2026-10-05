@@ -2694,6 +2694,11 @@ export type Database = {
         Args: { _answer: string; _referral_id: string }
         Returns: undefined
       }
+      booking_coach_card: {
+        Args: { p_athlete_id: string; p_coach_id: string }
+        Returns: Json
+      }
+      canonical_pillar: { Args: { p_title: string }; Returns: string }
       ccr_confirm_row: {
         Args: { _athlete: string; _referral_id: string; _source: string }
         Returns: string
@@ -2710,6 +2715,10 @@ export type Database = {
         Args: { retention_days?: number }
         Returns: number
       }
+      coach_credits_left: {
+        Args: { p_athlete_id: string; p_coach_id: string }
+        Returns: number
+      }
       coach_is_busy: {
         Args: {
           p_coach_id: string
@@ -2719,6 +2728,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      current_athlete_id: { Args: never; Returns: string }
       current_coach_id: { Args: never; Returns: string }
       delete_old_pending_bookings: { Args: never; Returns: undefined }
       detect_spam_submission: {
@@ -2747,6 +2757,10 @@ export type Database = {
           hours_trained: number
           sessions_completed: number
         }[]
+      }
+      get_bookable_sessions: {
+        Args: { p_coach_id: string; p_from: string; p_to: string }
+        Returns: Json
       }
       get_bookings_by_user_id: {
         Args: { athlete_id_param?: string; coach_id_param?: string }
@@ -2950,6 +2964,7 @@ export type Database = {
         }[]
       }
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
+      get_my_coaches: { Args: never; Returns: Json }
       get_or_create_my_coach_channel: { Args: never; Returns: string }
       get_partnership_summary: {
         Args: never
@@ -2976,6 +2991,10 @@ export type Database = {
           stripe_fee: number
           transaction_time: string
         }[]
+      }
+      get_pillar_coaches: {
+        Args: { p_pillar: string; p_position?: string }
+        Returns: Json
       }
       get_referral_invite: {
         Args: { _token: string }
@@ -3035,6 +3054,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      is_coach_client: {
+        Args: { p_athlete_id: string; p_coach_id: string }
+        Returns: boolean
+      }
       is_conversation_admin: {
         Args: { p_conversation_id: string }
         Returns: boolean
@@ -3071,6 +3094,16 @@ export type Database = {
       }
       rename_coach_slug: {
         Args: { p_coach_id: string; p_new_slug: string }
+        Returns: string
+      }
+      request_session_time: {
+        Args: {
+          p_coach_id: string
+          p_date: string
+          p_note?: string
+          p_pillar?: string
+          p_start: string
+        }
         Returns: string
       }
       resend_coach_referral: { Args: { _referral_id: string }; Returns: string }
@@ -3225,6 +3258,34 @@ export type Database = {
       }
       validate_instagram_handle: { Args: { handle: string }; Returns: boolean }
       validate_phone_number: { Args: { phone: string }; Returns: boolean }
+      visible_sessions: {
+        Args: {
+          p_athlete_id: string
+          p_coach_id: string
+          p_from: string
+          p_to: string
+        }
+        Returns: {
+          booked_count: number
+          capacity: number
+          coach_id: string
+          details: Json
+          duration_minutes: number
+          end_time: string
+          id: string
+          location: string
+          my_status: string
+          occurrence_date: string
+          pillar: string
+          place: string
+          position: string
+          price: number
+          session_name: string
+          session_type: string
+          start_time: string
+          visibility: string
+        }[]
+      }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user" | "coach"

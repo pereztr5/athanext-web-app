@@ -15,6 +15,7 @@ import CoachProfile from "./pages/CoachProfile";
 import ChangePassword from "./pages/ChangePassword";
 import AccountSettings from "./pages/AccountSettings";
 import MySchedule from "./pages/MySchedule";
+import BookSession from "./pages/BookSession";
 import PlanGroups from "./pages/PlanGroups";
 import GroupOffer from "./pages/GroupOffer";
 import Analytics from "./pages/Analytics";
@@ -72,6 +73,7 @@ export const ROUTES = {
   SETTINGS: "/settings",
   ADMIN_ACCOUNTS: "/admin/accounts",
   CHANGE_PASSWORD: "/settings/password",
+  BOOK: "/book",
   SCHEDULE: "/schedule",
   SCHEDULE_PLAN: "/schedule/plan",
   GROUP_OFFER: "/offers/:id",
@@ -141,6 +143,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
+  { path: ROUTES.BOOK, element: <ProtectedRoute><BookSession /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE_PLAN, element: <ProtectedRoute><PlanGroups /></ProtectedRoute> },
   { path: ROUTES.AVAILABILITY, element: <Navigate to={ROUTES.SCHEDULE} replace /> },

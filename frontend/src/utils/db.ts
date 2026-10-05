@@ -330,21 +330,21 @@ export const WHY_MYKONNECT_STRINGS = {
 // ============================================================================
 
 export const MYSESSION_SOCCER_PILLARS = [
-  "On Field Training",
-  "Video Analysis",
+  "On-field training",
+  "Video analysis",
   "Mentorship",
-  "Strength + Conditioning",
-  "Academic Tutoring",
-  "College Recruiting",
+  "Performance coaching",
+  "Academic tutoring",
+  "College recruiting",
 ];
 
 export const MYSESSION_ROWING_PILLARS = [
-  "Technical Development",
-  "Race Preparation",
+  "Technical development",
+  "Race preparation",
   "Mentorship",
-  "Strength + Conditioning",
-  "Academic Tutoring",
-  "College Recruiting",
+  "Performance coaching",
+  "Academic tutoring",
+  "College recruiting",
 ];
 
 /**

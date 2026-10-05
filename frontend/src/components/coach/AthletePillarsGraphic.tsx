@@ -52,19 +52,19 @@ const DEFAULT_PILLARS_WITH_META: Record<SportKey, DefaultPillar[]> = {
     id: `soccer-${pillar.title.toLowerCase().replace(/\s+/g, "-")}`,
     title: pillar.title,
     description:
-      pillar.title === "On Field Training"
-        ? "Individual or group sessions focused on technical and tactical development across multiple locations."
-        : pillar.title === "Video Analysis"
+      pillar.title === "On-field training"
+        ? "Technical and tactical work on the ball, in 1-on-1 or group sessions."
+        : pillar.title === "Video analysis"
         ? "In-depth review of game footage to identify strengths and improvement areas."
         : pillar.title === "Mentorship"
         ? "One-on-one guidance from experienced coaches and professionals."
-        : pillar.title === "Strength + Conditioning"
-        ? "Strength and conditioning programs to optimize physical performance."
-        : pillar.title === "Academic Tutoring"
+        : pillar.title === "Performance coaching"
+        ? "Speed, strength and conditioning to raise physical performance."
+        : pillar.title === "Academic tutoring"
         ? "Subject-specific tutoring and standardized test preparation for academic success."
         : "Expert navigation through the college recruitment process.",
     iconKey: pillar.iconKey,
-    variant: ["Strength + Conditioning", "Academic Tutoring", "College Recruiting"].includes(pillar.title)
+    variant: ["Performance coaching", "Academic tutoring", "College recruiting"].includes(pillar.title)
       ? "dark"
       : "light",
   })),
@@ -72,19 +72,19 @@ const DEFAULT_PILLARS_WITH_META: Record<SportKey, DefaultPillar[]> = {
     id: `rowing-${pillar.title.toLowerCase().replace(/\s+/g, "-")}`,
     title: pillar.title,
     description:
-      pillar.title === "Technical Development"
+      pillar.title === "Technical development"
         ? "Comprehensive technique refinement across all boat classes, including sculling and sweeping."
-        : pillar.title === "Race Preparation"
+        : pillar.title === "Race preparation"
         ? "Tactical training for head race endurance and sprint racing formats."
         : pillar.title === "Mentorship"
         ? "Building mental resilience, team cohesion, and leadership skills on and off the water."
-        : pillar.title === "Strength + Conditioning"
+        : pillar.title === "Performance coaching"
         ? "Strategic workout preparation, strength conditioning, and nutrition guidance."
-        : pillar.title === "Academic Tutoring"
+        : pillar.title === "Academic tutoring"
         ? "Subject-specific tutoring and standardized test preparation for academic success."
         : "College recruiting support, summer programs, and pathways to U19, U23, and Senior National Teams.",
     iconKey: pillar.iconKey,
-    variant: ["Strength + Conditioning", "Academic Tutoring", "College Recruiting"].includes(pillar.title)
+    variant: ["Performance coaching", "Academic tutoring", "College recruiting"].includes(pillar.title)
       ? "dark"
       : "light",
   })),
@@ -184,8 +184,8 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
 
     // Fallback: infer sport from specialties if sport field is missing
     const specialties = Array.isArray(coach.specialties) ? coach.specialties : [];
-    const rowingSpecialties = ["Technical Development", "Race Preparation"];
-    const soccerSpecialties = ["On Field Training", "Video Analysis", "College Recruiting"];
+    const rowingSpecialties = ["Technical development", "Race preparation"];
+    const soccerSpecialties = ["On-field training", "Video analysis", "College recruiting"];
 
     const hasRowingSpecialty = specialties.some((spec) =>
       rowingSpecialties.some((rs) => spec?.toLowerCase().includes(rs.toLowerCase()))
@@ -256,7 +256,7 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
         // Infer sport from specialties if not provided
         let inferredSport = coach.sport || coach.sport_type || "";
         if (!inferredSport) {
-          const rowingSpecialties = ["Technical Development", "Race Preparation"];
+          const rowingSpecialties = ["Technical development", "Race preparation"];
           const hasRowingSpecialty = specialties.some((spec) =>
             rowingSpecialties.some((rs) => spec?.toLowerCase().includes(rs.toLowerCase()))
           );
@@ -563,9 +563,9 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
       return basePillars;
     }
 
-    const order = ["Technical Development", "Race Preparation", "Mentorship"];
+    const order = ["Technical development", "Race preparation", "Mentorship"];
     const swapped = basePillars.map((pillar) => {
-      if (pillar.title === "Race Preparation") {
+      if (pillar.title === "Race preparation") {
         return { ...pillar, Icon: ICON_MAP.activity };
       }
       if (pillar.title === "Mentorship") {

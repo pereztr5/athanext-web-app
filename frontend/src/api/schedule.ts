@@ -444,18 +444,4 @@ export const groupOffersAPI = {
       })),
     };
   },
-
-  /** One checkout for the picked sessions; returns a Stripe URL, or requested when the coach confirms first. */
-  async checkout(occurrenceIds: string[], athleteId: string): Promise<{ url?: string; requested?: boolean }> {
-    const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
-      body: { occurrence_ids: occurrenceIds, athlete_id: athleteId },
-    });
-    if (error) {
-      const context = (error as { context?: Response }).context;
-      const message = context ? ((await context.json().catch(() => null)) as { error?: string } | null)?.error : null;
-      throw new Error(message || error.message);
-    }
-    if (data?.error) throw new Error(data.error);
-    return { url: data?.url, requested: Boolean(data?.requested) };
-  },
 };

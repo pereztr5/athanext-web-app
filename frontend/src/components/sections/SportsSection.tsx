@@ -44,12 +44,12 @@ export const SportsSection = ({ onSportClick }: SportsSectionProps) => {
   const rowingPillarTitles = useMemo(
     () => {
       const order = [
-        "Technical Development",
-        "Race Preparation",
+        "Technical development",
+        "Race preparation",
         "Mentorship",
-        "Strength + Conditioning",
-        "Academic Tutoring",
-        "College Recruiting",
+        "Performance coaching",
+        "Academic tutoring",
+        "College recruiting",
       ];
       const titles = (rowingSportPillars ?? [])
         .map((pillar) => pillar.title)

@@ -34,7 +34,7 @@ export const dialogContent = cn(
 /** Segmented control button. */
 export const segButton = (on: boolean) =>
   cn(
-    "inline-flex h-[32px] flex-1 items-center justify-center gap-1.5 rounded-[6px] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] [&>svg]:size-4",
+    "inline-flex h-[32px] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] [&>svg]:size-4",
     on ? "bg-[#F9F9F5] text-[#0054B4] shadow-[0_0_0_1px_#EAEADF]" : "text-[#767980] hover:text-[#1A202C]"
   );
 export const segGroup = "flex gap-1 rounded-[8px] bg-[#F1F1E6] p-1";

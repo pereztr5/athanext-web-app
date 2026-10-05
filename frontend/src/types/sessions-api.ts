@@ -122,7 +122,7 @@ export interface SessionUIModel {
   durationMinutes: number;
   notes: string | null;
   stripeSessionId: string | null;
-  pillarSlot: string | null; // e.g., "Academic Tutoring"
+  pillarSlot: string | null; // e.g., "Academic tutoring"
   athleteCount: number; // Number of athletes booked for this slot
   athleteNames: string[] | null; // Array of athlete names booked for this slot
   athleteNamesDisplay: string; // Formatted string for display: "John, Jane, Bob" or single name
