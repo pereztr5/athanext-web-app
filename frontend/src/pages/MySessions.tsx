@@ -63,7 +63,7 @@ import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { bookingRequestsAPI, type BookingRequest } from "@/api/bookingRequests";
-import { isRequestOverdue } from "@/utils/requestWaiting";
+import { formatExpiry, isRequestExpiringSoon } from "@/utils/requestWaiting";
 import { formatDateInZone } from "@/utils/viewerTime";
 import { sportFromText } from "@/utils/coachSport";
 
@@ -494,8 +494,8 @@ const BookingRequestCard = ({
         <div className="flex flex-wrap items-center gap-[10px]">
           <p className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{request.sessionName}</p>
           <BrandPill tone="blue">Requested</BrandPill>
-          {/* Requests never expire; flag ones the coach has left for a day (ATH-28). */}
-          {isRequestOverdue(request.requestedAt) ? <BrandPill tone="amber">Waiting over 24h</BrandPill> : null}
+          {/* Requests are held 24 hours (ATH-71); flag ones about to expire. */}
+          {isRequestExpiringSoon(request.expiresAt) ? <BrandPill tone="amber">{formatExpiry(request.expiresAt)}</BrandPill> : null}
         </div>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Athlete" value={request.athleteName} />

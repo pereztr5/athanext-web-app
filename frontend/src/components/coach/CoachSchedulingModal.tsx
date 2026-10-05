@@ -99,8 +99,9 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const { toast } = useToast();
   const { user, session } = useAuth();
   const { profile } = useProfile();
-  // Individual sessions with coaches who confirm first are requested, not paid (ATH-49).
+  // Families new to a coach who asks for requests send one instead of paying (ATH-49, ATH-71).
   // After the coach accepts, the athlete's row is pending_payment and this modal pays for it.
+  // Families who already train with the coach always book instantly.
   const viewerAthleteId =
     profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as any).id ?? null : null;
   const { data: confirmationState } = useQuery({
@@ -109,10 +110,29 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     queryFn: async () => {
       const { data } = await supabase
         .from("coaches")
-        .select("requires_booking_confirmation")
+        .select("new_family_booking")
         .eq("id", coach!.id)
         .maybeSingle();
       let hasAcceptedRequest = false;
+      let isClient = false;
+      if (viewerAthleteId) {
+        const [{ count: pastSessions }, { data: referral }] = await Promise.all([
+          supabase
+            .from("coach_slot_bookings")
+            .select("id", { count: "exact", head: true })
+            .eq("coach_id", coach!.id)
+            .eq("athlete_id", viewerAthleteId)
+            .in("status", ["booked", "completed"]),
+          supabase
+            .from("coach_client_referrals")
+            .select("id")
+            .eq("coach_id", coach!.id)
+            .eq("athlete_id", viewerAthleteId)
+            .eq("status", "confirmed")
+            .limit(1),
+        ]);
+        isClient = Boolean(pastSessions) || Boolean(referral?.length);
+      }
       if (viewerAthleteId && prefillSlot?.occurrenceId) {
         const { data: pending } = await supabase
           .from("coach_slot_bookings")
@@ -123,14 +143,13 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
           .limit(1);
         hasAcceptedRequest = Boolean(pending?.length);
       }
-      return { requiresConfirmation: Boolean(data?.requires_booking_confirmation), hasAcceptedRequest };
+      return { requiresConfirmation: data?.new_family_booking === "request" && !isClient, hasAcceptedRequest };
     },
   });
   const needsCoachConfirmation =
     Boolean(confirmationState?.requiresConfirmation) &&
     !confirmationState?.hasAcceptedRequest &&
-    !isFreeConsultation &&
-    prefillSlot?.slot?.session_type !== "group";
+    !isFreeConsultation;
   const modalAthleteId =
     profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as any).id : undefined;
   // Existing client of this coach: create-booking-payment charges no platform fee.

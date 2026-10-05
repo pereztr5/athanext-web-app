@@ -1,29 +1,34 @@
 /**
- * Booking request reminders (ATH-28). Requests are never auto-cancelled; once one has
- * waited a day the coach sees it flagged in the app.
+ * Booking request holds (ATH-71). A request is held for 24 hours, or until 10 minutes after
+ * the session starts if that's sooner, then it expires on its own.
  */
 
-export const REQUEST_REMINDER_HOURS = 24;
+/** Requests with less than this left are flagged so the coach answers them. */
+export const REQUEST_EXPIRING_HOURS = 6;
 
-/** Whole hours since the request was made (0 when unknown or in the future). */
-export const hoursWaiting = (requestedAt: string | null | undefined, now: Date = new Date()): number => {
-  if (!requestedAt) return 0;
-  const since = Date.parse(requestedAt);
-  if (isNaN(since)) return 0;
-  return Math.max(0, Math.floor((now.getTime() - since) / 3_600_000));
+/** Whole minutes until the hold ends (0 once expired or unknown). */
+export const minutesLeft = (expiresAt: string | null | undefined, now: Date = new Date()): number => {
+  if (!expiresAt) return 0;
+  const end = Date.parse(expiresAt);
+  if (isNaN(end)) return 0;
+  return Math.max(0, Math.floor((end - now.getTime()) / 60_000));
 };
 
-export const isRequestOverdue = (requestedAt: string | null | undefined, now: Date = new Date()): boolean =>
-  hoursWaiting(requestedAt, now) >= REQUEST_REMINDER_HOURS;
-
-/** "Waiting 5h" / "Waiting 2 days". */
-export const formatWaiting = (hours: number): string => {
-  if (hours < 1) return "Just now";
-  if (hours < 48) return `Waiting ${hours}h`;
-  return `Waiting ${Math.floor(hours / 24)} days`;
+export const isRequestExpiringSoon = (expiresAt: string | null | undefined, now: Date = new Date()): boolean => {
+  if (!expiresAt) return false;
+  return minutesLeft(expiresAt, now) < REQUEST_EXPIRING_HOURS * 60;
 };
 
-export const countOverdueRequests = (
-  requests: { requestedAt: string | null }[],
+/** "Expires in 5h" / "Expires in 40 min" / "Expiring". */
+export const formatExpiry = (expiresAt: string | null | undefined, now: Date = new Date()): string => {
+  if (!expiresAt) return "Waiting";
+  const minutes = minutesLeft(expiresAt, now);
+  if (minutes <= 0) return "Expiring";
+  if (minutes < 60) return `Expires in ${minutes} min`;
+  return `Expires in ${Math.floor(minutes / 60)}h`;
+};
+
+export const countExpiringSoon = (
+  requests: { expiresAt: string | null }[],
   now: Date = new Date()
-): number => requests.filter((request) => isRequestOverdue(request.requestedAt, now)).length;
+): number => requests.filter((request) => isRequestExpiringSoon(request.expiresAt, now)).length;

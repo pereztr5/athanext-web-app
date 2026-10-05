@@ -70,6 +70,8 @@ type Coach = Omit<
   | "pathway_tags"
   // Not returned by get_coaches_public.
   | "requires_booking_confirmation"
+  | "new_family_booking"
+  | "booking_window_weeks"
   | "affiliate_links"
 > & {
   is_verified?: boolean;

@@ -38,6 +38,9 @@ import { detectCoachSport } from "@/utils/coachSport";
 import { coachPricingPath, coachProfilePath } from "@/utils/coachSlug";
 import { recordCoachShareEvent } from "@/api/coachShare";
 import { ROUTES } from "@/routes";
+import { supabase } from "@/integrations/supabase/client";
+import { toBookSlotPayload } from "@/utils/slotBooking";
+import type { SlotOccurrence } from "@/types/availabilityWithOccurrences";
 
 const CoachProfile = () => {
   const { id } = useParams();
@@ -87,9 +90,9 @@ const CoachProfile = () => {
       ? coachPricingPath(coach.slug)
       : coachProfilePath(coach.slug);
     if (location.pathname !== canonical) {
-      navigate(canonical, { replace: true, state: location.state });
+      navigate(`${canonical}${location.search}`, { replace: true, state: location.state });
     }
-  }, [loading, coach?.slug, id, isPricingPath, location.pathname, location.state, navigate]);
+  }, [loading, coach?.slug, id, isPricingPath, location.pathname, location.search, location.state, navigate]);
 
   useEffect(() => {
     if (loading || !coach?.id || !isPricingPath) return;
@@ -103,6 +106,33 @@ const CoachProfile = () => {
       scrollToSection(availabilitySectionRef);
     }
   }, [loading, coach, location.state, isPricingPath, scrollToSection]);
+
+  // A session link shared from My Schedule (?session=<id>, ATH-71) opens booking for that session.
+  const sharedSessionId = new URLSearchParams(location.search).get("session");
+  const handledSharedSession = useRef<string | null>(null);
+  useEffect(() => {
+    if (!sharedSessionId || loading || !coach?.id || handledSharedSession.current === sharedSessionId) return;
+    handledSharedSession.current = sharedSessionId;
+    if (!user) {
+      navigate(`${ROUTES.AUTH}?mode=signin`, {
+        state: { from: { pathname: location.pathname, search: location.search } },
+      });
+      return;
+    }
+    if (!canBookSlots) return;
+    void (async () => {
+      const { data } = await supabase.rpc("get_session_for_booking", { p_occurrence_id: sharedSessionId });
+      const occ = data as unknown as SlotOccurrence | null;
+      if (!occ || occ.coach_id !== coach.id) {
+        toast({ title: "This session isn't available anymore", description: "Pick another time below." });
+        scrollToSection(availabilitySectionRef);
+        return;
+      }
+      handleBookSlot(toBookSlotPayload(occ));
+    })();
+    // handleBookSlot only sets state; leaving it out keeps this to one run per link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [sharedSessionId, loading, coach?.id, user, canBookSlots]);
 
   // Only feeds CoachHeader's required sportTheme prop; colours come from the brand kit now
   const getSportTheme = () => {

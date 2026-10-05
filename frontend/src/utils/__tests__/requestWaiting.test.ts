@@ -1,25 +1,26 @@
 import { describe, it, expect } from "vitest";
-import { countOverdueRequests, formatWaiting, hoursWaiting, isRequestOverdue } from "@/utils/requestWaiting";
+import { countExpiringSoon, formatExpiry, isRequestExpiringSoon, minutesLeft } from "@/utils/requestWaiting";
 
 const now = new Date("2026-09-30T12:00:00Z");
 
-describe("request waiting", () => {
-  it("counts whole hours since the request", () => {
-    expect(hoursWaiting("2026-09-30T06:30:00Z", now)).toBe(5);
-    expect(hoursWaiting(null, now)).toBe(0);
-    expect(hoursWaiting("not a date", now)).toBe(0);
-    expect(hoursWaiting("2026-10-01T00:00:00Z", now)).toBe(0);
+describe("request holds", () => {
+  it("counts whole minutes left", () => {
+    expect(minutesLeft("2026-09-30T13:30:30Z", now)).toBe(90);
+    expect(minutesLeft(null, now)).toBe(0);
+    expect(minutesLeft("not a date", now)).toBe(0);
+    expect(minutesLeft("2026-09-30T11:00:00Z", now)).toBe(0);
   });
-  it("flags requests waiting 24h or more", () => {
-    expect(isRequestOverdue("2026-09-29T12:00:01Z", now)).toBe(false);
-    expect(isRequestOverdue("2026-09-29T12:00:00Z", now)).toBe(true);
+  it("flags requests with under 6 hours left", () => {
+    expect(isRequestExpiringSoon("2026-09-30T18:00:00Z", now)).toBe(false);
+    expect(isRequestExpiringSoon("2026-09-30T17:59:00Z", now)).toBe(true);
+    expect(isRequestExpiringSoon(null, now)).toBe(false);
     expect(
-      countOverdueRequests([{ requestedAt: "2026-09-28T00:00:00Z" }, { requestedAt: "2026-09-30T11:00:00Z" }], now)
+      countExpiringSoon([{ expiresAt: "2026-09-30T13:00:00Z" }, { expiresAt: "2026-10-01T11:00:00Z" }], now)
     ).toBe(1);
   });
-  it("formats the wait", () => {
-    expect(formatWaiting(0)).toBe("Just now");
-    expect(formatWaiting(30)).toBe("Waiting 30h");
-    expect(formatWaiting(73)).toBe("Waiting 3 days");
+  it("formats the time left", () => {
+    expect(formatExpiry("2026-10-01T09:30:00Z", now)).toBe("Expires in 21h");
+    expect(formatExpiry("2026-09-30T12:40:00Z", now)).toBe("Expires in 40 min");
+    expect(formatExpiry("2026-09-30T11:00:00Z", now)).toBe("Expiring");
   });
 });

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Navigate } from "react-router-dom";
 
 import WhyMyKonnect from "./pages/WhyMyKonnect";
 import BecomeACoach from "./pages/BecomeACoach";
@@ -13,8 +14,7 @@ import RowingPillars from "./pages/RowingPillars";
 import CoachProfile from "./pages/CoachProfile";
 import ChangePassword from "./pages/ChangePassword";
 import AccountSettings from "./pages/AccountSettings";
-import Availability from "./pages/Availability";
-import CoachCalendar from "./pages/CoachCalendar";
+import MySchedule from "./pages/MySchedule";
 import Analytics from "./pages/Analytics";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
@@ -70,6 +70,8 @@ export const ROUTES = {
   SETTINGS: "/settings",
   ADMIN_ACCOUNTS: "/admin/accounts",
   CHANGE_PASSWORD: "/settings/password",
+  SCHEDULE: "/schedule",
+  // Older links: both now open My Schedule (ATH-71).
   AVAILABILITY: "/availability",
   CALENDAR: "/calendar",
   ANALYTICS: "/analytics",
@@ -134,8 +136,9 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
-  { path: ROUTES.AVAILABILITY, element: <ProtectedRoute><Availability /></ProtectedRoute> },
-  { path: ROUTES.CALENDAR, element: <ProtectedRoute><CoachCalendar /></ProtectedRoute> },
+  { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
+  { path: ROUTES.AVAILABILITY, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
+  { path: ROUTES.CALENDAR, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },
   { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><CoachSessionFeedback /></ProtectedRoute> },

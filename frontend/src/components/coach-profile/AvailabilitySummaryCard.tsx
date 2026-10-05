@@ -106,10 +106,10 @@ export function AvailabilitySummaryCard({ coachId, sessionTypes }: AvailabilityS
           Availability
         </h2>
         <Link
-          to={ROUTES.AVAILABILITY}
+          to={ROUTES.SCHEDULE}
           className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390]"
         >
-          Manage availability
+          Open My Schedule
         </Link>
       </div>
 

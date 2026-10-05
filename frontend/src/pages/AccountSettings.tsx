@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -15,7 +15,6 @@ import { PasswordRequirements } from "@/components/password/PasswordRequirements
 import { getInitials } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
-import { BookingConfirmationToggle } from "@/components/common/BookingConfirmationToggle";
 
 const rowLabelClass = "w-[180px] shrink-0 text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C]";
 const fieldLabelClass = "text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
@@ -462,7 +461,7 @@ const AccountSettings = () => {
             <CardHeader>
               <CardTitle className="tracking-[-0.05em]">Time zone</CardTitle>
               <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-                Session times show in this zone. Availability is still entered in Eastern Time.
+                Session times show in this zone, and My Schedule creates sessions in it.
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -478,7 +477,13 @@ const AccountSettings = () => {
                 <CardTitle className="tracking-[-0.05em]">Bookings</CardTitle>
               </CardHeader>
               <CardContent>
-                <BookingConfirmationToggle />
+                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                  Whether families new to you book instantly or send a request now lives in{" "}
+                  <Link to={ROUTES.SCHEDULE} className="font-medium text-[#0054B4] hover:underline">
+                    My Schedule, Schedule settings
+                  </Link>
+                  .
+                </p>
               </CardContent>
             </Card>
           </section>

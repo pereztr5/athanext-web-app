@@ -717,7 +717,7 @@ serve(async (req) => {
     const { data: occurrences, error: occErr } = await supabaseClient
       .from("coach_availability_slot_occurrences" as any)
       .select(
-        "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, duration_minutes, start_time, end_time, session_type, location, max_bookings_per_slot, is_enabled",
+        "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, duration_minutes, start_time, end_time, session_type, location, max_bookings_per_slot, is_enabled, is_draft, visibility",
       )
       .in("id", occurrenceIds);
     if (occErr) throw occErr;
@@ -749,8 +749,8 @@ serve(async (req) => {
     });
 
     for (const occ of occurrences) {
-      if (!occ.is_enabled) {
-        throw new Error(`Occurrence ${occ.id} is disabled`);
+      if (!occ.is_enabled || occ.is_draft) {
+        throw new Error("This session isn't available to book.");
       }
       const capacity = occ.session_type === "group"
         ? (occ.max_bookings_per_slot && occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : defaultGroupCapacity)
@@ -833,15 +833,38 @@ serve(async (req) => {
       throw new Error("Total amount must be greater than zero");
     }
 
-    // Coach confirms first (ATH-49): hold individual sessions as a request, no Stripe yet.
-    // Accepted requests become pending_payment and are paid through the branch below.
-    if (!coversAllPending && occurrences.every((occ) => occ.session_type !== "group")) {
+    // A family already trains with the coach when they have a booked or completed session,
+    // or a confirmed referral (ATH-71). Only those families can book "clients" sessions,
+    // and they always book instantly.
+    const { count: pastSessions } = await supabaseClient
+      .from("coach_slot_bookings" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("coach_id", coachId)
+      .eq("athlete_id", athleteId)
+      .in("status", ["booked", "completed"]);
+    const { data: confirmedReferral } = await supabaseClient
+      .from("coach_client_referrals" as any)
+      .select("id")
+      .eq("coach_id", coachId)
+      .eq("athlete_id", athleteId)
+      .eq("status", "confirmed")
+      .limit(1);
+    const isClient = Boolean(pastSessions) || Boolean(confirmedReferral?.length);
+
+    if (!isClient && occurrences.some((occ) => occ.visibility === "clients")) {
+      throw new Error("This session is only open to the coach's current athletes.");
+    }
+
+    // New families request instead of booking when the coach asks for that (ATH-49, ATH-71).
+    // The request is held 24 hours; accepted requests become pending_payment and are paid
+    // through the branch below.
+    if (!coversAllPending && !isClient) {
       const { data: coachSettings } = await supabaseClient
         .from("coaches" as any)
-        .select("requires_booking_confirmation")
+        .select("new_family_booking")
         .eq("id", coachId)
         .maybeSingle();
-      if ((coachSettings as { requires_booking_confirmation?: boolean } | null)?.requires_booking_confirmation) {
+      if ((coachSettings as { new_family_booking?: string } | null)?.new_family_booking === "request") {
         if (myPendingBookings.length) {
           throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
         }
@@ -930,8 +953,8 @@ serve(async (req) => {
           occurrence_ids: occurrenceIds.join(","),
           booking_ids: bookingIds.join(","),
           coach_id: coachId,
-          availability_id: availabilityId,
-          weekly_slot_id: weeklySlotId,
+          availability_id: availabilityId ?? "",
+          weekly_slot_id: weeklySlotId ?? "",
           athlete_id: athleteId,
           platform_fee_perc: platformFeePerc.toString(),
           stripe_fee_perc: stripeFeePerc.toString(),

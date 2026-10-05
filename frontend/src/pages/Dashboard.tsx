@@ -13,7 +13,7 @@ import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { formatTimeSpan } from "@/utils/sessionFormatting";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
-import { countOverdueRequests } from "@/utils/requestWaiting";
+import { countExpiringSoon } from "@/utils/requestWaiting";
 
 // Session dates/times render in the viewer's zone (ATH-22).
 const longDate = (iso: string, timeZone?: string) =>
@@ -265,7 +265,7 @@ const Dashboard = () => {
     queryFn: () => bookingRequestsAPI.listForCoach(),
     enabled: isCoach,
   });
-  const overdueRequests = countOverdueRequests(requestsQuery.data ?? []);
+  const expiringRequests = countExpiringSoon(requestsQuery.data ?? []);
   const unreadCount = conversations.filter((c) => isConversationUnread(c, user?.id)).length;
 
   const firstName = (userName || "").split(" ")[0] || "there";
@@ -310,16 +310,16 @@ const Dashboard = () => {
         </p>
       </header>
 
-      {isCoach && overdueRequests > 0 ? (
+      {isCoach && expiringRequests > 0 ? (
         <div role="status" className="flex flex-col gap-3 rounded-[10px] bg-[#FDF7EC] px-5 py-4 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">
             <AlertCircle className="mt-[1px] size-4 flex-none text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
             <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#906A29]">
-              {overdueRequests === 1 ? "1 booking request has" : `${overdueRequests} booking requests have`} waited over
-              24 hours for your answer.
+              {expiringRequests === 1 ? "1 booking request expires" : `${expiringRequests} booking requests expire`} in
+              less than 6 hours. Answer before the family loses the time.
             </p>
           </div>
-          <Link to={ROUTES.CALENDAR} className={cn(secondaryButtonClass, "w-fit text-[14px]")}>
+          <Link to={ROUTES.SCHEDULE} className={cn(secondaryButtonClass, "w-fit text-[14px]")}>
             Review requests
           </Link>
         </div>

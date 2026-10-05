@@ -727,7 +727,7 @@ const Profile = () => {
                     <div className="flex min-w-0 flex-col gap-[10px]">
                         <div className="flex justify-end">
                             <Button variant="outline" size="sm" asChild>
-                                <Link to={ROUTES.AVAILABILITY}>Manage availability</Link>
+                                <Link to={ROUTES.SCHEDULE}>Open My Schedule</Link>
                             </Button>
                         </div>
                         <div className="min-w-0 overflow-x-auto">

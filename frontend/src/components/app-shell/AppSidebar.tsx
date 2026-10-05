@@ -3,7 +3,6 @@ import {
   BadgeCheck,
   BarChart3,
   Calendar,
-  CalendarClock,
   CalendarDays,
   LayoutGrid,
   MessageCircle,
@@ -42,8 +41,7 @@ const ATHLETE_NAV = [
 const COACH_NAV = [
   { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
-  { title: "Calendar", url: ROUTES.CALENDAR, icon: CalendarDays },
-  { title: "Availability", url: ROUTES.AVAILABILITY, icon: CalendarClock },
+  { title: "My Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
   { title: "My Clients", url: ROUTES.MY_CLIENTS, icon: Users },
   { title: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },

@@ -479,61 +479,85 @@ export type Database = {
       }
       coach_availability_slot_occurrences: {
         Row: {
-          availability_id: string
+          availability_id: string | null
           coach_id: string
           created_at: string
+          details: Json
+          disabled_reason: string | null
           duration_minutes: number
           end_time: string
           id: string
+          is_draft: boolean
           is_enabled: boolean
           location: string
           max_bookings_per_slot: number
           occurrence_date: string
+          offered_to: string[]
           pillar_slot: string | null
+          place: string | null
+          position: string | null
           price: number
+          series_id: string | null
           session_name: string
           session_type: string
           start_time: string
           updated_at: string
-          weekly_slot_id: string
+          visibility: string
+          weekly_slot_id: string | null
         }
         Insert: {
-          availability_id: string
+          availability_id?: string | null
           coach_id: string
           created_at?: string
+          details?: Json
+          disabled_reason?: string | null
           duration_minutes: number
           end_time: string
           id?: string
+          is_draft?: boolean
           is_enabled?: boolean
           location: string
           max_bookings_per_slot?: number
           occurrence_date: string
+          offered_to?: string[]
           pillar_slot?: string | null
+          place?: string | null
+          position?: string | null
           price: number
+          series_id?: string | null
           session_name: string
           session_type: string
           start_time: string
           updated_at?: string
-          weekly_slot_id: string
+          visibility?: string
+          weekly_slot_id?: string | null
         }
         Update: {
-          availability_id?: string
+          availability_id?: string | null
           coach_id?: string
           created_at?: string
+          details?: Json
+          disabled_reason?: string | null
           duration_minutes?: number
           end_time?: string
           id?: string
+          is_draft?: boolean
           is_enabled?: boolean
           location?: string
           max_bookings_per_slot?: number
           occurrence_date?: string
+          offered_to?: string[]
           pillar_slot?: string | null
+          place?: string | null
+          position?: string | null
           price?: number
+          series_id?: string | null
           session_name?: string
           session_type?: string
           start_time?: string
           updated_at?: string
-          weekly_slot_id?: string
+          visibility?: string
+          weekly_slot_id?: string | null
         }
         Relationships: [
           {
@@ -548,6 +572,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_availability_slot_occurrences_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "coach_session_series"
             referencedColumns: ["id"]
           },
           {
@@ -749,6 +780,82 @@ export type Database = {
             foreignKeyName: "coach_brands_coach_id_fkey"
             columns: ["coach_id"]
             isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_busy_blocks: {
+        Row: {
+          coach_id: string
+          ends_at: string
+          id: string
+          source: string
+          starts_at: string
+        }
+        Insert: {
+          coach_id: string
+          ends_at: string
+          id?: string
+          source?: string
+          starts_at: string
+        }
+        Update: {
+          coach_id?: string
+          ends_at?: string
+          id?: string
+          source?: string
+          starts_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_busy_blocks_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      coach_calendar_connections: {
+        Row: {
+          access_token: string | null
+          access_token_expires_at: string | null
+          account_email: string | null
+          coach_id: string
+          connected_at: string
+          last_synced_at: string | null
+          provider: string
+          refresh_token: string
+          sync_error: string | null
+        }
+        Insert: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          account_email?: string | null
+          coach_id: string
+          connected_at?: string
+          last_synced_at?: string | null
+          provider?: string
+          refresh_token: string
+          sync_error?: string | null
+        }
+        Update: {
+          access_token?: string | null
+          access_token_expires_at?: string | null
+          account_email?: string | null
+          coach_id?: string
+          connected_at?: string
+          last_synced_at?: string | null
+          provider?: string
+          refresh_token?: string
+          sync_error?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_calendar_connections_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: true
             referencedRelation: "coaches"
             referencedColumns: ["id"]
           },
@@ -966,6 +1073,86 @@ export type Database = {
           },
         ]
       }
+      coach_session_series: {
+        Row: {
+          coach_id: string
+          created_at: string
+          day_of_week: number
+          details: Json
+          duration_minutes: number
+          ends_on: string | null
+          id: string
+          is_active: boolean
+          location: string
+          max_bookings_per_slot: number
+          offered_to: string[]
+          pillar_slot: string | null
+          place: string | null
+          position: string | null
+          price: number
+          session_name: string
+          session_type: string
+          start_time: string
+          starts_on: string
+          updated_at: string
+          visibility: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          day_of_week: number
+          details?: Json
+          duration_minutes: number
+          ends_on?: string | null
+          id?: string
+          is_active?: boolean
+          location: string
+          max_bookings_per_slot?: number
+          offered_to?: string[]
+          pillar_slot?: string | null
+          place?: string | null
+          position?: string | null
+          price: number
+          session_name: string
+          session_type: string
+          start_time: string
+          starts_on: string
+          updated_at?: string
+          visibility?: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          day_of_week?: number
+          details?: Json
+          duration_minutes?: number
+          ends_on?: string | null
+          id?: string
+          is_active?: boolean
+          location?: string
+          max_bookings_per_slot?: number
+          offered_to?: string[]
+          pillar_slot?: string | null
+          place?: string | null
+          position?: string | null
+          price?: number
+          session_name?: string
+          session_type?: string
+          start_time?: string
+          starts_on?: string
+          updated_at?: string
+          visibility?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_session_series_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_share_events: {
         Row: {
           coach_id: string
@@ -998,12 +1185,13 @@ export type Database = {
       coach_slot_bookings: {
         Row: {
           athlete_id: string
-          availability_id: string
+          availability_id: string | null
           canceled_at: string | null
           cancellation_reason: string | null
           coach_id: string
           created_at: string
           created_by: string | null
+          expires_at: string | null
           id: string
           notes: string | null
           occurrence_id: string
@@ -1012,16 +1200,17 @@ export type Database = {
           stripe_payment_intent: string | null
           stripe_session_id: string | null
           updated_at: string
-          weekly_slot_id: string
+          weekly_slot_id: string | null
         }
         Insert: {
           athlete_id: string
-          availability_id: string
+          availability_id?: string | null
           canceled_at?: string | null
           cancellation_reason?: string | null
           coach_id: string
           created_at?: string
           created_by?: string | null
+          expires_at?: string | null
           id?: string
           notes?: string | null
           occurrence_id: string
@@ -1030,16 +1219,17 @@ export type Database = {
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
           updated_at?: string
-          weekly_slot_id: string
+          weekly_slot_id?: string | null
         }
         Update: {
           athlete_id?: string
-          availability_id?: string
+          availability_id?: string | null
           canceled_at?: string | null
           cancellation_reason?: string | null
           coach_id?: string
           created_at?: string
           created_by?: string | null
+          expires_at?: string | null
           id?: string
           notes?: string | null
           occurrence_id?: string
@@ -1048,7 +1238,7 @@ export type Database = {
           stripe_payment_intent?: string | null
           stripe_session_id?: string | null
           updated_at?: string
-          weekly_slot_id?: string
+          weekly_slot_id?: string | null
         }
         Relationships: [
           {
@@ -1153,11 +1343,44 @@ export type Database = {
           },
         ]
       }
+      coach_time_off: {
+        Row: {
+          coach_id: string
+          created_at: string
+          id: string
+          note: string | null
+          off_date: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          off_date: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          id?: string
+          note?: string | null
+          off_date?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_time_off_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coaches: {
         Row: {
           affiliate_links: Json
           availability: Json | null
           bio: string | null
+          booking_window_weeks: number
           cancellation_policy: string | null
           company: string | null
           cover_image_urls: string[] | null
@@ -1172,6 +1395,7 @@ export type Database = {
           languages: string[] | null
           locations: string[]
           name: string
+          new_family_booking: string
           pathway_tags: string[]
           position: string | null
           positions: string[] | null
@@ -1192,6 +1416,7 @@ export type Database = {
           affiliate_links?: Json
           availability?: Json | null
           bio?: string | null
+          booking_window_weeks?: number
           cancellation_policy?: string | null
           company?: string | null
           cover_image_urls?: string[] | null
@@ -1206,6 +1431,7 @@ export type Database = {
           languages?: string[] | null
           locations?: string[]
           name: string
+          new_family_booking?: string
           pathway_tags?: string[]
           position?: string | null
           positions?: string[] | null
@@ -1226,6 +1452,7 @@ export type Database = {
           affiliate_links?: Json
           availability?: Json | null
           bio?: string | null
+          booking_window_weeks?: number
           cancellation_policy?: string | null
           company?: string | null
           cover_image_urls?: string[] | null
@@ -1240,6 +1467,7 @@ export type Database = {
           languages?: string[] | null
           locations?: string[]
           name?: string
+          new_family_booking?: string
           pathway_tags?: string[]
           position?: string | null
           positions?: string[] | null
@@ -2437,16 +2665,35 @@ export type Database = {
         Args: { retention_days?: number }
         Returns: number
       }
+      coach_is_busy: {
+        Args: {
+          p_coach_id: string
+          p_date: string
+          p_end: string
+          p_start: string
+        }
+        Returns: boolean
+      }
+      current_coach_id: { Args: never; Returns: string }
       delete_old_pending_bookings: { Args: never; Returns: undefined }
       detect_spam_submission: {
         Args: { p_email: string; p_message: string }
         Returns: boolean
       }
+      eastern_timestamp: {
+        Args: { p_date: string; p_time: string }
+        Returns: string
+      }
       ensure_coach_channel: { Args: { p_coach_id: string }; Returns: string }
+      expire_booking_requests: {
+        Args: { p_coach_id?: string }
+        Returns: number
+      }
       extend_rolling_availability: {
         Args: { p_availability_id?: string }
         Returns: number
       }
+      fill_session_series: { Args: { p_series_id?: string }; Returns: number }
       get_athlete_profile_stats: {
         Args: { p_athlete_id: string }
         Returns: {
@@ -2478,6 +2725,15 @@ export type Database = {
           slot_session_type: string
           slot_start_time: string
           weekly_slot_id: string
+        }[]
+      }
+      get_coach_athlete_options: {
+        Args: never
+        Returns: {
+          athlete_id: string
+          full_name: string
+          last_session_date: string
+          user_id: string
         }[]
       }
       get_coach_availability: {
@@ -2513,10 +2769,12 @@ export type Database = {
           athlete_photo: string
           booking_id: string
           end_time: string
+          expires_at: string
           location: string
           notes: string
           occurrence_date: string
           occurrence_id: string
+          place: string
           price: number
           requested_at: string
           session_name: string
@@ -2556,6 +2814,10 @@ export type Database = {
           reviewer_name: string
           updated_at: string
         }[]
+      }
+      get_coach_schedule: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
       }
       get_coach_session_feedback_screen_v2: {
         Args: { p_slot_id: string }
@@ -2682,6 +2944,10 @@ export type Database = {
           state: string
         }[]
       }
+      get_session_for_booking: {
+        Args: { p_occurrence_id: string }
+        Returns: Json
+      }
       get_session_roster: {
         Args: { p_occurrence_id: string }
         Returns: {
@@ -2767,6 +3033,40 @@ export type Database = {
         Args: { p_accept: boolean; p_booking_id: string }
         Returns: string
       }
+      schedule_clear_day: {
+        Args: { p_date: string; p_note?: string }
+        Returns: number
+      }
+      schedule_create_sessions: { Args: { p_session: Json }; Returns: Json }
+      schedule_drop_future: { Args: { p_series_id: string }; Returns: number }
+      schedule_offer_session: {
+        Args: {
+          p_athlete_ids: string[]
+          p_message: string
+          p_occurrence_ids: string[]
+          p_post_to_channel: boolean
+        }
+        Returns: Json
+      }
+      schedule_remove_session: {
+        Args: { p_occurrence_id: string }
+        Returns: undefined
+      }
+      schedule_restore_day: { Args: { p_date: string }; Returns: number }
+      schedule_set_rules: {
+        Args: { p_booking_window_weeks: number; p_new_family_booking: string }
+        Returns: undefined
+      }
+      schedule_stop_series: { Args: { p_series_id: string }; Returns: number }
+      schedule_update_series: {
+        Args: {
+          p_location: string
+          p_place: string
+          p_series_id: string
+          p_start_time: string
+        }
+        Returns: number
+      }
       short_display_name: { Args: { p_full_name: string }; Returns: string }
       slugify_coach_name: { Args: { p_name: string }; Returns: string }
       sync_availability_occurrences: {
@@ -2776,23 +3076,31 @@ export type Database = {
       upsert_occurrences: {
         Args: { p_availability_id: string; p_slots: Json }
         Returns: {
-          availability_id: string
+          availability_id: string | null
           coach_id: string
           created_at: string
+          details: Json
+          disabled_reason: string | null
           duration_minutes: number
           end_time: string
           id: string
+          is_draft: boolean
           is_enabled: boolean
           location: string
           max_bookings_per_slot: number
           occurrence_date: string
+          offered_to: string[]
           pillar_slot: string | null
+          place: string | null
+          position: string | null
           price: number
+          series_id: string | null
           session_name: string
           session_type: string
           start_time: string
           updated_at: string
-          weekly_slot_id: string
+          visibility: string
+          weekly_slot_id: string | null
         }[]
         SetofOptions: {
           from: "*"
@@ -2804,23 +3112,31 @@ export type Database = {
       upsert_occurrences_edit: {
         Args: { p_availability_id: string; p_slots: Json }
         Returns: {
-          availability_id: string
+          availability_id: string | null
           coach_id: string
           created_at: string
+          details: Json
+          disabled_reason: string | null
           duration_minutes: number
           end_time: string
           id: string
+          is_draft: boolean
           is_enabled: boolean
           location: string
           max_bookings_per_slot: number
           occurrence_date: string
+          offered_to: string[]
           pillar_slot: string | null
+          place: string | null
+          position: string | null
           price: number
+          series_id: string | null
           session_name: string
           session_type: string
           start_time: string
           updated_at: string
-          weekly_slot_id: string
+          visibility: string
+          weekly_slot_id: string | null
         }[]
         SetofOptions: {
           from: "*"
