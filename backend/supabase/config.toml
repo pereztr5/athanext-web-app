@@ -1,4 +1,4 @@
-project_id = "nnhmiokeizmfmkvdqrvi"
+project_id = "znrdabzydvulagmlepxr"
 
 [functions.create-appointment-payment]
 verify_jwt = true
