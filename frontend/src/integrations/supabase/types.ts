@@ -2721,8 +2721,10 @@ export type Database = {
           coach_id: string | null
           created_at: string | null
           date_of_birth: string | null
+          deletion_requested_at: string | null
           email: string
           gender: Database["public"]["Enums"]["gender_type"] | null
+          guardian_relationship: string | null
           id: string
           image_url: string | null
           instagram_handle: string | null
@@ -2745,8 +2747,10 @@ export type Database = {
           coach_id?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          deletion_requested_at?: string | null
           email: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
+          guardian_relationship?: string | null
           id?: string
           image_url?: string | null
           instagram_handle?: string | null
@@ -2769,8 +2773,10 @@ export type Database = {
           coach_id?: string | null
           created_at?: string | null
           date_of_birth?: string | null
+          deletion_requested_at?: string | null
           email?: string
           gender?: Database["public"]["Enums"]["gender_type"] | null
+          guardian_relationship?: string | null
           id?: string
           image_url?: string | null
           instagram_handle?: string | null

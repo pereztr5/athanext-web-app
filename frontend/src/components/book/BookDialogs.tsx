@@ -151,7 +151,7 @@ export const ReviewDialog = ({
           </button>
           {!athleteId ? <p className={meta}>Sign in as an athlete or parent to book.</p> : null}
           <span className={cn(meta, "text-center")}>
-            Free cancellation with 24 hours notice. {requests ? "You get a message when they reply." : "Payment is taken on the next screen."}
+            Free cancellation with 24 hours notice. {requests ? "You get a message when they reply." : "Card payments open Stripe's secure page. Nothing is saved to your account."}
           </span>
         </div>
       </DialogContent>

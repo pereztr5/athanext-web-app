@@ -2,9 +2,9 @@ import { Outlet } from "react-router-dom";
 import { SidebarProvider, SidebarInset } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-shell/AppSidebar";
 import { AppTopBar } from "@/components/app-shell/AppTopBar";
-import { CoachTabBar } from "@/components/app-shell/CoachTabBar";
+import { MainTabBar } from "@/components/app-shell/MainTabBar";
+import { ATHLETE_NAV, COACH_NAV } from "@/components/app-shell/nav";
 import { useRole } from "@/hooks/useRole";
-import { cn } from "@/lib/utils";
 
 export const AppLayout = () => {
   const { isCoach } = useRole();
@@ -13,10 +13,10 @@ export const AppLayout = () => {
       <AppSidebar />
       <SidebarInset className="min-w-0 overflow-x-hidden bg-[#F1F1E6]">
         <AppTopBar />
-        <main className={cn("min-w-0 flex-1 overflow-x-hidden", isCoach && "pb-16 md:pb-0")}>
+        <main className="min-w-0 flex-1 overflow-x-hidden pb-16 md:pb-0">
           <Outlet />
         </main>
-        {isCoach ? <CoachTabBar /> : null}
+        <MainTabBar items={isCoach ? COACH_NAV : ATHLETE_NAV} />
       </SidebarInset>
     </SidebarProvider>
   );

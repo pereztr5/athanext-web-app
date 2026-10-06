@@ -44,3 +44,13 @@ export const notificationOn = (prefs: unknown, kind: string, channel: Notificati
 };
 
 export const DEACTIVATE_WORD = "DEACTIVATE";
+
+export const ATHLETE_NOTIFICATIONS: [kind: string, title: string, detail: string][] = [
+  ["booking", "Bookings", "Confirmations and changes"],
+  ["message", "Messages", "From coaches and group channels"],
+  ["reminder", "Session reminders", "24 hours and 1 hour before"],
+  ["notes", "Session notes", "When a coach shares notes"],
+];
+
+export const DELETE_WORD = "DELETE";
+export const DELETION_GRACE_DAYS = 14;

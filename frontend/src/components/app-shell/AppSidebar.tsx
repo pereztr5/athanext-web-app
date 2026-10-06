@@ -1,19 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import {
-  BadgeCheck,
-  Calendar,
-  CalendarDays,
-  CalendarPlus,
-  CircleHelp,
-  LayoutGrid,
-  MessageCircle,
-  Search,
-  Settings,
-  Shield,
-  ShoppingBag,
-  UserCheck,
-  Users,
-} from "lucide-react";
+import { CircleHelp, Settings, Shield, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarMenu,
@@ -27,21 +13,9 @@ import { useRole } from "@/hooks/useRole";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
-import { cn } from "@/lib/utils";
-import { COACH_NAV } from "./coachNav";
+import { ATHLETE_NAV, COACH_NAV, isNavActive, type NavItem } from "./nav";
 
-const ATHLETE_NAV = [
-  { title: "Book a Session", url: ROUTES.BOOK, icon: CalendarPlus },
-  { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
-  { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
-  { title: "My Coaches", url: ROUTES.MY_COACHES, icon: UserCheck },
-  { title: "Browse coaches", url: ROUTES.COACHES, icon: Search },
-  { title: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
-  { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
-  { title: "Development", url: "", icon: BadgeCheck },
-];
-
-const COACH_FOOTER_NAV = [
+const FOOTER_NAV = [
   { title: "Account Settings", url: ROUTES.SETTINGS, icon: Settings },
   { title: "Help", url: ROUTES.CONTACT_US, icon: CircleHelp },
 ];
@@ -59,17 +33,17 @@ export const AppSidebar = () => {
   const location = useLocation();
   const { isCoach } = useRole();
   const { isAdmin } = useIsAdmin();
-  const { hasNewMessage, userName, userProfile, profileReady } = useAuth();
+  const { userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
   const items = [
     ...(isCoach ? COACH_NAV : ATHLETE_NAV),
     ...(isAdmin
       ? [
-          { title: "Accounts", url: ROUTES.ADMIN_ACCOUNTS, icon: Shield },
-          { title: "Referrals", url: ROUTES.ADMIN_REFERRALS, icon: Users },
+          { title: "Accounts", short: "Accounts", url: ROUTES.ADMIN_ACCOUNTS, icon: Shield },
+          { title: "Referrals", short: "Referrals", url: ROUTES.ADMIN_REFERRALS, icon: Users },
         ]
       : []),
-  ];
+  ] as NavItem[];
 
   const displayName = userName || userProfile?.name || "Account";
   const firstName = displayName.split(" ")[0] || displayName;
@@ -91,46 +65,20 @@ export const AppSidebar = () => {
             </Link>
           </div>
           <SidebarMenu className="w-full gap-[5px]">
-            {items.map((item: { title: string; url: string; icon: typeof Calendar }) => {
-              const active = Boolean(
-                item.url &&
-                  (location.pathname === item.url ||
-                    (item.url !== ROUTES.DASHBOARD && location.pathname.startsWith(item.url)) ||
-                    (item.url === ROUTES.COACHES && location.pathname.startsWith("/coach/")))
-              );
-              const label = (
-                <>
-                  <item.icon className="size-4" strokeWidth={1.5} />
-                  <span>{item.title}</span>
-                  {item.url === ROUTES.CHAT && hasNewMessage && (
-                    <span
-                      className="size-[6.6px] shrink-0 rounded-full bg-[#0054B4]"
-                      aria-label="New messages"
-                    />
-                  )}
-                </>
-              );
-              return (
-                <SidebarMenuItem key={item.title}>
-                  {item.url ? (
-                    <SidebarMenuButton asChild isActive={active} className={navItemClass}>
-                      <Link to={item.url} onClick={() => setOpenMobile(false)}>
-                        {label}
-                      </Link>
-                    </SidebarMenuButton>
-                  ) : (
-                    <SidebarMenuButton type="button" className={cn(navItemClass, "cursor-default hover:!text-[#767980]")} tabIndex={-1}>
-                      {label}
-                    </SidebarMenuButton>
-                  )}
-                </SidebarMenuItem>
-              );
-            })}
+            {items.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
+                  <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                    <item.icon className="size-4" strokeWidth={1.5} />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
           </SidebarMenu>
         </div>
-        {isCoach ? (
-          <SidebarMenu className="mt-auto w-full gap-[5px] pb-3">
-            {COACH_FOOTER_NAV.map((item) => (
+        <SidebarMenu className="mt-auto w-full gap-[5px] pb-3">
+            {FOOTER_NAV.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild isActive={location.pathname.startsWith(item.url)} className={navItemClass}>
                   <Link to={item.url} onClick={() => setOpenMobile(false)}>
@@ -141,9 +89,8 @@ export const AppSidebar = () => {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-        ) : null}
-        <nav aria-label="Support and legal" className={cn("flex flex-wrap gap-x-3 gap-y-1 pb-4", isCoach ? "" : "mt-auto")}>
-          {FOOTER_LINKS.filter((link) => !isCoach || link.url !== ROUTES.CONTACT_US).map((link) => (
+        <nav aria-label="Support and legal" className="flex flex-wrap gap-x-3 gap-y-1 pb-4">
+          {FOOTER_LINKS.filter((link) => link.url !== ROUTES.CONTACT_US).map((link) => (
             <Link
               key={link.url}
               to={link.url}

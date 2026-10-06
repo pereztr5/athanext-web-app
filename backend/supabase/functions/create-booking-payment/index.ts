@@ -952,6 +952,8 @@ serve(async (req) => {
         payment_method_types: ["card"],
         line_items,
         mode: "payment",
+        // Stripe emails the receipt (ATH-91). The card is never saved for later.
+        payment_intent_data: user.email ? { receipt_email: user.email } : undefined,
         success_url: `${req.headers.get("origin")}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${req.headers.get("origin")}/coach/${coachId}`,
         metadata: {

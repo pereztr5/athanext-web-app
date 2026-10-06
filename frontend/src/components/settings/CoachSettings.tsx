@@ -23,6 +23,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
+import { downloadJson } from "@/utils/download";
 import {
   COACH_NOTIFICATIONS,
   DEACTIVATE_WORD,
@@ -44,9 +45,9 @@ const TABS: [Tab, string][] = [
 ];
 
 const cardTitle = "flex items-center gap-2 text-[20px] font-medium leading-[22px] tracking-[-1px] text-[#1A202C]";
-const sub = "text-[14px] leading-[18px] tracking-[-0.42px] text-[#484D56]";
+export const sub = "text-[14px] leading-[18px] tracking-[-0.42px] text-[#484D56]";
 
-const Card = ({ icon, title, children, className }: { icon?: ReactNode; title: string; children: ReactNode; className?: string }) => (
+export const Card = ({ icon, title, children, className }: { icon?: ReactNode; title: string; children: ReactNode; className?: string }) => (
   <section className={cn(card, className)}>
     <h2 className={cardTitle}>
       {icon}
@@ -56,7 +57,7 @@ const Card = ({ icon, title, children, className }: { icon?: ReactNode; title: s
   </section>
 );
 
-const Field = ({ label: text, children, hint, error }: { label: string; children: ReactNode; hint?: string; error?: string }) => (
+export const Field = ({ label: text, children, hint, error }: { label: string; children: ReactNode; hint?: string; error?: string }) => (
   <label className="flex flex-col gap-1.5">
     <span className={label}>{text}</span>
     {children}
@@ -64,7 +65,7 @@ const Field = ({ label: text, children, hint, error }: { label: string; children
   </label>
 );
 
-const ToggleRow = ({ title, detail, checked, onChange, ariaLabel, disabled }: {
+export const ToggleRow = ({ title, detail, checked, onChange, ariaLabel, disabled }: {
   title: string;
   detail: string;
   checked: boolean;
@@ -81,39 +82,50 @@ const ToggleRow = ({ title, detail, checked, onChange, ariaLabel, disabled }: {
   </div>
 );
 
-export const CoachSettings = () => {
+/** Page frame shared by coach and athlete settings: header, tab list and the open tab. */
+export const SettingsShell = <T extends string>({
+  subtitle,
+  tabs,
+  defaultTab,
+  dirty,
+  onDiscard,
+  banner,
+  render,
+}: {
+  subtitle: string;
+  tabs: [T, string][];
+  defaultTab: T;
+  dirty?: boolean;
+  onDiscard?: () => void;
+  banner?: ReactNode;
+  render: (tab: T) => ReactNode;
+}) => {
   const [searchParams, setSearchParams] = useSearchParams();
-  const tabParam = searchParams.get("tab") as Tab | null;
-  const tab: Tab = TABS.some(([key]) => key === tabParam) ? (tabParam as Tab) : "account";
-  const { profile } = useProfile();
-  const coachId = profile?.userProfile?.coach_id ?? undefined;
-  const { coach } = useCoachDetails(coachId);
-  const [accountDirty, setAccountDirty] = useState(false);
+  const tabParam = searchParams.get("tab");
+  const tab = (tabs.some(([key]) => key === tabParam) ? tabParam : defaultTab) as T;
 
-  const openTab = (next: Tab) => {
+  const openTab = (next: T) => {
     if (next === tab) return;
-    if (accountDirty && !window.confirm("Discard unsaved changes?")) return;
-    setAccountDirty(false);
-    setSearchParams(next === "account" ? {} : { tab: next }, { replace: true });
+    if (dirty && !window.confirm("Discard unsaved changes?")) return;
+    onDiscard?.();
+    setSearchParams(next === defaultTab ? {} : { tab: next }, { replace: true });
   };
-
-  const deactivated = Boolean((coach as { deactivated_at?: string | null } | undefined)?.deactivated_at);
 
   return (
     <div className="overflow-x-hidden px-4 pb-16 md:px-10">
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
         <header className="flex flex-col gap-[10px]">
           <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Account Settings</h1>
-          <p className="text-[16px] leading-[18px] text-[#767980]">Account, notifications, booking and calendar.</p>
+          <p className="text-[16px] leading-[18px] text-[#767980]">{subtitle}</p>
         </header>
 
-        {deactivated && coachId ? <DeactivatedBanner coachId={coachId} /> : null}
+        {banner}
 
         <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
           <nav className={cn(card, "gap-1 p-2 md:p-3")} aria-label="Settings">
             <span className={cn(label, "hidden px-2 pb-1 md:block")}>Settings</span>
             <div className="flex gap-1 overflow-x-auto md:flex-col">
-              {TABS.map(([key, text]) => (
+              {tabs.map(([key, text]) => (
                 <button
                   key={key}
                   type="button"
@@ -130,16 +142,42 @@ export const CoachSettings = () => {
             </div>
           </nav>
 
-          <div className="flex min-w-0 flex-col gap-6">
-            {tab === "account" ? <AccountTab coach={coach} onDirtyChange={setAccountDirty} /> : null}
-            {tab === "notifications" ? <NotificationsTab /> : null}
-            {tab === "booking" ? <BookingTab /> : null}
-            {tab === "privacy" && coachId ? <PrivacyTab coachId={coachId} listed={(coach as { listed?: boolean } | undefined)?.listed !== false} /> : null}
-            {tab === "security" && coachId ? <SecurityTab coachId={coachId} deactivated={deactivated} /> : null}
-          </div>
+          <div className="flex min-w-0 flex-col gap-6">{render(tab)}</div>
         </div>
       </div>
     </div>
+  );
+};
+
+export const CoachSettings = () => {
+  const { profile } = useProfile();
+  const coachId = profile?.userProfile?.coach_id ?? undefined;
+  const { coach } = useCoachDetails(coachId);
+  const [accountDirty, setAccountDirty] = useState(false);
+  const deactivated = Boolean((coach as { deactivated_at?: string | null } | undefined)?.deactivated_at);
+
+  return (
+    <SettingsShell<Tab>
+      subtitle="Account, notifications, booking and calendar."
+      tabs={TABS}
+      defaultTab="account"
+      dirty={accountDirty}
+      onDiscard={() => setAccountDirty(false)}
+      banner={deactivated && coachId ? <DeactivatedBanner coachId={coachId} /> : null}
+      render={(tab) => (
+        <>
+          {tab === "account" ? <AccountTab coach={coach} onDirtyChange={setAccountDirty} /> : null}
+          {tab === "notifications" ? (
+            <NotificationsTab kinds={COACH_NOTIFICATIONS} caption="Messages from a parent about an athlete under 18 always notify you in the app." />
+          ) : null}
+          {tab === "booking" ? <BookingTab /> : null}
+          {tab === "privacy" && coachId ? <PrivacyTab coachId={coachId} listed={(coach as { listed?: boolean } | undefined)?.listed !== false} /> : null}
+          {tab === "security" && coachId ? (
+            <SecurityTab danger={!deactivated ? <DeactivateCard coachId={coachId} /> : null} />
+          ) : null}
+        </>
+      )}
+    />
   );
 };
 
@@ -241,7 +279,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
 
 /* ---------- Notifications ---------- */
 
-const NotificationsTab = () => {
+export const NotificationsTab = ({ kinds, caption }: { kinds: typeof COACH_NOTIFICATIONS; caption: string }) => {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
@@ -271,7 +309,7 @@ const NotificationsTab = () => {
         <span className={label}>Notify me about</span>
         <span className={cn(label, "text-center")}>Email</span>
         <span className={cn(label, "text-center")}>App</span>
-        {COACH_NOTIFICATIONS.map(([kind, title, detail]) => (
+        {kinds.map(([kind, title, detail]) => (
           <div key={kind} className="contents">
             <div className="flex flex-col gap-1">
               <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{title}</span>
@@ -289,7 +327,7 @@ const NotificationsTab = () => {
           </div>
         ))}
       </div>
-      <p className={meta}>Messages from a parent about an athlete under 18 always notify you in the app.</p>
+      <p className={meta}>{caption}</p>
     </Card>
   );
 };
@@ -322,15 +360,6 @@ const BookingTab = () => {
 };
 
 /* ---------- Privacy and safety ---------- */
-
-const downloadJson = (data: unknown, filename: string) => {
-  const url = URL.createObjectURL(new Blob([JSON.stringify(data, null, 2)], { type: "application/json" }));
-  const link = document.createElement("a");
-  link.href = url;
-  link.download = filename;
-  link.click();
-  URL.revokeObjectURL(url);
-};
 
 const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) => {
   const { user } = useAuth();
@@ -405,11 +434,10 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
 
 /* ---------- Password and account ---------- */
 
-const SecurityTab = ({ coachId, deactivated }: { coachId: string; deactivated: boolean }) => {
+export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
   const { user, changePassword, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
-  const queryClient = useQueryClient();
   const provider = (user?.app_metadata as { provider?: string } | undefined)?.provider || user?.identities?.[0]?.provider;
   const canChangePassword = provider === "email" || provider === "password";
 
@@ -420,8 +448,6 @@ const SecurityTab = ({ coachId, deactivated }: { coachId: string; deactivated: b
   const [pwError, setPwError] = useState<string | null>(null);
   const strength = passwordStrength(next);
 
-  const [deactivating, setDeactivating] = useState(false);
-  const [word, setWord] = useState("");
 
   const resetPw = () => {
     setPwOpen(false);
@@ -462,20 +488,6 @@ const SecurityTab = ({ coachId, deactivated }: { coachId: string; deactivated: b
     },
     onSuccess: () => toast({ title: "Signed out of your other devices" }),
     onError: () => toast({ title: "Couldn't sign out other devices", variant: "destructive" }),
-  });
-
-  const deactivate = useMutation({
-    mutationFn: async () => {
-      const { error } = await coachesAPI.updateCoach(coachId, { deactivated_at: new Date().toISOString() });
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: () => {
-      setDeactivating(false);
-      setWord("");
-      queryClient.invalidateQueries({ queryKey: ["coach-details"] });
-      toast({ title: "Account deactivated", description: "Families can no longer book you. Reactivate any time from here." });
-    },
-    onError: (err) => toast({ title: "Couldn't deactivate", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
   });
 
   const passwordInput = (id: string, text: string, value: string, onChange: (v: string) => void, auto: string) => (
@@ -530,44 +542,84 @@ const SecurityTab = ({ coachId, deactivated }: { coachId: string; deactivated: b
         </div>
       </Card>
 
-      {!deactivated ? (
-        <Card title="Deactivate account" className="border-[#FDB5B5]">
-          <p className={sub}>
-            Your profile leaves the marketplace and families can no longer book you. Upcoming sessions stay on your calendar until you cancel them.
-          </p>
-          {deactivating ? (
-            <div className="flex flex-col gap-2">
-              <span className={label}>Type {DEACTIVATE_WORD} to confirm</span>
-              <div className="flex flex-wrap gap-2">
-                <input
-                  className={cn(input, "max-w-[220px]")}
-                  value={word}
-                  onChange={(e) => setWord(e.target.value)}
-                  placeholder={DEACTIVATE_WORD}
-                  aria-label={`Type ${DEACTIVATE_WORD} to confirm`}
-                  autoFocus
-                />
-                <button
-                  type="button"
-                  className={dangerButton}
-                  disabled={word.trim() !== DEACTIVATE_WORD || deactivate.isPending}
-                  onClick={() => deactivate.mutate()}
-                >
-                  Deactivate account
-                </button>
-                <button type="button" className={secondaryButton} onClick={() => { setDeactivating(false); setWord(""); }}>
-                  Cancel
-                </button>
-              </div>
-            </div>
-          ) : (
-            <button type="button" className={cn(dangerButton, "self-start")} onClick={() => setDeactivating(true)}>
-              Deactivate account
-            </button>
-          )}
-        </Card>
-      ) : null}
+      {danger}
     </>
+  );
+};
+
+/** A red card whose action needs a word typed to confirm (DEACTIVATE for coaches, DELETE for athletes). */
+export const ConfirmWordCard = ({
+  title,
+  body,
+  word,
+  actionLabel,
+  pending,
+  onConfirm,
+}: {
+  title: string;
+  body: string;
+  word: string;
+  actionLabel: string;
+  pending: boolean;
+  onConfirm: () => void;
+}) => {
+  const [open, setOpen] = useState(false);
+  const [typed, setTyped] = useState("");
+  return (
+    <Card title={title} className="border-[#FDB5B5]">
+      <p className={sub}>{body}</p>
+      {open ? (
+        <div className="flex flex-col gap-2">
+          <span className={label}>Type {word} to confirm</span>
+          <div className="flex flex-wrap gap-2">
+            <input
+              className={cn(input, "max-w-[220px]")}
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              placeholder={word}
+              aria-label={`Type ${word} to confirm`}
+              autoFocus
+            />
+            <button type="button" className={dangerButton} disabled={typed.trim() !== word || pending} onClick={onConfirm}>
+              {actionLabel}
+            </button>
+            <button type="button" className={secondaryButton} onClick={() => { setOpen(false); setTyped(""); }}>
+              Cancel
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button type="button" className={cn(dangerButton, "self-start")} onClick={() => setOpen(true)}>
+          {actionLabel}
+        </button>
+      )}
+    </Card>
+  );
+};
+
+const DeactivateCard = ({ coachId }: { coachId: string }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const deactivate = useMutation({
+    mutationFn: async () => {
+      const { error } = await coachesAPI.updateCoach(coachId, { deactivated_at: new Date().toISOString() });
+      if (error) throw new Error(error.message);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["coach-details"] });
+      toast({ title: "Account deactivated", description: "Families can no longer book you. Reactivate any time from here." });
+    },
+    onError: (err) => toast({ title: "Couldn't deactivate", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+  });
+  return (
+    <ConfirmWordCard
+      title="Deactivate account"
+      body="Your profile leaves the marketplace and families can no longer book you. Upcoming sessions stay on your calendar until you cancel them."
+      word={DEACTIVATE_WORD}
+      actionLabel="Deactivate account"
+      pending={deactivate.isPending}
+      onConfirm={() => deactivate.mutate()}
+    />
   );
 };
 
