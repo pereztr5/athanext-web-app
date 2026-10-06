@@ -2945,6 +2945,7 @@ export type Database = {
           title: string
         }[]
       }
+      get_coach_earnings: { Args: { p_days: number }; Returns: Json }
       get_coach_rating_stats: {
         Args: { p_coach_id: string }
         Returns: {
@@ -3059,6 +3060,7 @@ export type Database = {
           role: string
         }[]
       }
+      get_feedback_due: { Args: never; Returns: Json }
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
       get_my_coaches: { Args: never; Returns: Json }
       get_or_create_my_coach_channel: { Args: never; Returns: string }

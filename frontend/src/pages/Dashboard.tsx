@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { formatTimeSpan } from "@/utils/sessionFormatting";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { countExpiringSoon } from "@/utils/requestWaiting";
+import { CoachHome } from "@/components/home/CoachHome";
 
 // Session dates/times render in the viewer's zone (ATH-22).
 const longDate = (iso: string, timeZone?: string) =>
@@ -244,7 +245,7 @@ const secondaryButtonClass =
 const captionClass =
   "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]";
 
-const Dashboard = () => {
+const AthleteDashboard = () => {
   const navigate = useNavigate();
   const timeZone = useViewerTimeZone();
   const { userName, user } = useAuth();
@@ -666,6 +667,13 @@ const Dashboard = () => {
       </div>
     </div>
   );
+};
+
+// Coaches get Coach Home (ATH-76); athletes keep this dashboard until their Home (ATH-92).
+const Dashboard = () => {
+  const { isCoach, ready } = useRole();
+  if (!ready) return null;
+  return isCoach ? <CoachHome /> : <AthleteDashboard />;
 };
 
 export default Dashboard;

@@ -66,6 +66,24 @@ const MySchedulePage = () => {
     return () => window.clearInterval(id);
   }, []);
 
+  // Links from Coach Home: ?day=YYYY-MM-DD opens that day, ?create=1 opens Create session.
+  useEffect(() => {
+    const day = searchParams.get("day");
+    const create = searchParams.get("create");
+    if (!day && !create) return;
+    if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
+      setAnchor(day);
+      setView("day");
+    }
+    if (create) {
+      setCreateDate(day && day >= todayISO ? day : todayISO);
+      setCreateOpen(true);
+    }
+    searchParams.delete("day");
+    searchParams.delete("create");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, setSearchParams, todayISO]);
+
   // Back from Google sign-in.
   useEffect(() => {
     const result = searchParams.get("calendar");
