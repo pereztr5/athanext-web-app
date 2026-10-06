@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Bell } from "lucide-react";
+import { Bell, MessageCircle } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -46,6 +46,15 @@ export const AppTopBar = () => {
     queryFn: () => chatAPI.getUserConversations(user!.id, { limit: 5 }),
     enabled: Boolean(user?.id) && open,
   });
+
+  // Unread conversations for the Messages button (ATH-75); refreshed when a new message arrives.
+  const unreadQuery = useQuery({
+    queryKey: ["unread-conversations", user?.id, hasNewMessage],
+    queryFn: () => chatAPI.countUnreadConversations(user!.id).then((r) => r.data ?? 0),
+    enabled: Boolean(user?.id),
+    refetchInterval: 60_000,
+  });
+  const unread = unreadQuery.data ?? 0;
 
   const sessionsQuery = useQuery({
     queryKey: ["topbar-next-session", personaId, isCoach],
@@ -124,6 +133,18 @@ export const AppTopBar = () => {
         <div className="sm:hidden">
           <UserMenu useFallbackDelay avatarReady={profileReady} />
         </div>
+        <Link
+          to={ROUTES.CHAT}
+          aria-label={unread ? `Messages, ${unread} unread` : "Messages"}
+          className="relative mr-4 inline-flex size-8 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] hover:bg-[#F4F4EB]"
+        >
+          <MessageCircle className="size-[18px]" strokeWidth={1.5} />
+          {unread ? (
+            <span className="absolute -right-1.5 -top-1.5 flex h-[16px] min-w-[16px] items-center justify-center rounded-full bg-[#0054B4] px-1 text-[10px] font-semibold text-[#F1F1E6]">
+              {unread > 9 ? "9+" : unread}
+            </span>
+          ) : null}
+        </Link>
         <Popover
           open={open}
           onOpenChange={(next) => {

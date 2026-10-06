@@ -393,10 +393,10 @@ export const chatAPI = {
     );
   },
 
-  async hasUnreadMessages(userId: string): Promise<ApiResponse<boolean>> {
-    return apiClient.query<boolean>(
+  /** Conversations with a message newer than the user's last read time. */
+  async countUnreadConversations(userId: string): Promise<ApiResponse<number>> {
+    return apiClient.query<number>(
       async (client) => {
-        // Get all conversations with their last_message_at and the user's last_read_at
         const response = await client
           .from("conversation_participants")
           .select(`
@@ -409,35 +409,25 @@ export const chatAPI = {
           .eq("user_id", userId);
 
         if (response.error) {
-          return { data: false, error: response.error };
+          return { data: 0, error: response.error };
         }
 
-        if (!response.data || response.data.length === 0) {
-          return { data: false, error: null };
-        }
-
-        // Check if any conversation has messages newer than last_read_at
-        const hasUnread = response.data.some((participant: any) => {
+        const unread = (response.data ?? []).filter((participant: any) => {
           const lastMessageAt = participant.conversations?.last_message_at;
           const lastReadAt = participant.last_read_at;
-          
-          // If there's a last message but no read timestamp, it's unread
-          if (lastMessageAt && !lastReadAt) {
-            return true;
-          }
-          
-          // If last message is newer than last read, it's unread
-          if (lastMessageAt && lastReadAt) {
-            return new Date(lastMessageAt) > new Date(lastReadAt);
-          }
-          
-          return false;
-        });
+          if (!lastMessageAt) return false;
+          return !lastReadAt || new Date(lastMessageAt) > new Date(lastReadAt);
+        }).length;
 
-        return { data: hasUnread, error: null };
+        return { data: unread, error: null };
       },
-      `Check for unread messages for user ${userId}`
+      `Count unread conversations for user ${userId}`
     );
+  },
+
+  async hasUnreadMessages(userId: string): Promise<ApiResponse<boolean>> {
+    const { data, error } = await this.countUnreadConversations(userId);
+    return { data: (data ?? 0) > 0, error };
   },
 
   async markConversationAsRead(

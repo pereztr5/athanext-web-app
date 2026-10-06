@@ -1,16 +1,16 @@
 import { Link, useLocation } from "react-router-dom";
 import {
   BadgeCheck,
-  BarChart3,
   Calendar,
   CalendarDays,
   CalendarPlus,
+  CircleHelp,
   LayoutGrid,
   MessageCircle,
   Search,
+  Settings,
   Shield,
   ShoppingBag,
-  User,
   UserCheck,
   Users,
 } from "lucide-react";
@@ -28,6 +28,7 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 import { cn } from "@/lib/utils";
+import { COACH_NAV } from "./coachNav";
 
 const ATHLETE_NAV = [
   { title: "Book a Session", url: ROUTES.BOOK, icon: CalendarPlus },
@@ -40,15 +41,9 @@ const ATHLETE_NAV = [
   { title: "Development", url: "", icon: BadgeCheck },
 ];
 
-const COACH_NAV = [
-  { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
-  { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
-  { title: "My Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
-  { title: "My Athletes", url: ROUTES.ATHLETES, icon: Users },
-  { title: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
-  { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
-  { title: "Analytics", url: ROUTES.ANALYTICS, icon: BarChart3 },
-  { title: "Profile", url: ROUTES.PROFILE, icon: User },
+const COACH_FOOTER_NAV = [
+  { title: "Account Settings", url: ROUTES.SETTINGS, icon: Settings },
+  { title: "Help", url: ROUTES.CONTACT_US, icon: CircleHelp },
 ];
 
 const FOOTER_LINKS = [
@@ -96,7 +91,7 @@ export const AppSidebar = () => {
             </Link>
           </div>
           <SidebarMenu className="w-full gap-[5px]">
-            {items.map((item) => {
+            {items.map((item: { title: string; url: string; icon: typeof Calendar }) => {
               const active = Boolean(
                 item.url &&
                   (location.pathname === item.url ||
@@ -133,8 +128,22 @@ export const AppSidebar = () => {
             })}
           </SidebarMenu>
         </div>
-        <nav aria-label="Support and legal" className="mt-auto flex flex-wrap gap-x-3 gap-y-1 pb-4">
-          {FOOTER_LINKS.map((link) => (
+        {isCoach ? (
+          <SidebarMenu className="mt-auto w-full gap-[5px] pb-3">
+            {COACH_FOOTER_NAV.map((item) => (
+              <SidebarMenuItem key={item.title}>
+                <SidebarMenuButton asChild isActive={location.pathname.startsWith(item.url)} className={navItemClass}>
+                  <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                    <item.icon className="size-4" strokeWidth={1.5} />
+                    <span>{item.title}</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+            ))}
+          </SidebarMenu>
+        ) : null}
+        <nav aria-label="Support and legal" className={cn("flex flex-wrap gap-x-3 gap-y-1 pb-4", isCoach ? "" : "mt-auto")}>
+          {FOOTER_LINKS.filter((link) => !isCoach || link.url !== ROUTES.CONTACT_US).map((link) => (
             <Link
               key={link.url}
               to={link.url}

@@ -15,7 +15,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { LogOut, Settings } from "lucide-react";
+import { CircleHelp, LogOut, Settings, Store } from "lucide-react";
+import { useRole } from "@/hooks/useRole";
 import { AvatarFallback } from "@radix-ui/react-avatar";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,6 +58,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   } = useAuth();
   const { profile, profileProgress } = useProfile();
   const navigate = useNavigate();
+  const { isCoach } = useRole();
   const location = useLocation();
   const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
@@ -455,12 +457,28 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             {displayEmail}
           </p>
         </DropdownMenuLabel>
+        {isCoach ? (
+          <DropdownMenuItem
+            onClick={() => navigate(ROUTES.PROFILE)}
+            className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
+          >
+            <Store className="size-4" strokeWidth={1.75} />
+            <span>My Profile</span>
+          </DropdownMenuItem>
+        ) : null}
         <DropdownMenuItem
           onClick={() => navigate(ROUTES.SETTINGS)}
           className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
         >
           <Settings className="size-4" strokeWidth={1.75} />
-          <span>Settings</span>
+          <span>Account Settings</span>
+        </DropdownMenuItem>
+        <DropdownMenuItem
+          onClick={() => navigate(ROUTES.CONTACT_US)}
+          className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
+        >
+          <CircleHelp className="size-4" strokeWidth={1.75} />
+          <span>Help</span>
         </DropdownMenuItem>
         <DropdownMenuItem
           onClick={async () => {
