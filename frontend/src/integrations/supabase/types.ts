@@ -1451,6 +1451,8 @@ export type Database = {
           name: string
           new_family_booking: string
           pathway_tags: string[]
+          pay_mode: string
+          pay_note: string | null
           position: string | null
           positions: string[] | null
           profile_faqs: Json
@@ -1490,6 +1492,8 @@ export type Database = {
           name: string
           new_family_booking?: string
           pathway_tags?: string[]
+          pay_mode?: string
+          pay_note?: string | null
           position?: string | null
           positions?: string[] | null
           profile_faqs?: Json
@@ -1529,6 +1533,8 @@ export type Database = {
           name?: string
           new_family_booking?: string
           pathway_tags?: string[]
+          pay_mode?: string
+          pay_note?: string | null
           position?: string | null
           positions?: string[] | null
           profile_faqs?: Json

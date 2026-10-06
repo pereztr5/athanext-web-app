@@ -7,6 +7,8 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AthleteSessionPage from "./AthleteSession";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -29,6 +31,8 @@ const LIVE = new Set(["requested", "pending_payment", "booked", "completed", "no
 const payPill = (b: CoachSessionBooking) =>
   b.status === "requested" ? (
     <BrandPill tone="amber">Request</BrandPill>
+  ) : b.paymentStatus === "direct" ? (
+    <BrandPill tone="neutral">Pays you directly</BrandPill>
   ) : b.paymentStatus === "paid" ? (
     <BrandPill tone="green">Paid</BrandPill>
   ) : (
@@ -53,6 +57,10 @@ const CoachSessionPage = () => {
     queryFn: () => coachSessionAPI.get(id!),
   });
   const s = query.data;
+  // Booking only coaches (ATH-86) are paid by families directly.
+  const { profile } = useProfile();
+  const { coach: me } = useCoachDetails(isCoach ? profile?.userProfile?.coach_id ?? undefined : undefined);
+  const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
 
   const done = (title: string) => {
     toast({ title });
@@ -128,10 +136,14 @@ const CoachSessionPage = () => {
   const payLine = !first
     ? "Nobody booked yet"
     : first.status === "requested"
-      ? "Charged when you accept"
-      : first.paymentStatus === "paid"
-        ? `Paid in app, ${money(s.price)}`
-        : `Waiting for payment, ${money(s.price)}`;
+      ? paysDirect
+        ? "The family pays you directly once you accept"
+        : "Charged when you accept"
+      : first.paymentStatus === "direct"
+        ? `Family pays you directly, ${money(s.price)}`
+        : first.paymentStatus === "paid"
+          ? `Paid in app, ${money(s.price)}`
+          : `Waiting for payment, ${money(s.price)}`;
 
   const openReschedule = () => {
     setNewDate(getZonedISODate(start, timeZone) < isoDateInZone(now, timeZone) ? isoDateInZone(now, timeZone) : getZonedISODate(start, timeZone));

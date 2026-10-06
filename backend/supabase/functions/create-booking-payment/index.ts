@@ -574,9 +574,12 @@ serve(async (req) => {
       return await handleWalkIn(req, parsedBody, supabaseClient);
     }
 
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-      apiVersion: "2025-08-27.basil",
-    });
+    // Created on first use, so booking only checkouts (ATH-86) work without a Stripe key.
+    let stripeClient: Stripe | null = null;
+    const stripeApi = () =>
+      (stripeClient ??= new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
+        apiVersion: "2025-08-27.basil",
+      }));
 
     if (req.method === "GET") {
       const url = new URL(req.url);
@@ -588,7 +591,7 @@ serve(async (req) => {
         });
       }
 
-      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      const session = await stripeApi().checkout.sessions.retrieve(sessionId, {
         expand: ["payment_intent"],
       });
 
@@ -620,7 +623,7 @@ serve(async (req) => {
 
       let event: Stripe.Event;
       try {
-        event = stripe.webhooks.constructEvent(rawBody, stripeSignature, webhookSecret);
+        event = stripeApi().webhooks.constructEvent(rawBody, stripeSignature, webhookSecret);
       } catch (err) {
         console.error("Webhook signature verification failed:", err);
         return new Response(JSON.stringify({ error: "Invalid signature" }), {
@@ -659,7 +662,7 @@ serve(async (req) => {
     if (parsedBody.session_id && typeof parsedBody.session_id === "string") {
       const sessionId = parsedBody.session_id;
 
-      const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      const session = await stripeApi().checkout.sessions.retrieve(sessionId, {
         expand: ["payment_intent"],
       });
 
@@ -895,6 +898,50 @@ serve(async (req) => {
       }
     }
 
+    // Booking only coaches (ATH-86): confirm now and let the family pay the coach directly.
+    // Nothing goes to Stripe. Unpaid bookings already waiting (an accepted request from
+    // before the coach switched) are confirmed the same way.
+    const { data: payRow } = await supabaseClient
+      .from("coaches" as any)
+      .select("pay_mode")
+      .eq("id", coachId)
+      .maybeSingle();
+    if ((payRow as { pay_mode?: string } | null)?.pay_mode === "self") {
+      let directIds: string[] = [];
+      if (coversAllPending) {
+        const { error: confirmErr } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .update({ status: "booked", payment_status: "direct", updated_at: new Date().toISOString() })
+          .in("id", myPendingBookings.map((b) => b.id));
+        if (confirmErr) throw confirmErr;
+        directIds = myPendingBookings.map((b) => b.id);
+      } else {
+        if (myPendingBookings.length) {
+          throw new Error("You already have a pending booking for this session.");
+        }
+        const { data: directRows, error: directErr } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .insert(occurrences.map((occ) => ({
+            occurrence_id: occ.id,
+            weekly_slot_id: occ.weekly_slot_id,
+            availability_id: occ.availability_id,
+            coach_id: occ.coach_id,
+            athlete_id: athleteId,
+            status: "booked",
+            payment_status: "direct",
+            notes: notes || null,
+            created_by: user.id,
+          })))
+          .select("id");
+        if (directErr) throw directErr;
+        directIds = (directRows || []).map((row: any) => row.id);
+      }
+      return new Response(
+        JSON.stringify({ direct: true, booking_ids: directIds }),
+        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+      );
+    }
+
     let bookingIds: string[] = [];
     if (coversAllPending) {
       reusingPendingBookings = true;
@@ -926,7 +973,7 @@ serve(async (req) => {
 
     let customerId: string | undefined;
     if (user?.email) {
-      const customers = await stripe.customers.list({ email: user.email, limit: 1 });
+      const customers = await stripeApi().customers.list({ email: user.email, limit: 1 });
       if (customers.data.length > 0) {
         customerId = customers.data[0].id;
       }
@@ -946,7 +993,7 @@ serve(async (req) => {
 
     let session: Stripe.Checkout.Session;
     try {
-      session = await stripe.checkout.sessions.create({
+      session = await stripeApi().checkout.sessions.create({
         customer: customerId,
         customer_email: customerId ? undefined : user.email || undefined,
         payment_method_types: ["card"],

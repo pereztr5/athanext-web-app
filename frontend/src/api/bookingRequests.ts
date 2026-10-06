@@ -70,13 +70,14 @@ export const bookingRequestsAPI = {
     }));
   },
 
-  async respond(bookingId: string, accept: boolean): Promise<'pending_payment' | 'canceled'> {
+  /** 'booked' when the coach is booking only (ATH-86): the family pays them directly. */
+  async respond(bookingId: string, accept: boolean): Promise<'pending_payment' | 'booked' | 'canceled'> {
     const { data, error } = await supabase.rpc('respond_to_booking_request', {
       p_booking_id: bookingId,
       p_accept: accept,
     });
     if (error) throw error;
-    return data as 'pending_payment' | 'canceled';
+    return data as 'pending_payment' | 'booked' | 'canceled';
   },
 
   /** Offers a 1-on-1 at another time (Eastern date and HH:MM:SS) and closes the request. */

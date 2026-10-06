@@ -53,6 +53,12 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
         window.location.href = result.url;
         return;
       }
+      if (result.direct) {
+        toast({ title: "You're booked", description: `Pay ${offer?.coachName ?? "the coach"} directly. Nothing was charged in AthaNext.` });
+        setPicked([]);
+        queryClient.invalidateQueries({ queryKey: ["group-offer", offerId] });
+        return;
+      }
       toast({
         title: "Request sent",
         description: "The coach will accept or decline. You'll pay once they accept, from My Sessions.",

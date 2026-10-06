@@ -21,7 +21,7 @@ export interface AthleteSession {
   ended: boolean;
   capacity: number;
   taken: number;
-  coach: { id: string; name: string; slug: string | null; photo: string | null };
+  coach: { id: string; name: string; slug: string | null; photo: string | null; paysDirect: boolean; payNote: string | null };
   booking: {
     id: string;
     status: string;
@@ -58,7 +58,14 @@ export const athleteSessionAPI = {
       ended: Boolean(raw.ended),
       capacity: Number(raw.capacity) || 1,
       taken: Number(raw.taken) || 0,
-      coach: { id: coach.id, name: coach.name ?? "Coach", slug: coach.slug ?? null, photo: coach.photo ?? null },
+      coach: {
+        id: coach.id,
+        name: coach.name ?? "Coach",
+        slug: coach.slug ?? null,
+        photo: coach.photo ?? null,
+        paysDirect: coach.pay_mode === "self",
+        payNote: coach.pay_note ?? null,
+      },
       booking: {
         id: booking.id,
         status: booking.status ?? "booked",

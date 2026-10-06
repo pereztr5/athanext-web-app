@@ -16,6 +16,7 @@ import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, sessionLink } from "@/utils/schedule";
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
+import { useCoachDetails } from "@/hooks/useCoachDetails";
 
 const when = (date: string, start: string, timeZone: string) => {
   const at = zonedWallTimeToUtc(date, start) ?? new Date(NaN);
@@ -33,6 +34,8 @@ export const BookAthleteDialog = ({
 }) => {
   const timeZone = useViewerTimeZone();
   const { userProfile } = useAuth();
+  const { coach: me } = useCoachDetails(userProfile?.coach_id ?? undefined);
+  const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
   const { toast } = useToast();
   const [picked, setPicked] = useState<string | null>(null);
   const times = useQuery({
@@ -52,7 +55,9 @@ export const BookAthleteDialog = ({
         [selected.id],
         [athleteId],
         false,
-        `${first}, I have ${label} open (${money(selected.price)}). Book it here: ${link}`,
+        paysDirect
+          ? `${first}, I have ${label} open (${money(selected.price)}, you pay me directly). Book it here: ${link}`
+          : `${first}, I have ${label} open (${money(selected.price)}). Book it here: ${link}`,
       );
     },
     onSuccess: () => {
@@ -103,7 +108,9 @@ export const BookAthleteDialog = ({
             })}
           </div>
           <p className="rounded-[8px] bg-[#F1F1E6] px-3 py-2.5 text-[14px] leading-[18px] text-[#484D56]">
-            {first} gets a message with a link to book and pay. Using a credit, or marking it paid outside AthaNext, comes with the payments model.
+            {paysDirect
+              ? `${first} gets a message with a link to book. They pay you directly.`
+              : `${first} gets a message with a link to book and pay. Using a credit, or marking it paid outside AthaNext, comes with the payments model.`}
           </p>
           <div className="flex justify-end gap-2">
             <button type="button" className={secondaryButton} onClick={onClose}>Cancel</button>

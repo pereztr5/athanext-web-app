@@ -78,6 +78,8 @@ type Coach = Omit<
   | "deals_enabled"
   | "listed"
   | "deactivated_at"
+  | "pay_mode"
+  | "pay_note"
 > & {
   is_verified?: boolean;
   favourite_positions?: string[];

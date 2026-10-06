@@ -14,6 +14,7 @@ import { BookingRulesSection, CalendarSyncSection } from "@/components/schedule/
 import { card, dangerButton, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
 import { Switch } from "@/components/ui/switch";
+import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
@@ -170,7 +171,13 @@ export const CoachSettings = () => {
           {tab === "notifications" ? (
             <NotificationsTab kinds={COACH_NOTIFICATIONS} caption="Messages from a parent about an athlete under 18 always notify you in the app." />
           ) : null}
-          {tab === "booking" ? <BookingTab /> : null}
+          {tab === "booking" && coachId ? (
+            <BookingTab
+              coachId={coachId}
+              payMode={(coach as { pay_mode?: string } | undefined)?.pay_mode === "self" ? "self" : "app"}
+              payNote={(coach as { pay_note?: string | null } | undefined)?.pay_note ?? ""}
+            />
+          ) : null}
           {tab === "privacy" && coachId ? <PrivacyTab coachId={coachId} listed={(coach as { listed?: boolean } | undefined)?.listed !== false} /> : null}
           {tab === "security" && coachId ? (
             <SecurityTab danger={!deactivated ? <DeactivateCard coachId={coachId} /> : null} />
@@ -334,21 +341,117 @@ export const NotificationsTab = ({ kinds, caption }: { kinds: typeof COACH_NOTIF
 
 /* ---------- Booking and calendar ---------- */
 
-const BookingTab = () => {
+const PAY_MODES: { value: "app" | "self"; title: string; detail: string }[] = [
+  { value: "app", title: "Through AthaNext", detail: "Families pay by card when they book. Stripe pays you out." },
+  {
+    value: "self",
+    title: "Booking only",
+    detail: "Families book and schedule through AthaNext and pay you themselves, in cash, Venmo or however you like.",
+  },
+];
+
+/** How families pay (ATH-86): in the app, or booking only with a note on how to pay the coach. */
+const HowFamiliesPay = ({ coachId, payMode, payNote }: { coachId: string; payMode: "app" | "self"; payNote: string }) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const [mode, setMode] = useState(payMode);
+  const [note, setNote] = useState(payNote);
+  useEffect(() => setMode(payMode), [payMode]);
+  useEffect(() => setNote(payNote), [payNote]);
+
+  const save = async (patch: { pay_mode?: "app" | "self"; pay_note?: string | null }) => {
+    const { error } = await coachesAPI.updateCoach(coachId, patch);
+    if (error) throw new Error(error.message);
+    queryClient.invalidateQueries({ queryKey: ["coach-details"] });
+  };
+
+  const choose = async (next: "app" | "self") => {
+    if (next === mode) return;
+    const previous = mode;
+    setMode(next);
+    try {
+      await save({ pay_mode: next });
+      toast({
+        title: next === "self" ? "Booking only is on" : "Families pay through AthaNext again",
+        description: "Only new bookings change. Sessions already paid in AthaNext stay as they are.",
+        duration: 10000,
+        action: (
+          <ToastAction
+            altText="Undo"
+            onClick={() => {
+              setMode(previous);
+              void save({ pay_mode: previous }).catch(() => undefined);
+            }}
+          >
+            Undo
+          </ToastAction>
+        ),
+      });
+    } catch (err) {
+      setMode(previous);
+      toast({ title: "Couldn't save", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    }
+  };
+
+  return (
+    <Card icon={<Wallet className="size-5 text-[#767980]" strokeWidth={1.5} />} title="How families pay">
+      <div className="flex flex-col gap-2" role="radiogroup" aria-label="How families pay">
+        {PAY_MODES.map((option) => {
+          const on = mode === option.value;
+          return (
+            <button
+              key={option.value}
+              type="button"
+              role="radio"
+              aria-checked={on}
+              onClick={() => void choose(option.value)}
+              className={cn(
+                "flex items-start gap-3 rounded-[8px] border px-4 py-3 text-left transition-colors",
+                on ? "border-[#CCDDF0] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F9F9F5] hover:bg-[#F4F4EB]"
+              )}
+            >
+              <span
+                className={cn("mt-[3px] size-3 shrink-0 rounded-full border bg-white", on ? "border-[3px] border-[#0054B4]" : "border-[#C1C1B8]")}
+                aria-hidden="true"
+              />
+              <span className="flex flex-col gap-1">
+                <b className="text-[14px] font-medium">{option.title}</b>
+                <span className={meta}>{option.detail}</span>
+              </span>
+            </button>
+          );
+        })}
+      </div>
+      {mode === "self" ? (
+        <Field label="How families pay you (optional)" hint="Shown to families when they book. AthaNext doesn't charge or track these payments.">
+          <input
+            className={input}
+            value={note}
+            maxLength={200}
+            placeholder="For example, Venmo @your-name or cash at the session"
+            onChange={(e) => setNote(e.target.value)}
+            onBlur={() => {
+              if (note.trim() === payNote.trim()) return;
+              save({ pay_note: note.trim() || null })
+                .then(() => toast({ title: "Saved" }))
+                .catch(() => toast({ title: "Couldn't save the note", variant: "destructive" }));
+            }}
+          />
+        </Field>
+      ) : (
+        <p className={meta}>AthaNext never stores your card or bank details.</p>
+      )}
+    </Card>
+  );
+};
+
+const BookingTab = ({ coachId, payMode, payNote }: { coachId: string; payMode: "app" | "self"; payNote: string }) => {
   const today = getZonedISODate(new Date(), "America/New_York");
   const schedule = useQuery({ queryKey: ["coach-schedule", today, today], queryFn: () => scheduleAPI.get(today, today) });
 
   return (
     <>
-      <Card icon={<Wallet className="size-5 text-[#767980]" strokeWidth={1.5} />} title="How families pay">
-        <div className="flex items-start gap-3 rounded-[8px] border border-[#CCDDF0] bg-[#E5EDF7] px-4 py-3">
-          <span className="mt-[3px] size-3 shrink-0 rounded-full border-[3px] border-[#0054B4] bg-white" aria-hidden="true" />
-          <span className="flex flex-col gap-1">
-            <b className="text-[14px] font-medium">Through AthaNext</b>
-            <span className={meta}>Families pay by card when they book. AthaNext never stores your card or bank details.</span>
-          </span>
-        </div>
-      </Card>
+      <HowFamiliesPay coachId={coachId} payMode={payMode} payNote={payNote} />
       <Card icon={<CalendarSync className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Booking and calendar">
         {schedule.isLoading ? <p className={meta}>Loading…</p> : null}
         <BookingRulesSection rules={schedule.data?.rules} />

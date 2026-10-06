@@ -11,6 +11,7 @@ import { CalendarCheck, ChevronRight, CircleCheck, Inbox, MessageSquareText, Plu
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { periodTotals } from "@/utils/home";
+import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
 import { rosterAPI } from "@/api/roster";
 import { card, meta, primaryButton, secondaryButton, segButton, segGroup, textButton } from "@/components/schedule/styles";
@@ -84,6 +85,8 @@ const paidText = (s: ScheduleSession) => {
 
 export const CoachHome = () => {
   const { userName, userProfile } = useAuth();
+  const { coach: me } = useCoachDetails(userProfile?.coach_id ?? undefined);
+  const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
   const navigate = useNavigate();
   const timeZone = useViewerTimeZone();
   const now = new Date();
@@ -184,6 +187,8 @@ export const CoachHome = () => {
           </section>
         ) : (
           <>
+            {/* Booking only coaches are paid directly, so there is no money strip (ATH-86). */}
+            {!paysDirect ? (
             <section aria-label="Money" className="flex flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 md:p-5">
               <div className={cn(segGroup, "sm:w-[360px]")} role="group" aria-label="Period">
                 {RANGES.map(([d, label]) => (
@@ -219,6 +224,7 @@ export const CoachHome = () => {
                 </div>
               </div>
             </section>
+            ) : null}
 
             <section className={card}>
               <div className="flex flex-wrap items-end justify-between gap-2">

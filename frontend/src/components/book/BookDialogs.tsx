@@ -44,6 +44,7 @@ export const ReviewDialog = ({
 
   const total = picked.reduce((n, s) => n + s.price, 0);
   const requests = Boolean(coach?.needsRequest);
+  const direct = Boolean(coach?.paysDirect);
   const first = coach?.name.split(" ")[0] ?? "The coach";
 
   const book = useMutation({
@@ -51,6 +52,17 @@ export const ReviewDialog = ({
     onSuccess: (result) => {
       if (result.url) {
         window.location.href = result.url;
+        return;
+      }
+      if (result.direct) {
+        setError(null);
+        toast({
+          title: picked.length > 1 ? `${plural(picked.length, "session")} booked` : "Session booked",
+          description: `Pay ${first} directly${coach?.payNote ? `: ${coach.payNote.replace(/\.$/, "")}.` : "."} Nothing was charged in AthaNext.`,
+        });
+        queryClient.invalidateQueries({ queryKey: ["bookable-sessions"] });
+        queryClient.invalidateQueries({ queryKey: ["sessions"] });
+        onBooked();
         return;
       }
       toast({
@@ -113,7 +125,8 @@ export const ReviewDialog = ({
           {requests ? (
             <p className="flex items-start gap-2 rounded-[8px] bg-[#FCEFDA] px-3 py-2.5 text-[14px] leading-[18px] text-[#906A29]">
               <UserCheck className="mt-[1px] size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
-              {first} approves new families first. Times are held for 24 hours, and you're only charged {money(total)} if accepted.
+              {first} approves new families first. Times are held for 24 hours
+              {direct ? ". You pay them directly once they accept." : `, and you're only charged ${money(total)} if accepted.`}
             </p>
           ) : null}
 
@@ -128,10 +141,14 @@ export const ReviewDialog = ({
               <span>{money(total)}</span>
             </div>
             <div className="flex items-baseline justify-between">
-              <b className="text-[16px] font-medium">{requests ? "Due if accepted" : "Total"}</b>
+              <b className="text-[16px] font-medium">{direct ? `Pay ${first} directly` : requests ? "Due if accepted" : "Total"}</b>
               <b className="text-[22px] font-semibold">{money(total)}</b>
             </div>
-            <span className={meta}>Any booking fee is shown at checkout before you pay.</span>
+            <span className={meta}>
+              {direct
+                ? `${coach?.payNote ? `${coach.payNote}. ` : ""}${first} takes payment themselves. Nothing is charged in AthaNext.`
+                : "Any booking fee is shown at checkout before you pay."}
+            </span>
           </div>
 
           {error ? (
@@ -144,14 +161,22 @@ export const ReviewDialog = ({
             {book.isPending
               ? requests
                 ? "Sending…"
-                : "Opening checkout…"
+                : direct
+                  ? "Booking…"
+                  : "Opening checkout…"
               : requests
                 ? `Send ${picked.length > 1 ? plural(picked.length, "request") : "request"}`
-                : `Pay ${money(total)}`}
+                : direct
+                  ? "Confirm booking"
+                  : `Pay ${money(total)}`}
           </button>
           {!athleteId ? <p className={meta}>Sign in as an athlete or parent to book.</p> : null}
           <span className={cn(meta, "text-center")}>
-            Free cancellation with 24 hours notice. {requests ? "You get a message when they reply." : "Card payments open Stripe's secure page. Nothing is saved to your account."}
+            Free cancellation with 24 hours notice. {requests
+              ? "You get a message when they reply."
+              : direct
+                ? `You arrange payment with ${first}.`
+                : "Card payments open Stripe's secure page. Nothing is saved to your account."}
           </span>
         </div>
       </DialogContent>

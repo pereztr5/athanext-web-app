@@ -157,10 +157,14 @@ const MySchedulePage = () => {
 
   const respond = useMutation({
     mutationFn: ({ bookingId, accept }: { bookingId: string; accept: boolean }) => bookingRequestsAPI.respond(bookingId, accept),
-    onSuccess: (_status, { bookingId, accept }) => {
+    onSuccess: (status, { bookingId, accept }) => {
       toast({
         title: accept ? "Request accepted" : "Request declined",
-        description: accept ? "The family can now pay to confirm the booking." : "The time is open again.",
+        description: !accept
+          ? "The time is open again."
+          : status === "booked"
+            ? "It's booked. The family pays you directly."
+            : "The family can now pay to confirm the booking.",
       });
       // Add it to the coach's Google Calendar when they connected one with event access.
       if (accept && schedule?.calendar?.canWrite) {

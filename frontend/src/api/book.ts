@@ -22,6 +22,9 @@ export interface BookingCoach {
   /** New family and the coach approves new families first. */
   needsRequest: boolean;
   credits: number;
+  /** Booking only (ATH-86): the family pays the coach directly, nothing is charged in AthaNext. */
+  paysDirect: boolean;
+  payNote: string | null;
   nextSession: { date: string; startTime: string } | null;
   nextOpen: { date: string; startTime: string } | null;
   nextGroup: { date: string; startTime: string; spotsLeft: number; capacity: number; name: string } | null;
@@ -65,6 +68,8 @@ const mapCoach = (row: Row): BookingCoach => ({
   isClient: Boolean(row.is_client),
   needsRequest: Boolean(row.needs_request),
   credits: Number(row.credits) || 0,
+  paysDirect: row.pay_mode === "self",
+  payNote: row.pay_note ?? null,
   nextSession: row.next_session ? { date: row.next_session.date, startTime: row.next_session.start_time } : null,
   nextOpen: row.next_open ? { date: row.next_open.date, startTime: row.next_open.start_time } : null,
   nextGroup: row.next_group
@@ -140,7 +145,7 @@ export const bookAPI = {
    * One checkout for several sessions with one coach. Returns a Stripe URL, or requested when
    * the coach approves new families first.
    */
-  async checkout(occurrenceIds: string[], athleteId: string): Promise<{ url?: string; requested?: boolean }> {
+  async checkout(occurrenceIds: string[], athleteId: string): Promise<{ url?: string; requested?: boolean; direct?: boolean }> {
     const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
       body: { occurrence_ids: occurrenceIds, athlete_id: athleteId },
     });
@@ -150,6 +155,6 @@ export const bookAPI = {
       throw new Error(message || error.message);
     }
     if (data?.error) throw new Error(data.error);
-    return { url: data?.url, requested: Boolean(data?.requested) };
+    return { url: data?.url, requested: Boolean(data?.requested), direct: Boolean(data?.direct) };
   },
 };

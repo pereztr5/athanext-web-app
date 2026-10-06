@@ -60,6 +60,8 @@ export type CoachProfileData = ProfileData & {
     }[];
     rating?: number;
     deals_enabled?: boolean | null;
+    pay_mode?: string | null;
+    pay_note?: string | null;
 };
 
 interface CoachProfileViewProps {
@@ -143,6 +145,8 @@ export function CoachProfileView({
   const perSession = activePackages.map((pkg) => pkg.price_per_session / 100).filter((n) => n > 0);
   const from = hourly || (perSession.length ? Math.min(...perSession) : 0);
   const responseHours = coach.response_time_hours ?? 24;
+  // Booking only coaches (ATH-86) take payment themselves; packages are arranged with them.
+  const paysDirect = coach.pay_mode === "self";
 
   const book = () => {
     if (!user) {
@@ -206,6 +210,7 @@ export function CoachProfileView({
     ["Languages", coach.languages?.join(", ") || ""],
     ["Session types", sessionTypes.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(", ")],
     ["Cancellation", coach.cancellation_policy || "Free cancellation with 24 hours notice"],
+    ["Payment", paysDirect ? `Pay ${first} directly${coach.pay_note ? `. ${coach.pay_note}` : ""}` : ""],
   ].filter(([, value]) => value) as [string, string][];
 
   const shownReviews = allReviews ? reviews : reviews.slice(0, 2);
@@ -302,6 +307,15 @@ export function CoachProfileView({
                     <button type="button" onClick={book} className="h-8 rounded-md bg-[#0054B4] px-3 text-[13px] font-medium text-white hover:bg-[#004390]">
                       Book
                     </button>
+                  ) : paysDirect ? (
+                    <button
+                      type="button"
+                      onClick={onMessage}
+                      disabled={!onMessage || messaging}
+                      className="h-8 rounded-md border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[13px] font-medium text-[#1A202C] hover:bg-[#EAEADF] disabled:opacity-50"
+                    >
+                      Ask {first}
+                    </button>
                   ) : (
                     <button
                       type="button"
@@ -315,6 +329,9 @@ export function CoachProfileView({
                 </li>
               ))}
             </ul>
+            {paysDirect && activePackages.length ? (
+              <p className={caption}>{first} takes payment directly, so packages are arranged with them. Ask to buy one.</p>
+            ) : null}
             {rows.length > 4 ? (
               <button type="button" className="self-start text-[14px] font-medium text-[#0054B4] hover:underline" onClick={() => setAllRows((v) => !v)}>
                 {allRows ? "Show fewer" : `See all ${rows.length}`}

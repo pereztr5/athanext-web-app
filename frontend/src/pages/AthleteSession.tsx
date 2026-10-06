@@ -76,17 +76,21 @@ const AthleteSessionPage = () => {
 
   const payLine = cancelled
     ? s.booking.cancellationReason || "Cancelled"
-    : status === "requested"
-      ? `Waiting for ${coachFirst} to accept. You're only charged if they do.`
-      : status === "pending_payment"
-        ? `${money(s.price)} due to confirm your spot`
-        : s.booking.paymentStatus === "paid"
-          ? s.booking.paidAmount
-            ? `Paid ${money(s.booking.paidAmount)} by card`
-            : "Paid"
-          : s.booking.paymentStatus === "refunded"
-            ? "Refunded"
-            : "Not paid yet";
+    : s.booking.paymentStatus === "direct"
+      ? `Pay ${coachFirst} directly, ${money(s.price)}${s.coach.payNote ? `. ${s.coach.payNote}` : ""}`
+      : status === "requested"
+        ? s.coach.paysDirect
+          ? `Waiting for ${coachFirst} to accept. You pay them directly.`
+          : `Waiting for ${coachFirst} to accept. You're only charged if they do.`
+        : status === "pending_payment"
+          ? `${money(s.price)} due to confirm your spot`
+          : s.booking.paymentStatus === "paid"
+            ? s.booking.paidAmount
+              ? `Paid ${money(s.booking.paidAmount)} by card`
+              : "Paid"
+            : s.booking.paymentStatus === "refunded"
+              ? "Refunded"
+              : "Not paid yet";
 
   const fact = (Icon: typeof Clock, a: string, b?: string | null, right?: JSX.Element | null) => (
     <div className="flex items-start gap-3 py-3">
