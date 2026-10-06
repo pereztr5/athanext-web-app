@@ -1,4 +1,4 @@
-import { Calendar, CalendarDays, CalendarPlus, House, ShoppingBag, Store, UserCheck, Users } from "lucide-react";
+import { Calendar, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "lucide-react";
 import { ROUTES } from "@/routes";
 
 export type NavItem = { title: string; short: string; url: string; icon: typeof House; also?: string[] };
@@ -17,7 +17,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { title: "Home", short: "Home", url: ROUTES.DASHBOARD, icon: House },
   { title: "Book a Session", short: "Book", url: ROUTES.BOOK, icon: CalendarPlus },
   { title: "My Sessions", short: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
-  { title: "Coaches", short: "Coaches", url: ROUTES.MY_COACHES, icon: UserCheck, also: [ROUTES.COACHES, "/coach/"] },
+  { title: "Coaches", short: "Coaches", url: ROUTES.COACHES, icon: Search, also: [ROUTES.MY_COACHES, "/coach/", "/organizations/"] },
   { title: "Gear", short: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
 ];
 

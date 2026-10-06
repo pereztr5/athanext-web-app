@@ -1,8 +1,9 @@
 import { useState, useEffect, useMemo, useRef } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { BadgeCheck, Building2, Search, Users } from "lucide-react";
+import { BadgeCheck, Building2, MapPin, Search, Users } from "lucide-react";
 import {
   Select,
   SelectContent,
@@ -38,8 +39,9 @@ import { useSportPillars } from "@/hooks/useSportPillars";
 import type { Enums } from "@/integrations/supabase/types";
 import { useSlowLoading } from "@/hooks/useSlowLoading";
 import { stripRichTextToPlainText } from "@/utils/richText";
-import { publicCoachRatingLabel } from "@/utils/publicRating";
-import { BrandPill } from "@/components/brand";
+import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
+import { BrandPill, BrandStar } from "@/components/brand";
+import { athleteHomeAPI } from "@/api/athleteHome";
 import {
   ALL_ACADEMIES,
   academySlug,
@@ -91,20 +93,28 @@ type Coach = Omit<
 };
 
 type DirectoryView = "coaches" | "organizations";
+const ALL_SESSION_TYPES = "All Session Types";
 
 const DIRECTORY_VIEWS: { value: DirectoryView; label: string; icon: typeof Users }[] = [
   { value: "coaches", label: "Coaches", icon: Users },
   { value: "organizations", label: "Organizations", icon: Building2 },
 ];
 
+/**
+ * Coach card for signed-in families (ATH-96): the whole card opens the profile, with one
+ * full-width View profile button. Name and badge, role, rating, area, pillar pills, "From $X",
+ * and the coach's organization, "Your coach", or Independent.
+ */
 const AthleteBrowseCard = ({
   coach,
   sport,
-  onViewSessions,
+  isMine,
+  onOpen,
 }: {
   coach: Coach;
   sport: string;
-  onViewSessions: () => void;
+  isMine: boolean;
+  onOpen: () => void;
 }) => {
   const photo = coach.profile_image_url || coach.image_url || "";
   const initials = (coach.name || "Coach")
@@ -116,94 +126,100 @@ const AthleteBrowseCard = ({
   const rawPosition = coach.coach_position || coach.positions?.[0] || "";
   const position = normalizePosition(sport, rawPosition) || "Coach";
   const location = coach.locations?.[0] || "";
-  const rating = publicCoachRatingLabel(coach.rating, coach.total_reviews).replace(".", ",");
-  const showScore = rating !== "New";
+  const ratingVisible = isPublicCoachRatingVisible(coach.total_reviews, coach.rating);
   const price = coach.hourly_rate ? `$${Math.round(Number(coach.hourly_rate))}` : null;
-  const pillars = (coach.specialties || []).filter(Boolean);
+  const pillars = (coach.specialties || []).filter(Boolean).slice(0, 3);
   const academy = coachAcademy(coach.company);
 
   return (
-    <article className="flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
-      <div className="relative h-[131px] shrink-0">
-        <div className="px-[7px] pt-[7px]">
-          <div className="relative h-[77px] overflow-hidden rounded-[6px] bg-[linear-gradient(103deg,#1599BC_0.25%,#0054B4_99.75%)]">
-            {photo ? (
-              <img
-                src={photo}
-                alt=""
-                className="absolute inset-0 size-full scale-125 object-cover opacity-80 blur-[5px]"
-              />
-            ) : null}
+    <article
+      role="link"
+      tabIndex={0}
+      aria-label={`View ${coach.name}'s profile`}
+      onClick={onOpen}
+      onKeyDown={(event) => {
+        if (event.target !== event.currentTarget) return;
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      className="flex min-w-0 cursor-pointer flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 transition-colors hover:border-[#C1C1B8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+    >
+      <div className="flex min-w-0 items-start gap-3">
+        <span className="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[14px] font-medium text-[#0054B4]">
+          {photo ? <img src={photo} alt="" className="size-full object-cover" /> : initials}
+        </span>
+        <div className="flex min-w-0 flex-1 flex-col gap-1">
+          <div className="flex min-w-0 items-center gap-[5px]">
+            <h2 className="truncate text-[18px] font-medium leading-[20px] tracking-[-0.8px] text-[#1A202C]">{coach.name}</h2>
+            {coach.is_verified ? <BadgeCheck className="size-4 shrink-0 fill-[#0054B4] text-white" strokeWidth={2} aria-label="Verified" /> : null}
           </div>
-        </div>
-        <div className="absolute left-[21px] top-[42px] size-[84px] overflow-hidden rounded-full border-[3px] border-[#FCFCFA] bg-[#C1C1B8]">
-          {photo ? (
-            <img src={photo} alt="" className="size-full object-cover" />
-          ) : (
-            <span className="flex size-full items-center justify-center text-[18px] font-medium text-[#484D56]">
-              {initials}
-            </span>
-          )}
+          <p className="truncate text-[12px] font-medium leading-[14px] text-[#767980]">{position}</p>
+          <p className="flex min-w-0 items-center gap-[6px] text-[12px] leading-[14px] text-[#767980]">
+            {ratingVisible ? (
+              <span className="inline-flex shrink-0 items-center gap-1 text-[#1A202C]">
+                <BrandStar size={10} />
+                <b className="font-medium">{publicCoachRatingLabel(coach.rating, coach.total_reviews)}</b>
+                <span className="text-[#767980]">({coach.total_reviews})</span>
+              </span>
+            ) : (
+              <span className="shrink-0">New</span>
+            )}
+            {location ? (
+              <>
+                <span aria-hidden="true">·</span>
+                <MapPin className="size-3 shrink-0" strokeWidth={2} aria-hidden="true" />
+                <span className="truncate">{location}</span>
+              </>
+            ) : null}
+          </p>
         </div>
       </div>
-      <div className="flex min-w-0 flex-col gap-[5px] px-[17px] pt-[7px]">
-        <div className="flex min-w-0 items-end gap-[5px]">
-          <h2 className="truncate text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">
-            {coach.name}
-          </h2>
-          {coach.is_verified ? (
-            <BadgeCheck className="size-4 shrink-0 fill-[#0054B4] text-white" strokeWidth={2} />
-          ) : null}
+
+      {pillars.length ? (
+        <div className="flex flex-wrap gap-[5px]">
+          {pillars.map((pillar) => (
+            <span key={pillar} className="rounded-[4px] border border-[#EAEADF] bg-[#F4F4EB] px-2 py-1 text-[12px] font-medium leading-[13px] text-[#484D56]">
+              {pillar}
+            </span>
+          ))}
         </div>
-        <div className="flex min-w-0 items-center gap-[6px]">
-          <p className="shrink-0 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]">{position}</p>
+      ) : null}
+
+      <div className="mt-auto flex flex-col gap-3">
+        <div className="flex min-w-0 items-center justify-between gap-2 text-[12px] text-[#767980]">
+          <span className="whitespace-nowrap">
+            {price ? (
+              <>
+                From <b className="text-[14px] font-medium text-[#1A202C]">{price}</b>
+              </>
+            ) : null}
+          </span>
           {academy ? (
             <Link
               to={organizationPath(academy)}
-              className="min-w-0 max-w-full rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+              onClick={(event) => event.stopPropagation()}
+              className="inline-flex min-w-0 items-center gap-1 rounded-[4px] font-medium text-[#0054B4] hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
             >
-              <BrandPill tone="muted" className="min-w-0 max-w-full hover:text-[#0054B4]">
-                <span className="truncate">{academy}</span>
-              </BrandPill>
+              <Building2 className="size-3 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+              <span className="truncate">{academy}</span>
             </Link>
-          ) : null}
+          ) : isMine ? (
+            <BrandPill tone="green">Your coach</BrandPill>
+          ) : (
+            <span>Independent coach</span>
+          )}
         </div>
-        {location || rating ? (
-          <div className="flex items-center gap-[6px] text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
-            {location ? <span className="truncate">{location}</span> : null}
-            {location && showScore ? <span className="text-[10px] leading-none text-[#E2A100]">★</span> : null}
-            <span>{rating}</span>
-          </div>
-        ) : null}
-        {pillars.length > 0 ? (
-          <div className="flex gap-[5px] overflow-hidden">
-            {pillars.map((pillar) => (
-              <span
-                key={pillar}
-                className="shrink-0 rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-1 text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#0054B4]"
-              >
-                {pillar}
-              </span>
-            ))}
-          </div>
-        ) : null}
-      </div>
-      <div className="mt-auto flex items-center justify-end gap-3 pb-[15px] pl-[17px] pr-2 pt-[25px]">
-        {price ? (
-          <div className="text-right">
-            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">from</p>
-            <p className="text-[#1A202C]">
-              <span className="text-[16px] font-medium leading-[18px] tracking-[-0.48px]">{price}</span>
-              <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px]">/session</span>
-            </p>
-          </div>
-        ) : null}
         <button
           type="button"
-          onClick={onViewSessions}
-          className="inline-flex items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#F1F1E6]"
+          onClick={(event) => {
+            event.stopPropagation();
+            onOpen();
+          }}
+          className="h-[34px] w-full rounded-[8px] border border-[#6698D2] bg-[#0054B4] text-[14px] font-medium tracking-[-0.42px] text-[#F1F1E6] hover:bg-[#004390]"
         >
-          View sessions
+          View profile
         </button>
       </div>
     </article>
@@ -215,6 +231,9 @@ const AllCoaches = () => {
   const { profile, loading: profileLoading } = useProfile();
   const { user, userProfile } = useAuth();
   const { isAuthenticated, isAthleteLike } = useRole();
+  // Coaches this family already trains with get a "Your coach" pill (ATH-96).
+  const homeQuery = useQuery({ queryKey: ["athlete-home"], queryFn: () => athleteHomeAPI.get(), enabled: isAthleteLike });
+  const myCoachIds = useMemo(() => new Set((homeQuery.data?.coaches ?? []).map((c) => c.id)), [homeQuery.data]);
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
   const directoryView: DirectoryView = searchParams.get("view") === "organizations" ? "organizations" : "coaches";
@@ -244,6 +263,7 @@ const AllCoaches = () => {
   const [selectedPillar, setSelectedPillar] = useState("All Pillars");
   const [selectedFavoritePosition, setSelectedFavoritePosition] = useState("All Positions");
   const [selectedPathway, setSelectedPathway] = useState("All Pathways");
+  const [selectedSessionType, setSelectedSessionType] = useState(ALL_SESSION_TYPES);
   // Organization pages link here with ?academy=<name>. The ref survives the automatic
   // filter reset that runs when the sport is set on load; any manual change clears it.
   const deepLinkAcademy = useRef<string | null>(searchParams.get("academy"));
@@ -512,6 +532,13 @@ const AllCoaches = () => {
       });
     }
 
+    // Filter by session type: in person or virtual (ATH-96)
+    if (selectedSessionType !== ALL_SESSION_TYPES) {
+      filtered = filtered.filter((coach) =>
+        (coach?.session_types ?? []).some((type) => type.toLowerCase().replace(/\s+/g, "-") === selectedSessionType)
+      );
+    }
+
     // Filter by academy (coaches.company)
     if (selectedAcademy !== ALL_ACADEMIES) {
       filtered = filtered.filter((coach) => coach && matchesAcademy(coach.company, selectedAcademy));
@@ -601,6 +628,8 @@ const AllCoaches = () => {
     selectedFavoritePosition,
 
     selectedPathway,
+
+    selectedSessionType,
 
     selectedAcademy,
 
@@ -952,6 +981,12 @@ const AllCoaches = () => {
         return "All positions";
       case "All Pathways":
         return "All pathways";
+      case ALL_SESSION_TYPES:
+        return "In person or virtual";
+      case "in-person":
+        return "In person";
+      case "virtual":
+        return "Virtual";
       case ALL_ACADEMIES:
         return "All academies";
       case "Highest Rated":
@@ -963,7 +998,7 @@ const AllCoaches = () => {
     }
   };
   const isDefaultFilter = (value: string) =>
-    ["All Sports", "All Pillars", "All Positions", "All Pathways", ALL_ACADEMIES, "Highest Rated"].includes(value);
+    ["All Sports", "All Pillars", "All Positions", "All Pathways", ALL_SESSION_TYPES, ALL_ACADEMIES, "Highest Rated"].includes(value);
   const triggerClass = (value: string, width: string) =>
     `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
   const zipDigits = zipQuery.replace(/\D/g, "");
@@ -1153,6 +1188,19 @@ const AllCoaches = () => {
                 </SelectContent>
               </Select>
 
+              <Select value={selectedSessionType} onValueChange={setSelectedSessionType}>
+                <SelectTrigger className={triggerClass(selectedSessionType, "lg:!w-[170px]")} aria-label="Session type">
+                  <SelectValue>{filterLabel(selectedSessionType)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  {[ALL_SESSION_TYPES, "in-person", "virtual"].map((type) => (
+                    <SelectItem key={type} value={type}>
+                      {filterLabel(type)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               {academyOptions.length > 0 && (
                 <Select value={selectedAcademy} onValueChange={chooseAcademy}>
                   <SelectTrigger className={triggerClass(selectedAcademy, "lg:!w-[160px]")} aria-label="Academy">
@@ -1265,6 +1313,7 @@ const AllCoaches = () => {
                   setSelectedPillar("All Pillars");
                   setSelectedFavoritePosition("All Positions");
                   setSelectedPathway("All Pathways");
+                  setSelectedSessionType(ALL_SESSION_TYPES);
                   chooseAcademy(ALL_ACADEMIES);
                   setZipQuery("");
                   setSortBy("Highest Rated");
@@ -1283,7 +1332,8 @@ const AllCoaches = () => {
                       key={coach.id}
                       coach={coach}
                       sport={getCoachSport(coach)}
-                      onViewSessions={() => onViewProfile(coach.id)}
+                      isMine={myCoachIds.has(coach.id)}
+                      onOpen={() => onViewProfile(coach.id)}
                     />
                   );
                 }
