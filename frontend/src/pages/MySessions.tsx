@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
 import {
   AlertCircle,
   Calendar,
@@ -649,6 +650,21 @@ const MySessions = () => {
   useEffect(() => {
     window.scrollTo(0, 0);
   }, []);
+
+  // The coach's summary for the session (ATH-82), shown with their note in the rating dialog.
+  const coachSummaryQuery = useQuery({
+    queryKey: ["session-summary", rateSession?.slotId],
+    enabled: rateDialogOpen && Boolean(rateSession?.slotId),
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from("session_feedback_v2")
+        .select("summary")
+        .eq("slot_id", rateSession!.slotId!)
+        .maybeSingle();
+      if (error) throw error;
+      return data?.summary ?? null;
+    },
+  });
 
   // Fetch existing feedback when dialog opens
   useEffect(() => {
@@ -1476,6 +1492,7 @@ const MySessions = () => {
         isSubmitting={isSubmittingCoachFeedback}
         isSubmitted={feedbackSubmitted}
         existingFeedback={existingFeedback}
+        coachSummary={coachSummaryQuery.data ?? null}
         isLoadingFeedback={isLoadingExistingFeedback}
         onSubmit={handleSubmitCoachFeedback}
         onCancel={() => setRateDialogOpen(false)}

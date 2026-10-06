@@ -28,7 +28,7 @@ import SignupConfirmation from "./pages/SignupConfirmation";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/common/ProtectedRoute";
-import CoachSessionFeedback from "./pages/CoachSessionFeedback";
+import SessionFeedback from "./pages/SessionFeedback";
 import MySessions from "./pages/MySessions";
 import ChatPage from "./pages/ChatPage";
 import BookingConfirmation from "./pages/BookingConfirmation";
@@ -156,7 +156,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.CALENDAR, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },
-  { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><CoachSessionFeedback /></ProtectedRoute> },
+  { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><SessionFeedback /></ProtectedRoute> },
   { path: ROUTES.BOOKING_CONFIRMATION, element: <ProtectedRoute><BookingConfirmation /></ProtectedRoute> },
   { path: ROUTES.PACKAGE_CONFIRMATION, element: <ProtectedRoute><PackageConfirmation /></ProtectedRoute> },
   { path: ROUTES.ADMIN_REFERRALS, element: <ProtectedRoute requireAdmin><AdminReferrals /></ProtectedRoute> },

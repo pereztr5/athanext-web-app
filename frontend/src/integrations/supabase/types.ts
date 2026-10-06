@@ -2332,7 +2332,8 @@ export type Database = {
           created_by: string | null
           edit_count: number
           id: string
-          rating: number
+          no_show: boolean
+          rating: number | null
           slot_id: string
           status: string
           summary: string | null
@@ -2344,7 +2345,8 @@ export type Database = {
           created_by?: string | null
           edit_count?: number
           id?: string
-          rating: number
+          no_show?: boolean
+          rating?: number | null
           slot_id: string
           status?: string
           summary?: string | null
@@ -2356,7 +2358,8 @@ export type Database = {
           created_by?: string | null
           edit_count?: number
           id?: string
-          rating?: number
+          no_show?: boolean
+          rating?: number | null
           slot_id?: string
           status?: string
           summary?: string | null
@@ -2372,6 +2375,42 @@ export type Database = {
           },
           {
             foreignKeyName: "session_feedback_v2_slot_id_fkey"
+            columns: ["slot_id"]
+            isOneToOne: true
+            referencedRelation: "coach_availability_slot_occurrences"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      session_scores: {
+        Row: {
+          coach_id: string
+          score: number
+          slot_id: string
+          updated_at: string
+        }
+        Insert: {
+          coach_id: string
+          score: number
+          slot_id: string
+          updated_at?: string
+        }
+        Update: {
+          coach_id?: string
+          score?: number
+          slot_id?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "session_scores_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "session_scores_slot_id_fkey"
             columns: ["slot_id"]
             isOneToOne: true
             referencedRelation: "coach_availability_slot_occurrences"
@@ -3061,6 +3100,7 @@ export type Database = {
         }[]
       }
       get_feedback_due: { Args: never; Returns: Json }
+      get_feedback_screen: { Args: { p_slot_id: string }; Returns: Json }
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
       get_my_coaches: { Args: never; Returns: Json }
       get_or_create_my_coach_channel: { Args: never; Returns: string }
@@ -3269,8 +3309,21 @@ export type Database = {
         Args: { p_athlete_id: string; p_note: string }
         Returns: undefined
       }
+      set_session_note: {
+        Args: { p_booking_id: string; p_note: string }
+        Returns: undefined
+      }
       short_display_name: { Args: { p_full_name: string }; Returns: string }
       slugify_coach_name: { Args: { p_name: string }; Returns: string }
+      submit_session_feedback: {
+        Args: {
+          p_absent: string[]
+          p_score: number
+          p_slot_id: string
+          p_summary: string
+        }
+        Returns: Json
+      }
       sync_availability_occurrences: {
         Args: { p_availability_id: string }
         Returns: undefined

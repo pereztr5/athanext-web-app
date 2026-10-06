@@ -73,6 +73,8 @@ type RateCoachDialogProps = {
     edit_count?: number | null;
   } | null;
   isLoadingFeedback?: boolean;
+  /** The coach's summary for everyone who came, or their message after a no-show (ATH-82). */
+  coachSummary?: string | null;
   onSubmit: () => void;
   onCancel: () => void;
   onRatingChange: (value: number) => void;
@@ -98,6 +100,7 @@ export const RateCoachDialog = ({
   isSubmitting,
   isSubmitted = false,
   existingFeedback = null,
+  coachSummary = null,
   isLoadingFeedback = false,
   onSubmit,
   onCancel,
@@ -155,10 +158,16 @@ export const RateCoachDialog = ({
                 ) : null}
               </div>
 
-              {existingFeedback?.feedback_to_athlete ? (
+              {coachSummary || existingFeedback?.feedback_to_athlete ? (
                 <div className="flex flex-col gap-1.5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-4">
                   <p className="text-[14px] leading-[18px] font-medium text-[#1A202C]">From your coach</p>
-                  <p className="text-[14px] leading-[18px] text-[#767980]">{existingFeedback.feedback_to_athlete}</p>
+                  {coachSummary ? <p className="whitespace-pre-wrap text-[14px] leading-[18px] text-[#767980]">{coachSummary}</p> : null}
+                  {existingFeedback?.feedback_to_athlete ? (
+                    <p className="whitespace-pre-wrap text-[14px] leading-[18px] text-[#484D56]">
+                      {coachSummary ? <b className="font-medium">Just for you: </b> : null}
+                      {existingFeedback.feedback_to_athlete}
+                    </p>
+                  ) : null}
                 </div>
               ) : null}
 
