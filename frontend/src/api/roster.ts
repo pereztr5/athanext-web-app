@@ -47,14 +47,11 @@ export interface AthleteSession {
   place: string | null;
   price: number;
   status: string;
-}
-
-export interface GearPurchase {
-  title: string;
-  /** After refunds. */
-  amount: number;
-  refunded: boolean;
-  purchasedAt: string;
+  /** Previous sessions only (ATH-79). */
+  hasFeedback?: boolean;
+  noShow?: boolean;
+  summary?: string | null;
+  note?: string | null;
 }
 
 export interface OpenTime {
@@ -103,7 +100,6 @@ export const rosterAPI = {
     note: string;
     upcoming: AthleteSession[];
     past: AthleteSession[];
-    gear: GearPurchase[];
   }> {
     const { data, error } = await supabase.rpc("get_coach_athlete", { p_athlete_id: id });
     if (error) throw error;
@@ -113,12 +109,6 @@ export const rosterAPI = {
       note: raw.note ?? "",
       upcoming: (raw.upcoming as AthleteSession[]) ?? [],
       past: (raw.past as AthleteSession[]) ?? [],
-      gear: ((raw.gear as Row[]) ?? []).map((g) => ({
-        title: g.title,
-        amount: Number(g.amount) || 0,
-        refunded: Boolean(g.refunded),
-        purchasedAt: g.purchasedAt,
-      })),
     };
   },
 
