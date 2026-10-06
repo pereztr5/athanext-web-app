@@ -148,9 +148,11 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
                         : s.myStatus === "pending_payment"
                           ? "To pay"
                           : "You're in"
-                      : full
-                        ? "Full"
-                        : `${plural(s.capacity - s.bookedCount, "spot")} left`}
+                      : isOwner
+                        ? `${s.bookedCount} signed up · See who`
+                        : full
+                          ? "Full"
+                          : `${plural(s.capacity - s.bookedCount, "spot")} left`}
                   </small>
                 </span>
               </>
@@ -160,6 +162,14 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               on ? "border-[#6698D2] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F9F9F5]",
               full && !mine ? "opacity-60" : ""
             );
+            // The coach opens each session to see who signed up (ATH-98).
+            if (isOwner) {
+              return (
+                <Link key={s.id} to={`/sessions/${s.id}`} className={cn(rowClass, "hover:bg-[#F1F1E6]")} aria-label={`See who signed up for ${s.sessionName}`}>
+                  {row}
+                </Link>
+              );
+            }
             return selectable ? (
               <button
                 key={s.id}

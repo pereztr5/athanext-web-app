@@ -2739,6 +2739,7 @@ export type Database = {
           is_profile_completed: boolean
           name: string
           notification_prefs: Json
+          notifications_seen_at: string | null
           persona_type: string | null
           phone_number: string | null
           position: string | null
@@ -2765,6 +2766,7 @@ export type Database = {
           is_profile_completed?: boolean
           name: string
           notification_prefs?: Json
+          notifications_seen_at?: string | null
           persona_type?: string | null
           phone_number?: string | null
           position?: string | null
@@ -2791,6 +2793,7 @@ export type Database = {
           is_profile_completed?: boolean
           name?: string
           notification_prefs?: Json
+          notifications_seen_at?: string | null
           persona_type?: string | null
           phone_number?: string | null
           position?: string | null
@@ -3139,10 +3142,15 @@ export type Database = {
           role: string
         }[]
       }
+      get_conversation_safeguard: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
       get_feedback_due: { Args: never; Returns: Json }
       get_feedback_screen: { Args: { p_slot_id: string }; Returns: Json }
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
       get_my_coaches: { Args: never; Returns: Json }
+      get_my_notifications: { Args: never; Returns: Json }
       get_or_create_my_coach_channel: { Args: never; Returns: string }
       get_partnership_summary: {
         Args: never
@@ -3276,6 +3284,7 @@ export type Database = {
         }
         Returns: undefined
       }
+      mark_notifications_seen: { Args: never; Returns: undefined }
       message_session_families: {
         Args: { p_body: string; p_occurrence_id: string }
         Returns: number

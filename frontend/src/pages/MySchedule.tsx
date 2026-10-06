@@ -67,11 +67,14 @@ const MySchedulePage = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Links from Coach Home: ?day=YYYY-MM-DD opens that day, ?create=1 opens Create session.
+  // Links from Coach Home: ?day=YYYY-MM-DD opens that day, ?create=1 opens Create session;
+  // from notifications: ?requests=1 opens booking requests (ATH-98).
   useEffect(() => {
     const day = searchParams.get("day");
     const create = searchParams.get("create");
-    if (!day && !create) return;
+    const requests = searchParams.get("requests");
+    if (!day && !create && !requests) return;
+    if (requests) setRequestsOpen(true);
     if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
       setAnchor(day);
       setView("day");
@@ -82,6 +85,7 @@ const MySchedulePage = () => {
     }
     searchParams.delete("day");
     searchParams.delete("create");
+    searchParams.delete("requests");
     setSearchParams(searchParams, { replace: true });
   }, [searchParams, setSearchParams, todayISO]);
 

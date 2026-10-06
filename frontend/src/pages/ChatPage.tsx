@@ -10,6 +10,7 @@ import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Users } from
 import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
+import { SafeguardingStrip } from "@/components/chat/SafeguardingStrip";
 import { cn } from "@/lib/utils";
 import {
   chatAPI,
@@ -1130,6 +1131,10 @@ const ChatPage = () => {
                     </button>
                   ) : null}
                 </div>
+
+                {selectedConversation && !selectedConversation.is_group ? (
+                  <SafeguardingStrip conversationId={selectedConversation.id} />
+                ) : null}
 
                 <div
                   className="flex flex-1 flex-col overflow-y-auto"
