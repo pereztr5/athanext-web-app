@@ -73,6 +73,7 @@ type Coach = Omit<
   | "new_family_booking"
   | "booking_window_weeks"
   | "affiliate_links"
+  | "deals_enabled"
 > & {
   is_verified?: boolean;
   favourite_positions?: string[];

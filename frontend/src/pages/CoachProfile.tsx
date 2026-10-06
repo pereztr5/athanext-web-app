@@ -3,8 +3,8 @@ import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
-import { AffiliateLinksCard } from "@/components/coach-profile/AffiliateLinksCard";
-import { CoachGearCard } from "@/components/coach-profile/CoachGearCard";
+import { GearAndDealsCard } from "@/components/coach-profile/GearAndDealsCard";
+import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
 import { useCoachBrands } from "@/hooks/useBrands";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { ArrowLeft } from "lucide-react";
@@ -303,16 +303,12 @@ const CoachProfile = () => {
     return (
       <div className="min-h-screen w-full overflow-x-hidden bg-app-background">
         <CoachProfileView
-          readOnly
           coach={coach as any}
           packages={packages}
           averageRating={averageRating}
           totalReviews={totalReviews}
           ratingDistribution={ratingDistribution}
           reviews={reviews}
-          onEdit={() => undefined}
-          onEditPackages={() => undefined}
-          onEditCertifications={() => undefined}
           bookAction={
             <BookSessionButton
               coachId={coach.id}
@@ -442,13 +438,17 @@ const CoachProfile = () => {
               cancellationPolicy={coach.cancellation_policy}
             />
 
-            <FAQSection />
+            <FAQSection coachFaqs={normalizeCoachFaqs(coach.profile_faqs)} />
 
-            <AffiliateLinksCard coachId={coach.id} links={coach.affiliate_links} />
+            <GearAndDealsCard
+              coachId={coach.id}
+              coachName={coach.name}
+              links={coach.affiliate_links}
+              dealsEnabled={coach.deals_enabled}
+              brandNames={coachBrands.map((brand) => brand.name)}
+            />
           </div>
         </div>
-
-        <CoachGearCard brandNames={coachBrands.map((brand) => brand.name)} />
       </div>
 
       {/* Modals */}

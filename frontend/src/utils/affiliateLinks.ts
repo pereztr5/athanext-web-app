@@ -35,3 +35,7 @@ export const parseAffiliateLinks = (value: unknown): AffiliateLink[] => {
     })
     .slice(0, MAX_AFFILIATE_LINKS);
 };
+
+/** Deals families see (ATH-88): none when the coach turned deals off. */
+export const visibleDeals = (value: unknown, enabled: boolean | null | undefined): AffiliateLink[] =>
+  enabled === false ? [] : parseAffiliateLinks(value);

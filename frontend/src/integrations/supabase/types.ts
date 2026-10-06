@@ -1424,6 +1424,7 @@ export type Database = {
           company: string | null
           cover_image_urls: string[] | null
           created_at: string
+          deals_enabled: boolean
           email: string | null
           favourite_positions: string[] | null
           hourly_rate: number
@@ -1460,6 +1461,7 @@ export type Database = {
           company?: string | null
           cover_image_urls?: string[] | null
           created_at?: string
+          deals_enabled?: boolean
           email?: string | null
           favourite_positions?: string[] | null
           hourly_rate?: number
@@ -1496,6 +1498,7 @@ export type Database = {
           company?: string | null
           cover_image_urls?: string[] | null
           created_at?: string
+          deals_enabled?: boolean
           email?: string | null
           favourite_positions?: string[] | null
           hourly_rate?: number

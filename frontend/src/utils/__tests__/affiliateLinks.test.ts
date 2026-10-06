@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseAffiliateLinks, toAffiliateUrl } from "@/utils/affiliateLinks";
+import { parseAffiliateLinks, toAffiliateUrl, visibleDeals } from "@/utils/affiliateLinks";
 
 describe("toAffiliateUrl", () => {
   it("adds https to bare domains", () => {
@@ -37,5 +37,19 @@ describe("parseAffiliateLinks", () => {
         { brand: "D", url: "d.com" },
       ]).map((link) => link.brand)
     ).toEqual(["A", "B", "C"]);
+  });
+});
+
+describe("visibleDeals", () => {
+  const links = [{ brand: "Nike", url: "nike.com/coach" }];
+
+  it("hides deals the coach turned off", () => {
+    expect(visibleDeals(links, false)).toEqual([]);
+  });
+
+  it("shows deals when on, or before the switch existed", () => {
+    expect(visibleDeals(links, true)).toHaveLength(1);
+    expect(visibleDeals(links, undefined)).toHaveLength(1);
+    expect(visibleDeals([], true)).toEqual([]);
   });
 });
