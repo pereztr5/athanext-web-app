@@ -1,8 +1,6 @@
 import type { ShopifyMoney, ShopifyProduct, ShopifyVariant } from "@/api/shopify";
 import { brandKey } from "@/utils/brands";
 
-export const ALL_BRANDS = "All Brands";
-export const ALL_TYPES = "All Types";
 export const MAX_LINE_QUANTITY = 10;
 
 export const formatMoney = (money?: ShopifyMoney | null): string => {
@@ -26,22 +24,8 @@ export const formatPriceRange = (product: Pick<ShopifyProduct, "priceRange">): s
 const uniqueSorted = (values: string[]) =>
   Array.from(new Set(values.map((value) => value.trim()).filter(Boolean))).sort((a, b) => a.localeCompare(b));
 
-export const getBrandOptions = (products: Pick<ShopifyProduct, "vendor">[]) =>
-  uniqueSorted(products.map((product) => product.vendor));
-
 export const getProductTypeOptions = (products: Pick<ShopifyProduct, "productType">[]) =>
   uniqueSorted(products.map((product) => product.productType));
-
-export const filterGearProducts = <T extends Pick<ShopifyProduct, "vendor" | "productType">>(
-  products: T[],
-  brand: string,
-  productType: string
-): T[] =>
-  products.filter(
-    (product) =>
-      (brand === ALL_BRANDS || product.vendor.trim() === brand) &&
-      (productType === ALL_TYPES || product.productType.trim() === productType)
-  );
 
 /** Products with a single "Default Title" variant have no real options to choose from. */
 export const hasOnlyDefaultVariant = (product: Pick<ShopifyProduct, "variants">) =>
@@ -108,4 +92,50 @@ export const pickCoachGear = <T extends Pick<ShopifyProduct, "vendor" | "availab
   const fromBrands = inStock.filter((product) => brandKeys.has(brandKey(product.vendor)));
   const others = inStock.filter((product) => !brandKeys.has(brandKey(product.vendor)));
   return [...fromBrands, ...others].slice(0, limit);
+};
+
+/* ---------- Catalog filters (ATH-97): search, sport, category, price and From my coaches ---------- */
+
+export const GEAR_SPORTS = ["Soccer", "Rowing"] as const;
+
+export const PRICE_BANDS = [
+  { key: "under25", label: "Under $25", min: 0, max: 25 },
+  { key: "25to50", label: "$25 to $50", min: 25, max: 50 },
+  { key: "50to100", label: "$50 to $100", min: 50, max: 100 },
+  { key: "over100", label: "$100 and up", min: 100, max: Infinity },
+] as const;
+
+export type GearFilters = {
+  search: string;
+  sport: string | null;
+  category: string | null;
+  price: string | null;
+  fromMyCoaches: boolean;
+};
+
+type Filterable = Pick<ShopifyProduct, "title" | "vendor" | "productType" | "priceRange"> & { tags?: string[] };
+
+const productSports = (product: { tags?: string[] }) =>
+  GEAR_SPORTS.filter((sport) => (product.tags ?? []).some((tag) => tag.trim().toLowerCase() === sport.toLowerCase()));
+
+/** Sports that at least one product is tagged with; the sport filter only shows these. */
+export const getSportOptions = (products: { tags?: string[] }[]) =>
+  GEAR_SPORTS.filter((sport) => products.some((product) => productSports(product).includes(sport)));
+
+export const applyGearFilters = <T extends Filterable>(products: T[], filters: GearFilters, coachBrandNames: string[] = []): T[] => {
+  const words = filters.search.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const band = PRICE_BANDS.find((b) => b.key === filters.price);
+  const brands = new Set(coachBrandNames.map((name) => brandKey(name)).filter(Boolean));
+  return products.filter((product) => {
+    const haystack = `${product.title} ${product.vendor} ${product.productType}`.toLowerCase();
+    if (words.some((word) => !haystack.includes(word))) return false;
+    if (filters.sport && !productSports(product).includes(filters.sport as (typeof GEAR_SPORTS)[number])) return false;
+    if (filters.category && product.productType.trim() !== filters.category) return false;
+    if (band) {
+      const price = Number(product.priceRange.minVariantPrice.amount);
+      if (!(price >= band.min && price < band.max)) return false;
+    }
+    if (filters.fromMyCoaches && !brands.has(brandKey(product.vendor))) return false;
+    return true;
+  });
 };

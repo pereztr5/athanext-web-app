@@ -791,24 +791,3 @@ export async function upsertSessionFeedback(payload: {
     };
   }
 }
-
-
-export interface SessionRosterEntry {
-  displayName: string;
-  isYou: boolean;
-}
-
-/**
- * Athletes booked into an occurrence (ATH-58). Athletes get other athletes as
- * first name + last initial; the session's coach gets full names.
- */
-export async function getSessionRoster(occurrenceId: string): Promise<SessionRosterEntry[]> {
-  const { data, error } = await (supabase as any).rpc('get_session_roster', {
-    p_occurrence_id: occurrenceId,
-  });
-  if (error) throw error;
-  return (Array.isArray(data) ? data : []).map((row: any) => ({
-    displayName: row.display_name || 'Athlete',
-    isYou: Boolean(row.is_you),
-  }));
-}

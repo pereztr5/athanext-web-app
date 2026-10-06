@@ -2,14 +2,10 @@ import { describe, expect, it } from "vitest";
 import type { ShopifyVariant } from "@/api/shopify";
 import {
   pickCoachGear,
-  ALL_BRANDS,
-  ALL_TYPES,
   clampQuantity,
-  filterGearProducts,
   findVariant,
   formatMoney,
   formatPriceRange,
-  getBrandOptions,
   getInitialOptions,
   getProductTypeOptions,
   hasOnlyDefaultVariant,
@@ -51,17 +47,8 @@ describe("gear helpers", () => {
     );
   });
 
-  it("builds sorted, unique filter options", () => {
-    expect(getBrandOptions(products)).toEqual(["Adidas", "Concept2", "Nike", "SetGK"]);
+  it("builds sorted, unique category options", () => {
     expect(getProductTypeOptions(products)).toEqual(["Balls", "Goalkeeper Gloves"]);
-  });
-
-  it("filters by brand and product type", () => {
-    const handles = (list: typeof products) => list.map((p) => p.handle);
-    expect(handles(filterGearProducts(products, ALL_BRANDS, ALL_TYPES))).toEqual(["gloves", "predator", "ball", "pad"]);
-    expect(handles(filterGearProducts(products, "Nike", ALL_TYPES))).toEqual(["ball"]);
-    expect(handles(filterGearProducts(products, ALL_BRANDS, "Goalkeeper Gloves"))).toEqual(["gloves", "predator"]);
-    expect(handles(filterGearProducts(products, "Adidas", "Balls"))).toEqual([]);
   });
 
   it("finds variants by selected options", () => {

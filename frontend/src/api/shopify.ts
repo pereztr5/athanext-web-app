@@ -58,6 +58,8 @@ export interface ShopifyProduct {
   handle: string;
   vendor: string;
   productType: string;
+  /** Shopify tags; "soccer" or "rowing" put a product under that sport (ATH-97). */
+  tags?: string[];
   description: string;
   availableForSale: boolean;
   featuredImage: ShopifyImage | null;
@@ -119,6 +121,7 @@ const PRODUCT_FIELDS = `
   handle
   vendor
   productType
+  tags
   description
   availableForSale
   featuredImage { ${IMAGE_FIELDS} }

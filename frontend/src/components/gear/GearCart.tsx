@@ -137,7 +137,7 @@ export const GearCartButton = () => {
               </span>
             </div>
             <p className="text-[12px] leading-[14px] tracking-[-0.36px] text-[#767980]">
-              Taxes and shipping are calculated at checkout.
+              You pay on Shopify's checkout, which adds taxes and shipping. AthaNext never sees your card.
             </p>
             <Button
               className="w-full"
@@ -153,7 +153,7 @@ export const GearCartButton = () => {
               }}
             >
               {busy ? <Loader2 className="animate-spin" /> : null}
-              Checkout
+              Buy on Shopify
             </Button>
           </div>
         ) : null}

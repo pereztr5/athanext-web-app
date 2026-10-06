@@ -2925,6 +2925,7 @@ export type Database = {
           sessions_completed: number
         }[]
       }
+      get_athlete_session: { Args: { p_occurrence_id: string }; Returns: Json }
       get_bookable_sessions: {
         Args: { p_coach_id: string; p_from: string; p_to: string }
         Returns: Json

@@ -44,7 +44,6 @@ import {
   getExistingFeedback,
   getSubmittedFeedbackIds,
   getCoachSubmittedSessionIds,
-  getSessionRoster,
 } from "@/api/sessions";
 import { startOccurrenceCheckout } from "@/api/bookings";
 import { ERROR_CODES } from "@/constants/errorCodes";
@@ -176,45 +175,13 @@ const CoachBlock = ({ name, avatar }: { name: string; avatar?: string | null }) 
   </div>
 );
 
-/** Group-session co-attendees for athletes (ATH-58): first name + last initial, no photos. */
-const SessionRoster = ({ occurrenceId }: { occurrenceId: string }) => {
-  const { data: roster = [], isLoading, isError } = useQuery({
-    queryKey: ["session-roster", occurrenceId],
-    queryFn: () => getSessionRoster(occurrenceId),
-    retry: false,
-  });
-  const noteClass = "text-[12px] leading-[14px] text-[#767980]";
-
-  return (
-    <div className="flex flex-col gap-2">
-      <span className={labelClass}>
-        Who's coming
-        {!isLoading && !isError ? ` · ${roster.length} ${roster.length === 1 ? "athlete" : "athletes"}` : null}
-      </span>
-      {isLoading ? (
-        <p className={noteClass}>Loading athletes...</p>
-      ) : isError ? (
-        <p className={noteClass}>Couldn't load who's coming.</p>
-      ) : (
-        <>
-          {roster.length > 0 ? (
-            <div className={cn("flex flex-wrap gap-1.5", roster.length > 12 && "max-h-40 overflow-y-auto pr-1")}>
-              {roster.map((athlete, index) => (
-                <PersonPill
-                  key={`${athlete.displayName}-${index}`}
-                  name={athlete.displayName}
-                  label={athlete.isYou ? "You" : undefined}
-                  toneIndex={index}
-                />
-              ))}
-            </div>
-          ) : null}
-          {roster.every((athlete) => athlete.isYou) ? <p className={noteClass}>No other athletes yet.</p> : null}
-        </>
-      )}
-    </div>
-  );
-};
+/** Group sessions for athletes (ATH-97): families never see other athletes' names, only a note. */
+const SessionRoster = () => (
+  <div className="flex flex-col gap-2">
+    <span className={labelClass}>Who's coming</span>
+    <p className="text-[12px] leading-[14px] text-[#767980]">You're booked. Only your coach sees who else is coming.</p>
+  </div>
+);
 
 const SessionTypePill = ({ type }: { type: UISession["type"] }) => (
   <BrandPill tone={type === "group" ? "teal" : "blue"}>{type === "group" ? "Group" : "Individual"}</BrandPill>
@@ -881,10 +848,10 @@ const MySessions = () => {
     navigate(`/coach-session-feedback?slotId=${slotId}`);
   };
 
-  // Coaches open the session page (ATH-80); athletes keep the details dialog.
+  // Every card opens the session page: the coach's (ATH-80) or the athlete's (ATH-97).
   const openSession = (session: UISession) => {
     const occurrenceId = session.occurrenceId || session.slotId;
-    if (role === PROFILE_TYPE.coach && occurrenceId) {
+    if (occurrenceId) {
       navigate(`/sessions/${occurrenceId}`);
       return;
     }
@@ -1417,7 +1384,7 @@ const MySessions = () => {
                   selectedSessionSafe.occurrenceId &&
                   !sessionIsRequested(selectedSessionSafe) &&
                   !sessionNeedsPayment(selectedSessionSafe) ? (
-                    <SessionRoster occurrenceId={selectedSessionSafe.occurrenceId} />
+                    <SessionRoster />
                   ) : null}
 
                   <p className="text-[12px] leading-[14px] text-[#767980]">

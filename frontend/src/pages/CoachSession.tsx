@@ -5,7 +5,8 @@
  * after the session. Only Message and Reschedule as buttons, and Cancel as a quiet link.
  */
 import { useState } from "react";
-import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import AthleteSessionPage from "./AthleteSession";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarClock, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -82,7 +83,8 @@ const CoachSessionPage = () => {
   });
 
   if (!ready) return null;
-  if (!isCoach) return <Navigate to={ROUTES.MY_SESSIONS} replace />;
+  // Athletes and parents get their own page for the same link (ATH-97).
+  if (!isCoach) return <AthleteSessionPage />;
   if (query.isError) {
     return (
       <div className="mx-auto max-w-[760px] px-4 py-10">
