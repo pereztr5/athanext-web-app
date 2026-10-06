@@ -1429,6 +1429,8 @@ export type Database = {
       coaches: {
         Row: {
           affiliate_links: Json
+          age_max: number | null
+          age_min: number | null
           availability: Json | null
           bio: string | null
           booking_window_weeks: number
@@ -1470,6 +1472,8 @@ export type Database = {
         }
         Insert: {
           affiliate_links?: Json
+          age_max?: number | null
+          age_min?: number | null
           availability?: Json | null
           bio?: string | null
           booking_window_weeks?: number
@@ -1511,6 +1515,8 @@ export type Database = {
         }
         Update: {
           affiliate_links?: Json
+          age_max?: number | null
+          age_min?: number | null
           availability?: Json | null
           bio?: string | null
           booking_window_weeks?: number
@@ -3108,6 +3114,8 @@ export type Database = {
       get_coaches_public: {
         Args: never
         Returns: {
+          age_max: number
+          age_min: number
           availability: Json
           bio: string
           cancellation_policy: string
@@ -3272,6 +3280,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: boolean
       }
+      is_my_athlete: { Args: { p_athlete_id: string }; Returns: boolean }
       is_reserved_coach_slug: { Args: { p_slug: string }; Returns: boolean }
       join_coach_channel: {
         Args: { p_conversation_id: string }

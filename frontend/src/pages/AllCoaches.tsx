@@ -42,6 +42,7 @@ import { stripRichTextToPlainText } from "@/utils/richText";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { BrandPill, BrandStar } from "@/components/brand";
 import { athleteHomeAPI } from "@/api/athleteHome";
+import { AGE_GROUPS, agePillLabel, matchesAgeGroup } from "@/utils/coachAges";
 import {
   ALL_ACADEMIES,
   academySlug,
@@ -96,6 +97,7 @@ type Coach = Omit<
 
 type DirectoryView = "coaches" | "organizations";
 const ALL_SESSION_TYPES = "All Session Types";
+const ANY_AGE = "Any Age";
 
 const DIRECTORY_VIEWS: { value: DirectoryView; label: string; icon: typeof Users }[] = [
   { value: "coaches", label: "Coaches", icon: Users },
@@ -132,6 +134,7 @@ const AthleteBrowseCard = ({
   const price = coach.hourly_rate ? `$${Math.round(Number(coach.hourly_rate))}` : null;
   const pillars = (coach.specialties || []).filter(Boolean).slice(0, 3);
   const academy = coachAcademy(coach.company);
+  const agePill = agePillLabel(coach);
 
   return (
     <article
@@ -179,13 +182,18 @@ const AthleteBrowseCard = ({
         </div>
       </div>
 
-      {pillars.length ? (
+      {pillars.length || agePill ? (
         <div className="flex flex-wrap gap-[5px]">
           {pillars.map((pillar) => (
             <span key={pillar} className="rounded-[4px] border border-[#EAEADF] bg-[#F4F4EB] px-2 py-1 text-[12px] font-medium leading-[13px] text-[#484D56]">
               {pillar}
             </span>
           ))}
+          {agePill ? (
+            <span className="rounded-[4px] border border-[#BFE3EC] bg-[#E7F4F8] px-2 py-1 text-[12px] font-medium leading-[13px] text-[#117A96]">
+              {agePill}
+            </span>
+          ) : null}
         </div>
       ) : null}
 
@@ -266,6 +274,7 @@ const AllCoaches = () => {
   const [selectedFavoritePosition, setSelectedFavoritePosition] = useState("All Positions");
   const [selectedPathway, setSelectedPathway] = useState("All Pathways");
   const [selectedSessionType, setSelectedSessionType] = useState(ALL_SESSION_TYPES);
+  const [selectedAgeGroup, setSelectedAgeGroup] = useState(ANY_AGE);
   // Organization pages link here with ?academy=<name>. The ref survives the automatic
   // filter reset that runs when the sport is set on load; any manual change clears it.
   const deepLinkAcademy = useRef<string | null>(searchParams.get("academy"));
@@ -541,6 +550,11 @@ const AllCoaches = () => {
       );
     }
 
+    // Filter by age group: the coach's ages overlap it (ATH-96)
+    if (selectedAgeGroup !== ANY_AGE) {
+      filtered = filtered.filter((coach) => coach && matchesAgeGroup(coach, selectedAgeGroup));
+    }
+
     // Filter by academy (coaches.company)
     if (selectedAcademy !== ALL_ACADEMIES) {
       filtered = filtered.filter((coach) => coach && matchesAcademy(coach.company, selectedAcademy));
@@ -632,6 +646,8 @@ const AllCoaches = () => {
     selectedPathway,
 
     selectedSessionType,
+
+    selectedAgeGroup,
 
     selectedAcademy,
 
@@ -985,6 +1001,8 @@ const AllCoaches = () => {
         return "All pathways";
       case ALL_SESSION_TYPES:
         return "In person or virtual";
+      case ANY_AGE:
+        return "Any age";
       case "in-person":
         return "In person";
       case "virtual":
@@ -1000,7 +1018,7 @@ const AllCoaches = () => {
     }
   };
   const isDefaultFilter = (value: string) =>
-    ["All Sports", "All Pillars", "All Positions", "All Pathways", ALL_SESSION_TYPES, ALL_ACADEMIES, "Highest Rated"].includes(value);
+    ["All Sports", "All Pillars", "All Positions", "All Pathways", ALL_SESSION_TYPES, ANY_AGE, ALL_ACADEMIES, "Highest Rated"].includes(value);
   const triggerClass = (value: string, width: string) =>
     `${filterTriggerClass} ${isAuthenticated ? "" : width} ${isDefaultFilter(value) ? "!text-[#767980]" : "!text-[#1A202C]"}`;
   const zipDigits = zipQuery.replace(/\D/g, "");
@@ -1190,6 +1208,19 @@ const AllCoaches = () => {
                 </SelectContent>
               </Select>
 
+              <Select value={selectedAgeGroup} onValueChange={setSelectedAgeGroup}>
+                <SelectTrigger className={triggerClass(selectedAgeGroup, "lg:!w-[150px]")} aria-label="Age group">
+                  <SelectValue>{filterLabel(selectedAgeGroup)}</SelectValue>
+                </SelectTrigger>
+                <SelectContent className="z-50">
+                  {[ANY_AGE, ...AGE_GROUPS.map((g) => g.label)].map((group) => (
+                    <SelectItem key={group} value={group}>
+                      {filterLabel(group)}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+
               <Select value={selectedSessionType} onValueChange={setSelectedSessionType}>
                 <SelectTrigger className={triggerClass(selectedSessionType, "lg:!w-[170px]")} aria-label="Session type">
                   <SelectValue>{filterLabel(selectedSessionType)}</SelectValue>
@@ -1316,6 +1347,7 @@ const AllCoaches = () => {
                   setSelectedFavoritePosition("All Positions");
                   setSelectedPathway("All Pathways");
                   setSelectedSessionType(ALL_SESSION_TYPES);
+                  setSelectedAgeGroup(ANY_AGE);
                   chooseAcademy(ALL_ACADEMIES);
                   setZipQuery("");
                   setSortBy("Highest Rated");

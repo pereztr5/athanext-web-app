@@ -20,6 +20,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { packagesAPI } from "@/api/packages";
 import type { Brand } from "@/utils/brands";
+import { ageRangeLabel } from "@/utils/coachAges";
 
 const NO_BRANDS: Brand[] = [];
 
@@ -62,6 +63,8 @@ export type CoachProfileData = ProfileData & {
     deals_enabled?: boolean | null;
     pay_mode?: string | null;
     pay_note?: string | null;
+    age_min?: number | null;
+    age_max?: number | null;
 };
 
 interface CoachProfileViewProps {
@@ -209,6 +212,7 @@ export function CoachProfileView({
     ["Credentials", (coach.certifications || []).map((c) => c.certification_name).filter(Boolean).join(" · ")],
     ["Languages", coach.languages?.join(", ") || ""],
     ["Session types", sessionTypes.map((t) => t.charAt(0).toUpperCase() + t.slice(1)).join(", ")],
+    ["Ages", ageRangeLabel(coach)],
     ["Cancellation", coach.cancellation_policy || "Free cancellation with 24 hours notice"],
     ["Payment", paysDirect ? `Pay ${first} directly${coach.pay_note ? `. ${coach.pay_note}` : ""}` : ""],
   ].filter(([, value]) => value) as [string, string][];

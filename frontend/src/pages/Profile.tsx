@@ -288,6 +288,8 @@ const Profile = () => {
                 session_types: editedCoach.session_types ?? coach.session_types,
                 cancellation_policy: editedCoach.cancellation_policy ?? coach.cancellation_policy,
                 deals_enabled: editedCoach.deals_enabled ?? coach.deals_enabled,
+                age_min: editedCoach.age_min !== undefined ? editedCoach.age_min : coach.age_min,
+                age_max: editedCoach.age_max !== undefined ? editedCoach.age_max : coach.age_max,
                 profile_faqs: normalizeCoachFaqs(
                   editedCoach.profile_faqs ?? coach.profile_faqs
                 ) as unknown as import("@/integrations/supabase/types").Json,

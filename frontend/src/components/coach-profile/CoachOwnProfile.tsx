@@ -24,6 +24,7 @@ import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publ
 import { coachProfilePath, coachProfileUrl } from "@/utils/coachSlug";
 import { recordCoachShareEvent } from "@/api/coachShare";
 import type { Brand } from "@/utils/brands";
+import { AGE_AND_UP, ageRangeLabel } from "@/utils/coachAges";
 import type { PathwayTag } from "@/constants/pathwayTags";
 import { CoachProfileButton, CoachProfileCard, CoachProfileCardHeader, CoachProfileChip } from "./CoachProfileCard";
 import { AvailabilitySummaryCard } from "./AvailabilitySummaryCard";
@@ -38,6 +39,7 @@ import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
 
 const NO_BRANDS: Brand[] = [];
 const RESPONSE_TIMES = [1, 2, 4, 12, 24, 48];
+const AGE_OPTIONS = Array.from({ length: 28 }, (_, i) => i + 5);
 const SESSION_TYPES = [
   ["virtual", "Virtual"],
   ["in-person", "In person"],
@@ -485,6 +487,35 @@ export function CoachOwnProfile({
                       ))}
                     </div>
                   </div>
+                  <div className="flex flex-col gap-1.5">
+                    <span className={fieldLabel}>Ages you coach</span>
+                    <div className="flex items-center gap-2">
+                      <select
+                        className={editInput}
+                        aria-label="Youngest age"
+                        value={c.age_min ?? ""}
+                        onChange={(e) => onField("age_min", e.target.value ? Number(e.target.value) : null)}
+                      >
+                        <option value="">From</option>
+                        {AGE_OPTIONS.map((a) => (
+                          <option key={a} value={a}>{a}</option>
+                        ))}
+                      </select>
+                      <span className="text-[14px] text-[#767980]">to</span>
+                      <select
+                        className={editInput}
+                        aria-label="Oldest age"
+                        value={c.age_max ?? ""}
+                        onChange={(e) => onField("age_max", e.target.value ? Number(e.target.value) : null)}
+                      >
+                        <option value="">To</option>
+                        {AGE_OPTIONS.filter((a) => a >= (c.age_min ?? 0)).map((a) => (
+                          <option key={a} value={a}>{a}</option>
+                        ))}
+                        <option value={AGE_AND_UP}>and up</option>
+                      </select>
+                    </div>
+                  </div>
                   <label className="flex flex-col gap-1.5">
                     <span className={fieldLabel}>Languages</span>
                     <input
@@ -525,6 +556,7 @@ export function CoachOwnProfile({
                       ["Response Time", `Within ${responseTime} hour${responseTime === 1 ? "" : "s"}`],
                       ["Session Types", sessionTypesLabel],
                       ["Languages", c.languages?.join(", ") || "English"],
+                      ["Ages", ageRangeLabel(c) || "Not set"],
                       ["Location", locationLabel],
                     ].map(([label, value]) => (
                       <div key={label} className="flex items-start justify-between gap-3">
