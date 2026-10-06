@@ -6,6 +6,7 @@ import {
   type ShopifyCart,
   type ShopifyCartLineInput,
 } from "@/api/shopify";
+import { useAuth } from "@/contexts/AuthContext";
 import { readCartId, writeCartId } from "@/utils/gear";
 
 const GEAR_CART_KEY = ["gear-cart"] as const;
@@ -30,8 +31,13 @@ export const useGearProduct = (handle: string | undefined) =>
  * Shared Gear cart. The cart id lives in localStorage; the cart itself lives in
  * the query cache so every cart button and sheet reads the same state.
  */
+const cartAttributes = (athleteId: string | null | undefined) =>
+  athleteId ? [{ key: "athlete_id", value: athleteId }] : [];
+
 export const useGearCart = () => {
   const queryClient = useQueryClient();
+  const { userProfile } = useAuth();
+  const attributes = cartAttributes(userProfile?.athlete_id);
 
   const cartQuery = useQuery<ShopifyCart | null>({
     queryKey: GEAR_CART_KEY,
@@ -61,7 +67,7 @@ export const useGearCart = () => {
           if (!isMissingCart(error)) throw error;
         }
       }
-      return shopifyAPI.createCart(lines);
+      return shopifyAPI.createCart(lines, attributes);
     },
     onSuccess: setCart,
   });

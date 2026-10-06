@@ -2,6 +2,8 @@ import { Link } from "react-router-dom";
 import { Loader2, Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetDescription, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { shopifyAPI } from "@/api/shopify";
+import { useAuth } from "@/contexts/AuthContext";
 import { useGearCart } from "@/hooks/useGear";
 import { useToast } from "@/hooks/use-toast";
 import { ROUTES } from "@/routes";
@@ -13,6 +15,7 @@ const qtyButtonClass =
 /** Cart icon with item count; opens the cart sheet. */
 export const GearCartButton = () => {
   const { cart, itemCount, updateLine, removeLine } = useGearCart();
+  const { userProfile } = useAuth();
   const { toast } = useToast();
   const lines = cart?.lines ?? [];
   const busy = updateLine.isPending || removeLine.isPending;
@@ -139,7 +142,15 @@ export const GearCartButton = () => {
             <Button
               className="w-full"
               disabled={busy}
-              onClick={() => window.location.assign(cart.checkoutUrl)}
+              onClick={async () => {
+                try {
+                  const athleteId = userProfile?.athlete_id;
+                  if (athleteId) await shopifyAPI.setCartAttributes(cart.id, [{ key: "athlete_id", value: athleteId }]);
+                } catch {
+                  // Checkout still works if the tag doesn't stick. The order can be matched by email.
+                }
+                window.location.assign(cart.checkoutUrl);
+              }}
             >
               {busy ? <Loader2 className="animate-spin" /> : null}
               Checkout

@@ -190,6 +190,12 @@ const CART_CREATE_MUTATION = `
   }
 `;
 
+const CART_ATTRIBUTES_MUTATION = `
+  mutation GearCartAttributes($cartId: ID!, $attributes: [AttributeInput!]!, $country: CountryCode) @inContext(country: $country) {
+    cartAttributesUpdate(cartId: $cartId, attributes: $attributes) { ${CART_MUTATION_RESULT} }
+  }
+`;
+
 const CART_LINES_ADD_MUTATION = `
   mutation GearCartLinesAdd($cartId: ID!, $lines: [CartLineInput!]!, $country: CountryCode) @inContext(country: $country) {
     cartLinesAdd(cartId: $cartId, lines: $lines) { ${CART_MUTATION_RESULT} }
@@ -282,12 +288,27 @@ export const shopifyAPI = {
     return data.cart ? mapCart(data.cart) : null;
   },
 
-  async createCart(lines: ShopifyCartLineInput[] = []): Promise<ShopifyCart> {
+  async createCart(lines: ShopifyCartLineInput[] = [], attributes: { key: string; value: string }[] = []): Promise<ShopifyCart> {
+    const input: { lines: ShopifyCartLineInput[]; buyerIdentity: { countryCode: string }; attributes?: { key: string; value: string }[] } = {
+      lines,
+      buyerIdentity: { countryCode: SHOPIFY_COUNTRY },
+    };
+    if (attributes.length) input.attributes = attributes;
     const data = await storefrontRequest<{ cartCreate: { cart: RawCart | null; userErrors: UserError[] } }>(
       CART_CREATE_MUTATION,
-      { input: { lines, buyerIdentity: { countryCode: SHOPIFY_COUNTRY } } }
+      { input }
     );
     return unwrapCartMutation(data.cartCreate);
+  },
+
+  /** Tags the cart so a paid order can be tied back to the athlete. */
+  async setCartAttributes(cartId: string, attributes: { key: string; value: string }[]): Promise<void> {
+    if (!attributes.length) return;
+    const data = await storefrontRequest<{ cartAttributesUpdate: { cart: RawCart | null; userErrors: UserError[] } }>(
+      CART_ATTRIBUTES_MUTATION,
+      { cartId, attributes }
+    );
+    unwrapCartMutation(data.cartAttributesUpdate);
   },
 
   async addCartLines(cartId: string, lines: ShopifyCartLineInput[]): Promise<ShopifyCart> {

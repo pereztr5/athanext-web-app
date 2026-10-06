@@ -38,6 +38,8 @@ import Dashboard from "./pages/Dashboard";
 import AdminAccounts from "./pages/AdminAccounts";
 import { HomeSwitch } from "./layouts/HomeSwitch";
 import MyClients from "./pages/MyClients";
+import MyAthletes from "./pages/MyAthletes";
+import AthleteDetail from "./pages/AthleteDetail";
 import MyCoaches from "./pages/MyCoaches";
 import AdminReferrals from "./pages/AdminReferrals";
 import InviteClaim from "./pages/InviteClaim";
@@ -68,6 +70,8 @@ export const ROUTES = {
   COACH_SESSION_FEEDBACK: "/coach-session-feedback",
   MY_SESSIONS: "/my-sessions",
   MY_CLIENTS: "/my-clients",
+  ATHLETES: "/athletes",
+  ATHLETE: "/athletes/:id",
   MY_COACHES: "/my-coaches",
   CREATE_ATHLETE_PROFILE: "/athlete-profile/create",
   SETTINGS: "/settings",
@@ -138,6 +142,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
   { path: ROUTES.MY_CLIENTS, element: <ProtectedRoute><MyClients /></ProtectedRoute> },
+  { path: ROUTES.ATHLETES, element: <ProtectedRoute><MyAthletes /></ProtectedRoute> },
+  { path: ROUTES.ATHLETE, element: <ProtectedRoute><AthleteDetail /></ProtectedRoute> },
   { path: ROUTES.MY_COACHES, element: <ProtectedRoute><MyCoaches /></ProtectedRoute> },
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },

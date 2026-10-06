@@ -436,6 +436,42 @@ export type Database = {
         }
         Relationships: []
       }
+      coach_athlete_notes: {
+        Row: {
+          athlete_id: string
+          coach_id: string
+          private_note: string
+          updated_at: string
+        }
+        Insert: {
+          athlete_id: string
+          coach_id: string
+          private_note?: string
+          updated_at?: string
+        }
+        Update: {
+          athlete_id?: string
+          coach_id?: string
+          private_note?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_athlete_notes_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_athlete_notes_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_availability: {
         Row: {
           coach_id: string
@@ -1754,6 +1790,63 @@ export type Database = {
           },
         ]
       }
+      gear_purchases: {
+        Row: {
+          amount: number
+          athlete_id: string
+          coach_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          purchased_at: string
+          refunded_amount: number
+          shopify_line_id: string
+          shopify_order_id: string
+          title: string
+        }
+        Insert: {
+          amount: number
+          athlete_id: string
+          coach_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          purchased_at?: string
+          refunded_amount?: number
+          shopify_line_id?: string
+          shopify_order_id: string
+          title: string
+        }
+        Update: {
+          amount?: number
+          athlete_id?: string
+          coach_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          purchased_at?: string
+          refunded_amount?: number
+          shopify_line_id?: string
+          shopify_order_id?: string
+          title?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "gear_purchases_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "gear_purchases_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_session_offers: {
         Row: {
           closes_at: string
@@ -2728,6 +2821,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      coach_roster_ids: { Args: { p_coach_id: string }; Returns: string[] }
       current_athlete_id: { Args: never; Returns: string }
       current_coach_id: { Args: never; Returns: string }
       delete_old_pending_bookings: { Args: never; Returns: undefined }
@@ -2786,6 +2880,7 @@ export type Database = {
           weekly_slot_id: string
         }[]
       }
+      get_coach_athlete: { Args: { p_athlete_id: string }; Returns: Json }
       get_coach_athlete_options: {
         Args: never
         Returns: {
@@ -2874,6 +2969,7 @@ export type Database = {
           updated_at: string
         }[]
       }
+      get_coach_roster: { Args: never; Returns: Json }
       get_coach_schedule: {
         Args: { p_from: string; p_to: string }
         Returns: Json
@@ -3009,6 +3105,7 @@ export type Database = {
           state: string
         }[]
       }
+      get_roster_open_times: { Args: { p_athlete_id: string }; Returns: Json }
       get_session_for_booking: {
         Args: { p_occurrence_id: string }
         Returns: Json
@@ -3165,6 +3262,10 @@ export type Database = {
           p_start_time: string
         }
         Returns: number
+      }
+      set_coach_athlete_note: {
+        Args: { p_athlete_id: string; p_note: string }
+        Returns: undefined
       }
       short_display_name: { Args: { p_full_name: string }; Returns: string }
       slugify_coach_name: { Args: { p_name: string }; Returns: string }

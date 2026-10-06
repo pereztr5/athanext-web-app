@@ -27,6 +27,10 @@ verify_jwt = true
 [functions.google-calendar]
 verify_jwt = false
 
+# Shopify signs the body itself. The function rejects a bad signature.
+[functions.shopify-orders]
+verify_jwt = false
+
 # Deployed as create-booking-payment-v0. Receives Stripe webhooks, so the function checks
 # the caller token and the Stripe signature itself.
 [functions.create-booking-payment]

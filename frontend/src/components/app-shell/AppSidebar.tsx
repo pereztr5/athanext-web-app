@@ -44,7 +44,7 @@ const COACH_NAV = [
   { title: "Dashboard", url: ROUTES.DASHBOARD, icon: LayoutGrid },
   { title: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "My Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
-  { title: "My Clients", url: ROUTES.MY_CLIENTS, icon: Users },
+  { title: "My Athletes", url: ROUTES.ATHLETES, icon: Users },
   { title: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
   { title: "Messages", url: ROUTES.CHAT, icon: MessageCircle },
   { title: "Analytics", url: ROUTES.ANALYTICS, icon: BarChart3 },
