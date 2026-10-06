@@ -321,7 +321,7 @@ export const CoachHome = () => {
                               </Link>
                             ) : null}
                             {group ? (
-                              <Link to={ROUTES.MY_SESSIONS} className={cn(secondaryButton, "h-[30px] px-3")}>
+                              <Link to={`/sessions/${s.id}`} className={cn(secondaryButton, "h-[30px] px-3")}>
                                 View session
                               </Link>
                             ) : (

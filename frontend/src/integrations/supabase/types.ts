@@ -3014,6 +3014,7 @@ export type Database = {
         Args: { p_from: string; p_to: string }
         Returns: Json
       }
+      get_coach_session: { Args: { p_occurrence_id: string }; Returns: Json }
       get_coach_session_feedback_screen_v2: {
         Args: { p_slot_id: string }
         Returns: {
@@ -3223,6 +3224,10 @@ export type Database = {
         }
         Returns: undefined
       }
+      message_session_families: {
+        Args: { p_body: string; p_occurrence_id: string }
+        Returns: number
+      }
       record_coach_share_event: {
         Args: { p_coach_id: string; p_event_type: string }
         Returns: undefined
@@ -3250,6 +3255,10 @@ export type Database = {
       respond_to_booking_request: {
         Args: { p_accept: boolean; p_booking_id: string }
         Returns: string
+      }
+      schedule_cancel_session: {
+        Args: { p_message: string; p_occurrence_id: string }
+        Returns: number
       }
       schedule_clear_day: {
         Args: { p_date: string; p_note?: string }
@@ -3285,6 +3294,15 @@ export type Database = {
       schedule_remove_session: {
         Args: { p_occurrence_id: string }
         Returns: undefined
+      }
+      schedule_reschedule_session: {
+        Args: {
+          p_date: string
+          p_message: string
+          p_occurrence_id: string
+          p_start: string
+        }
+        Returns: number
       }
       schedule_restore_day: { Args: { p_date: string }; Returns: number }
       schedule_set_rules: {

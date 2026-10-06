@@ -381,7 +381,6 @@ const SessionCard = ({
 const PastDraftCard = ({
   session,
   onSelect,
-  onPastNavigate,
   onFeedbackNavigate,
   role,
   hasFeedbackSubmitted,
@@ -395,7 +394,6 @@ const PastDraftCard = ({
 }: {
   session: UISession;
   onSelect: (session: UISession) => void;
-  onPastNavigate: (session: UISession) => void;
   onFeedbackNavigate: (slotId: string, session?: UISession) => void;
   role: 'coach' | 'athlete' | null;
   hasFeedbackSubmitted: boolean;
@@ -410,15 +408,8 @@ const PastDraftCard = ({
   const timeZone = useViewerTimeZone();
   const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
   const showPay = canPay && Boolean(onPay);
-  const openDetails = () => {
-    if (session.computedStatus === "past" || session.computedStatus === "completed") {
-      if (role === PROFILE_TYPE.coach) {
-        onPastNavigate(session);
-        return;
-      }
-    }
-    onSelect(session);
-  };
+  // Coaches open the session page for every session; it has Add or Edit feedback (ATH-80).
+  const openDetails = () => onSelect(session);
 
   return (
     <div className={cn(cardShellClass, "cursor-pointer")} onClick={openDetails}>
@@ -890,18 +881,11 @@ const MySessions = () => {
     navigate(`/coach-session-feedback?slotId=${slotId}`);
   };
 
-  const handlePastNavigate = (session: UISession) => {
-    if (role === PROFILE_TYPE.coach) {
-      const slotIdentifier = session.slotId || session.id;
-      if (!slotIdentifier) {
-        toast({
-          title: "Missing session details",
-          description: "We couldn't find the slot ID for this session.",
-          variant: "destructive",
-        });
-        return;
-      }
-      navigate(`/coach-session-feedback?slotId=${slotIdentifier}`);
+  // Coaches open the session page (ATH-80); athletes keep the details dialog.
+  const openSession = (session: UISession) => {
+    const occurrenceId = session.occurrenceId || session.slotId;
+    if (role === PROFILE_TYPE.coach && occurrenceId) {
+      navigate(`/sessions/${occurrenceId}`);
       return;
     }
     setSelectedSession(session);
@@ -1252,7 +1236,7 @@ const MySessions = () => {
               key={session.id}
               session={session}
               now={now}
-              onSelect={setSelectedSession}
+              onSelect={openSession}
               role={role}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
@@ -1276,7 +1260,7 @@ const MySessions = () => {
               key={session.id}
               session={session}
               now={now}
-              onSelect={setSelectedSession}
+              onSelect={openSession}
               role={role}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
@@ -1299,8 +1283,7 @@ const MySessions = () => {
             <PastDraftCard
               key={session.id}
               session={session}
-              onSelect={setSelectedSession}
-              onPastNavigate={handlePastNavigate}
+              onSelect={openSession}
               onFeedbackNavigate={handleFeedbackNavigate}
               role={role}
               hasFeedbackSubmitted={hasSubmittedFeedback(session)}

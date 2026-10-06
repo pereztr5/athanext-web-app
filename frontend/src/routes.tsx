@@ -29,6 +29,7 @@ import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 import { ProtectedRoute } from "./components/common/ProtectedRoute";
 import SessionFeedback from "./pages/SessionFeedback";
+import CoachSession from "./pages/CoachSession";
 import MySessions from "./pages/MySessions";
 import ChatPage from "./pages/ChatPage";
 import BookingConfirmation from "./pages/BookingConfirmation";
@@ -68,6 +69,7 @@ export const ROUTES = {
   BOOKING_CONFIRMATION: "/booking-confirmation",
   PACKAGE_CONFIRMATION: "/package-confirmation",
   COACH_SESSION_FEEDBACK: "/coach-session-feedback",
+  COACH_SESSION: "/sessions/:id",
   MY_SESSIONS: "/my-sessions",
   MY_CLIENTS: "/my-clients",
   ATHLETES: "/athletes",
@@ -157,6 +159,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },
   { path: ROUTES.COACH_SESSION_FEEDBACK, element: <ProtectedRoute><SessionFeedback /></ProtectedRoute> },
+  { path: ROUTES.COACH_SESSION, element: <ProtectedRoute><CoachSession /></ProtectedRoute> },
   { path: ROUTES.BOOKING_CONFIRMATION, element: <ProtectedRoute><BookingConfirmation /></ProtectedRoute> },
   { path: ROUTES.PACKAGE_CONFIRMATION, element: <ProtectedRoute><PackageConfirmation /></ProtectedRoute> },
   { path: ROUTES.ADMIN_REFERRALS, element: <ProtectedRoute requireAdmin><AdminReferrals /></ProtectedRoute> },

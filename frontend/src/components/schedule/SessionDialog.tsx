@@ -296,7 +296,7 @@ export const SessionDialog = ({
                 <MessageCircle strokeWidth={1.5} aria-hidden="true" />
                 Message
               </Link>
-              <Link to={ROUTES.MY_SESSIONS} className={cn(secondaryButton, "flex-1")}>
+              <Link to={`/sessions/${session.id}`} className={cn(secondaryButton, "flex-1")}>
                 Session details
               </Link>
             </div>
