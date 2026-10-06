@@ -18,7 +18,8 @@ import { calendarSyncAPI, scheduleAPI, type ScheduleSession } from "@/api/schedu
 import { DayView, MonthView, WeekAgenda, WeekColumns, type ScheduleViewHandlers } from "@/components/schedule/ScheduleViews";
 import { CreateSessionDialog } from "@/components/schedule/CreateSessionDialog";
 import { SessionDialog } from "@/components/schedule/SessionDialog";
-import { ClearDayDialog, RequestsDialog, ScheduleSettingsDialog } from "@/components/schedule/ScheduleDialogs";
+import { ClearDayDialog, ScheduleSettingsDialog } from "@/components/schedule/ScheduleDialogs";
+import { RequestsDialog } from "@/components/schedule/RequestsDialog";
 import { card, iconButton, meta, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -152,11 +153,17 @@ const MySchedulePage = () => {
 
   const respond = useMutation({
     mutationFn: ({ bookingId, accept }: { bookingId: string; accept: boolean }) => bookingRequestsAPI.respond(bookingId, accept),
-    onSuccess: (_status, { accept }) => {
+    onSuccess: (_status, { bookingId, accept }) => {
       toast({
         title: accept ? "Request accepted" : "Request declined",
         description: accept ? "The family can now pay to confirm the booking." : "The time is open again.",
       });
+      // Add it to the coach's Google Calendar when they connected one with event access.
+      if (accept && schedule?.calendar?.canWrite) {
+        void calendarSyncAPI.addEvent(bookingId).then(({ added }) => {
+          if (added) toast({ title: "Added to your Google Calendar" });
+        });
+      }
       setOpenSession(null);
       refresh();
     },

@@ -132,6 +132,9 @@ export const CalendarSyncSection = ({ calendar }: { calendar: CoachSchedule["cal
                   ? ` Updated ${formatDateInZone(new Date(calendar.lastSyncedAt), Intl.DateTimeFormat().resolvedOptions().timeZone, { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}.`
                   : ""}
               </span>
+              {!calendar.canWrite ? (
+                <span className="text-[12px] text-[#906A29]">Connect again to add accepted bookings to your calendar.</span>
+              ) : null}
               {calendar.syncError ? (
                 <span className="text-[12px] text-[#972B2B]">
                   {calendar.syncError === "reconnect" ? "Google stopped the connection. Connect again." : `Last update failed: ${calendar.syncError}`}
@@ -144,7 +147,7 @@ export const CalendarSyncSection = ({ calendar }: { calendar: CoachSchedule["cal
               <RefreshCw strokeWidth={1.5} aria-hidden="true" />
               Update now
             </button>
-            {calendar.syncError === "reconnect" ? (
+            {calendar.syncError === "reconnect" || !calendar.canWrite ? (
               <button type="button" className={primaryButton} disabled={connect.isPending} onClick={() => connect.mutate()}>
                 Connect again
               </button>

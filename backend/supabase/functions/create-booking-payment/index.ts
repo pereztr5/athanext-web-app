@@ -717,7 +717,7 @@ serve(async (req) => {
     const { data: occurrences, error: occErr } = await supabaseClient
       .from("coach_availability_slot_occurrences" as any)
       .select(
-        "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, duration_minutes, start_time, end_time, session_type, location, max_bookings_per_slot, is_enabled, is_draft, visibility",
+        "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, duration_minutes, start_time, end_time, session_type, location, max_bookings_per_slot, is_enabled, is_draft, visibility, offered_to",
       )
       .in("id", occurrenceIds);
     if (occErr) throw occErr;
@@ -858,7 +858,12 @@ serve(async (req) => {
     // New families request instead of booking when the coach asks for that (ATH-49, ATH-71).
     // The request is held 24 hours; accepted requests become pending_payment and are paid
     // through the branch below.
-    if (!coversAllPending && !isClient) {
+    // A session the coach offered to this athlete by name (a suggested time, ATH-85) is the
+    // coach's own choice, so it books straight away.
+    const offeredToMe = occurrences.every(
+      (occ) => occ.visibility === "offered" && ((occ as { offered_to?: string[] }).offered_to ?? []).includes(athleteId),
+    );
+    if (!coversAllPending && !isClient && !offeredToMe) {
       const { data: coachSettings } = await supabaseClient
         .from("coaches" as any)
         .select("new_family_booking")

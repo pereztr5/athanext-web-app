@@ -858,6 +858,7 @@ export type Database = {
           access_token: string | null
           access_token_expires_at: string | null
           account_email: string | null
+          can_write: boolean
           coach_id: string
           connected_at: string
           last_synced_at: string | null
@@ -869,6 +870,7 @@ export type Database = {
           access_token?: string | null
           access_token_expires_at?: string | null
           account_email?: string | null
+          can_write?: boolean
           coach_id: string
           connected_at?: string
           last_synced_at?: string | null
@@ -880,6 +882,7 @@ export type Database = {
           access_token?: string | null
           access_token_expires_at?: string | null
           account_email?: string | null
+          can_write?: boolean
           coach_id?: string
           connected_at?: string
           last_synced_at?: string | null
@@ -1231,6 +1234,7 @@ export type Database = {
           created_at: string
           created_by: string | null
           expires_at: string | null
+          google_event_id: string | null
           id: string
           notes: string | null
           occurrence_id: string
@@ -1250,6 +1254,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
+          google_event_id?: string | null
           id?: string
           notes?: string | null
           occurrence_id: string
@@ -1269,6 +1274,7 @@ export type Database = {
           created_at?: string
           created_by?: string | null
           expires_at?: string | null
+          google_event_id?: string | null
           id?: string
           notes?: string | null
           occurrence_id?: string
@@ -2976,6 +2982,7 @@ export type Database = {
           athlete_name: string
           athlete_photo: string
           booking_id: string
+          capacity: number
           end_time: string
           expires_at: string
           location: string
@@ -2988,6 +2995,7 @@ export type Database = {
           session_name: string
           session_type: string
           start_time: string
+          taken: number
         }[]
       }
       get_coach_channel: {
@@ -3202,6 +3210,19 @@ export type Database = {
           total_used: number
         }[]
       }
+      get_waiting_suggestions: {
+        Args: never
+        Returns: {
+          athlete_id: string
+          athlete_name: string
+          end_time: string
+          occurrence_date: string
+          occurrence_id: string
+          price: number
+          start_time: string
+          suggested_at: string
+        }[]
+      }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -3243,9 +3264,17 @@ export type Database = {
         Args: { p_body: string; p_occurrence_id: string }
         Returns: number
       }
+      message_session_families_to: {
+        Args: { p_athlete_id: string; p_body: string }
+        Returns: undefined
+      }
       notification_allowed: {
         Args: { p_channel: string; p_kind: string; p_user_id: string }
         Returns: boolean
+      }
+      open_family_conversation: {
+        Args: { p_athlete_id: string }
+        Returns: string
       }
       record_coach_share_event: {
         Args: { p_coach_id: string; p_event_type: string }
@@ -3360,6 +3389,15 @@ export type Database = {
           p_summary: string
         }
         Returns: Json
+      }
+      suggest_booking_time: {
+        Args: {
+          p_booking_id: string
+          p_date: string
+          p_message: string
+          p_start: string
+        }
+        Returns: string
       }
       sync_availability_occurrences: {
         Args: { p_availability_id: string }

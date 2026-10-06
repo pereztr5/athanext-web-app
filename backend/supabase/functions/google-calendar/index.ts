@@ -1,11 +1,14 @@
 // Google Calendar for coaches (ATH-71): connect, sync busy times, disconnect.
 // Only free/busy is read (calendar.freebusy scope), never event details. Busy times are
 // stored in coach_busy_blocks and hide overlapping open sessions from families.
+// ATH-85: accepted bookings are added as events (calendar.events.owned, which only reaches
+// calendars the coach owns). Events are marked free so they don't block the coach's own slots.
 //
 // GET  /google-calendar/callback      Google's OAuth redirect (no JWT).
 // POST { action: "connect_url", origin }   -> { url }       coach only
 // POST { action: "sync", coach_id? }       -> { synced }    own calendar, or any coach's (throttled)
 // POST { action: "disconnect" }            -> { ok }        coach only
+// POST { action: "add_event", booking_id } -> { added, reason? } coach only
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -25,7 +28,8 @@ const SERVICE_ROLE_KEY = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
 const CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID") ?? "";
 const CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET") ?? "";
 const REDIRECT_URI = `${SUPABASE_URL}/functions/v1/google-calendar/callback`;
-const SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.freebusy"];
+const EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events.owned";
+const SCOPES = ["openid", "email", "https://www.googleapis.com/auth/calendar.freebusy", EVENTS_SCOPE];
 const STATE_TTL_MS = 15 * 60 * 1000;
 // A family opening a coach's page refreshes that coach's busy times at most this often.
 const SYNC_THROTTLE_MS = 15 * 60 * 1000;
@@ -94,6 +98,7 @@ type TokenResponse = {
   refresh_token?: string;
   expires_in?: number;
   id_token?: string;
+  scope?: string;
   error?: string;
 };
 
@@ -225,6 +230,7 @@ const handleCallback = async (url: URL, admin: SupabaseClient) => {
     access_token: token.access_token,
     access_token_expires_at: new Date(Date.now() + (token.expires_in ?? 3600) * 1000).toISOString(),
     sync_error: null,
+    can_write: (token.scope ?? "").split(" ").includes(EVENTS_SCOPE),
     connected_at: new Date().toISOString(),
   });
   if (error) {
@@ -260,7 +266,7 @@ serve(async (req) => {
   const { userId, coachId } = await callerCoachId(req, admin);
   if (!userId) return json({ error: "Sign in first" }, 401);
 
-  let body: { action?: string; origin?: string; coach_id?: string } = {};
+  let body: { action?: string; origin?: string; coach_id?: string; booking_id?: string } = {};
   try {
     body = await req.json();
   } catch {
@@ -317,5 +323,79 @@ serve(async (req) => {
     return json({ ok: true });
   }
 
+  if (body.action === "add_event") {
+    if (!coachId) return json({ error: "Only coaches can add events" }, 403);
+    if (!body.booking_id) return json({ error: "booking_id is required" }, 400);
+    return json(await addEvent(admin, coachId, body.booking_id));
+  }
+
   return json({ error: "Unknown action" }, 400);
 });
+
+// Adds one of the coach's bookings to their primary calendar, once.
+const addEvent = async (
+  admin: SupabaseClient,
+  coachId: string,
+  bookingId: string,
+): Promise<{ added: boolean; reason?: string }> => {
+  const { data: booking } = await admin
+    .from("coach_slot_bookings")
+    .select("id, status, google_event_id, athlete_id, occurrence_id")
+    .eq("id", bookingId)
+    .eq("coach_id", coachId)
+    .maybeSingle();
+  if (!booking) return { added: false, reason: "not_found" };
+  if (booking.google_event_id) return { added: true };
+  if (!["pending_payment", "booked"].includes(booking.status)) return { added: false, reason: "not_confirmed" };
+
+  const { data: conn } = await admin
+    .from("coach_calendar_connections")
+    .select("coach_id, refresh_token, access_token, access_token_expires_at, last_synced_at, can_write")
+    .eq("coach_id", coachId)
+    .maybeSingle();
+  if (!conn) return { added: false, reason: "not_connected" };
+  if (!conn.can_write) return { added: false, reason: "reconnect" };
+
+  const [{ data: occ }, { data: athlete }] = await Promise.all([
+    admin
+      .from("coach_availability_slot_occurrences")
+      .select("occurrence_date, start_time, end_time, session_name, session_type, place, location")
+      .eq("id", booking.occurrence_id)
+      .maybeSingle(),
+    admin.from("athlete_profiles").select("full_name").eq("id", booking.athlete_id).maybeSingle(),
+  ]);
+  if (!occ) return { added: false, reason: "not_found" };
+
+  const who = athlete?.full_name || "an athlete";
+  const what = occ.session_type === "group" ? occ.session_name || "Group session" : "1-on-1";
+  try {
+    const accessToken = await accessTokenFor(admin, conn as Connection);
+    const res = await fetch("https://www.googleapis.com/calendar/v3/calendars/primary/events", {
+      method: "POST",
+      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
+      body: JSON.stringify({
+        summary: `${what} with ${who}`,
+        location: occ.location === "online" ? "Video call" : occ.place || undefined,
+        description: "Booked on AthaNext.",
+        // Session times are stored on the Eastern clock.
+        start: { dateTime: `${occ.occurrence_date}T${occ.start_time}`, timeZone: "America/New_York" },
+        end: { dateTime: `${occ.occurrence_date}T${occ.end_time}`, timeZone: "America/New_York" },
+        transparency: "transparent",
+      }),
+    });
+    const event = await res.json();
+    if (!res.ok) {
+      if (res.status === 403) {
+        await admin.from("coach_calendar_connections").update({ can_write: false }).eq("coach_id", coachId);
+        return { added: false, reason: "reconnect" };
+      }
+      throw new Error(event?.error?.message || `Google returned ${res.status}`);
+    }
+    await admin.from("coach_slot_bookings").update({ google_event_id: event.id }).eq("id", booking.id);
+    return { added: true };
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    console.error(`Adding event failed for booking ${bookingId}:`, message);
+    return { added: false, reason: message === "reconnect" ? "reconnect" : "error" };
+  }
+};

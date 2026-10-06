@@ -1,25 +1,19 @@
 /**
- * Smaller My Schedule sheets (ATH-71): Clear day, Schedule settings (booking rules, Google
- * Calendar, days off) and the booking requests list.
+ * Smaller My Schedule sheets (ATH-71): Clear day and Schedule settings (booking rules, Google
+ * Calendar, days off). Booking requests live in RequestsDialog.
  */
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BrandPill } from "@/components/brand";
 import { BookingRulesSection, CalendarSyncSection } from "./BookingSettings";
-import type { BookingRequest } from "@/api/bookingRequests";
 import { scheduleAPI, type CoachSchedule, type TimeOffDay } from "@/api/schedule";
-import { cn } from "@/lib/utils";
 import { formatDayISO, plural } from "@/utils/schedule";
-import { formatExpiry } from "@/utils/requestWaiting";
-import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
 import {
   dangerButton,
   dialogContent,
   input,
   label,
   meta,
-  primaryButton,
   secondaryButton,
   textButton,
 } from "./styles";
@@ -139,62 +133,3 @@ export const ScheduleSettingsDialog = ({
     </Dialog>
   );
 };
-
-export const RequestsDialog = ({
-  open,
-  onOpenChange,
-  requests,
-  timeZone,
-  now,
-  respondingId,
-  onRespond,
-}: {
-  open: boolean;
-  onOpenChange: (open: boolean) => void;
-  requests: BookingRequest[];
-  timeZone: string;
-  now: Date;
-  respondingId: string | null;
-  onRespond: (bookingId: string, accept: boolean) => void;
-}) => (
-  <Dialog open={open} onOpenChange={onOpenChange}>
-    <DialogContent className={dialogContent}>
-      <Header title="Booking requests" description="Held for 24 hours. Families are charged only if you accept." />
-      <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
-        {requests.length ? (
-          requests.map((request) => {
-            const start = new Date(request.start);
-            return (
-              <div key={request.bookingId} className="flex flex-col gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] p-3">
-                <div className="flex flex-col gap-1">
-                  <div className="flex items-center justify-between gap-2">
-                    <b className="text-[14px] font-medium">{request.athleteName}</b>
-                    <BrandPill tone="amber">{formatExpiry(request.expiresAt, now)}</BrandPill>
-                  </div>
-                  <span className={meta}>
-                    {request.sessionType === "group" ? `${request.sessionName} · group` : "1-on-1"} · ${Math.round(request.price)}
-                  </span>
-                  <span className={meta}>
-                    {formatDateInZone(start, timeZone, { weekday: "short", month: "short", day: "numeric" })},{" "}
-                    {formatInstantSpan(start, new Date(request.end), timeZone)}
-                  </span>
-                  {request.notes ? <p className="text-[12px] italic text-[#484D56]">“{request.notes}”</p> : null}
-                </div>
-                <div className="flex gap-2">
-                  <button type="button" className={cn(secondaryButton, "flex-1")} disabled={respondingId !== null} onClick={() => onRespond(request.bookingId, false)}>
-                    Decline
-                  </button>
-                  <button type="button" className={cn(primaryButton, "flex-1")} disabled={respondingId !== null} onClick={() => onRespond(request.bookingId, true)}>
-                    Accept
-                  </button>
-                </div>
-              </div>
-            );
-          })
-        ) : (
-          <p className={meta}>No requests waiting.</p>
-        )}
-      </div>
-    </DialogContent>
-  </Dialog>
-);

@@ -79,6 +79,8 @@ export interface CalendarConnection {
   accountEmail: string | null;
   lastSyncedAt: string | null;
   syncError: string | null;
+  /** Google granted event access, so accepted bookings are added (ATH-85). */
+  canWrite: boolean;
 }
 
 export interface ScheduleRules {
@@ -213,6 +215,7 @@ export const scheduleAPI = {
             accountEmail: raw.calendar.account_email ?? null,
             lastSyncedAt: raw.calendar.last_synced_at ?? null,
             syncError: raw.calendar.sync_error ?? null,
+            canWrite: Boolean(raw.calendar.can_write),
           }
         : null,
     };
@@ -384,6 +387,15 @@ export const calendarSyncAPI = {
   async disconnect(): Promise<void> {
     const { error } = await supabase.functions.invoke("google-calendar", { body: { action: "disconnect" } });
     if (error) throw error;
+  },
+
+  /** Adds an accepted booking to the coach's Google Calendar. Never throws; returns whether it was added. */
+  async addEvent(bookingId: string): Promise<{ added: boolean; reason?: string }> {
+    const { data, error } = await supabase.functions.invoke("google-calendar", {
+      body: { action: "add_event", booking_id: bookingId },
+    });
+    if (error) return { added: false, reason: "error" };
+    return { added: Boolean(data?.added), reason: data?.reason };
   },
 };
 
