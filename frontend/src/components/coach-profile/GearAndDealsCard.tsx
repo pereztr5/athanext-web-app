@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ExternalLink, Plus, Tag, Trash2 } from "lucide-react";
+import { ChevronDown, ExternalLink, Plus, Tag, Trash2 } from "lucide-react";
 import {
   Dialog,
   DialogContent,
@@ -51,6 +51,8 @@ interface GearAndDealsCardProps {
   editing?: boolean;
   onDealsEnabledChange?: (enabled: boolean) => void;
   onSaved?: () => void;
+  /** Family view (ATH-95): the box starts folded at the bottom of the profile. */
+  folded?: boolean;
 }
 
 /**
@@ -67,8 +69,10 @@ export function GearAndDealsCard({
   editing = false,
   onDealsEnabledChange,
   onSaved,
+  folded = false,
 }: GearAndDealsCardProps) {
   const [editorOpen, setEditorOpen] = useState(false);
+  const [open, setOpen] = useState(!folded);
   const { data: products = [] } = useGearProducts();
   const gear = isShopifyConfigured ? pickCoachGear(products, brandNames) : [];
   const allDeals = parseAffiliateLinks(links);
@@ -78,6 +82,22 @@ export function GearAndDealsCard({
   if (!editing && deals.length === 0 && gear.length === 0) return null;
 
   const first = coachName.trim().split(/\s+/)[0] || "Your coach";
+
+  if (folded && !open) {
+    return (
+      <CoachProfileCard className="gap-0">
+        <button type="button" className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={false} onClick={() => setOpen(true)}>
+          <span className="text-[20px] font-medium leading-[22px] tracking-[-1px] text-[#1A202C]">Gear {first} uses</span>
+          <span className="inline-flex items-center gap-1.5 text-[12px] text-[#767980]">
+            {[deals.length ? `${deals.length} ${deals.length === 1 ? "deal" : "deals"}` : "", gear.length ? `${gear.length} ${gear.length === 1 ? "product" : "products"}` : ""]
+              .filter(Boolean)
+              .join(" · ")}
+            <ChevronDown className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          </span>
+        </button>
+      </CoachProfileCard>
+    );
+  }
 
   return (
     <CoachProfileCard className="gap-4">

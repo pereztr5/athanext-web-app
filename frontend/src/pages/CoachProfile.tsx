@@ -317,6 +317,8 @@ const CoachProfile = () => {
               onMessageCoach={handleSendMessage}
             />
           }
+          onMessage={canSendMessage ? handleSendMessage : undefined}
+          messaging={startingChat}
           availability={
             <div ref={availabilitySectionRef}>
               <CoachAvailabilitySection
