@@ -98,6 +98,9 @@ export const rosterAPI = {
   async athlete(id: string): Promise<{
     athlete: RosterAthlete;
     note: string;
+    /** Set by the family on their Home (ATH-92). */
+    goal: string | null;
+    video: string | null;
     upcoming: AthleteSession[];
     past: AthleteSession[];
   }> {
@@ -107,6 +110,8 @@ export const rosterAPI = {
     return {
       athlete: mapAthlete(raw.athlete ?? {}),
       note: raw.note ?? "",
+      goal: raw.goal ?? null,
+      video: raw.video ?? null,
       upcoming: (raw.upcoming as AthleteSession[]) ?? [],
       past: (raw.past as AthleteSession[]) ?? [],
     };

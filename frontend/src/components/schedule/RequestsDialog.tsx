@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
+import { ageGroup } from "@/utils/athleteHome";
 import { formatExpiry } from "@/utils/requestWaiting";
 import { ALL_START_MINUTES, formatMinutes, minutesInZone, viewerToEastern } from "@/utils/schedule";
 import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
@@ -161,7 +162,15 @@ export const RequestsDialog = ({
                 <div key={request.bookingId} className="flex flex-col gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] p-3">
                   <div className="flex flex-col gap-1">
                     <div className="flex items-center justify-between gap-2">
-                      <b className="text-[14px] font-medium">{request.athleteName}</b>
+                      <b className="text-[14px] font-medium">
+                        {[
+                          request.athleteName.split(" ")[0],
+                          ageGroup(request.athleteBirthDate, getZonedISODate(now, timeZone)),
+                          request.athletePosition,
+                        ]
+                          .filter(Boolean)
+                          .join(" · ")}
+                      </b>
                       <BrandPill tone="amber">{formatExpiry(request.expiresAt, now)}</BrandPill>
                     </div>
                     <span className={meta}>

@@ -175,7 +175,22 @@ const AthleteDetailPage = () => {
             </section>
 
             <section className={card}>
-              <h2 className="text-[20px] font-medium tracking-[-0.04em]">Private note</h2>
+              <h2 className="text-[20px] font-medium tracking-[-0.04em]">Goal and notes</h2>
+              <div className="flex flex-col gap-1">
+                <span className={meta}>Season goal</span>
+                <span className="text-[14px]">{detail.data.goal || "Not set yet. The family adds it on their Home."}</span>
+              </div>
+              {detail.data.video ? (
+                <a
+                  className="text-[14px] font-medium text-[#0054B4] hover:underline"
+                  href={/^https?:\/\//i.test(detail.data.video) ? detail.data.video : `https://${detail.data.video}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Highlight video
+                </a>
+              ) : null}
+              <span className={meta}>Private note</span>
               <textarea
                 className={cn(input, "h-auto py-2")}
                 rows={3}

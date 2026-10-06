@@ -27,6 +27,9 @@ export interface BookingRequest {
   /** Spots on the session and how many are already taken (ATH-85: "Group is full"). */
   capacity: number;
   taken: number;
+  /** The preview a coach sees before accepting (ATH-92): position and birth date for the age group. */
+  athletePosition: string | null;
+  athleteBirthDate: string | null;
 }
 
 /** A time the coach suggested instead of a request, until the family books it (ATH-85). */
@@ -62,6 +65,8 @@ export const bookingRequestsAPI = {
       expiresAt: row.expires_at ?? null,
       capacity: Number(row.capacity) || 1,
       taken: Number(row.taken) || 0,
+      athletePosition: row.athlete_position ?? null,
+      athleteBirthDate: row.athlete_birth_date ?? null,
     }));
   },
 

@@ -222,6 +222,7 @@ export type Database = {
           graduation_year: string | null
           height: string | null
           high_school: string | null
+          highlight_video_url: string | null
           id: string
           instagram_handle: string | null
           location: string | null
@@ -230,6 +231,7 @@ export type Database = {
           position: string | null
           profile_completed: boolean
           profile_image_url: string | null
+          season_goal: string | null
           sport: string
           tags: string[]
           updated_at: string
@@ -248,6 +250,7 @@ export type Database = {
           graduation_year?: string | null
           height?: string | null
           high_school?: string | null
+          highlight_video_url?: string | null
           id?: string
           instagram_handle?: string | null
           location?: string | null
@@ -256,6 +259,7 @@ export type Database = {
           position?: string | null
           profile_completed?: boolean
           profile_image_url?: string | null
+          season_goal?: string | null
           sport: string
           tags?: string[]
           updated_at?: string
@@ -274,6 +278,7 @@ export type Database = {
           graduation_year?: string | null
           height?: string | null
           high_school?: string | null
+          highlight_video_url?: string | null
           id?: string
           instagram_handle?: string | null
           location?: string | null
@@ -282,6 +287,7 @@ export type Database = {
           position?: string | null
           profile_completed?: boolean
           profile_image_url?: string | null
+          season_goal?: string | null
           sport?: string
           tags?: string[]
           updated_at?: string
@@ -2909,6 +2915,7 @@ export type Database = {
         Returns: number
       }
       fill_session_series: { Args: { p_series_id?: string }; Returns: number }
+      get_athlete_home: { Args: never; Returns: Json }
       get_athlete_profile_stats: {
         Args: { p_athlete_id: string }
         Returns: {
@@ -2984,9 +2991,11 @@ export type Database = {
       get_coach_booking_requests: {
         Args: never
         Returns: {
+          athlete_birth_date: string
           athlete_id: string
           athlete_name: string
           athlete_photo: string
+          athlete_position: string
           booking_id: string
           capacity: number
           end_time: string
