@@ -12,6 +12,7 @@ export interface CoachClientReferral {
   created_at: string;
   confirmed_at: string | null;
   client_name: string | null;
+  athlete_first_name: string | null;
   invite_token: string | null;
   expires_at: string | null;
 }
@@ -30,6 +31,7 @@ export interface ReferralInvite {
 export interface ClientInviteInput {
   name: string;
   email: string;
+  athlete_first_name?: string;
 }
 
 export interface AddClientResult {
@@ -111,6 +113,12 @@ export const removeReferral = async (referralId: string) =>
 
 export const createAthleteInitiatedReferral = async (coachId: string) =>
   supabase.rpc("register_athlete_referral", { _coach_id: coachId });
+
+/** The coach's name for a share link sign-up (coaches are public). */
+export const getCoachName = async (coachId: string) => {
+  const { data } = await supabase.from("coaches").select("name").eq("id", coachId).maybeSingle();
+  return (data?.name as string | undefined) ?? null;
+};
 
 export const getReferralInvite = async (token: string) =>
   (await supabase.rpc("get_referral_invite", { _token: token })) as unknown as {

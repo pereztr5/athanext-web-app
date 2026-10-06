@@ -947,6 +947,7 @@ export type Database = {
       }
       coach_client_referrals: {
         Row: {
+          athlete_first_name: string | null
           athlete_id: string | null
           client_email: string
           client_name: string | null
@@ -961,6 +962,7 @@ export type Database = {
           status: string
         }
         Insert: {
+          athlete_first_name?: string | null
           athlete_id?: string | null
           client_email: string
           client_name?: string | null
@@ -975,6 +977,7 @@ export type Database = {
           status?: string
         }
         Update: {
+          athlete_first_name?: string | null
           athlete_id?: string | null
           client_email?: string
           client_name?: string | null

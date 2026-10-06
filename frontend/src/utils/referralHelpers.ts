@@ -2,6 +2,37 @@
 // athlete back to /invite/:token after they sign up or log in.
 export const INVITE_TOKEN_STORAGE_KEY = "ccr_invite_token";
 
+// Sign-ups through a coach's share link (ATH-78) keep the coach here until the profile is
+// complete, then ask to join their roster. The coach approves on My Clients.
+export const JOIN_COACH_STORAGE_KEY = "ccr_join_coach";
+
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
+/** The share-link coach from the URL (saved for after email confirmation) or from earlier. */
+export const readJoinCoach = (fromUrl: string | null): string | null => {
+  try {
+    if (fromUrl && UUID_RE.test(fromUrl)) {
+      localStorage.setItem(JOIN_COACH_STORAGE_KEY, fromUrl);
+      return fromUrl;
+    }
+    const saved = localStorage.getItem(JOIN_COACH_STORAGE_KEY);
+    return saved && UUID_RE.test(saved) ? saved : null;
+  } catch {
+    return fromUrl && UUID_RE.test(fromUrl) ? fromUrl : null;
+  }
+};
+
+export const clearJoinCoach = () => {
+  try {
+    localStorage.removeItem(JOIN_COACH_STORAGE_KEY);
+  } catch {
+    // Storage can be blocked; the referral already exists.
+  }
+};
+
+export const joinLinkFor = (coachId: string) =>
+  `${window.location.origin}/auth?mode=signup&coach=${coachId}`;
+
 export const inviteLinkFor = (token: string) => `${window.location.origin}/invite/${token}`;
 
 export type AttestationAnswer = "offline" | "platform" | "declined";
@@ -67,6 +98,10 @@ export const isOpenInvite = (r: {
   (r.status === "invited" ||
     r.status === "pending_confirmation" ||
     (r.status === "confirmed" && !r.athlete_id));
+
+/** A family who asked to join (share link or sign-up) and waits for the coach to approve. */
+export const isAwaitingCoachApproval = (r: { status: ReferralStatus; initiated_by: string }) =>
+  r.initiated_by === "athlete" && r.status === "pending_confirmation";
 
 export const isInviteExpired = (r: { expires_at: string | null }) =>
   Boolean(r.expires_at && new Date(r.expires_at).getTime() < Date.now());

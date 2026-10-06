@@ -1,20 +1,21 @@
 /**
- * My Athletes (ATH-74): one sortable roster. Pending invites stay on the existing invite page.
+ * My Athletes (ATH-74): one sortable roster. Pending invites and families waiting for approval
+ * stay on the existing invite page (My Clients).
  */
 import { useMemo, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Mail, Plus, Search, Users } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown, ChevronRight, Mail, Plus, Search, UserCheck, Users } from "lucide-react";
 import { rosterAPI } from "@/api/roster";
 import { BookAthleteDialog } from "@/components/athletes/BookAthleteDialog";
-import { AddClientsModal } from "@/components/referrals/AddClientsModal";
+import { AddAthleteModal } from "@/components/athletes/AddAthleteModal";
 import { card, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachReferrals } from "@/hooks/useReferrals";
 import { useRole } from "@/hooks/useRole";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { isInviteExpired, isOpenInvite } from "@/utils/referralHelpers";
+import { isAwaitingCoachApproval, isInviteExpired, isOpenInvite } from "@/utils/referralHelpers";
 import { ROSTER_SORTS, rosterSubtitle, sortRoster, type RosterSort } from "@/utils/roster";
 import { plural } from "@/utils/schedule";
 import { zonedWallTimeToUtc, getZonedISODate } from "@/utils/dateHelpers";
@@ -45,6 +46,7 @@ const MyAthletesPage = () => {
   const [booking, setBooking] = useState<{ id: string; name: string } | null>(null);
 
   const pending = (referrals.data ?? []).filter((r) => isOpenInvite(r) && !isInviteExpired(r)).length;
+  const toApprove = (referrals.data ?? []).filter(isAwaitingCoachApproval).length;
   const pillars = useMemo(() => {
     const set = new Set<string>();
     (roster.data ?? []).forEach((a) => a.pillars.forEach((p) => set.add(p)));
@@ -98,6 +100,12 @@ const MyAthletesPage = () => {
               Invite the families you already coach. They book you here with no marketplace fee.
             </p>
             <button type="button" className={primaryButton} onClick={() => setAdding(true)}>Invite families</button>
+            {toApprove ? (
+              <Link to={ROUTES.MY_CLIENTS} className={textButton}>
+                {toApprove} waiting for your approval
+                <ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+              </Link>
+            ) : null}
           </section>
         ) : (
           <section className={card}>
@@ -135,12 +143,23 @@ const MyAthletesPage = () => {
                   </select>
                 </label>
               </div>
-              {pending ? (
-                <Link to={ROUTES.MY_CLIENTS} className={cn(textButton, "self-start")}>
-                  <Mail className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                  {plural(pending, "pending invite")}
-                  <ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                </Link>
+              {pending || toApprove ? (
+                <div className="flex flex-wrap gap-x-5 gap-y-2">
+                  {toApprove ? (
+                    <Link to={ROUTES.MY_CLIENTS} className={textButton}>
+                      <UserCheck className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                      {toApprove} waiting for your approval
+                      <ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    </Link>
+                  ) : null}
+                  {pending ? (
+                    <Link to={ROUTES.MY_CLIENTS} className={textButton}>
+                      <Mail className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                      {plural(pending, "pending invite")}
+                      <ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                    </Link>
+                  ) : null}
+                </div>
               ) : null}
             </div>
 
@@ -219,7 +238,7 @@ const MyAthletesPage = () => {
           </section>
         )}
       </div>
-      <AddClientsModal open={adding} onClose={() => setAdding(false)} />
+      <AddAthleteModal open={adding} onClose={() => setAdding(false)} coachId={coachId} />
       <BookAthleteDialog athleteId={booking?.id ?? null} name={booking?.name ?? ""} onClose={() => setBooking(null)} />
     </div>
   );

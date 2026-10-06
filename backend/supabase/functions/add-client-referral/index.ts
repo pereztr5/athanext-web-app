@@ -42,19 +42,25 @@ const escapeHtml = (value: string) =>
     .replace(/"/g, "&quot;")
     .replace(/'/g, "&#39;");
 
-const inviteEmailHtml = (coachName: string, clientName: string | null, link: string) => `
+const inviteEmailHtml = (
+  coachName: string,
+  clientName: string | null,
+  link: string,
+  athleteFirstName: string | null = null,
+) => `
   <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
     <h2 style="color:#0054B4;">${escapeHtml(coachName)} invited you to AthaNext</h2>
     <p>${clientName ? `Hi ${escapeHtml(clientName)},` : "Hi,"}</p>
     <p>${escapeHtml(coachName)} manages their sessions on AthaNext. As an existing client,
     you book with them with <strong>no platform service fee</strong>.</p>
+    <p>${athleteFirstName ? `After you accept, add ${escapeHtml(athleteFirstName)} as your athlete.` : "After you accept, add your athlete (or yourself, if you're 18 or older)."}</p>
     <p><a href="${link}" style="background:#0054B4;color:#fff;padding:12px 20px;
     border-radius:6px;text-decoration:none;">Accept invite</a></p>
     <p style="color:#767980;font-size:13px;">Use this email address when you sign up or log in.
     This invite expires in ${INVITE_TTL_DAYS} days.</p>
   </div>`;
 
-type ClientInput = { email: string; name: string | null };
+type ClientInput = { email: string; name: string | null; athleteFirstName: string | null };
 
 const parseClients = (body: Record<string, unknown>): ClientInput[] => {
   const raw: ClientInput[] = [];
@@ -62,13 +68,15 @@ const parseClients = (body: Record<string, unknown>): ClientInput[] => {
     for (const c of body.clients as Array<Record<string, unknown>>) {
       if (typeof c?.email !== "string") continue;
       const name = typeof c?.name === "string" ? c.name.trim().slice(0, 100) : "";
-      raw.push({ email: c.email, name: name || null });
+      const athleteFirstName =
+        typeof c?.athlete_first_name === "string" ? c.athlete_first_name.trim().slice(0, 100) : "";
+      raw.push({ email: c.email, name: name || null, athleteFirstName: athleteFirstName || null });
     }
   }
   // Legacy payload: plain email list.
   if (Array.isArray(body?.client_emails)) {
     for (const e of body.client_emails as unknown[]) {
-      if (typeof e === "string") raw.push({ email: e, name: null });
+      if (typeof e === "string") raw.push({ email: e, name: null, athleteFirstName: null });
     }
   }
   const seen = new Set<string>();
@@ -77,7 +85,7 @@ const parseClients = (body: Record<string, unknown>): ClientInput[] => {
     const email = c.email.trim().toLowerCase();
     if (!EMAIL_RE.test(email) || seen.has(email)) continue;
     seen.add(email);
-    clients.push({ email, name: c.name });
+    clients.push({ ...c, email });
   }
   return clients.slice(0, MAX_CLIENTS_PER_REQUEST);
 };
@@ -88,6 +96,7 @@ const sendInviteEmail = async (
   coachName: string,
   clientName: string | null,
   link: string,
+  athleteFirstName: string | null = null,
 ) => {
   const { data: cfgRows } = await service
     .from("configurations")
@@ -107,7 +116,7 @@ const sendInviteEmail = async (
       to,
       from: fromEmail,
       subject: `${coachName} invited you to AthaNext`,
-      html: inviteEmailHtml(coachName, clientName, link),
+      html: inviteEmailHtml(coachName, clientName, link, athleteFirstName),
     }),
   }).catch((e) => console.error("send-email failed", e));
   return true;
@@ -151,12 +160,14 @@ serve(async (req) => {
       }
       const { data: row } = await service
         .from("coach_client_referrals")
-        .select("coach_id, client_email, client_name")
+        .select("coach_id, client_email, client_name, athlete_first_name")
         .eq("id", body.referral_id)
         .single();
       const link = inviteLink(token as string);
       const emailed = row
-        ? await sendInviteEmail(service, row.client_email, await coachNameFor(row.coach_id), row.client_name, link)
+        ? await sendInviteEmail(
+            service, row.client_email, await coachNameFor(row.coach_id), row.client_name, link, row.athlete_first_name,
+          )
         : false;
       return json({ invite_link: link, emailed });
     }
@@ -189,7 +200,7 @@ serve(async (req) => {
     const coachName = await coachNameFor(coachId);
 
     const results: Array<{ email: string; status: string; invite_link?: string; emailed?: boolean }> = [];
-    for (const { email, name } of clients) {
+    for (const { email, name, athleteFirstName } of clients) {
       const { data: existing } = await service
         .from("coach_client_referrals")
         .select("id")
@@ -237,6 +248,7 @@ serve(async (req) => {
           coach_id: coachId,
           client_email: email,
           client_name: name,
+          athlete_first_name: athleteFirstName,
           athlete_id: athleteId,
           initiated_by: adminCreated ? "admin" : "coach",
           status,
@@ -257,7 +269,7 @@ serve(async (req) => {
         continue;
       }
       const link = inviteLink(inserted.invite_token);
-      const emailed = await sendInviteEmail(service, email, coachName, name, link);
+      const emailed = await sendInviteEmail(service, email, coachName, name, link, athleteFirstName);
       results.push({ email, status, invite_link: link, emailed });
     }
 

@@ -18,6 +18,7 @@ import { authSchema, signupSchema, profileCompletionSchema } from "@/utils/valid
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
 import { Loader2, Eye, EyeOff, MapPin } from "lucide-react";
+import { useQuery } from "@tanstack/react-query";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswordValidation";
 import {
@@ -33,9 +34,9 @@ import { useUserProfile } from "@/hooks/useUserProfile";
 import { useCoachProfileActions } from "@/hooks/useCoachProfileActions";
 import { useAthleteProfileActions } from "@/hooks/useAthleteProfileActions";
 import { useCoaches } from "@/hooks/useCoaches";
-import { createAthleteInitiatedReferral } from "@/api/referrals";
+import { createAthleteInitiatedReferral, getCoachName } from "@/api/referrals";
 import { useReferralInvite } from "@/hooks/useReferrals";
-import { INVITE_TOKEN_STORAGE_KEY } from "@/utils/referralHelpers";
+import { INVITE_TOKEN_STORAGE_KEY, clearJoinCoach, readJoinCoach } from "@/utils/referralHelpers";
 import { ROUTES } from "@/routes";
 
 import { fetchLocationFromZipCode, formatLocationDisplay, hasValidLocationData, type LocationInfo } from "@/utils/geolocation";
@@ -167,6 +168,15 @@ const Auth = () => {
   const inviteCoachName = pendingInvite?.state === "valid" ? pendingInvite.coach_name : null;
   // An invited athlete accepts on the invite page once signed in (email must match there).
   const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
+  // A coach's share link (ATH-78): the sign-up asks to join that coach's athletes.
+  const coachParam = searchParams.get("coach");
+  const joinCoachId = useMemo(() => (inviteToken ? null : readJoinCoach(coachParam)), [inviteToken, coachParam]);
+  const { data: joinCoachName } = useQuery({
+    queryKey: ["join-coach-name", joinCoachId],
+    queryFn: () => getCoachName(joinCoachId!),
+    enabled: Boolean(joinCoachId),
+    staleTime: Infinity,
+  });
   const {
     items: signupPasswordValidationItems,
     allValid: isSignupPasswordStrong,
@@ -902,13 +912,14 @@ const Auth = () => {
           }
 
           // Coach referral fee-waiver: invited athletes accept on the invite page
-          // after this; otherwise record an athlete-initiated referral if one was
-          // picked. Parents completing a profile aren't the athlete, so skip it.
-          if (persona === PROFILE_TYPE.athlete) {
-            if (!inviteToken && existingCoachId) {
-              const { error: referralError } = await createAthleteInitiatedReferral(existingCoachId);
-              if (referralError) console.error("create athlete-initiated referral failed", referralError);
-            }
+          // after this; otherwise record an athlete-initiated referral for the coach
+          // whose share link they came through (athlete or parent), or the coach an
+          // athlete picked. The coach approves it on My Clients.
+          const referralCoachId = joinCoachId ?? (persona === PROFILE_TYPE.athlete ? existingCoachId : null);
+          if (!inviteToken && referralCoachId) {
+            const { error: referralError } = await createAthleteInitiatedReferral(referralCoachId);
+            if (referralError) console.error("create athlete-initiated referral failed", referralError);
+            else clearJoinCoach();
           }
         }
       }
@@ -1383,7 +1394,13 @@ const Auth = () => {
                   </div>
                 )}
 
-                {persona === PROFILE_TYPE.athlete && !inviteToken && (
+                {joinCoachId && joinCoachName && (
+                  <p className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                    You'll join <span className="font-medium">Coach {joinCoachName}</span>'s athletes once they approve.
+                  </p>
+                )}
+
+                {persona === PROFILE_TYPE.athlete && !inviteToken && !joinCoachId && (
                   <div className="space-y-2">
                     <Label htmlFor="complete-existing-coach">Already working with a coach? (optional)</Label>
                     <Select
@@ -1440,6 +1457,12 @@ const Auth = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {joinCoachName && !inviteCoachName && (
+              <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                <span className="font-medium">Coach {joinCoachName}</span> invited you to {strings.brand.name}.
+                Sign up as a parent or athlete, and they'll approve you as their client.
+              </div>
+            )}
             {inviteCoachName && (
               <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
                 <span className="font-medium">Coach {inviteCoachName}</span>{" "}

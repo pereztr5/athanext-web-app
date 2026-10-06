@@ -7,7 +7,7 @@ import { referralStatusLabel } from "@/utils/referralHelpers";
 import {
   useAcknowledgeReferral, useCoachReferrals, useRemoveReferral,
 } from "@/hooks/useReferrals";
-import { AddClientsModal } from "@/components/referrals/AddClientsModal";
+import { AddAthleteModal } from "@/components/athletes/AddAthleteModal";
 import { ReferralRowActions } from "@/components/referrals/ReferralRowActions";
 
 const MyClients = () => {
@@ -47,6 +47,9 @@ const MyClients = () => {
                 {r.client_name ? (
                   <p className="truncate text-sm text-muted-foreground">{r.client_email}</p>
                 ) : null}
+                {r.athlete_first_name ? (
+                  <p className="truncate text-sm text-muted-foreground">Athlete: {r.athlete_first_name}</p>
+                ) : null}
                 <Badge
                   className="mt-1"
                   variant={r.status === "confirmed" ? "default" : "secondary"}
@@ -76,7 +79,7 @@ const MyClients = () => {
           ))}
         </ul>
       )}
-      <AddClientsModal open={modalOpen} onClose={() => setModalOpen(false)} />
+      <AddAthleteModal open={modalOpen} onClose={() => setModalOpen(false)} coachId={coachId} />
     </div>
   );
 };
