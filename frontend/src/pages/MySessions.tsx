@@ -299,6 +299,8 @@ const cardShellClass =
   "grid w-full grid-cols-1 gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-left font-sans text-[#1A202C] md:grid-cols-[1fr_auto] md:gap-x-6";
 const cardAsideClass = "flex flex-row flex-wrap items-end justify-between gap-5 md:flex-col md:items-end";
 
+const STARTS_IN_WINDOW_MS = 3 * 24 * 60 * 60 * 1000;
+
 const SessionTitleRow = ({ session, children }: { session: UISession; children?: ReactNode }) => (
   <div className="flex flex-wrap items-center gap-2">
     <span className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
@@ -334,10 +336,12 @@ const SessionCard = ({
 }) => {
   const timeZone = useViewerTimeZone();
   const startMeta = session.computedStatus === "upcoming" ? getStartMeta(session.start, now) : null;
+  // "Starts in" only for sessions 3 days out or less (ATH-81).
+  const soon = new Date(session.start).getTime() - now.getTime() <= STARTS_IN_WINDOW_MS;
   const statusLabel =
     session.computedStatus === "in-progress"
       ? "In progress"
-      : startMeta?.startsIn
+      : startMeta?.startsIn && soon
         ? `Starts in ${startMeta.startsIn}`
         : null;
   const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
