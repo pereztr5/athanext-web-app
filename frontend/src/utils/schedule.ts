@@ -223,3 +223,26 @@ export const WEEKDAY_NAMES = ["Monday", "Tuesday", "Wednesday", "Thursday", "Fri
 /** Booking link for one session: the coach's profile opens straight into booking it. */
 export const sessionLink = (slug: string | null, coachId: string, sessionId: string) =>
   `${window.location.origin}${coachProfilePath(slug || coachId)}?session=${sessionId}`;
+
+/** "September 2026", "Sep – Oct 2026" or "Dec 2026 – Jan 2027" for a run of ISO dates (ATH-84). */
+export const monthRangeLabel = (dates: string[]): string => {
+  if (!dates.length) return "";
+  const first = dates[0];
+  const last = dates[dates.length - 1];
+  if (first.slice(0, 7) === last.slice(0, 7)) return formatDayISO(first, { month: "long", year: "numeric" });
+  if (first.slice(0, 4) === last.slice(0, 4)) {
+    return `${formatDayISO(first, { month: "short" })} – ${formatDayISO(last, { month: "short" })} ${first.slice(0, 4)}`;
+  }
+  return `${formatDayISO(first, { month: "short", year: "numeric" })} – ${formatDayISO(last, { month: "short", year: "numeric" })}`;
+};
+
+/** "Central time (CT)" for the coach's zone; just the name when there's no short code. */
+export const timeZonePillLabel = (timeZone: string, at = new Date()): string => {
+  const part = (style: "longGeneric" | "shortGeneric") =>
+    new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: style })
+      .formatToParts(at)
+      .find((p) => p.type === "timeZoneName")?.value ?? "";
+  const long = part("longGeneric").replace(/ Time$/, " time");
+  const short = part("shortGeneric");
+  return /^[A-Z]{2,5}$/.test(short) ? `${long} (${short})` : long || timeZone;
+};

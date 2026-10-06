@@ -6,8 +6,10 @@ import {
   itemAt,
   layoutDays,
   monthGrid,
+  monthRangeLabel,
   sessionKind,
   suggestedStartMinutes,
+  timeZonePillLabel,
   viewerToEastern,
   weekDates,
   weekStartISO,
@@ -139,5 +141,19 @@ describe("layoutDays", () => {
     expect(itemAt(tuesday, 17 * 60 + 30, 60, "America/New_York", true)?.key).toBe("open");
     expect(itemAt(tuesday, 17 * 60 + 30, 60, "America/New_York", false)).toBeNull();
     expect(itemAt(tuesday, 18 * 60, 60, "America/New_York", true)).toBeNull();
+  });
+});
+
+describe("Create session labels (ATH-84)", () => {
+  it("labels the day strip's month or months", () => {
+    expect(monthRangeLabel(["2026-09-07", "2026-09-13"])).toBe("September 2026");
+    expect(monthRangeLabel(["2026-09-28", "2026-10-04"])).toBe("Sep – Oct 2026");
+    expect(monthRangeLabel(["2026-12-28", "2027-01-03"])).toBe("Dec 2026 – Jan 2027");
+  });
+
+  it("names the coach's time zone", () => {
+    const at = new Date("2026-10-06T12:00:00Z");
+    expect(timeZonePillLabel("America/Chicago", at)).toBe("Central time (CT)");
+    expect(timeZonePillLabel("America/New_York", at)).toBe("Eastern time (ET)");
   });
 });

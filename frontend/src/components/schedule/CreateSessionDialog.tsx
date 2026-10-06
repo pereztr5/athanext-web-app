@@ -3,9 +3,11 @@
  * Open 1-on-1 slots repeat every week with no end; offered and group sessions can repeat for
  * 4, 8 or 12 weeks. Offered and group sessions then go to the share step.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, MapPin, Minus, Plus, Repeat, TriangleAlert, User, Users, Video } from "lucide-react";
+import { ChevronLeft, ChevronRight, MapPin, Minus, Plus, Repeat, TriangleAlert, User, Users, Video, X } from "lucide-react";
+import { coachesAPI } from "@/api";
+import { ToastAction } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   scheduleAPI,
@@ -26,8 +28,10 @@ import {
   itemAt,
   layoutDays,
   minutesToHHMM,
+  monthRangeLabel,
   plural,
   suggestedStartMinutes,
+  timeZonePillLabel,
   viewerToEastern,
   WEEKDAY_NAMES,
   isoWeekday,
@@ -77,9 +81,11 @@ export const CreateSessionDialog = ({
   const { toast } = useToast();
   const queryClient = useQueryClient();
 
+  // The coach's saved locations (coaches.locations). Removing or adding one saves straight away.
+  const [savedLocations, setSavedLocations] = useState<string[]>(rules.locations);
   const places: Place[] = useMemo(
     () => [
-      ...(rules.locations.length ? rules.locations : ["In person"]).map((l) => ({
+      ...(savedLocations.length ? savedLocations : ["In person"]).map((l) => ({
         key: l,
         label: l,
         location: "in-person" as const,
@@ -87,7 +93,7 @@ export const CreateSessionDialog = ({
       })),
       { key: "online", label: "Video call", location: "online" as const, place: null },
     ],
-    [rules.locations]
+    [savedLocations]
   );
 
   const [kind, setKind] = useState<Kind>("individual");
@@ -98,6 +104,8 @@ export const CreateSessionDialog = ({
   const [other, setOther] = useState(false);
   const [otherMinutes, setOtherMinutes] = useState(17 * 60);
   const [placeKey, setPlaceKey] = useState(places[0].key);
+  const [addingPlace, setAddingPlace] = useState(false);
+  const [newPlace, setNewPlace] = useState("");
   const [name, setName] = useState("");
   const [length, setLength] = useState(60);
   const [spots, setSpots] = useState(6);
@@ -114,9 +122,12 @@ export const CreateSessionDialog = ({
   const [error, setError] = useState<string | null>(null);
   const [created, setCreated] = useState<ScheduleSession[] | null>(null);
 
-  // Fresh form every time the sheet opens.
+  // Fresh form every time the sheet opens, not when the schedule refetches while it's open.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opening) return;
     const start = startDate < todayISO ? todayISO : startDate;
     setKind("individual");
     setWho("open");
@@ -124,7 +135,10 @@ export const CreateSessionDialog = ({
     setDay(start);
     setTimes([]);
     setOther(false);
-    setPlaceKey(places[0].key);
+    setSavedLocations(rules.locations);
+    setPlaceKey(rules.locations[0] ?? "In person");
+    setAddingPlace(false);
+    setNewPlace("");
     setName("");
     setLength(60);
     setSpots(6);
@@ -140,7 +154,47 @@ export const CreateSessionDialog = ({
     setBring("");
     setError(null);
     setCreated(null);
-  }, [open, startDate, todayISO, places, rules.hourlyRate]);
+  }, [open, startDate, todayISO, rules.locations, rules.hourlyRate]);
+
+  const saveLocations = async (next: string[]) => {
+    const { error } = await coachesAPI.updateCoach(coachId, { locations: next });
+    if (error) throw new Error(error.message);
+    setSavedLocations(next);
+    queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
+  };
+
+  const removeLocation = async (location: string) => {
+    const before = savedLocations;
+    try {
+      await saveLocations(before.filter((l) => l !== location));
+      if (placeKey === location) setPlaceKey(before.find((l) => l !== location) ?? "In person");
+      toast({
+        title: `${location} removed`,
+        duration: 10000,
+        action: (
+          <ToastAction altText={`Undo remove ${location}`} onClick={() => saveLocations(before).catch(() => undefined)}>
+            Undo
+          </ToastAction>
+        ),
+      });
+    } catch (err) {
+      toast({ title: "Couldn't remove it", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    }
+  };
+
+  const addLocation = async () => {
+    const location = newPlace.trim();
+    if (!location) return;
+    const existing = savedLocations.find((l) => l.toLowerCase() === location.toLowerCase());
+    try {
+      if (!existing) await saveLocations([...savedLocations, location]);
+      setPlaceKey(existing ?? location);
+      setAddingPlace(false);
+      setNewPlace("");
+    } catch (err) {
+      toast({ title: "Couldn't save it", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+    }
+  };
 
   const stripDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(stripStart, i)), [stripStart]);
 
@@ -336,7 +390,9 @@ export const CreateSessionDialog = ({
               ) : null}
 
               <div className="flex items-center justify-between">
-                <span className={label}>Day</span>
+                <span className={label}>
+                  Day <span className="ml-1 text-[#1A202C]">{monthRangeLabel(stripDates)}</span>
+                </span>
                 <span className="flex gap-1.5">
                   <button
                     type="button"
@@ -392,9 +448,14 @@ export const CreateSessionDialog = ({
                 ))}
               </div>
 
-              <span className={label}>
-                {multi ? "Times · tap one or more" : "Time"} · {formatDayISO(day, { weekday: "long", month: "long", day: "numeric" })}
-              </span>
+              <div className="flex flex-wrap items-center justify-between gap-2">
+                <span className={label}>
+                  {multi ? "Times · tap one or more" : "Time"} · {formatDayISO(day, { weekday: "long", month: "long", day: "numeric" })}
+                </span>
+                <span className="rounded-full border border-[#EAEADF] bg-[#F4F4EB] px-2 py-0.5 text-[11px] font-medium leading-[14px] text-[#767980]">
+                  {timeZonePillLabel(timeZone)}
+                </span>
+              </div>
               <div className="grid grid-cols-3 gap-2 sm:grid-cols-4">
                 {candidates.map((minutes) => {
                   const taken = takenBy(minutes);
@@ -433,13 +494,64 @@ export const CreateSessionDialog = ({
 
               <span className={label}>Where</span>
               <div className="flex flex-wrap gap-2">
-                {places.map((p) => (
-                  <button key={p.key} type="button" aria-pressed={placeKey === p.key} className={choice(placeKey === p.key)} onClick={() => setPlaceKey(p.key)}>
-                    {p.location === "online" ? <Video strokeWidth={1.5} aria-hidden="true" /> : <MapPin strokeWidth={1.5} aria-hidden="true" />}
-                    {p.label}
+                {places.map((p) => {
+                  const removable = p.location === "in-person" && savedLocations.includes(p.key);
+                  return (
+                    <span key={p.key} className="relative inline-flex">
+                      <button
+                        type="button"
+                        aria-pressed={placeKey === p.key}
+                        className={cn(choice(placeKey === p.key), removable && "pr-7")}
+                        onClick={() => setPlaceKey(p.key)}
+                      >
+                        {p.location === "online" ? <Video strokeWidth={1.5} aria-hidden="true" /> : <MapPin strokeWidth={1.5} aria-hidden="true" />}
+                        {p.label}
+                      </button>
+                      {removable ? (
+                        <button
+                          type="button"
+                          aria-label={`Remove ${p.label} from your locations`}
+                          className="absolute right-1.5 top-1/2 inline-flex size-5 -translate-y-1/2 items-center justify-center rounded-full text-[#767980] hover:bg-[#EAEADF] hover:text-[#1A202C]"
+                          onClick={() => removeLocation(p.key)}
+                        >
+                          <X className="size-3" strokeWidth={1.75} />
+                        </button>
+                      ) : null}
+                    </span>
+                  );
+                })}
+                {!addingPlace ? (
+                  <button type="button" className={textButton} onClick={() => setAddingPlace(true)}>
+                    <Plus strokeWidth={1.5} aria-hidden="true" />
+                    Other location
                   </button>
-                ))}
+                ) : null}
               </div>
+              {addingPlace ? (
+                <div className="flex gap-2">
+                  <input
+                    className={input}
+                    value={newPlace}
+                    onChange={(e) => setNewPlace(e.target.value)}
+                    onKeyDown={(e) => {
+                      if (e.key === "Enter") {
+                        e.preventDefault();
+                        void addLocation();
+                      }
+                    }}
+                    placeholder="For example, Riverside Park field 2"
+                    aria-label="New location"
+                    maxLength={120}
+                    autoFocus
+                  />
+                  <button type="button" className={primaryButton} disabled={!newPlace.trim()} onClick={() => void addLocation()}>
+                    Add
+                  </button>
+                  <button type="button" className={textButton} onClick={() => { setAddingPlace(false); setNewPlace(""); }}>
+                    Cancel
+                  </button>
+                </div>
+              ) : null}
 
               {group ? (
                 <label className="flex flex-col gap-1.5">
@@ -474,10 +586,10 @@ export const CreateSessionDialog = ({
                 ) : null}
                 <label className="flex flex-col gap-1.5">
                   <span className={label}>{group ? "Price per athlete" : "Price"}</span>
-                  <span className="relative flex items-center">
-                    <span className="pointer-events-none absolute left-3 text-[14px] text-[#767980]">$</span>
+                  <span className="flex h-[38px] items-center gap-1 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-3 focus-within:ring-2 focus-within:ring-[#6698D2]">
+                    <span className="text-[14px] text-[#767980]" aria-hidden="true">$</span>
                     <input
-                      className={cn(input, "pl-6")}
+                      className="h-full w-full min-w-0 bg-transparent text-[14px] text-[#1A202C] focus:outline-none"
                       type="number"
                       min={0}
                       inputMode="decimal"
@@ -551,12 +663,18 @@ export const CreateSessionDialog = ({
                 </button>
               )}
 
+              <span className={label}>Repeats</span>
+              <div className={segGroup} role="group" aria-label="Repeats">
+                <button type="button" className={segButton(!repeat)} aria-pressed={!repeat} onClick={() => setRepeat(false)}>
+                  One time
+                </button>
+                <button type="button" className={segButton(repeat)} aria-pressed={repeat} onClick={() => setRepeat(true)}>
+                  Every {weekday}
+                </button>
+              </div>
               <div className="flex items-center gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
                 <Repeat className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
                 <span className="grow text-[14px] leading-[18px] text-[#1A202C]">{summary}</span>
-                <button type="button" className={textButton} onClick={() => setRepeat((v) => !v)}>
-                  {repeat ? "One time" : "Repeat weekly"}
-                </button>
               </div>
               {repeat && !openSlots ? (
                 <div className={segGroup} role="group" aria-label="How many weeks">
