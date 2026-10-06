@@ -15,6 +15,7 @@ import { PasswordRequirements } from "@/components/password/PasswordRequirements
 import { getInitials } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
+import { CoachSettings } from "@/components/settings/CoachSettings";
 
 const rowLabelClass = "w-[180px] shrink-0 text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C]";
 const fieldLabelClass = "text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
@@ -189,6 +190,8 @@ const AccountSettings = () => {
       navigate(ROUTES.AUTH);
     }, 2500);
   };
+
+  if (isCoach) return <CoachSettings />;
 
   if (isAthleteLike) {
     return (

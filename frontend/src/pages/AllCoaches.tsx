@@ -74,6 +74,8 @@ type Coach = Omit<
   | "booking_window_weeks"
   | "affiliate_links"
   | "deals_enabled"
+  | "listed"
+  | "deactivated_at"
 > & {
   is_verified?: boolean;
   favourite_positions?: string[];

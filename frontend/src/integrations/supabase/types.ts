@@ -1424,6 +1424,7 @@ export type Database = {
           company: string | null
           cover_image_urls: string[] | null
           created_at: string
+          deactivated_at: string | null
           deals_enabled: boolean
           email: string | null
           favourite_positions: string[] | null
@@ -1433,6 +1434,7 @@ export type Database = {
           instagram_handle: string | null
           is_verified: boolean | null
           languages: string[] | null
+          listed: boolean
           locations: string[]
           name: string
           new_family_booking: string
@@ -1461,6 +1463,7 @@ export type Database = {
           company?: string | null
           cover_image_urls?: string[] | null
           created_at?: string
+          deactivated_at?: string | null
           deals_enabled?: boolean
           email?: string | null
           favourite_positions?: string[] | null
@@ -1470,6 +1473,7 @@ export type Database = {
           instagram_handle?: string | null
           is_verified?: boolean | null
           languages?: string[] | null
+          listed?: boolean
           locations?: string[]
           name: string
           new_family_booking?: string
@@ -1498,6 +1502,7 @@ export type Database = {
           company?: string | null
           cover_image_urls?: string[] | null
           created_at?: string
+          deactivated_at?: string | null
           deals_enabled?: boolean
           email?: string | null
           favourite_positions?: string[] | null
@@ -1507,6 +1512,7 @@ export type Database = {
           instagram_handle?: string | null
           is_verified?: boolean | null
           languages?: string[] | null
+          listed?: boolean
           locations?: string[]
           name?: string
           new_family_booking?: string
@@ -2718,6 +2724,7 @@ export type Database = {
           is_admin: boolean
           is_profile_completed: boolean
           name: string
+          notification_prefs: Json
           persona_type: string | null
           phone_number: string | null
           position: string | null
@@ -2741,6 +2748,7 @@ export type Database = {
           is_admin?: boolean
           is_profile_completed?: boolean
           name: string
+          notification_prefs?: Json
           persona_type?: string | null
           phone_number?: string | null
           position?: string | null
@@ -2764,6 +2772,7 @@ export type Database = {
           is_admin?: boolean
           is_profile_completed?: boolean
           name?: string
+          notification_prefs?: Json
           persona_type?: string | null
           phone_number?: string | null
           position?: string | null
@@ -3233,6 +3242,10 @@ export type Database = {
       message_session_families: {
         Args: { p_body: string; p_occurrence_id: string }
         Returns: number
+      }
+      notification_allowed: {
+        Args: { p_channel: string; p_kind: string; p_user_id: string }
+        Returns: boolean
       }
       record_coach_share_event: {
         Args: { p_coach_id: string; p_event_type: string }
