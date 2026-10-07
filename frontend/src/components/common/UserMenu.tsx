@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, CircleHelp, CreditCard, LogOut, Settings, Store } from "lucide-react";
+import { Building2, CircleHelp, CreditCard, LayoutGrid, ShoppingBag, LogOut, Settings, Store } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { useMyOrganization } from "@/hooks/useOrganizations";
 import { useCoachPayMode } from "@/hooks/useCoachPayMode";
@@ -456,7 +456,8 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         sideOffset={12}
         forceMount
       >
-        <DropdownMenuLabel className="p-[5px] font-normal">
+        <DropdownMenuLabel className="flex flex-col gap-1 p-[5px] font-normal">
+          {displayName ? <p className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{displayName}</p> : null}
           <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
             {displayEmail}
           </p>
@@ -487,6 +488,18 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             <CreditCard className="size-4" strokeWidth={1.75} />
             <span>Payments</span>
           </DropdownMenuItem>
+        ) : null}
+        {!isCoach ? (
+          <>
+            <DropdownMenuItem onClick={() => navigate(ROUTES.DASHBOARD)} className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]">
+              <LayoutGrid className="size-4" strokeWidth={1.75} />
+              <span>Home</span>
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => navigate(ROUTES.GEAR)} className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]">
+              <ShoppingBag className="size-4" strokeWidth={1.75} />
+              <span>Gear</span>
+            </DropdownMenuItem>
+          </>
         ) : null}
         <DropdownMenuItem
           onClick={() => navigate(ROUTES.SETTINGS)}

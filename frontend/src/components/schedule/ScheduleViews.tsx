@@ -302,17 +302,20 @@ export const WeekColumns = ({
         key={day.date}
         className={cn(
           "flex min-h-[220px] min-w-0 flex-col gap-1.5 rounded-[8px] p-1.5",
-          day.date === todayISO ? "bg-[#E5EDF7]/50" : "",
           day.date < todayISO ? "opacity-60" : ""
         )}
       >
+        {/* Working Copy: "Mon 28" on one line, underlined; today in blue. */}
         <button
           type="button"
           onClick={() => onOpenDay(day.date)}
-          className="flex flex-col items-center gap-0.5 rounded-[6px] py-1 hover:bg-[#F1F1E6]"
+          className={cn(
+            "flex items-baseline gap-1.5 border-b-2 px-1 pb-1.5 pt-1 text-left hover:bg-[#F1F1E6]",
+            day.date === todayISO ? "border-[#0054B4]" : "border-[#EAEADF]"
+          )}
           aria-label={`Open ${formatDayISO(day.date, { weekday: "long", month: "long", day: "numeric" })}`}
         >
-          <small className="text-[11px] font-medium uppercase leading-[13px] text-[#767980]">
+          <small className={cn("text-[12px] font-medium leading-[14px]", day.date === todayISO ? "text-[#0054B4]" : "text-[#767980]")}>
             {formatDayISO(day.date, { weekday: "short" })}
           </small>
           <b className={cn("text-[18px] font-semibold leading-[20px]", day.date === todayISO ? "text-[#0054B4]" : "text-[#1A202C]")}>

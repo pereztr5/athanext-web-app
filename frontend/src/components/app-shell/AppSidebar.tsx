@@ -15,6 +15,10 @@ import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 import { useMyOrganization } from "@/hooks/useOrganizations";
 import { useCoachPayMode } from "@/hooks/useCoachPayMode";
+import { useQuery } from "@tanstack/react-query";
+import { bookingRequestsAPI } from "@/api/bookingRequests";
+import { useCoachReferrals } from "@/hooks/useReferrals";
+import { isAwaitingCoachApproval } from "@/utils/referralHelpers";
 import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PAYMENTS_NAV, isNavActive, type NavItem } from "./nav";
 
 const FOOTER_NAV = [
@@ -39,6 +43,12 @@ export const AppSidebar = () => {
   const { setOpenMobile } = useSidebar();
   const { data: myOrg } = useMyOrganization();
   const { data: payMode } = useCoachPayMode();
+  // Badges as in the Working Copy: requests waiting on My Schedule, new families on My Athletes.
+  const requests = useQuery({ queryKey: ["booking-requests"], queryFn: () => bookingRequestsAPI.listForCoach(), enabled: isCoach, staleTime: 60_000 });
+  const referrals = useCoachReferrals(isCoach ? userProfile?.coach_id ?? undefined : undefined);
+  const approvals = (referrals.data ?? []).filter(isAwaitingCoachApproval).length;
+  const badgeFor = (url: string) =>
+    url === ROUTES.SCHEDULE && requests.data?.length ? String(requests.data.length) : url === ROUTES.ATHLETES && approvals ? `${approvals} new` : null;
   const business = isCoach ? [...(myOrg ? [ORG_NAV] : []), ...(payMode === "app" ? [PAYMENTS_NAV] : [])] : [];
   const items = [
     ...(isCoach ? COACH_NAV : ATHLETE_NAV),
@@ -76,6 +86,11 @@ export const AppSidebar = () => {
                   <Link to={item.url} onClick={() => setOpenMobile(false)}>
                     <item.icon className="size-4" strokeWidth={1.5} />
                     <span>{item.title}</span>
+                    {badgeFor(item.url) ? (
+                      <span className="ml-auto rounded-[4px] bg-[#0054B4] px-1.5 py-[2px] text-[11px] font-medium leading-[13px] text-[#F1F1E6]">
+                        {badgeFor(item.url)}
+                      </span>
+                    ) : null}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

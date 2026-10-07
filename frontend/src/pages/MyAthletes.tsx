@@ -210,7 +210,9 @@ const MyAthletesPage = () => {
                         {athlete.next ? nextLabel(athlete.next.date, athlete.next.startTime, timeZone) : <span className={meta}>Not booked</span>}
                       </span>
                       <span className="text-[14px]">
-                        {left != null && athlete.packageTotal ? (
+                        {left === 0 && athlete.packageTotal ? (
+                          <span className={meta}>Package used</span>
+                        ) : left != null && athlete.packageTotal ? (
                           <span className="flex flex-col gap-1">
                             <span className={meta}>{left} of {athlete.packageTotal} left</span>
                             <span className="h-[4px] overflow-hidden rounded-full bg-[#EAEADF]">
@@ -219,9 +221,7 @@ const MyAthletesPage = () => {
                           </span>
                         ) : athlete.credits ? (
                           <span className={meta}>{plural(athlete.credits, "credit")} left</span>
-                        ) : (
-                          <span className={meta}>Per session</span>
-                        )}
+                        ) : null}
                       </span>
                       <span className={meta}>{athlete.position || ""}</span>
                       <button type="button" className={secondaryButton} onClick={() => setBooking({ id: athlete.id, name: athlete.name })}>

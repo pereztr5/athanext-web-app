@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { memo, useEffect, useMemo, useState } from "react";
+import { Children, memo, useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
@@ -482,6 +482,8 @@ const BookingRequestCard = ({
   );
 };
 
+const PAGE = 5;
+
 const SessionGroup = ({
   iconBg,
   icon,
@@ -496,7 +498,10 @@ const SessionGroup = ({
   count: number;
   empty: string;
   children: ReactNode;
-}) => (
+}) => {
+  const [limit, setLimit] = useState(PAGE);
+  const items = Children.toArray(children);
+  return (
   <section className="flex flex-col gap-[14px]">
     <div className="flex items-center gap-[10px]">
       <span className={cn("inline-flex size-8 items-center justify-center rounded-[8px]", iconBg)} aria-hidden="true">
@@ -505,9 +510,19 @@ const SessionGroup = ({
       <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">{title}</h2>
       <span className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">{count}</span>
     </div>
-    {count > 0 ? <div className="flex flex-col gap-[14px]">{children}</div> : <EmptySessionNote>{empty}</EmptySessionNote>}
+    {count > 0 ? <div className="flex flex-col gap-[14px]">{items.slice(0, limit)}</div> : <EmptySessionNote>{empty}</EmptySessionNote>}
+    {items.length > limit ? (
+      <button
+        type="button"
+        className="self-start text-[14px] font-medium tracking-[-0.03em] text-[#0054B4] hover:underline"
+        onClick={() => setLimit((l) => l + PAGE)}
+      >
+        Show {Math.min(PAGE, items.length - limit)} more
+      </button>
+    ) : null}
   </section>
-);
+  );
+};
 
 const MySessions = () => {
   const navigate = useNavigate();
@@ -955,7 +970,11 @@ const MySessions = () => {
 
   const inProgressSessions = withDefaults(sortedInProgress, avatarMapByName, coachAvatarMapById);
   const upcomingSessions = withDefaults(sortedUpcoming, avatarMapByName, coachAvatarMapById);
-  const pastCompletedSessions = withDefaults(sortedPastCompleted, avatarMapByName, coachAvatarMapById);
+  // Feedback due first, then the most recent (Working Copy).
+  const pastCompletedSessions = withDefaults(sortedPastCompleted, avatarMapByName, coachAvatarMapById).sort((a, b) => {
+    const due = (x: UISession) => (role === PROFILE_TYPE.coach ? !x.hasSessionFeedback : !x.hasSlotFeedback) ? 0 : 1;
+    return due(a) - due(b) || new Date(b.start).getTime() - new Date(a.start).getTime();
+  });
 
   const selectedSessionSafe = useMemo(() => {
     if (!selectedSession) return null;
@@ -1055,126 +1074,14 @@ const MySessions = () => {
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
         <div className="flex flex-col gap-[10px]">
           <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
-            My sessions
+            My Sessions
           </h1>
           <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-            Review your sessions and leave feedback
+            {role === PROFILE_TYPE.coach ? "Check in athletes and send feedback after each session." : "Everything booked on your account."}
           </p>
         </div>
 
-        <div className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]">
-          <div className="flex items-center gap-[5px]">
-            <Filter className="size-4 text-[#1A202C]" strokeWidth={1.5} />
-            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Filters</h2>
-          </div>
-          <div className="flex items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-[10px] py-[9px] focus-within:ring-2 focus-within:ring-[#6698D2]">
-            <Search className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} />
-            <input
-              value={filters.search ?? ""}
-              onChange={(event) => setFilters((prev) => ({ ...prev, search: event.target.value }))}
-              placeholder={
-                "Search sessions or coaches"
-              }
-              className="w-full bg-transparent text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#1A202C] outline-none placeholder:text-[#A3A6AB]"
-            />
-          </div>
-          <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-5">
-            <div className="flex min-w-0 flex-col gap-[5px]">
-              <label className={fieldLabel}>Date</label>
-              <div className="relative">
-                <div className={cn(selectClass(!filters.date), "flex items-center")}>
-                  <span className="truncate">{dateLabel}</span>
-                </div>
-                <input
-                  type="date"
-                  value={filters.date ?? ""}
-                  onChange={(event) => setFilters((prev) => ({ ...prev, date: event.target.value }))}
-                  aria-label="Date"
-                  className="absolute inset-0 cursor-pointer opacity-0"
-                />
-                <Calendar className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]" strokeWidth={1.5} />
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-col gap-[5px]">
-              <label className={fieldLabel}>Type</label>
-              <div className="relative">
-                <select
-                  value={filters.type}
-                  onChange={(event) =>
-                    setFilters((prev) => ({ ...prev, type: event.target.value as SessionFilters["type"] }))
-                  }
-                  className={selectClass(filters.type === "all")}
-                >
-                  <option value="all">All types</option>
-                  <option value="group">Group</option>
-                  <option value="individual">Individual</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-col gap-[5px]">
-              <label className={fieldLabel}>Status</label>
-              <div className="relative">
-                <select
-                  value={filters.status}
-                  onChange={(event) =>
-                    setFilters((prev) => ({ ...prev, status: event.target.value as SessionFilters["status"] }))
-                  }
-                  className={selectClass(filters.status === "all")}
-                >
-                  <option value="all">All sessions</option>
-                  <option value="in-progress">In progress</option>
-                  <option value="upcoming">Upcoming</option>
-                  <option value="past">Past</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-col gap-[5px]">
-              <label className={fieldLabel}>Location</label>
-              <div className="relative">
-                <select
-                  value={filters.locationType}
-                  onChange={(event) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      locationType: event.target.value as SessionFilters["locationType"],
-                    }))
-                  }
-                  className={selectClass(filters.locationType === "all")}
-                >
-                  <option value="all">All locations</option>
-                  <option value="in-person">In person</option>
-                  <option value="online">Online</option>
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
-              </div>
-            </div>
-            <div className="flex min-w-0 flex-col gap-[5px]">
-              <label className={fieldLabel}>Pillar</label>
-              <div className="relative">
-                <select
-                  value={filters.pillar}
-                  onChange={(event) =>
-                    setFilters((prev) => ({
-                      ...prev,
-                      pillar: event.target.value,
-                    }))
-                  }
-                  className={selectClass(!filters.pillar || filters.pillar === "all")}
-                >
-                  <option value="all">All pillars</option>
-                  {pillarOptions.map((pillar) => (
-                    <option key={pillar} value={pillar}>
-                      {pillar}
-                    </option>
-                  ))}
-                </select>
-                <ChevronDown className="pointer-events-none absolute right-[10px] top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
-              </div>
-            </div>
-          </div>
-        </div>
+        {/* The Working Copy has no filter panel here: three sections, five at a time. */}
 
         {role === PROFILE_TYPE.coach && bookingRequests.length > 0 ? (
           <SessionGroup

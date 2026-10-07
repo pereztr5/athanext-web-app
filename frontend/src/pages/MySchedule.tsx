@@ -247,9 +247,11 @@ const MySchedulePage = () => {
         <header className="flex items-end justify-between gap-4">
           <div className="flex flex-col gap-[10px]">
             <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
-            <p className={meta}>
-              Times in {timeZone.replace(/_/g, " ")} ({timeZoneAbbreviation(timeZone, now)})
-            </p>
+            {timeZone !== "America/New_York" ? (
+              <p className={meta}>
+                Times in {timeZone.replace(/_/g, " ")} ({timeZoneAbbreviation(timeZone, now)})
+              </p>
+            ) : null}
           </div>
           <div className="flex gap-2">
             <Link to={ROUTES.SCHEDULE_PLAN} className={cn(secondaryButton, "hidden sm:inline-flex")}>

@@ -10,6 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { CalendarCheck, ChevronRight, CircleCheck, Inbox, MessageSquareText, Plus, TrendingDown, TrendingUp, User, Users } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
+import { payoutsAPI } from "@/api/payouts";
 import { periodTotals } from "@/utils/home";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
@@ -87,6 +88,11 @@ export const CoachHome = () => {
   const { userName, userProfile } = useAuth();
   const { coach: me } = useCoachDetails(userProfile?.coach_id ?? undefined);
   const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
+  const payouts = useQuery({ queryKey: ["coach-payouts"], queryFn: () => payoutsAPI.summary(), enabled: Boolean(me) && !paysDirect, retry: false });
+  const nextPayout = payouts.data?.payouts
+    .filter((p) => p.status === "pending" || p.status === "in_transit")
+    .sort((a, b) => a.arrival.localeCompare(b.arrival))[0];
+  const payoutBalance = payouts.data?.balance ? payouts.data.balance.available + payouts.data.balance.pending : 0;
   const navigate = useNavigate();
   const timeZone = useViewerTimeZone();
   const now = new Date();
@@ -190,12 +196,18 @@ export const CoachHome = () => {
             {/* Booking only coaches are paid directly, so there is no money strip (ATH-86). */}
             {!paysDirect ? (
             <section aria-label="Money" className="flex flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 md:p-5">
-              <div className={cn(segGroup, "sm:w-[360px]")} role="group" aria-label="Period">
-                {RANGES.map(([d, label]) => (
-                  <button key={d} type="button" className={segButton(range === d)} aria-pressed={range === d} onClick={() => setRange(d)}>
-                    {label}
-                  </button>
-                ))}
+              <div className="flex items-center justify-between gap-3">
+                <div className={cn(segGroup, "sm:w-[360px]")} role="group" aria-label="Period">
+                  {RANGES.map(([d, label]) => (
+                    <button key={d} type="button" className={segButton(range === d)} aria-pressed={range === d} onClick={() => setRange(d)}>
+                      {label}
+                    </button>
+                  ))}
+                </div>
+                <Link to={ROUTES.PAYMENTS} className={cn(textButton, "hidden sm:inline-flex")}>
+                  Payments
+                  <ChevronRight strokeWidth={1.5} aria-hidden="true" />
+                </Link>
               </div>
               <div className="flex flex-wrap items-end gap-x-8 gap-y-4">
                 <div className="flex flex-col gap-1">
@@ -222,6 +234,17 @@ export const CoachHome = () => {
                     <span className={meta}>Nothing overdue</span>
                   )}
                 </div>
+                {payouts.data?.account.connected ? (
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[12px] font-medium uppercase tracking-[0.02em] text-[#767980]">Next payout</span>
+                    <b className="text-[20px] font-semibold">{money(nextPayout?.amount ?? payoutBalance)}</b>
+                    <span className={meta}>
+                      {nextPayout
+                        ? new Date(nextPayout.arrival).toLocaleDateString("en-US", { weekday: "short", month: "short", day: "numeric" })
+                        : `Every ${payouts.data.account.payoutDay[0].toUpperCase()}${payouts.data.account.payoutDay.slice(1)}`}
+                    </span>
+                  </div>
+                ) : null}
               </div>
             </section>
             ) : null}

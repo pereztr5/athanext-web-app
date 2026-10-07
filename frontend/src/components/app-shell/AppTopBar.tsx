@@ -1,7 +1,7 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, MessageCircle } from "lucide-react";
+import { Bell, CalendarPlus, MessageCircle, Plus } from "lucide-react";
 import { getInitials } from "@/lib/utils";
 import { SidebarTrigger } from "@/components/ui/sidebar";
 import {
@@ -11,6 +11,8 @@ import {
 } from "@/components/ui/popover";
 import { UserMenu } from "@/components/common/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
+import { useRole } from "@/hooks/useRole";
+import { primaryButton } from "@/components/schedule/styles";
 import { ROUTES } from "@/routes";
 import { chatAPI } from "@/api/chat";
 import { notificationsAPI, type AppNotification } from "@/api/notifications";
@@ -31,8 +33,18 @@ const notificationWhen = (iso: string) => {
   return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
 };
 
+// Pages that already have their own main action, so the top bar doesn't repeat it.
+const COACH_ACTION_HIDDEN = [ROUTES.DASHBOARD, ROUTES.SCHEDULE, ROUTES.MY_SESSIONS, ROUTES.ATHLETES, ROUTES.MY_ORGANIZATION, "/sessions/", "/coach-session-feedback"];
+const ATHLETE_ACTION_HIDDEN = [ROUTES.BOOK, ROUTES.MY_SESSIONS, ROUTES.BOOKING_CONFIRMATION];
+
 export const AppTopBar = () => {
   const navigate = useNavigate();
+  const { pathname } = useLocation();
+  const { isCoach, isAthleteLike } = useRole();
+  const hides = (list: string[]) => list.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(`${p}/`)));
+  const action = isCoach
+    ? hides(COACH_ACTION_HIDDEN) ? null : { label: "Create session", to: `${ROUTES.SCHEDULE}?create=1`, Icon: Plus }
+    : isAthleteLike && !hides(ATHLETE_ACTION_HIDDEN) ? { label: "Book", to: ROUTES.BOOK, Icon: CalendarPlus } : null;
   const { hasNewMessage, user, profileReady, setHasNewMessage } = useAuth();
   const queryClient = useQueryClient();
   const timeZone = useViewerTimeZone();
@@ -71,9 +83,12 @@ export const AppTopBar = () => {
     >
       <div className="mx-auto flex w-full max-w-[1000px] items-center justify-end pb-[30px]">
         <SidebarTrigger className="mr-auto md:hidden" />
-        <div className="sm:hidden">
-          <UserMenu useFallbackDelay avatarReady={profileReady} />
-        </div>
+        {action ? (
+          <Link to={action.to} className={`${primaryButton} mr-4 hidden h-[32px] px-3 md:inline-flex`}>
+            <action.Icon strokeWidth={1.5} aria-hidden="true" />
+            {action.label}
+          </Link>
+        ) : null}
         <Link
           to={ROUTES.CHAT}
           aria-label={unread ? `Messages, ${unread} unread` : "Messages"}
@@ -116,7 +131,8 @@ export const AppTopBar = () => {
             sideOffset={14}
             className="w-[277px] rounded-[10px] border-[#EAEADF] bg-[#F4F4EB] p-0 shadow-[0px_0px_15px_0px_rgba(0,0,0,0.05)]"
           >
-            <div className="flex max-h-80 flex-col gap-[10px] overflow-y-auto px-[10px] py-[15px]">
+            <p className="px-[15px] pt-[12px] text-[14px] font-medium text-[#1A202C]">Notifications</p>
+            <div className="flex max-h-80 flex-col gap-[10px] overflow-y-auto px-[10px] pb-[15px] pt-[8px]">
               {notifications.length ? (
                 notifications.map((n, index) => (
                   <div key={n.id} className="flex flex-col gap-[10px]">
@@ -166,6 +182,9 @@ export const AppTopBar = () => {
             </div>
           </PopoverContent>
         </Popover>
+        <div className="ml-4">
+          <UserMenu useFallbackDelay avatarReady={profileReady} />
+        </div>
       </div>
     </header>
   );
