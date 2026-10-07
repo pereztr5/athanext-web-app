@@ -3427,6 +3427,7 @@ export type Database = {
           notes: string
           occurrence_date: string
           occurrence_id: string
+          payment_status: string
           place: string
           price: number
           requested_at: string

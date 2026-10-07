@@ -109,7 +109,8 @@ const ensurePaymentRowsForSession = async (
   const { data: bookings, error: bookingFetchErr } = await client
     .from("coach_slot_bookings" as any)
     .select("id, occurrence_id")
-    .eq("stripe_session_id", session.id);
+    .eq("stripe_session_id", session.id)
+    .eq("payment_status", "paid");
 
   if (bookingFetchErr) throw bookingFetchErr;
   if (!bookings || bookings.length === 0) return;
@@ -222,6 +223,160 @@ const callPayoutTransfersForBookings = async (bookingIds: string[]) => {
   }
 };
 
+/* ---------- Requests from new families (ATH-85): hold the card, charge only on accept ---------- */
+
+/** Once the family finishes Stripe's page, the request is created with the card held. */
+const createRequestFromSession = async (session: Stripe.Checkout.Session, client: SupabaseClient, stripe: Stripe) => {
+  if (session.metadata?.request !== "1" || session.status !== "complete") return { created: false, full: false };
+  const intentId = extractPaymentIntentId(session);
+  const { data: existing } = await client.from("coach_slot_bookings" as any).select("id").eq("stripe_session_id", session.id).limit(1);
+  if (existing?.length) return { created: false, full: false };
+
+  const occurrenceIds = String(session.metadata.occurrence_ids ?? "").split(",").filter(Boolean);
+  const { data: occurrences } = await client
+    .from("coach_availability_slot_occurrences" as any)
+    .select("id, coach_id, weekly_slot_id, availability_id, max_bookings_per_slot")
+    .in("id", occurrenceIds);
+  for (const occ of (occurrences ?? []) as any[]) {
+    const { count } = await client
+      .from("coach_slot_bookings" as any)
+      .select("id", { count: "exact", head: true })
+      .eq("occurrence_id", occ.id)
+      .in("status", ACTIVE_BOOKING_STATUSES);
+    if ((count ?? 0) >= (occ.max_bookings_per_slot || 1)) {
+      if (intentId) await stripe.paymentIntents.cancel(intentId).catch((e: unknown) => console.error("Release failed", e));
+      return { created: false, full: true };
+    }
+  }
+  const { error } = await client.from("coach_slot_bookings" as any).insert(
+    ((occurrences ?? []) as any[]).map((occ) => ({
+      occurrence_id: occ.id,
+      weekly_slot_id: occ.weekly_slot_id,
+      availability_id: occ.availability_id,
+      coach_id: occ.coach_id,
+      athlete_id: session.metadata!.athlete_id,
+      status: "requested",
+      payment_status: "authorized",
+      notes: session.metadata!.notes || null,
+      created_by: session.metadata!.user_id || null,
+      stripe_session_id: session.id,
+      stripe_payment_intent: intentId,
+    })),
+  );
+  if (error) throw error;
+  return { created: true, full: false };
+};
+
+/**
+ * When every request paid with one card hold has an answer, charge the accepted ones and
+ * release the rest. Returns the ids that were charged.
+ */
+const settleRequestHold = async (sessionId: string, client: SupabaseClient, stripe: Stripe): Promise<string[]> => {
+  const { data: rows } = await client
+    .from("coach_slot_bookings" as any)
+    .select("id, status, payment_status, occurrence_id, stripe_payment_intent")
+    .eq("stripe_session_id", sessionId);
+  const list = (rows ?? []) as any[];
+  if (!list.length || list.some((r) => r.status === "requested")) return [];
+  const accepted = list.filter((r) => r.payment_status === "authorized" && (r.status === "booked" || r.status === "pending_payment"));
+  const intentId = list.find((r) => r.stripe_payment_intent)?.stripe_payment_intent as string | undefined;
+  if (!intentId) return [];
+  const intent = await stripe.paymentIntents.retrieve(intentId);
+  if (intent.status !== "requires_capture") return [];
+
+  if (!accepted.length) {
+    await stripe.paymentIntents.cancel(intentId);
+    await client.from("coach_slot_bookings" as any).update({ payment_status: "released" }).eq("stripe_session_id", sessionId).eq("payment_status", "authorized");
+    return [];
+  }
+
+  const session = await stripe.checkout.sessions.retrieve(sessionId);
+  const { platformFeePerc, stripeFeePerc } = await resolveFeePercents(session, client);
+  const feeFactor = 1 + platformFeePerc / 100 + stripeFeePerc / 100;
+  const { data: occs } = await client
+    .from("coach_availability_slot_occurrences" as any)
+    .select("id, price")
+    .in("id", accepted.map((r) => r.occurrence_id));
+  const priceOf = new Map(((occs ?? []) as any[]).map((o) => [o.id, Number(o.price || 0)]));
+  const amount = accepted.reduce((sum, r) => sum + Math.round((priceOf.get(r.occurrence_id) ?? 0) * feeFactor * 100), 0);
+  await stripe.paymentIntents.capture(intentId, { amount_to_capture: Math.min(amount, intent.amount_capturable) });
+
+  const ids = accepted.map((r) => r.id);
+  await client.from("coach_slot_bookings" as any).update({ status: "booked", payment_status: "paid", updated_at: new Date().toISOString() }).in("id", ids);
+  await client.from("coach_slot_bookings" as any).update({ payment_status: "released" }).eq("stripe_session_id", sessionId).eq("payment_status", "authorized");
+  await ensurePaymentRowsForSession(session, client);
+  return ids;
+};
+
+/** Coach answers a request: accept (and charge once the hold settles) or decline. */
+const handleRequestResponse = async (req: Request, body: any, client: SupabaseClient, stripe: () => Stripe) => {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const userClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+    global: { headers: { Authorization: authHeader } },
+  });
+  const { data: userData } = await userClient.auth.getUser();
+  if (!userData?.user) return jsonResponse({ error: "Authentication required" }, 401);
+
+  if (body.action === "request_sweep") {
+    // Holds whose requests all expired or were answered elsewhere.
+    const { data: profile } = await client.from("user_profiles" as any).select("coach_id").eq("id", userData.user.id).maybeSingle();
+    const coachId = (profile as any)?.coach_id;
+    if (!coachId) return jsonResponse({ settled: 0 });
+    const { data: held } = await client
+      .from("coach_slot_bookings" as any)
+      .select("stripe_session_id")
+      .eq("coach_id", coachId)
+      .eq("payment_status", "authorized")
+      .neq("status", "requested")
+      .limit(20);
+    const sessions = [...new Set(((held ?? []) as any[]).map((r) => r.stripe_session_id).filter(Boolean))];
+    let settled = 0;
+    for (const id of sessions) {
+      const charged = await settleRequestHold(id, client, stripe()).catch((e: unknown) => {
+        console.error("Settle failed", id, e);
+        return [] as string[];
+      });
+      if (charged.length) {
+        settled++;
+        await callReconcileEndpointForBookings(charged);
+        await callNotificationEndpointForBookings(charged);
+        await callPayoutTransfersForBookings(charged);
+      }
+    }
+    return jsonResponse({ settled });
+  }
+
+  const bookingId = String(body.booking_id ?? "");
+  const accept = Boolean(body.accept);
+  const { data: result, error } = await userClient.rpc("respond_to_booking_request", { p_booking_id: bookingId, p_accept: accept });
+  if (error) return jsonResponse({ error: error.message }, 400);
+
+  const { data: booking } = await client
+    .from("coach_slot_bookings" as any)
+    .select("id, payment_status, stripe_session_id")
+    .eq("id", bookingId)
+    .maybeSingle();
+  const held = (booking as any)?.payment_status === "authorized" && (booking as any)?.stripe_session_id;
+  if (!held) return jsonResponse({ status: result });
+
+  if (accept) {
+    await client.from("coach_slot_bookings" as any).update({ status: "booked", updated_at: new Date().toISOString() }).eq("id", bookingId);
+  }
+  try {
+    const charged = await settleRequestHold((booking as any).stripe_session_id, client, stripe());
+    if (charged.length) {
+      await callReconcileEndpointForBookings(charged);
+      await callNotificationEndpointForBookings(charged);
+      await callPayoutTransfersForBookings(charged);
+    }
+    return jsonResponse({ status: accept ? "booked" : "canceled", charged: charged.includes(bookingId) });
+  } catch (e) {
+    console.error("Charging the request failed", e);
+    // The booking is accepted; the charge can be retried by the sweep.
+    return jsonResponse({ status: accept ? "booked" : "canceled", charged: false, error: "The card couldn't be charged yet. We'll try again." });
+  }
+};
+
 const callNotificationEndpointForBookings = async (bookingIds: string[]) => {
   const uniqueIds = Array.from(new Set(bookingIds));
   if (!uniqueIds.length) return;
@@ -263,6 +418,10 @@ const updateBookingPaymentStatus = async (
   session: Stripe.Checkout.Session,
   client: SupabaseClient,
 ): Promise<PaymentUpdateResult> => {
+  // Card holds for requests (ATH-85) are captured only when the coach accepts.
+  if (session.metadata?.request === "1") {
+    return { paid: false, newlyPaid: false, bookingIds: [] as string[] };
+  }
   const paid = isSessionPaid(session);
   if (!paid) {
     return { paid: false, newlyPaid: false, bookingIds: [] as string[] };
@@ -600,6 +759,10 @@ serve(async (req) => {
         apiVersion: "2025-08-27.basil",
       }));
 
+    if (parsedBody.action === "respond_request" || parsedBody.action === "request_sweep") {
+      return await handleRequestResponse(req, parsedBody, supabaseClient, stripeApi);
+    }
+
     if (req.method === "GET") {
       const url = new URL(req.url);
       const sessionId = url.searchParams.get("session_id");
@@ -613,6 +776,15 @@ serve(async (req) => {
       const session = await stripeApi().checkout.sessions.retrieve(sessionId, {
         expand: ["payment_intent"],
       });
+
+      // A request's card hold (ATH-85): create the request now; nothing is charged yet.
+      if (session.metadata?.request === "1") {
+        const { full } = await createRequestFromSession(session, supabaseClient, stripeApi());
+        return new Response(
+          JSON.stringify({ session_id: sessionId, requested: true, held: session.status === "complete" && !full, full }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
 
       const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
 
@@ -654,6 +826,14 @@ serve(async (req) => {
 
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
+
+        if (session.metadata?.request === "1") {
+          await createRequestFromSession(session, supabaseClient, stripeApi());
+          return new Response(JSON.stringify({ received: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
 
         // Coach invoices (ATH-89) use the same Stripe account; coach-invoices settles them.
         if (session.metadata?.kind === "invoice" && session.metadata?.invoice_id) {
@@ -699,6 +879,15 @@ serve(async (req) => {
       const session = await stripeApi().checkout.sessions.retrieve(sessionId, {
         expand: ["payment_intent"],
       });
+
+      // A request's card hold (ATH-85): create the request now; nothing is charged yet.
+      if (session.metadata?.request === "1") {
+        const { full } = await createRequestFromSession(session, supabaseClient, stripeApi());
+        return new Response(
+          JSON.stringify({ session_id: sessionId, requested: true, held: session.status === "complete" && !full, full }),
+          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+        );
+      }
 
       const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
 
@@ -894,8 +1083,8 @@ serve(async (req) => {
     }
 
     // New families request instead of booking when the coach asks for that (ATH-49, ATH-71).
-    // The request is held 24 hours; accepted requests become pending_payment and are paid
-    // through the branch below.
+    // The request is held 24 hours. With in-app payment the card is held first and charged
+    // when the coach accepts (ATH-85).
     // A session the coach offered to this athlete by name (a suggested time, ATH-85) is the
     // coach's own choice, so it books straight away.
     const offeredToMe = occurrences.every(
@@ -904,30 +1093,74 @@ serve(async (req) => {
     if (!coversAllPending && !isClient && !offeredToMe) {
       const { data: coachSettings } = await supabaseClient
         .from("coaches" as any)
-        .select("new_family_booking")
+        .select("new_family_booking, pay_mode")
         .eq("id", coachId)
         .maybeSingle();
-      if ((coachSettings as { new_family_booking?: string } | null)?.new_family_booking === "request") {
+      const settings = coachSettings as { new_family_booking?: string; pay_mode?: string } | null;
+      if (settings?.new_family_booking === "request") {
         if (myPendingBookings.length) {
           throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
         }
-        const { data: requestRows, error: requestErr } = await supabaseClient
-          .from("coach_slot_bookings" as any)
-          .insert(occurrences.map((occ) => ({
-            occurrence_id: occ.id,
-            weekly_slot_id: occ.weekly_slot_id,
-            availability_id: occ.availability_id,
-            coach_id: occ.coach_id,
+        // Booking only coaches: the request is sent now and the family pays the coach directly.
+        if (settings.pay_mode === "self") {
+          const { data: requestRows, error: requestErr } = await supabaseClient
+            .from("coach_slot_bookings" as any)
+            .insert(occurrences.map((occ) => ({
+              occurrence_id: occ.id,
+              weekly_slot_id: occ.weekly_slot_id,
+              availability_id: occ.availability_id,
+              coach_id: occ.coach_id,
+              athlete_id: athleteId,
+              status: "requested",
+              payment_status: "unpaid",
+              notes: notes || null,
+              created_by: user.id,
+            })))
+            .select("id");
+          if (requestErr) throw requestErr;
+          return new Response(
+            JSON.stringify({ requested: true, booking_ids: (requestRows || []).map((row: any) => row.id) }),
+            { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
+          );
+        }
+
+        // In-app payment (ATH-85): the family's card is held on Stripe's page and charged only
+        // if the coach accepts. The request itself is created once the card is held.
+        const holdSession = await stripeApi().checkout.sessions.create({
+          customer_email: user.email || undefined,
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: occurrences.map((occ) => ({
+            price_data: {
+              currency: "usd",
+              unit_amount: Math.round(Number(occ.price || 0) * feeFactor * 100),
+              product_data: {
+                name: occ.session_name || "Coaching Session",
+                description: `${occ.session_type || "session"} on ${occ.occurrence_date}. Charged only if the coach accepts.`,
+              },
+            },
+            quantity: 1,
+          })),
+          payment_intent_data: {
+            capture_method: "manual",
+            ...(user.email ? { receipt_email: user.email } : {}),
+            metadata: { request: "1", coach_id: coachId },
+          },
+          success_url: `${req.headers.get("origin")}/booking-confirmation?request=1&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${req.headers.get("origin")}/coach/${coachId}`,
+          metadata: {
+            request: "1",
+            occurrence_ids: occurrenceIds.join(","),
+            coach_id: coachId,
             athlete_id: athleteId,
-            status: "requested",
-            payment_status: "unpaid",
-            notes: notes || null,
-            created_by: user.id,
-          })))
-          .select("id");
-        if (requestErr) throw requestErr;
+            user_id: user.id,
+            notes: String(notes || "").slice(0, 450),
+            platform_fee_perc: platformFeePerc.toString(),
+            stripe_fee_perc: stripeFeePerc.toString(),
+          },
+        });
         return new Response(
-          JSON.stringify({ requested: true, booking_ids: (requestRows || []).map((row: any) => row.id) }),
+          JSON.stringify({ url: holdSession.url, session_id: holdSession.id, request: true }),
           { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
         );
       }

@@ -6,6 +6,7 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/routes";
+import { supabase } from "@/integrations/supabase/client";
 import { bookingsAPI, type BookingConfirmationData } from "@/api/bookings";
 import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
 import { parseISODateLocal, zonedWallTimeToUtc } from "@/utils/dateHelpers";
@@ -384,4 +385,48 @@ const BookingConfirmation = () => {
   );
 };
 
-export default BookingConfirmation;
+/**
+ * Back from Stripe after a request (ATH-85): the card is held, nothing is charged until the
+ * coach accepts.
+ */
+const RequestSent = ({ sessionId }: { sessionId: string }) => {
+  const navigate = useNavigate();
+  const [state, setState] = useState<"checking" | "held" | "full" | "error">("checking");
+  useEffect(() => {
+    supabase.functions
+      .invoke("create-booking-payment-v0", { body: { session_id: sessionId } })
+      .then(({ data, error }) => setState(error ? "error" : data?.full ? "full" : data?.held ? "held" : "error"))
+      .catch(() => setState("error"));
+  }, [sessionId]);
+  const copy = {
+    checking: ["Sending your request…", "One moment while we confirm your card."],
+    held: ["Request sent", "Your card is held and charged only if the coach accepts. They usually reply within a day; if they don't accept, the hold is released."],
+    full: ["That time just filled up", "Your card was not charged and the hold is released. Pick another time."],
+    error: ["We couldn't confirm your request", "Your card was not charged. Check My Sessions, or try again."],
+  }[state];
+  return (
+    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+      <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-6 text-center">
+        <h1 className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em] text-[#1A202C]">{copy[0]}</h1>
+        <p className="text-[14px] leading-[20px] text-[#484D56]">{copy[1]}</p>
+        {state !== "checking" ? (
+          <button
+            type="button"
+            className="mx-auto inline-flex h-[34px] items-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium text-[#F1F1E6]"
+            onClick={() => navigate(state === "full" ? ROUTES.BOOK : ROUTES.MY_SESSIONS)}
+          >
+            {state === "full" ? "Pick another time" : "Go to My Sessions"}
+          </button>
+        ) : null}
+      </div>
+    </div>
+  );
+};
+
+const BookingConfirmationPage = () => {
+  const [searchParams] = useSearchParams();
+  const sessionId = searchParams.get("session_id");
+  return searchParams.get("request") === "1" && sessionId ? <RequestSent sessionId={sessionId} /> : <BookingConfirmation />;
+};
+
+export default BookingConfirmationPage;

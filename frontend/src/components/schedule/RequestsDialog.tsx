@@ -198,7 +198,7 @@ export const RequestsDialog = ({
                           disabled={respondingId !== null || full}
                           onClick={() => onRespond(request.bookingId, true)}
                         >
-                          {full ? "Group is full" : "Accept"}
+                          {full ? "Group is full" : request.cardHeld ? `Accept and charge $${request.price.toFixed(2).replace(/\.00$/, "")}` : "Accept"}
                         </button>
                       </div>
                       <div className="flex flex-wrap gap-x-4 gap-y-2">

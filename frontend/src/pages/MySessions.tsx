@@ -572,12 +572,16 @@ const MySessions = () => {
   const respondToRequest = useMutation({
     mutationFn: ({ bookingId, accept }: { bookingId: string; accept: boolean }) =>
       bookingRequestsAPI.respond(bookingId, accept),
-    onSuccess: (_status, { accept }) => {
+    onSuccess: (status, { accept }) => {
       toast({
         title: accept ? "Request accepted" : "Request declined",
-        description: accept
-          ? "The athlete can now pay to confirm the booking."
-          : "The slot is open again.",
+        description: !accept
+          ? "The slot is open again."
+          : status === "charged"
+            ? "It's booked and the family's card was charged."
+            : status === "booked"
+              ? "It's booked."
+              : "The athlete can now pay to confirm the booking.",
       });
       queryClient.invalidateQueries({ queryKey: ["booking-requests"] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });

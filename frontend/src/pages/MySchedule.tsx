@@ -162,9 +162,11 @@ const MySchedulePage = () => {
         title: accept ? "Request accepted" : "Request declined",
         description: !accept
           ? "The time is open again."
-          : status === "booked"
-            ? "It's booked. The family pays you directly."
-            : "The family can now pay to confirm the booking.",
+          : status === "charged"
+            ? "It's booked and the family's card was charged."
+            : status === "booked"
+              ? "It's booked."
+              : "The family can now pay to confirm the booking.",
       });
       // Add it to the coach's Google Calendar when they connected one with event access.
       if (accept && schedule?.calendar?.canWrite) {

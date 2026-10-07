@@ -67,7 +67,7 @@ export const ReviewDialog = ({
       }
       toast({
         title: picked.length > 1 ? `${plural(picked.length, "request")} sent` : "Request sent",
-        description: `${first} will accept or decline, usually within a day. You'll pay from My Sessions once they accept.`,
+        description: `${first} will accept or decline, usually within a day.${direct ? " You pay them directly once they accept." : ""}`,
       });
       queryClient.invalidateQueries({ queryKey: ["bookable-sessions"] });
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
