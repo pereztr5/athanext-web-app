@@ -1973,6 +1973,188 @@ export type Database = {
           },
         ]
       }
+      organization_coaches: {
+        Row: {
+          coach_id: string
+          joined_at: string
+          organization_id: string
+          rate: number | null
+          shown: boolean
+          sort_order: number
+        }
+        Insert: {
+          coach_id: string
+          joined_at?: string
+          organization_id: string
+          rate?: number | null
+          shown?: boolean
+          sort_order?: number
+        }
+        Update: {
+          coach_id?: string
+          joined_at?: string
+          organization_id?: string
+          rate?: number | null
+          shown?: boolean
+          sort_order?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_coaches_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: true
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_coaches_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_invites: {
+        Row: {
+          coach_id: string | null
+          email: string | null
+          id: string
+          kind: string
+          organization_id: string
+          rate: number
+          responded_at: string | null
+          sent_at: string
+          status: string
+          token: string
+        }
+        Insert: {
+          coach_id?: string | null
+          email?: string | null
+          id?: string
+          kind?: string
+          organization_id: string
+          rate: number
+          responded_at?: string | null
+          sent_at?: string
+          status?: string
+          token?: string
+        }
+        Update: {
+          coach_id?: string | null
+          email?: string | null
+          id?: string
+          kind?: string
+          organization_id?: string
+          rate?: number
+          responded_at?: string | null
+          sent_at?: string
+          status?: string
+          token?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_invites_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_invites_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organization_rate_history: {
+        Row: {
+          coach_id: string
+          effective_from: string
+          id: string
+          organization_id: string
+          rate: number
+        }
+        Insert: {
+          coach_id: string
+          effective_from?: string
+          id?: string
+          organization_id: string
+          rate: number
+        }
+        Update: {
+          coach_id?: string
+          effective_from?: string
+          id?: string
+          organization_id?: string
+          rate?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organization_rate_history_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "organization_rate_history_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      organizations: {
+        Row: {
+          about: string
+          created_at: string
+          id: string
+          line: string
+          logo_url: string | null
+          name: string
+          owner_coach_id: string
+          pricing: Json
+          slug: string
+          updated_at: string
+        }
+        Insert: {
+          about?: string
+          created_at?: string
+          id?: string
+          line?: string
+          logo_url?: string | null
+          name: string
+          owner_coach_id: string
+          pricing?: Json
+          slug: string
+          updated_at?: string
+        }
+        Update: {
+          about?: string
+          created_at?: string
+          id?: string
+          line?: string
+          logo_url?: string | null
+          name?: string
+          owner_coach_id?: string
+          pricing?: Json
+          slug?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "organizations_owner_coach_id_fkey"
+            columns: ["owner_coach_id"]
+            isOneToOne: true
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       package_purchases: {
         Row: {
           coach_id: string
@@ -2862,9 +3044,14 @@ export type Database = {
         Args: { _accept: boolean; _referral_id: string }
         Returns: undefined
       }
+      admin_org_owner_ids: { Args: never; Returns: string[] }
       admin_prepare_account_deletion: {
         Args: { p_user_id: string }
         Returns: undefined
+      }
+      admin_set_org_owner: {
+        Args: { p_coach_id: string; p_enabled: boolean }
+        Returns: string
       }
       allocate_coach_slug: {
         Args: { p_coach_id?: string; p_name: string }
@@ -2878,9 +3065,17 @@ export type Database = {
         Args: { p_athlete_id: string; p_coach_id: string }
         Returns: Json
       }
+      cancel_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: undefined
+      }
       canonical_pillar: { Args: { p_title: string }; Returns: string }
       ccr_confirm_row: {
         Args: { _athlete: string; _referral_id: string; _source: string }
+        Returns: string
+      }
+      change_organization_rate: {
+        Args: { p_coach_id: string; p_rate: number }
         Returns: string
       }
       check_contact_rate_limit: {
@@ -3165,7 +3360,14 @@ export type Database = {
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
       get_my_coaches: { Args: never; Returns: Json }
       get_my_notifications: { Args: never; Returns: Json }
+      get_my_organization: { Args: never; Returns: Json }
       get_or_create_my_coach_channel: { Args: never; Returns: string }
+      get_organization_invite: { Args: { p_token: string }; Returns: Json }
+      get_organization_sessions: {
+        Args: { p_from: string; p_to: string }
+        Returns: Json
+      }
+      get_organizations_public: { Args: never; Returns: Json }
       get_partnership_summary: {
         Args: never
         Returns: {
@@ -3268,6 +3470,10 @@ export type Database = {
         }
         Returns: boolean
       }
+      invite_organization_coach: {
+        Args: { p_email: string; p_rate: number }
+        Returns: string
+      }
       is_coach_client: {
         Args: { p_athlete_id: string; p_coach_id: string }
         Returns: boolean
@@ -3308,12 +3514,17 @@ export type Database = {
         Args: { p_athlete_id: string; p_body: string }
         Returns: undefined
       }
+      my_organization_id: { Args: never; Returns: string }
       notification_allowed: {
         Args: { p_channel: string; p_kind: string; p_user_id: string }
         Returns: boolean
       }
       open_family_conversation: {
         Args: { p_athlete_id: string }
+        Returns: string
+      }
+      organization_slug: {
+        Args: { p_name: string; p_org_id?: string }
         Returns: string
       }
       prepare_account_deletion: {
@@ -3327,6 +3538,10 @@ export type Database = {
       register_athlete_referral: {
         Args: { _coach_id: string }
         Returns: string
+      }
+      remove_organization_coach: {
+        Args: { p_coach_id: string }
+        Returns: undefined
       }
       rename_coach_slug: {
         Args: { p_coach_id: string; p_new_slug: string }
@@ -3343,12 +3558,31 @@ export type Database = {
         Returns: string
       }
       resend_coach_referral: { Args: { _referral_id: string }; Returns: string }
+      resend_organization_invite: {
+        Args: { p_invite_id: string }
+        Returns: string
+      }
       resolve_coach_by_slug_or_id: { Args: { p_key: string }; Returns: string }
+      respond_organization_invite: {
+        Args: { p_accept: boolean; p_token: string }
+        Returns: undefined
+      }
       respond_to_booking_request: {
         Args: { p_accept: boolean; p_booking_id: string }
         Returns: string
       }
       run_due_account_deletions: { Args: never; Returns: number }
+      save_organization_page: {
+        Args: {
+          p_about: string
+          p_coaches: Json
+          p_line: string
+          p_logo_url: string
+          p_name: string
+          p_pricing: Json
+        }
+        Returns: string
+      }
       schedule_cancel_session: {
         Args: { p_message: string; p_occurrence_id: string }
         Returns: number

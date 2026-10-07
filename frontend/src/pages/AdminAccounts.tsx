@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Navigate } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -12,6 +12,8 @@ import {
   searchAdminAccounts,
   type AdminAccount,
 } from "@/api/adminAccounts";
+import { organizationsAPI } from "@/api/organizations";
+import { Switch } from "@/components/ui/switch";
 import { ROUTES } from "@/routes";
 
 const PERSONAS = ["athlete", "parent", "coach"] as const;
@@ -37,6 +39,17 @@ export default function AdminAccounts() {
   const [email, setEmail] = useState("");
   const [persona, setPersona] = useState<(typeof PERSONAS)[number]>("athlete");
   const [confirmEmail, setConfirmEmail] = useState("");
+  const qc = useQueryClient();
+  const orgOwners = useQuery({ queryKey: ["admin-org-owners"], queryFn: () => organizationsAPI.adminOwnerIds(), enabled: isAdmin });
+  const setOrgOwner = useMutation({
+    mutationFn: ({ coachId, enabled }: { coachId: string; enabled: boolean }) => organizationsAPI.adminSetOwner(coachId, enabled),
+    onSuccess: (_, { enabled }) => {
+      qc.invalidateQueries({ queryKey: ["admin-org-owners"] });
+      qc.invalidateQueries({ queryKey: ["organizations-public"] });
+      toast({ title: enabled ? "Org status given" : "Org status removed" });
+    },
+    onError: (error: Error) => toast({ title: "Could not change org status", description: error.message, variant: "destructive" }),
+  });
 
   const search = useMutation({
     mutationFn: () => searchAdminAccounts(query.trim()),
@@ -225,6 +238,26 @@ export default function AdminAccounts() {
                 {selected.is_active ? "Deactivate" : "Reactivate"}
               </Button>
             </div>
+            {selected.coach_id ? (
+              <div className="flex items-start justify-between gap-4 border-t border-[#EAEADF] pt-5">
+                <div className="flex flex-col gap-1">
+                  <Label htmlFor="org-owner" className={labelClass}>Org owner</Label>
+                  <p className="text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
+                    Gives this coach My Organization: invite coaches at a % rate, an org page and splits. Turning it off deletes the org, its
+                    page and invites. Coaches keep their own profiles, athletes and payments.
+                  </p>
+                </div>
+                <Switch
+                  id="org-owner"
+                  checked={(orgOwners.data ?? []).includes(selected.coach_id)}
+                  disabled={orgOwners.isLoading || setOrgOwner.isPending}
+                  onCheckedChange={(enabled) => {
+                    if (!enabled && !window.confirm("Remove org status? This deletes the organization, its page and invites.")) return;
+                    setOrgOwner.mutate({ coachId: selected.coach_id!, enabled });
+                  }}
+                />
+              </div>
+            ) : null}
             <div className="flex flex-col items-start gap-2 border-t border-[#EAEADF] pt-5">
               <Label htmlFor="confirm-email" className={labelClass}>Type {selected.email} to delete this login</Label>
               <Input

@@ -35,3 +35,6 @@ verify_jwt = false
 # the caller token and the Stripe signature itself.
 [functions.create-booking-payment]
 verify_jwt = false
+
+[functions.organization-email]
+verify_jwt = true

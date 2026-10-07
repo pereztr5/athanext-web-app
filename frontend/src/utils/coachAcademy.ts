@@ -129,3 +129,34 @@ export const organizationRatingLabel = (organization: Pick<CoachOrganization, "r
   organization.rating !== null && isPublicCoachRatingVisible(organization.totalReviews, organization.rating)
     ? organization.rating.toFixed(1)
     : null;
+
+type OrgMembership = { name: string; slug: string; memberIds: string[] };
+
+/**
+ * Organizations an admin set up (ATH-90) win over the free-text academy: their coaches are
+ * grouped under the org's name, and other coaches who typed the same academy are left out
+ * of that org.
+ */
+export const applyOrganizations = <T extends { id?: string; company?: string | null }>(
+  coaches: T[],
+  organizations: OrgMembership[]
+): T[] => {
+  if (!organizations.length) return coaches;
+  const byCoach = new Map<string, string>();
+  const taken = new Set<string>();
+  organizations.forEach((org) => {
+    org.memberIds.forEach((id) => byCoach.set(id, org.name));
+    taken.add(org.slug);
+    taken.add(academySlug(org.name));
+  });
+  return coaches.map((coach) => {
+    const orgName = coach?.id ? byCoach.get(coach.id) : undefined;
+    if (orgName) return { ...coach, company: orgName };
+    if (coach && taken.has(academySlug(coach.company))) return { ...coach, company: null };
+    return coach;
+  });
+};
+
+/** The org an admin set up for this page slug, if any. */
+export const findOrganization = <T extends { name: string; slug: string }>(organizations: T[], slug: string) =>
+  organizations.find((org) => org.slug === slug || academySlug(org.name) === slug);

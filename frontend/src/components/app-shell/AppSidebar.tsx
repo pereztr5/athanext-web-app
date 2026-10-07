@@ -13,7 +13,8 @@ import { useRole } from "@/hooks/useRole";
 import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
-import { ATHLETE_NAV, COACH_NAV, isNavActive, type NavItem } from "./nav";
+import { useMyOrganization } from "@/hooks/useOrganizations";
+import { ATHLETE_NAV, COACH_NAV, ORG_NAV, isNavActive, type NavItem } from "./nav";
 
 const FOOTER_NAV = [
   { title: "Account Settings", url: ROUTES.SETTINGS, icon: Settings },
@@ -35,6 +36,8 @@ export const AppSidebar = () => {
   const { isAdmin } = useIsAdmin();
   const { userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
+  const { data: myOrg } = useMyOrganization();
+  const business = isCoach && myOrg ? [ORG_NAV] : [];
   const items = [
     ...(isCoach ? COACH_NAV : ATHLETE_NAV),
     ...(isAdmin
@@ -76,6 +79,23 @@ export const AppSidebar = () => {
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
+          {business.length ? (
+            <div className="flex flex-col gap-[5px]">
+              <p className="px-[10px] text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">Business</p>
+              <SidebarMenu className="w-full gap-[5px]">
+                {business.map((item) => (
+                  <SidebarMenuItem key={item.title}>
+                    <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
+                      <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                        <item.icon className="size-4" strokeWidth={1.5} />
+                        <span>{item.title}</span>
+                      </Link>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </div>
+          ) : null}
         </div>
         <SidebarMenu className="mt-auto w-full gap-[5px] pb-3">
             {FOOTER_NAV.map((item) => (

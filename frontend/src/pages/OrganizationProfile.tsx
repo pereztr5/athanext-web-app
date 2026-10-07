@@ -10,9 +10,14 @@ import { useBrandsByCoach } from "@/hooks/useBrands";
 import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { organizationPartners } from "@/utils/brands";
+import { OrgFamilyPage } from "@/components/organization/OrgFamilyPage";
+import { bookPathFor } from "@/utils/organizations";
+import { usePublicOrganizations } from "@/hooks/useOrganizations";
 import {
   academySlug,
+  applyOrganizations,
   buildOrganizations,
+  findOrganization,
   coachAcademy,
   initialsOf,
   organizationRatingLabel,
@@ -39,6 +44,9 @@ type PublicCoach = {
   sport?: string | null;
   session_types?: string[] | null;
   specialties?: string[] | null;
+  hourly_rate?: number | null;
+  age_min?: number | null;
+  age_max?: number | null;
 };
 
 const card = "flex min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]";
@@ -61,9 +69,11 @@ const OrganizationProfile = () => {
     },
   });
 
+  const { data: orgPages = [], isLoading: orgsLoading } = usePublicOrganizations();
+  const orgPage = findOrganization(orgPages, slug);
   const members = useMemo(
-    () => coaches.filter((coach) => academySlug(coach.company) === slug),
-    [coaches, slug]
+    () => applyOrganizations(coaches, orgPages).filter((coach) => academySlug(coach.company) === slug),
+    [coaches, orgPages, slug]
   );
   const organization = useMemo(() => buildOrganizations(members, getCoachSport)[0], [members]);
 
@@ -96,7 +106,7 @@ const OrganizationProfile = () => {
     </Link>
   );
 
-  if (isLoading) {
+  if (isLoading || orgsLoading) {
     return (
       <div className={shell}>
         <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6" aria-busy="true" aria-label="Loading organization">
@@ -107,6 +117,20 @@ const OrganizationProfile = () => {
             ))}
           </div>
           <Skeleton className="h-[220px] w-full rounded-[10px]" />
+        </div>
+      </div>
+    );
+  }
+
+  if (orgPage) {
+    const shown = orgPage.coachIds
+      .map((id) => coaches.find((coach) => coach.id === id))
+      .filter((coach): coach is PublicCoach => Boolean(coach));
+    return (
+      <div className={shell}>
+        <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+          {backLink}
+          <OrgFamilyPage org={orgPage} coaches={shown} bookTo={bookPathFor(isAuthenticated, orgPage.name)} />
         </div>
       </div>
     );

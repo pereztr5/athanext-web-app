@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ALL_ACADEMIES, academySlug, buildOrganizations, coachAcademy, getAcademyOptions, matchesAcademy } from "@/utils/coachAcademy";
+import { ALL_ACADEMIES, academySlug, applyOrganizations, buildOrganizations, coachAcademy, findOrganization, getAcademyOptions, matchesAcademy } from "@/utils/coachAcademy";
 
 describe("coachAcademy", () => {
   it("trims and collapses whitespace", () => {
@@ -115,5 +115,25 @@ describe("buildOrganizations grouping", () => {
     expect(orgs).toHaveLength(1);
     expect(orgs[0].coachCount).toBe(2);
     expect(orgs[0].photos).toEqual(["same.jpg"]);
+  });
+});
+
+describe("applyOrganizations", () => {
+  const orgs = [{ name: "Torres Soccer", slug: "torres-soccer", memberIds: ["a", "b"] }];
+  it("groups members under the org and drops look-alike academies", () => {
+    const out = applyOrganizations(
+      [
+        { id: "a", company: "" },
+        { id: "b", company: "Other FC" },
+        { id: "c", company: "Torres Soccer" },
+        { id: "d", company: "Elite GK" },
+      ],
+      orgs
+    );
+    expect(out.map((c) => c.company)).toEqual(["Torres Soccer", "Torres Soccer", null, "Elite GK"]);
+  });
+  it("finds an org by its slug or its name", () => {
+    expect(findOrganization(orgs, "torres-soccer")?.name).toBe("Torres Soccer");
+    expect(findOrganization(orgs, "nope")).toBeUndefined();
   });
 });

@@ -13,36 +13,44 @@ import {
 export const OrganizationCard = ({
   organization,
   partners,
+  page,
 }: {
   organization: CoachOrganization;
+  /** The page an org owner set up (ATH-90): logo, line and description. */
+  page?: { slug: string; line: string; about: string; logoUrl: string | null };
   /** The organization's brands, most shared first. */
   partners: Pick<Brand, "id" | "name" | "logo_url">[];
 }) => {
   const { name, coachCount, verifiedCount, sports, location, photos, totalReviews } = organization;
   const rating = organizationRatingLabel(organization);
+  const place = page?.line || location;
 
   return (
     <Link
-      to={organizationPath(name)}
+      to={page ? `/organizations/${page.slug}` : organizationPath(name)}
       aria-label={`Open ${name}`}
       className="flex min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] transition-colors hover:border-[#C1C1B8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
     >
       <div className="flex min-w-0 items-center gap-[10px]">
-        <span className="flex size-14 shrink-0 items-center justify-center rounded-[10px] bg-[#CCDDF0] text-[20px] font-semibold tracking-[-0.03em] text-[#00326C]">
-          {initialsOf(name)}
-        </span>
+        {page?.logoUrl ? (
+          <img src={page.logoUrl} alt="" className="size-14 shrink-0 rounded-[10px] bg-[#F9F9F5] object-contain" />
+        ) : (
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-[10px] bg-[#CCDDF0] text-[20px] font-semibold tracking-[-0.03em] text-[#00326C]">
+            {initialsOf(name)}
+          </span>
+        )}
         <div className="flex min-w-0 flex-col gap-[6px]">
           <h2 className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{name}</h2>
           <p className="flex min-w-0 items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
-            {location ? (
+            {place ? (
               <>
                 <MapPin className="size-3 shrink-0" strokeWidth={2} aria-hidden="true" />
-                <span className="truncate">{location}</span>
+                <span className="truncate">{place}</span>
               </>
             ) : null}
             {verifiedCount > 0 ? (
               <span className="inline-flex shrink-0 items-center gap-[2px]">
-                {location ? "·" : null}
+                {place ? "·" : null}
                 <BadgeCheck className="size-3 fill-[#0054B4] text-white" strokeWidth={2} aria-hidden="true" />
                 Verified
               </span>
@@ -50,6 +58,10 @@ export const OrganizationCard = ({
           </p>
         </div>
       </div>
+
+      {page?.about ? (
+        <p className="line-clamp-3 text-[14px] leading-[20px] tracking-[-0.03em] text-[#484D56]">{page.about}</p>
+      ) : null}
 
       {sports.length > 0 ? (
         <div className="flex flex-wrap gap-[6px]">

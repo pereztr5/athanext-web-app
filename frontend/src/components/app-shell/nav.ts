@@ -1,4 +1,4 @@
-import { Calendar, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "lucide-react";
+import { Building2, Calendar, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "lucide-react";
 import { ROUTES } from "@/routes";
 
 export type NavItem = { title: string; short: string; url: string; icon: typeof House; also?: string[] };
@@ -11,6 +11,9 @@ export const COACH_NAV: NavItem[] = [
   { title: "My Schedule", short: "Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
   { title: "My Profile", short: "Profile", url: ROUTES.PROFILE, icon: Store },
 ];
+
+// Business section (ATH-90): My Organization shows only for org owners.
+export const ORG_NAV: NavItem = { title: "My Organization", short: "Organization", url: ROUTES.MY_ORGANIZATION, icon: Building2 };
 
 // Athlete navigation (ATH-91): Home, Book, Sessions, Coaches, Gear on web and phone.
 export const ATHLETE_NAV: NavItem[] = [

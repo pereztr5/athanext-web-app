@@ -31,6 +31,7 @@ import footballIcon from "../assets/images/colored-soccer.png";
 import rowerIcon from "../assets/images/colored-rowing.png";
 import CoachCard from "@/components/coach/CoachCard";
 import { OrganizationCard } from "@/components/coach/OrganizationCard";
+import { organizationsAPI, type PublicOrganization } from "@/api/organizations";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { chatAPI } from "@/api";
 import { buildId } from "@/utils/chatHelpers";
@@ -46,7 +47,9 @@ import { AGE_GROUPS, agePillLabel, matchesAgeGroup } from "@/utils/coachAges";
 import {
   ALL_ACADEMIES,
   academySlug,
+  applyOrganizations,
   buildOrganizations,
+  findOrganization,
   coachAcademy,
   getAcademyOptions,
   matchesAcademy,
@@ -258,6 +261,7 @@ const AllCoaches = () => {
     );
 
   const [coaches, setCoaches] = useState<Coach[]>([]);
+  const [publicOrgs, setPublicOrgs] = useState<PublicOrganization[]>([]);
 
   const [filteredCoaches, setFilteredCoaches] = useState<Coach[]>([]);
 
@@ -676,12 +680,17 @@ const AllCoaches = () => {
       }
 
       // Map coach_position to position for compatibility
-      const mappedCoaches = data.map((coach) => ({
-        ...coach,
-        position: coach?.coach_position || null,
-        // Map positions to favourite_positions for compatibility with CoachCard
-        favourite_positions: coach.positions || []
-      }));
+      const orgs = await organizationsAPI.listPublic().catch(() => [] as PublicOrganization[]);
+      setPublicOrgs(orgs);
+      const mappedCoaches = applyOrganizations(
+        data.map((coach) => ({
+          ...coach,
+          position: coach?.coach_position || null,
+          // Map positions to favourite_positions for compatibility with CoachCard
+          favourite_positions: coach.positions || []
+        })),
+        orgs
+      );
 
       setCoaches(mappedCoaches);
       setFilteredCoaches(mappedCoaches);
@@ -1321,6 +1330,7 @@ const AllCoaches = () => {
                   <OrganizationCard
                     key={organization.name}
                     organization={organization}
+                    page={findOrganization(publicOrgs, organization.slug)}
                     partners={organizationPartners(organization.coachIds, brandsByCoach, 3)}
                   />
                 ))}

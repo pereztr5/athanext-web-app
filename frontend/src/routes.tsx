@@ -24,6 +24,8 @@ import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ContactUs from "./pages/ContactUs";
 import OrganizationProfile from "./pages/OrganizationProfile";
+import MyOrganization from "./pages/MyOrganization";
+import OrganizationInvite from "./pages/OrganizationInvite";
 import SignupConfirmation from "./pages/SignupConfirmation";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -95,6 +97,8 @@ export const ROUTES = {
   CHAT: "/chat",
   ADMIN_REFERRALS: "/admin/referrals",
   INVITE: "/invite/:token",
+  MY_ORGANIZATION: "/organization",
+  ORG_INVITE: "/org-invite/:token",
   NOT_FOUND: "*",
 } as const;
 
@@ -162,6 +166,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.COACH_SESSION, element: <ProtectedRoute><CoachSession /></ProtectedRoute> },
   { path: ROUTES.BOOKING_CONFIRMATION, element: <ProtectedRoute><BookingConfirmation /></ProtectedRoute> },
   { path: ROUTES.PACKAGE_CONFIRMATION, element: <ProtectedRoute><PackageConfirmation /></ProtectedRoute> },
+  { path: ROUTES.MY_ORGANIZATION, element: <ProtectedRoute><MyOrganization /></ProtectedRoute> },
+  { path: ROUTES.ORG_INVITE, element: <ProtectedRoute><OrganizationInvite /></ProtectedRoute> },
   { path: ROUTES.ADMIN_REFERRALS, element: <ProtectedRoute requireAdmin><AdminReferrals /></ProtectedRoute> },
 ];
 
