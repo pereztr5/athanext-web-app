@@ -1824,6 +1824,8 @@ export type Database = {
       }
       conversations: {
         Row: {
+          channel_description: string | null
+          channel_primary: boolean
           created_at: string
           created_by: string | null
           id: string
@@ -1834,6 +1836,8 @@ export type Database = {
           title: string | null
         }
         Insert: {
+          channel_description?: string | null
+          channel_primary?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -1844,6 +1848,8 @@ export type Database = {
           title?: string | null
         }
         Update: {
+          channel_description?: string | null
+          channel_primary?: boolean
           created_at?: string
           created_by?: string | null
           id?: string
@@ -3352,6 +3358,10 @@ export type Database = {
       }
       coach_roster_ids: { Args: { p_coach_id: string }; Returns: string[] }
       coach_undo_booking: { Args: { p_booking_ids: string[] }; Returns: number }
+      create_coach_channel: {
+        Args: { p_description?: string; p_title: string }
+        Returns: string
+      }
       create_coach_invoice: {
         Args: {
           p_amount: number
@@ -3487,6 +3497,17 @@ export type Database = {
         Args: { p_coach_id: string }
         Returns: {
           conversation_id: string
+          is_member: boolean
+          member_count: number
+          title: string
+        }[]
+      }
+      get_coach_channels: {
+        Args: { p_coach_id: string }
+        Returns: {
+          conversation_id: string
+          description: string
+          is_main: boolean
           is_member: boolean
           member_count: number
           title: string

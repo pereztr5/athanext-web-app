@@ -54,7 +54,7 @@ export const OwnProfilePreview = ({
   onCoachUpdated: () => void;
 }) => {
   const [openFaq, setOpenFaq] = useState<string | null>(null);
-  const channel = useQuery({ queryKey: ["coach-channel", coach.id, "owner"], queryFn: () => chatAPI.getCoachChannel(coach.id), staleTime: 5 * 60_000 });
+  const channels = useQuery({ queryKey: ["coach-channels", coach.id, "owner"], queryFn: () => chatAPI.getCoachChannels(coach.id), staleTime: 60_000 });
   const payout = useQuery({ queryKey: ["payout-account"], queryFn: () => payoutsAPI.status(), retry: false, staleTime: 5 * 60_000 });
   const showRating = isPublicCoachRatingVisible(totalReviews, averageRating);
   const photo = coach.profile_image_url || coach.image_url;
@@ -173,20 +173,22 @@ export const OwnProfilePreview = ({
             <h2 className={h2}>Group chats families can join</h2>
             <span className={meta}>These show on your public profile with a Join button.</span>
           </div>
-          {channel.data ? (
-            <Link to={`/chat?conversationId=${channel.data.conversationId}`} className="flex items-center gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-3 py-2.5 hover:bg-[#F4F4EB]">
-              <span className="inline-flex size-8 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
-                <Hash className="size-4" strokeWidth={1.5} aria-hidden="true" />
-              </span>
-              <span className="flex min-w-0 flex-col">
-                <b className="truncate text-[14px] font-medium">{channel.data.title || `${first}'s group chat`}</b>
-                <span className={meta}>
-                  {channel.data.memberCount} {channel.data.memberCount === 1 ? "family" : "families"}
+          {channels.data?.length ? (
+            channels.data.map((ch) => (
+              <Link key={ch.conversationId} to={`/chat?conversationId=${ch.conversationId}`} className="flex items-center gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-3 py-2.5 hover:bg-[#F4F4EB]">
+                <span className="inline-flex size-8 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
+                  <Hash className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-              </span>
-            </Link>
+                <span className="flex min-w-0 flex-col">
+                  <b className="truncate text-[14px] font-medium">{ch.title || `${first}'s group chat`}</b>
+                  <span className={meta}>
+                    {[`${ch.memberCount} ${ch.memberCount === 1 ? "family" : "families"}`, ch.description ?? ""].filter(Boolean).join(" · ")}
+                  </span>
+                </span>
+              </Link>
+            ))
           ) : (
-            <p className={meta}>{channel.isLoading ? "Loading…" : "No group chat yet. Open My community in Messages to start one."}</p>
+            <p className={meta}>{channels.isLoading ? "Loading…" : "No group chats yet. Start one with New channel in Messages."}</p>
           )}
         </section>
 

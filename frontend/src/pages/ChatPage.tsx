@@ -6,7 +6,8 @@ import {
   useState,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Users } from "lucide-react";
+import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Plus, Users } from "lucide-react";
+import { NewChannelDialog } from "@/components/chat/NewChannelDialog";
 import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
@@ -649,10 +650,11 @@ const ChatPage = () => {
     [user?.id]
   );
 
-  // Coach opens (or creates) their community channel (ATH-21).
-  const handleOpenMyChannel = async () => {
+  // Coach opens a channel they just created (Working Copy "New channel").
+  const [newChannelOpen, setNewChannelOpen] = useState(false);
+  const handleOpenMyChannel = async (createdId?: string) => {
     try {
-      const channelId = await chatAPI.openMyCoachChannel();
+      const channelId = createdId ?? (await chatAPI.openMyCoachChannel());
       await fetchConversations({ silent: true });
       // Make sure the channel is in the list even if it's older than the loaded page.
       const { data: linked } = await chatAPI.getConversationsByIds([channelId]);
@@ -853,6 +855,7 @@ const ChatPage = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-10 md:px-10">
+      <NewChannelDialog open={newChannelOpen} onClose={() => setNewChannelOpen(false)} onCreated={(id) => void handleOpenMyChannel(id)} />
       <div className="relative mx-auto flex h-[min(930px,calc(100vh-8.5rem))] w-full max-w-[1000px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
         <aside
           className={cn(
@@ -869,11 +872,11 @@ const ChatPage = () => {
               {userProfile?.coach_id ? (
                 <button
                   type="button"
-                  onClick={() => void handleOpenMyChannel()}
+                  onClick={() => setNewChannelOpen(true)}
                   className="inline-flex h-[30px] shrink-0 items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
                 >
-                  <Users className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                  My community
+                  <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                  New channel
                 </button>
               ) : null}
             </div>

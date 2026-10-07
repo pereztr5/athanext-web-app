@@ -538,6 +538,35 @@ export const chatAPI = {
     };
   },
 
+  /** Every channel a coach runs, main one first (Working Copy "New channel"). */
+  async getCoachChannels(coachId: string): Promise<(CoachChannelInfo & { description: string | null; isMain: boolean })[]> {
+    const supabase = apiClient.getSupabaseClient();
+    const { data, error } = await supabase.rpc("get_coach_channels", { p_coach_id: coachId });
+    if (error) throw error;
+    return ((data as Record<string, unknown>[]) ?? []).map((row) => ({
+      conversationId: row.conversation_id as string,
+      title: (row.title as string) ?? null,
+      description: (row.description as string) ?? null,
+      memberCount: Number(row.member_count) || 0,
+      isMember: Boolean(row.is_member),
+      isMain: Boolean(row.is_main),
+    }));
+  },
+
+  async createCoachChannel(title: string, description: string): Promise<string> {
+    const supabase = apiClient.getSupabaseClient();
+    const { data, error } = await supabase.rpc("create_coach_channel", { p_title: title, p_description: description || undefined });
+    if (error) throw error;
+    return data as string;
+  },
+
+  /** Family joins one of a coach's channels by id. */
+  async joinChannel(conversationId: string): Promise<void> {
+    const supabase = apiClient.getSupabaseClient();
+    const { error } = await supabase.rpc("join_coach_channel", { p_conversation_id: conversationId });
+    if (error) throw error;
+  },
+
   async openMyCoachChannel(): Promise<string> {
     const supabase = apiClient.getSupabaseClient();
     const { data, error } = await supabase.rpc("get_or_create_my_coach_channel");

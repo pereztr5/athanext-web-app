@@ -2,22 +2,15 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { AlertCircle, Search, ShoppingBag } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { GearLoading, GearNotice, GearPageShell } from "@/components/gear/GearPageShell";
 import { GearProductCard } from "@/components/gear/GearProductCard";
 import { athleteHomeAPI } from "@/api/athleteHome";
 import { isShopifyConfigured } from "@/api/shopify";
-import { Switch } from "@/components/ui/switch";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBrandsByCoach } from "@/hooks/useBrands";
 import { useGearProducts } from "@/hooks/useGear";
 import { useRole } from "@/hooks/useRole";
+import { brandKey } from "@/utils/brands";
 import {
   PRICE_BANDS,
   applyGearFilters,
@@ -29,8 +22,10 @@ import {
 const ALL = "__all";
 const NO_FILTERS: GearFilters = { search: "", sport: null, category: null, price: null, fromMyCoaches: false };
 
-const filterTriggerClass =
-  "!h-auto w-full !rounded-[8px] !border-[#EAEADF] !bg-[#F7F7F0] !px-[10px] !py-[10px] !text-[12px] !font-normal !leading-[14px] !tracking-[-0.36px] shadow-none focus:!ring-0 focus:!ring-offset-0 sm:!w-[200px] [&>svg]:!size-4 [&>svg]:!opacity-100 [&>svg]:!text-[#767980]";
+const chipClass = (on: boolean) =>
+  `inline-flex h-[30px] items-center rounded-full border px-3 text-[13px] font-medium transition-colors ${
+    on ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]" : "border-[#EAEADF] bg-[#F7F7F0] text-[#484D56] hover:bg-[#F1F1E6]"
+  }`;
 
 const Gear = () => {
   const { data: products = [], isLoading, isError, refetch, isFetching } = useGearProducts();
@@ -49,22 +44,35 @@ const Gear = () => {
   const filtered = useMemo(() => applyGearFilters(products, filters, coachBrandNames), [products, filters, coachBrandNames]);
   const set = (patch: Partial<GearFilters>) => setFilters((f) => ({ ...f, ...patch }));
 
-  const triggerClass = (value: string | null) => `${filterTriggerClass} ${value ? "!text-[#1A202C]" : "!text-[#767980]"}`;
-  const select = (value: string | null, onChange: (v: string | null) => void, label: string, all: string, options: { value: string; label: string }[]) => (
-    <Select value={value ?? ALL} onValueChange={(v) => onChange(v === ALL ? null : v)}>
-      <SelectTrigger className={triggerClass(value)} aria-label={label}>
-        <SelectValue>{value ? options.find((o) => o.value === value)?.label ?? value : all}</SelectValue>
-      </SelectTrigger>
-      <SelectContent className="z-50">
-        <SelectItem value={ALL}>{all}</SelectItem>
-        {options.map((o) => (
-          <SelectItem key={o.value} value={o.value}>
+  // Filters as chip rows, as in the Working Copy.
+  const chips = (value: string | null, onChange: (v: string | null) => void, label: string, all: string, options: { value: string; label: string }[]) => (
+    <div className="flex flex-wrap gap-1.5" role="group" aria-label={label}>
+      {[{ value: null as string | null, label: all }, ...options].map((o) => {
+        const on = value === o.value;
+        return (
+          <button
+            key={o.value ?? ALL}
+            type="button"
+            aria-pressed={on}
+            onClick={() => onChange(o.value)}
+            className={chipClass(on)}
+          >
             {o.label}
-          </SelectItem>
-        ))}
-      </SelectContent>
-    </Select>
+          </button>
+        );
+      })}
+    </div>
   );
+
+  // The first of the family's coaches whose brands have products here (Working Copy: "From Michael's store").
+  const featured = useMemo(() => {
+    for (const c of home.data?.coaches ?? []) {
+      const names = (brandsByCoach[c.id] ?? []).map((b) => brandKey(b.name));
+      const picks = products.filter((p) => p.availableForSale !== false && names.includes(brandKey(p.vendor))).slice(0, 5);
+      if (picks.length) return { coach: c, picks };
+    }
+    return null;
+  }, [home.data, brandsByCoach, products]);
 
   const renderContent = () => {
     if (!isShopifyConfigured) {
@@ -114,20 +122,40 @@ const Gear = () => {
               onChange={(e) => set({ search: e.target.value })}
             />
           </label>
-          <div className="flex flex-col gap-[10px] sm:flex-row sm:flex-wrap sm:items-center">
-            {sportOptions.length
-              ? select(filters.sport, (v) => set({ sport: v }), "Sport", "All sports", sportOptions.map((o) => ({ value: o, label: o })))
-              : null}
-            {select(filters.category, (v) => set({ category: v }), "Category", "All categories", typeOptions.map((o) => ({ value: o, label: o })))}
-            {select(filters.price, (v) => set({ price: v }), "Price", "Any price", PRICE_BANDS.map((b) => ({ value: b.key, label: b.label })))}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
+            {sportOptions.length ? chips(filters.sport, (v) => set({ sport: v }), "Sport", "All", sportOptions.map((o) => ({ value: o, label: o }))) : null}
+            {chips(filters.price, (v) => set({ price: v }), "Price", "Any price", PRICE_BANDS.map((b) => ({ value: b.key, label: b.label })))}
             {coachIds.length ? (
-              <label className="flex items-center gap-2 text-[14px] text-[#484D56]">
-                <Switch checked={filters.fromMyCoaches} onCheckedChange={(on) => set({ fromMyCoaches: on })} aria-label="From my coaches" />
+              <button
+                type="button"
+                aria-pressed={filters.fromMyCoaches}
+                onClick={() => set({ fromMyCoaches: !filters.fromMyCoaches })}
+                className={chipClass(filters.fromMyCoaches)}
+              >
                 From my coaches
-              </label>
+              </button>
             ) : null}
           </div>
+          {typeOptions.length ? chips(filters.category, (v) => set({ category: v }), "Category", "All", typeOptions.map((o) => ({ value: o, label: o }))) : null}
         </div>
+
+        {featured && !filters.fromMyCoaches && !filters.search ? (
+          <section className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 md:p-5">
+            <div className="flex flex-col gap-0.5">
+              <b className="text-[18px] font-medium tracking-[-0.04em]">From {featured.coach.name.split(" ")[0]}'s picks</b>
+              <span className="text-[12px] text-[#767980]">
+                Your coach · {featured.picks.length} {featured.picks.length === 1 ? "product" : "products"}
+              </span>
+            </div>
+            <div className="-mx-1 flex gap-3 overflow-x-auto px-1 pb-1">
+              {featured.picks.map((product) => (
+                <div key={product.id} className="w-[180px] shrink-0">
+                  <GearProductCard product={product} />
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
 
         <p className="text-[14px] font-normal tracking-[-0.7px] text-[#767980]">
           {filtered.length} {filtered.length === 1 ? "product" : "products"}
