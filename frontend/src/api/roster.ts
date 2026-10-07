@@ -117,8 +117,8 @@ export const rosterAPI = {
     };
   },
 
-  async openTimes(athleteId: string): Promise<OpenTime[]> {
-    const { data, error } = await supabase.rpc("get_roster_open_times", { p_athlete_id: athleteId });
+  async openTimes(athleteId: string, limit = 8): Promise<OpenTime[]> {
+    const { data, error } = await supabase.rpc("get_roster_open_times", { p_athlete_id: athleteId, p_limit: limit });
     if (error) throw error;
     return ((data as Row[]) ?? []).map((row) => ({
       id: row.id,
@@ -129,6 +129,26 @@ export const rosterAPI = {
       place: row.place ?? null,
       suggested: Boolean(row.suggested),
     }));
+  },
+
+  /** How a booking from the roster can be paid (ATH-77). */
+  async bookPayment(athleteId: string): Promise<{ credits: number; ownClient: boolean; paysDirect: boolean }> {
+    const { data, error } = await supabase.rpc("get_roster_book_payment", { p_athlete_id: athleteId });
+    if (error) throw error;
+    const raw = (data ?? {}) as Row;
+    return { credits: Number(raw.credits) || 0, ownClient: Boolean(raw.own_client), paysDirect: Boolean(raw.pays_direct) };
+  },
+
+  /** Books the athlete, paid with credits or outside AthaNext. Returns the booking ids. */
+  async book(athleteId: string, occurrenceIds: string[], payment: "credit" | "outside"): Promise<string[]> {
+    const { data, error } = await supabase.rpc("coach_book_athlete", { p_athlete_id: athleteId, p_occurrence_ids: occurrenceIds, p_payment: payment });
+    if (error) throw error;
+    return (data as string[]) ?? [];
+  },
+
+  async undoBooking(bookingIds: string[]): Promise<void> {
+    const { error } = await supabase.rpc("coach_undo_booking", { p_booking_ids: bookingIds });
+    if (error) throw error;
   },
 
   async saveNote(athleteId: string, note: string): Promise<void> {
