@@ -235,7 +235,7 @@ export type Database = {
           sport: string
           tags: string[]
           updated_at: string
-          user_id: string
+          user_id: string | null
           weight: string | null
         }
         Insert: {
@@ -263,7 +263,7 @@ export type Database = {
           sport: string
           tags?: string[]
           updated_at?: string
-          user_id: string
+          user_id?: string | null
           weight?: string | null
         }
         Update: {
@@ -291,7 +291,7 @@ export type Database = {
           sport?: string
           tags?: string[]
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
           weight?: string | null
         }
         Relationships: []
@@ -1994,7 +1994,7 @@ export type Database = {
           stripe_session_id: string | null
           total_amount: number | null
           updated_at: string
-          user_id: string
+          user_id: string | null
         }
         Insert: {
           coach_id: string
@@ -2016,7 +2016,7 @@ export type Database = {
           stripe_session_id?: string | null
           total_amount?: number | null
           updated_at?: string
-          user_id: string
+          user_id?: string | null
         }
         Update: {
           coach_id?: string
@@ -2038,7 +2038,7 @@ export type Database = {
           stripe_session_id?: string | null
           total_amount?: number | null
           updated_at?: string
-          user_id?: string
+          user_id?: string | null
         }
         Relationships: [
           {
@@ -3316,6 +3316,10 @@ export type Database = {
         Args: { p_athlete_id: string }
         Returns: string
       }
+      prepare_account_deletion: {
+        Args: { p_user_id: string }
+        Returns: undefined
+      }
       record_coach_share_event: {
         Args: { p_coach_id: string; p_event_type: string }
         Returns: undefined
@@ -3344,6 +3348,7 @@ export type Database = {
         Args: { p_accept: boolean; p_booking_id: string }
         Returns: string
       }
+      run_due_account_deletions: { Args: never; Returns: number }
       schedule_cancel_session: {
         Args: { p_message: string; p_occurrence_id: string }
         Returns: number

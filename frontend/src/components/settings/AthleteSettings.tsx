@@ -255,7 +255,7 @@ const DeleteCard = ({ isParent, athleteFirst }: { isParent: boolean; athleteFirs
   return (
     <ConfirmWordCard
       title="Delete account"
-      body={`Removes ${isParent ? `${athleteFirst}'s` : "your"} profile, sessions and notes ${DELETION_GRACE_DAYS} days after you ask. Sign in before then to undo.`}
+      body={`Deletes ${isParent ? `${athleteFirst}'s` : "your"} account and personal details ${DELETION_GRACE_DAYS} days after you ask, and cancels upcoming sessions. Coaches keep a record of past sessions without the name. Sign in before then to undo.`}
       word={DELETE_WORD}
       actionLabel="Delete account"
       pending={request.isPending}
