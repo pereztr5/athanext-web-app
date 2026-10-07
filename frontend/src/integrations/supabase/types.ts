@@ -1017,6 +1017,81 @@ export type Database = {
           },
         ]
       }
+      coach_invoices: {
+        Row: {
+          amount: number
+          athlete_id: string | null
+          athlete_name: string
+          coach_id: string
+          created_at: string
+          due_date: string
+          family_name: string
+          id: string
+          last_reminded_at: string | null
+          note: string | null
+          paid_at: string | null
+          paid_method: string | null
+          reminders: number
+          service: string
+          status: string
+          stripe_payment_intent: string | null
+          stripe_session_id: string | null
+        }
+        Insert: {
+          amount: number
+          athlete_id?: string | null
+          athlete_name?: string
+          coach_id: string
+          created_at?: string
+          due_date: string
+          family_name?: string
+          id?: string
+          last_reminded_at?: string | null
+          note?: string | null
+          paid_at?: string | null
+          paid_method?: string | null
+          reminders?: number
+          service: string
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+        }
+        Update: {
+          amount?: number
+          athlete_id?: string | null
+          athlete_name?: string
+          coach_id?: string
+          created_at?: string
+          due_date?: string
+          family_name?: string
+          id?: string
+          last_reminded_at?: string | null
+          note?: string | null
+          paid_at?: string | null
+          paid_method?: string | null
+          reminders?: number
+          service?: string
+          status?: string
+          stripe_payment_intent?: string | null
+          stripe_session_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_invoices_athlete_id_fkey"
+            columns: ["athlete_id"]
+            isOneToOne: false
+            referencedRelation: "athlete_profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_invoices_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_packages: {
         Row: {
           coach_id: string
@@ -2527,12 +2602,13 @@ export type Database = {
       payout_transfers: {
         Row: {
           amount: number
-          booking_id: string
+          booking_id: string | null
           coach_id: string
           created_at: string
           currency: string
           error: string | null
           id: string
+          invoice_id: string | null
           kind: string
           organization_id: string | null
           sent_at: string | null
@@ -2542,12 +2618,13 @@ export type Database = {
         }
         Insert: {
           amount: number
-          booking_id: string
+          booking_id?: string | null
           coach_id: string
           created_at?: string
           currency?: string
           error?: string | null
           id?: string
+          invoice_id?: string | null
           kind: string
           organization_id?: string | null
           sent_at?: string | null
@@ -2557,12 +2634,13 @@ export type Database = {
         }
         Update: {
           amount?: number
-          booking_id?: string
+          booking_id?: string | null
           coach_id?: string
           created_at?: string
           currency?: string
           error?: string | null
           id?: string
+          invoice_id?: string | null
           kind?: string
           organization_id?: string | null
           sent_at?: string | null
@@ -2583,6 +2661,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_transfers_invoice_id_fkey"
+            columns: ["invoice_id"]
+            isOneToOne: false
+            referencedRelation: "coach_invoices"
             referencedColumns: ["id"]
           },
           {
@@ -3221,6 +3306,16 @@ export type Database = {
         Returns: boolean
       }
       coach_roster_ids: { Args: { p_coach_id: string }; Returns: string[] }
+      create_coach_invoice: {
+        Args: {
+          p_amount: number
+          p_athlete_id: string
+          p_due: string
+          p_note: string
+          p_service: string
+        }
+        Returns: string
+      }
       current_athlete_id: { Args: never; Returns: string }
       current_coach_id: { Args: never; Returns: string }
       delete_old_pending_bookings: { Args: never; Returns: undefined }
@@ -3351,6 +3446,7 @@ export type Database = {
         }[]
       }
       get_coach_earnings: { Args: { p_days: number }; Returns: Json }
+      get_coach_payments: { Args: never; Returns: Json }
       get_coach_rating_stats: {
         Args: { p_coach_id: string }
         Returns: {
@@ -3472,6 +3568,7 @@ export type Database = {
         Args: { p_conversation_id: string }
         Returns: Json
       }
+      get_family_invoice: { Args: { p_invoice_id: string }; Returns: Json }
       get_feedback_due: { Args: never; Returns: Json }
       get_feedback_screen: { Args: { p_slot_id: string }; Returns: Json }
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
@@ -3604,6 +3701,10 @@ export type Database = {
         Returns: boolean
       }
       is_my_athlete: { Args: { p_athlete_id: string }; Returns: boolean }
+      is_own_client: {
+        Args: { p_athlete_id: string; p_coach_id: string }
+        Returns: boolean
+      }
       is_reserved_coach_slug: { Args: { p_slug: string }; Returns: boolean }
       join_coach_channel: {
         Args: { p_conversation_id: string }
@@ -3620,6 +3721,10 @@ export type Database = {
           p_action: string
           p_table_name: string
         }
+        Returns: undefined
+      }
+      mark_coach_invoice_paid: {
+        Args: { p_invoice_id: string }
         Returns: undefined
       }
       mark_notifications_seen: { Args: never; Returns: undefined }
@@ -3648,12 +3753,38 @@ export type Database = {
         Args: { p_booking_id: string }
         Returns: {
           amount: number
-          booking_id: string
+          booking_id: string | null
           coach_id: string
           created_at: string
           currency: string
           error: string | null
           id: string
+          invoice_id: string | null
+          kind: string
+          organization_id: string | null
+          sent_at: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_transfer_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "payout_transfers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      plan_invoice_transfers: {
+        Args: { p_invoice_id: string }
+        Returns: {
+          amount: number
+          booking_id: string | null
+          coach_id: string
+          created_at: string
+          currency: string
+          error: string | null
+          id: string
+          invoice_id: string | null
           kind: string
           organization_id: string | null
           sent_at: string | null
@@ -3680,6 +3811,7 @@ export type Database = {
         Args: { _coach_id: string }
         Returns: string
       }
+      remind_coach_invoice: { Args: { p_invoice_id: string }; Returns: number }
       remove_organization_coach: {
         Args: { p_coach_id: string }
         Returns: undefined

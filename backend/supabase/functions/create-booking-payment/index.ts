@@ -655,6 +655,19 @@ serve(async (req) => {
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
 
+        // Coach invoices (ATH-89) use the same Stripe account; coach-invoices settles them.
+        if (session.metadata?.kind === "invoice" && session.metadata?.invoice_id) {
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/coach-invoices`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+            body: JSON.stringify({ action: "settle", invoice_id: session.metadata.invoice_id }),
+          }).catch((e) => console.error("Invoice settle call error:", e));
+          return new Response(JSON.stringify({ received: true }), {
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+            status: 200,
+          });
+        }
+
         if (isSessionPaid(session)) {
           try {
             const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);

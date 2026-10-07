@@ -41,3 +41,6 @@ verify_jwt = true
 
 [functions.stripe-payouts]
 verify_jwt = true
+
+[functions.coach-invoices]
+verify_jwt = true

@@ -1,4 +1,4 @@
-import { Building2, Calendar, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "lucide-react";
+import { Building2, Calendar, CreditCard, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "lucide-react";
 import { ROUTES } from "@/routes";
 
 export type NavItem = { title: string; short: string; url: string; icon: typeof House; also?: string[] };
@@ -12,8 +12,10 @@ export const COACH_NAV: NavItem[] = [
   { title: "My Profile", short: "Profile", url: ROUTES.PROFILE, icon: Store },
 ];
 
-// Business section (ATH-90): My Organization shows only for org owners.
+// Business section: My Organization shows only for org owners (ATH-90).
 export const ORG_NAV: NavItem = { title: "My Organization", short: "Organization", url: ROUTES.MY_ORGANIZATION, icon: Building2 };
+// Payments (ATH-89): hidden in booking only mode.
+export const PAYMENTS_NAV: NavItem = { title: "Payments", short: "Payments", url: ROUTES.PAYMENTS, icon: CreditCard };
 
 // Athlete navigation (ATH-91): Home, Book, Sessions, Coaches, Gear on web and phone.
 export const ATHLETE_NAV: NavItem[] = [

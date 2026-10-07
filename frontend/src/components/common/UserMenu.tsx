@@ -15,9 +15,10 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, CircleHelp, LogOut, Settings, Store } from "lucide-react";
+import { Building2, CircleHelp, CreditCard, LogOut, Settings, Store } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { useMyOrganization } from "@/hooks/useOrganizations";
+import { useCoachPayMode } from "@/hooks/useCoachPayMode";
 import { AvatarFallback } from "@radix-ui/react-avatar";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -61,6 +62,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const navigate = useNavigate();
   const { isCoach } = useRole();
   const { data: myOrg } = useMyOrganization();
+  const { data: payMode } = useCoachPayMode();
   const location = useLocation();
   const { toast, dismiss } = useToast();
   const queryClient = useQueryClient();
@@ -475,6 +477,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           >
             <Building2 className="size-4" strokeWidth={1.75} />
             <span>My Organization</span>
+          </DropdownMenuItem>
+        ) : null}
+        {isCoach && payMode === "app" ? (
+          <DropdownMenuItem
+            onClick={() => navigate(ROUTES.PAYMENTS)}
+            className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
+          >
+            <CreditCard className="size-4" strokeWidth={1.75} />
+            <span>Payments</span>
           </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem

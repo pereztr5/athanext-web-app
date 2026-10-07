@@ -14,7 +14,8 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 import { useMyOrganization } from "@/hooks/useOrganizations";
-import { ATHLETE_NAV, COACH_NAV, ORG_NAV, isNavActive, type NavItem } from "./nav";
+import { useCoachPayMode } from "@/hooks/useCoachPayMode";
+import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PAYMENTS_NAV, isNavActive, type NavItem } from "./nav";
 
 const FOOTER_NAV = [
   { title: "Account Settings", url: ROUTES.SETTINGS, icon: Settings },
@@ -37,7 +38,8 @@ export const AppSidebar = () => {
   const { userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
   const { data: myOrg } = useMyOrganization();
-  const business = isCoach && myOrg ? [ORG_NAV] : [];
+  const { data: payMode } = useCoachPayMode();
+  const business = isCoach ? [...(myOrg ? [ORG_NAV] : []), ...(payMode === "app" ? [PAYMENTS_NAV] : [])] : [];
   const items = [
     ...(isCoach ? COACH_NAV : ATHLETE_NAV),
     ...(isAdmin

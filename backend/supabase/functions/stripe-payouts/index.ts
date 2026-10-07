@@ -7,6 +7,7 @@
 //   { action: "payouts" }           -> { balance, payouts } for the Payments page
 // Service role (from checkout):
 //   { action: "transfer_bookings", booking_ids } -> { sent, waiting, failed }
+//   { action: "transfer_invoices", invoice_ids } -> { sent, waiting, failed }  (invoices paid by card)
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -68,6 +69,13 @@ const publicAccount = (row: Record<string, unknown> | null) =>
       }
     : { connected: false };
 
+const chargeIdForInvoice = async (admin: SupabaseClient, invoiceId: string): Promise<string | null> => {
+  const { data: inv } = await admin.from("coach_invoices").select("stripe_payment_intent").eq("id", invoiceId).maybeSingle();
+  if (!inv?.stripe_payment_intent) return null;
+  const intent = await stripe().paymentIntents.retrieve(inv.stripe_payment_intent as string);
+  return typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id ?? null;
+};
+
 const chargeIdFor = async (admin: SupabaseClient, bookingId: string): Promise<string | null> => {
   const { data: pay } = await admin
     .from("payments")
@@ -102,15 +110,16 @@ const sendTransfers = async (admin: SupabaseClient, rows: Record<string, any>[])
       continue;
     }
     try {
-      const charge = row.stripe_charge_id ?? (await chargeIdFor(admin, row.booking_id));
+      const charge =
+        row.stripe_charge_id ?? (row.invoice_id ? await chargeIdForInvoice(admin, row.invoice_id) : await chargeIdFor(admin, row.booking_id));
       const transfer = await stripe().transfers.create(
         {
           amount: Math.round(Number(row.amount) * 100),
           currency: row.currency ?? "usd",
           destination: account.stripe_account_id,
           ...(charge ? { source_transaction: charge } : {}),
-          transfer_group: `booking_${row.booking_id}`,
-          metadata: { booking_id: row.booking_id, kind: row.kind },
+          transfer_group: row.invoice_id ? `invoice_${row.invoice_id}` : `booking_${row.booking_id}`,
+          metadata: row.invoice_id ? { invoice_id: row.invoice_id, kind: row.kind } : { booking_id: row.booking_id, kind: row.kind },
         },
         { idempotencyKey: `payout-transfer-${row.id}` },
       );
@@ -135,12 +144,16 @@ serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
 
-    if (body.action === "transfer_bookings") {
+    if (body.action === "transfer_bookings" || body.action === "transfer_invoices") {
       if (!bearer || bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return json({ error: "Unauthorized" }, 401);
-      const ids = Array.isArray(body.booking_ids) ? (body.booking_ids as string[]).slice(0, 50) : [];
+      const invoices = body.action === "transfer_invoices";
+      const list = invoices ? body.invoice_ids : body.booking_ids;
+      const ids = Array.isArray(list) ? (list as string[]).slice(0, 50) : [];
       const total = { sent: 0, waiting: 0, failed: 0 };
       for (const id of ids) {
-        const { data: rows, error } = await admin.rpc("plan_booking_transfers", { p_booking_id: id });
+        const { data: rows, error } = invoices
+          ? await admin.rpc("plan_invoice_transfers", { p_invoice_id: id })
+          : await admin.rpc("plan_booking_transfers", { p_booking_id: id });
         if (error) {
           console.error("plan failed", id, error);
           total.failed++;

@@ -364,6 +364,7 @@ const HowFamiliesPay = ({ coachId, payMode, payNote }: { coachId: string; payMod
     const { error } = await coachesAPI.updateCoach(coachId, patch);
     if (error) throw new Error(error.message);
     queryClient.invalidateQueries({ queryKey: ["coach-details"] });
+    queryClient.invalidateQueries({ queryKey: ["coach-pay-mode"] });
   };
 
   const choose = async (next: "app" | "self") => {
