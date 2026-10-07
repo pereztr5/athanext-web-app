@@ -142,12 +142,17 @@ export const bookAPI = {
   },
 
   /**
-   * One checkout for several sessions with one coach. Returns a Stripe URL, or requested when
-   * the coach approves new families first.
+   * One call for sessions paid the same way, across coaches (ATH-94): paid now (credits used
+   * first, then one Stripe checkout), requests (card held on Stripe's page, ATH-85) or paid to
+   * the coach directly (booking only, ATH-86).
    */
-  async checkout(occurrenceIds: string[], athleteId: string): Promise<{ url?: string; requested?: boolean; direct?: boolean }> {
+  async checkout(
+    occurrenceIds: string[],
+    athleteId: string,
+    useCredits = true
+  ): Promise<{ url?: string; requested?: boolean; direct?: boolean; booked?: boolean; creditsUsed: number }> {
     const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
-      body: { occurrence_ids: occurrenceIds, athlete_id: athleteId },
+      body: { occurrence_ids: occurrenceIds, athlete_id: athleteId, use_credits: useCredits },
     });
     if (error) {
       const context = (error as { context?: Response }).context;
@@ -155,6 +160,12 @@ export const bookAPI = {
       throw new Error(message || error.message);
     }
     if (data?.error) throw new Error(data.error);
-    return { url: data?.url, requested: Boolean(data?.requested), direct: Boolean(data?.direct) };
+    return {
+      url: data?.url,
+      requested: Boolean(data?.requested),
+      direct: Boolean(data?.direct),
+      booked: Boolean(data?.booked),
+      creditsUsed: Number(data?.credits_used) || 0,
+    };
   },
 };

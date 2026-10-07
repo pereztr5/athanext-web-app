@@ -1361,6 +1361,7 @@ export type Database = {
           coach_id: string
           created_at: string
           created_by: string | null
+          credit_purchase_id: string | null
           expires_at: string | null
           google_event_id: string | null
           id: string
@@ -1381,6 +1382,7 @@ export type Database = {
           coach_id: string
           created_at?: string
           created_by?: string | null
+          credit_purchase_id?: string | null
           expires_at?: string | null
           google_event_id?: string | null
           id?: string
@@ -1401,6 +1403,7 @@ export type Database = {
           coach_id?: string
           created_at?: string
           created_by?: string | null
+          credit_purchase_id?: string | null
           expires_at?: string | null
           google_event_id?: string | null
           id?: string
@@ -1433,6 +1436,13 @@ export type Database = {
             columns: ["coach_id"]
             isOneToOne: false
             referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_slot_bookings_credit_purchase_id_fkey"
+            columns: ["credit_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "package_purchases"
             referencedColumns: ["id"]
           },
           {
@@ -2283,11 +2293,13 @@ export type Database = {
           created_at: string
           expiry_date: string
           id: string
-          package_id: string
+          package_id: string | null
           payment_intent_id: string | null
           purchase_date: string
           sessions_remaining: number
           sessions_total: number
+          source: string
+          source_booking_id: string | null
           status: string
           stripe_balance_txn: string | null
           stripe_charge_id: string | null
@@ -2305,11 +2317,13 @@ export type Database = {
           created_at?: string
           expiry_date: string
           id?: string
-          package_id: string
+          package_id?: string | null
           payment_intent_id?: string | null
           purchase_date?: string
           sessions_remaining: number
           sessions_total: number
+          source?: string
+          source_booking_id?: string | null
           status?: string
           stripe_balance_txn?: string | null
           stripe_charge_id?: string | null
@@ -2327,11 +2341,13 @@ export type Database = {
           created_at?: string
           expiry_date?: string
           id?: string
-          package_id?: string
+          package_id?: string | null
           payment_intent_id?: string | null
           purchase_date?: string
           sessions_remaining?: number
           sessions_total?: number
+          source?: string
+          source_booking_id?: string | null
           status?: string
           stripe_balance_txn?: string | null
           stripe_charge_id?: string | null
@@ -2357,6 +2373,13 @@ export type Database = {
             columns: ["package_id"]
             isOneToOne: false
             referencedRelation: "coach_packages"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "package_purchases_source_booking_id_fkey"
+            columns: ["source_booking_id"]
+            isOneToOne: false
+            referencedRelation: "coach_slot_bookings"
             referencedColumns: ["id"]
           },
           {
@@ -2611,6 +2634,7 @@ export type Database = {
           invoice_id: string | null
           kind: string
           organization_id: string | null
+          package_purchase_id: string | null
           sent_at: string | null
           status: string
           stripe_charge_id: string | null
@@ -2627,6 +2651,7 @@ export type Database = {
           invoice_id?: string | null
           kind: string
           organization_id?: string | null
+          package_purchase_id?: string | null
           sent_at?: string | null
           status?: string
           stripe_charge_id?: string | null
@@ -2643,6 +2668,7 @@ export type Database = {
           invoice_id?: string | null
           kind?: string
           organization_id?: string | null
+          package_purchase_id?: string | null
           sent_at?: string | null
           status?: string
           stripe_charge_id?: string | null
@@ -2675,6 +2701,13 @@ export type Database = {
             columns: ["organization_id"]
             isOneToOne: false
             referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_transfers_package_purchase_id_fkey"
+            columns: ["package_purchase_id"]
+            isOneToOne: false
+            referencedRelation: "package_purchases"
             referencedColumns: ["id"]
           },
         ]
@@ -3267,6 +3300,10 @@ export type Database = {
         Args: { p_athlete_id: string; p_coach_id: string }
         Returns: Json
       }
+      cancel_my_booking: {
+        Args: { p_booking_id: string; p_reason?: string }
+        Returns: Json
+      }
       cancel_organization_invite: {
         Args: { p_invite_id: string }
         Returns: undefined
@@ -3292,6 +3329,14 @@ export type Database = {
         Args: { retention_days?: number }
         Returns: number
       }
+      coach_book_athlete: {
+        Args: {
+          p_athlete_id: string
+          p_occurrence_ids: string[]
+          p_payment: string
+        }
+        Returns: string[]
+      }
       coach_credits_left: {
         Args: { p_athlete_id: string; p_coach_id: string }
         Returns: number
@@ -3306,6 +3351,7 @@ export type Database = {
         Returns: boolean
       }
       coach_roster_ids: { Args: { p_coach_id: string }; Returns: string[] }
+      coach_undo_booking: { Args: { p_booking_ids: string[] }; Returns: number }
       create_coach_invoice: {
         Args: {
           p_amount: number
@@ -3626,7 +3672,11 @@ export type Database = {
           state: string
         }[]
       }
-      get_roster_open_times: { Args: { p_athlete_id: string }; Returns: Json }
+      get_roster_book_payment: { Args: { p_athlete_id: string }; Returns: Json }
+      get_roster_open_times: {
+        Args: { p_athlete_id: string; p_limit?: number }
+        Returns: Json
+      }
       get_session_for_booking: {
         Args: { p_occurrence_id: string }
         Returns: Json
@@ -3763,6 +3813,7 @@ export type Database = {
           invoice_id: string | null
           kind: string
           organization_id: string | null
+          package_purchase_id: string | null
           sent_at: string | null
           status: string
           stripe_charge_id: string | null
@@ -3788,6 +3839,33 @@ export type Database = {
           invoice_id: string | null
           kind: string
           organization_id: string | null
+          package_purchase_id: string | null
+          sent_at: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_transfer_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "payout_transfers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
+      }
+      plan_package_transfers: {
+        Args: { p_purchase_id: string }
+        Returns: {
+          amount: number
+          booking_id: string | null
+          coach_id: string
+          created_at: string
+          currency: string
+          error: string | null
+          id: string
+          invoice_id: string | null
+          kind: string
+          organization_id: string | null
+          package_purchase_id: string | null
           sent_at: string | null
           status: string
           stripe_charge_id: string | null
@@ -3808,6 +3886,7 @@ export type Database = {
         Args: { p_coach_id: string; p_event_type: string }
         Returns: undefined
       }
+      redeem_coach_credit: { Args: { p_booking_id: string }; Returns: string }
       register_athlete_referral: {
         Args: { _coach_id: string }
         Returns: string

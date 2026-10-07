@@ -1,6 +1,7 @@
 /**
  * Book a Session (ATH-73): book with a coach the family already trains with, or book by pillar
- * (then Goalkeeper or Field player). Pick several times with one coach and book them at once.
+ * (then Goalkeeper or Field player). Pick several times across days and coaches and book them
+ * in one go (ATH-94).
  * Families new to a coach send a request when the coach approves new families first.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -72,7 +73,7 @@ const BookSessionPage = () => {
   const [format, setFormat] = useState<BookFormat>("all");
   const [pillarCoachId, setPillarCoachId] = useState<string | null>(null);
   const [picked, setPicked] = useState<BookableSession[]>([]);
-  const [pickedCoach, setPickedCoach] = useState<BookingCoach | null>(null);
+  const [pickedCoaches, setPickedCoaches] = useState<Record<string, BookingCoach>>({});
   const [reviewOpen, setReviewOpen] = useState(false);
   const [requestCoach, setRequestCoach] = useState<BookingCoach | null>(null);
 
@@ -108,15 +109,12 @@ const BookSessionPage = () => {
   if (isCoach) return <Navigate to={ROUTES.SCHEDULE} replace />;
 
   const toggle = (coach: BookingCoach) => (session: BookableSession) => {
-    setPicked((cur) => {
-      const has = cur.some((s) => s.id === session.id);
-      const next = has ? cur.filter((s) => s.id !== session.id) : [...cur, session];
-      setPickedCoach(next.length ? coach : null);
-      return next;
-    });
+    setPickedCoaches((cur) => ({ ...cur, [coach.id]: coach }));
+    setPicked((cur) => (cur.some((s) => s.id === session.id) ? cur.filter((s) => s.id !== session.id) : [...cur, session]));
   };
-  const lockedFor = (coach: BookingCoach) =>
-    pickedCoach && pickedCoach.id !== coach.id && picked.length ? pickedCoach.name.split(" ")[0] : null;
+  const untoggle = (session: BookableSession) => setPicked((cur) => cur.filter((s) => s.id !== session.id));
+  const pickedCoachIds = [...new Set(picked.map((s) => s.coachId))];
+  const onlyCoach = pickedCoachIds.length === 1 ? pickedCoaches[pickedCoachIds[0]] : null;
   const switchMode = (next: Mode) => {
     setMode(next);
     setPillarCoachId(null);
@@ -132,7 +130,7 @@ const BookSessionPage = () => {
             <button
               key={s.id}
               type="button"
-              onClick={() => pickedCoach && toggle(pickedCoach)(s)}
+              onClick={() => untoggle(s)}
               className="inline-flex items-center gap-1 rounded-full border border-[#6698D2] bg-[#E5EDF7] px-2.5 py-1 text-[12px] font-medium text-[#0054B4]"
               aria-label={`Remove ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })}, ${formatClock(start, timeZone)}`}
             >
@@ -145,12 +143,14 @@ const BookSessionPage = () => {
       <div className="flex items-center justify-between gap-3">
         <span className="flex flex-col">
           <span className={meta}>
-            {plural(picked.length, pickedCoach?.needsRequest ? "request" : "session")} with {pickedCoach?.name.split(" ")[0]}
+            {onlyCoach
+              ? `${plural(picked.length, onlyCoach.needsRequest ? "request" : "session")} with ${onlyCoach.name.split(" ")[0]}`
+              : `${plural(picked.length, "session")} with ${plural(pickedCoachIds.length, "coach", "coaches")}`}
           </span>
           <b className="text-[20px] font-semibold">{money(total)}</b>
         </span>
         <span className="flex gap-2">
-          <button type="button" className={textButton} onClick={() => { setPicked([]); setPickedCoach(null); }}>
+          <button type="button" className={textButton} onClick={() => setPicked([])}>
             Clear
           </button>
           <button type="button" className={cn(primaryButton, "h-[40px]")} onClick={() => setReviewOpen(true)}>
@@ -211,13 +211,13 @@ const BookSessionPage = () => {
       key={coach.id}
       coach={coach}
       pillar={currentMode === "pillar" ? pillar : null}
-      picked={pickedCoach?.id === coach.id ? picked : []}
+      picked={picked.filter((s) => s.coachId === coach.id)}
       onToggle={toggle(coach)}
       alwaysShowDetails={alwaysShowDetails}
       timeZone={timeZone}
       todayISO={todayISO}
       onRequestTime={() => setRequestCoach(coach)}
-      lockedBy={lockedFor(coach)}
+      lockedBy={null}
     />
   );
 
@@ -496,18 +496,17 @@ const BookSessionPage = () => {
       <ReviewDialog
         open={reviewOpen}
         onOpenChange={setReviewOpen}
-        coach={pickedCoach}
+        coaches={pickedCoaches}
         picked={picked}
         pillar={currentMode === "pillar" ? pillar : null}
         athleteId={athleteId}
         timeZone={timeZone}
         onRemove={(s) => {
-          if (pickedCoach) toggle(pickedCoach)(s);
+          untoggle(s);
           if (picked.length <= 1) setReviewOpen(false);
         }}
         onBooked={() => {
           setPicked([]);
-          setPickedCoach(null);
           setReviewOpen(false);
         }}
       />

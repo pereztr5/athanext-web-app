@@ -36,6 +36,13 @@ export interface AthleteSession {
 }
 
 export const athleteSessionAPI = {
+  /** Cancels the family's booking. With 24 hours' notice a paid session comes back as a credit (ATH-94). */
+  async cancel(bookingId: string): Promise<{ credit: boolean }> {
+    const { data, error } = await supabase.rpc("cancel_my_booking", { p_booking_id: bookingId });
+    if (error) throw error;
+    return { credit: Boolean((data as { credit?: boolean } | null)?.credit) };
+  },
+
   async get(occurrenceId: string): Promise<AthleteSession> {
     const { data, error } = await supabase.rpc("get_athlete_session", { p_occurrence_id: occurrenceId });
     if (error) throw error;

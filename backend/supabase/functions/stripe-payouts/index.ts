@@ -8,6 +8,7 @@
 // Service role (from checkout):
 //   { action: "transfer_bookings", booking_ids } -> { sent, waiting, failed }
 //   { action: "transfer_invoices", invoice_ids } -> { sent, waiting, failed }  (invoices paid by card)
+//   { action: "transfer_packages", purchase_ids } -> { sent, waiting, failed }  (packages, paid at purchase)
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -76,6 +77,14 @@ const chargeIdForInvoice = async (admin: SupabaseClient, invoiceId: string): Pro
   return typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id ?? null;
 };
 
+const chargeIdForPackage = async (admin: SupabaseClient, purchaseId: string): Promise<string | null> => {
+  const { data: p } = await admin.from("package_purchases").select("stripe_charge_id, stripe_payment_intent").eq("id", purchaseId).maybeSingle();
+  if (p?.stripe_charge_id) return p.stripe_charge_id as string;
+  if (!p?.stripe_payment_intent) return null;
+  const intent = await stripe().paymentIntents.retrieve(p.stripe_payment_intent as string);
+  return typeof intent.latest_charge === "string" ? intent.latest_charge : intent.latest_charge?.id ?? null;
+};
+
 const chargeIdFor = async (admin: SupabaseClient, bookingId: string): Promise<string | null> => {
   const { data: pay } = await admin
     .from("payments")
@@ -111,15 +120,24 @@ const sendTransfers = async (admin: SupabaseClient, rows: Record<string, any>[])
     }
     try {
       const charge =
-        row.stripe_charge_id ?? (row.invoice_id ? await chargeIdForInvoice(admin, row.invoice_id) : await chargeIdFor(admin, row.booking_id));
+        row.stripe_charge_id ??
+        (row.invoice_id
+          ? await chargeIdForInvoice(admin, row.invoice_id)
+          : row.package_purchase_id
+            ? await chargeIdForPackage(admin, row.package_purchase_id)
+            : await chargeIdFor(admin, row.booking_id));
       const transfer = await stripe().transfers.create(
         {
           amount: Math.round(Number(row.amount) * 100),
           currency: row.currency ?? "usd",
           destination: account.stripe_account_id,
           ...(charge ? { source_transaction: charge } : {}),
-          transfer_group: row.invoice_id ? `invoice_${row.invoice_id}` : `booking_${row.booking_id}`,
-          metadata: row.invoice_id ? { invoice_id: row.invoice_id, kind: row.kind } : { booking_id: row.booking_id, kind: row.kind },
+          transfer_group: row.invoice_id ? `invoice_${row.invoice_id}` : row.package_purchase_id ? `package_${row.package_purchase_id}` : `booking_${row.booking_id}`,
+          metadata: row.invoice_id
+            ? { invoice_id: row.invoice_id, kind: row.kind }
+            : row.package_purchase_id
+              ? { package_purchase_id: row.package_purchase_id, kind: row.kind }
+              : { booking_id: row.booking_id, kind: row.kind },
         },
         { idempotencyKey: `payout-transfer-${row.id}` },
       );
@@ -144,16 +162,19 @@ serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
 
-    if (body.action === "transfer_bookings" || body.action === "transfer_invoices") {
+    if (body.action === "transfer_bookings" || body.action === "transfer_invoices" || body.action === "transfer_packages") {
       if (!bearer || bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return json({ error: "Unauthorized" }, 401);
       const invoices = body.action === "transfer_invoices";
-      const list = invoices ? body.invoice_ids : body.booking_ids;
+      const packages = body.action === "transfer_packages";
+      const list = invoices ? body.invoice_ids : packages ? body.purchase_ids : body.booking_ids;
       const ids = Array.isArray(list) ? (list as string[]).slice(0, 50) : [];
       const total = { sent: 0, waiting: 0, failed: 0 };
       for (const id of ids) {
         const { data: rows, error } = invoices
           ? await admin.rpc("plan_invoice_transfers", { p_invoice_id: id })
-          : await admin.rpc("plan_booking_transfers", { p_booking_id: id });
+          : packages
+            ? await admin.rpc("plan_package_transfers", { p_purchase_id: id })
+            : await admin.rpc("plan_booking_transfers", { p_booking_id: id });
         if (error) {
           console.error("plan failed", id, error);
           total.failed++;

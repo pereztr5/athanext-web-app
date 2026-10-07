@@ -3,13 +3,15 @@
  * status tag and the type; one facts card (when, where with Directions, how it was paid, the
  * coach); a spot count for groups, never other athletes' names; feedback after the session.
  */
+import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
-import { useMutation, useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, ChevronLeft, ChevronRight, Clock, CreditCard, MapPin, MessageCircle, Ticket, Users, Video } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { athleteSessionAPI } from "@/api/athleteSession";
 import { startOccurrenceCheckout } from "@/api/bookings";
-import { card, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { card, dangerButton, dialogContent, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -31,6 +33,24 @@ const AthleteSessionPage = () => {
   const athleteId = profile?.userProfile?.athlete_id ?? "";
   const query = useQuery({ queryKey: ["athlete-session", id], enabled: Boolean(id), queryFn: () => athleteSessionAPI.get(id!) });
   const s = query.data;
+
+  const queryClient = useQueryClient();
+  const [confirmCancel, setConfirmCancel] = useState(false);
+  const cancel = useMutation({
+    mutationFn: () => athleteSessionAPI.cancel(s!.booking.id),
+    onSuccess: ({ credit }) => {
+      setConfirmCancel(false);
+      toast({
+        title: "Session cancelled",
+        description: credit ? `It's back as a credit with ${s!.coach.name.split(" ")[0]} for 90 days.` : undefined,
+      });
+      queryClient.invalidateQueries({ queryKey: ["athlete-session", id] });
+      queryClient.invalidateQueries({ queryKey: ["sessions"] });
+      queryClient.invalidateQueries({ queryKey: ["my-coaches"] });
+    },
+    onError: (err: unknown) =>
+      toast({ title: "Couldn't cancel", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+  });
 
   const pay = useMutation({
     mutationFn: () => startOccurrenceCheckout(s!.id, athleteId),
@@ -84,6 +104,8 @@ const AthleteSessionPage = () => {
           : `Waiting for ${coachFirst} to accept. You're only charged if they do.`
         : status === "pending_payment"
           ? `${money(s.price)} due to confirm your spot`
+          : s.booking.paymentStatus === "credit"
+            ? "Paid with a credit"
           : s.booking.paymentStatus === "paid"
             ? s.booking.paidAmount
               ? `Paid ${money(s.booking.paidAmount)} by card`
@@ -131,6 +153,11 @@ const AthleteSessionPage = () => {
               <MessageCircle strokeWidth={1.5} aria-hidden="true" />
               Message {coachFirst}
             </Link>
+            {!cancelled && !s.started && ["booked", "pending_payment", "requested"].includes(status) ? (
+              <button type="button" className={secondaryButton} onClick={() => setConfirmCancel(true)}>
+                Cancel
+              </button>
+            ) : null}
             {s.ended || cancelled ? (
               <Link to={`${ROUTES.BOOK}?coach=${s.coach.id}`} className={secondaryButton}>
                 <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
@@ -189,6 +216,30 @@ const AthleteSessionPage = () => {
           </section>
         ) : null}
       </div>
+      <Dialog open={confirmCancel} onOpenChange={setConfirmCancel}>
+        <DialogContent className={dialogContent}>
+          <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
+            <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">
+              {status === "requested" ? "Cancel this request?" : "Cancel this session?"}
+            </DialogTitle>
+            <DialogDescription className={meta}>
+              {status === "booked" && ["paid", "credit"].includes(s.booking.paymentStatus)
+                ? start.getTime() - Date.now() >= 24 * 3600 * 1000
+                  ? `It comes back as a credit with ${coachFirst} for another session, valid for 90 days.`
+                  : "It's less than 24 hours away, so it won't come back as a credit."
+                : status === "requested"
+                  ? `${coachFirst} won't see it anymore${s.coach.paysDirect ? "" : " and nothing is charged"}.`
+                  : "The time opens again for other families."}
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 px-5 pb-5 sm:px-[25px]">
+            <button type="button" className={secondaryButton} onClick={() => setConfirmCancel(false)}>Keep it</button>
+            <button type="button" className={dangerButton} disabled={cancel.isPending} onClick={() => cancel.mutate()}>
+              {cancel.isPending ? "Cancelling…" : "Cancel session"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

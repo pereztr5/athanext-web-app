@@ -7,6 +7,8 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ROUTES } from "@/routes";
 import { supabase } from "@/integrations/supabase/client";
+import { bookAPI } from "@/api/book";
+import { clearPendingRequests, readPendingRequests } from "@/utils/pendingRequests";
 import { bookingsAPI, type BookingConfirmationData } from "@/api/bookings";
 import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormatting";
 import { parseISODateLocal, zonedWallTimeToUtc } from "@/utils/dateHelpers";
@@ -423,10 +425,69 @@ const RequestSent = ({ sessionId }: { sessionId: string }) => {
   );
 };
 
+/** Requests picked with paid sessions get their card hold after the payment (ATH-94). */
+const PendingRequestsStep = () => {
+  const [pending, setPending] = useState(readPendingRequests);
+  const [opening, setOpening] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  if (!pending) return null;
+  const go = async () => {
+    setOpening(true);
+    setError(null);
+    try {
+      const result = await bookAPI.checkout(pending.occurrenceIds, pending.athleteId);
+      clearPendingRequests();
+      if (result.url) window.location.href = result.url;
+      else setPending(null);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Couldn't send the requests.");
+      setOpening(false);
+    }
+  };
+  return (
+    <div className="px-4 pt-6 md:px-10">
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-3 rounded-[10px] border border-[#F0B144] bg-[#FCEFDA] p-5">
+        <b className="text-[16px] font-medium text-[#1A202C]">One more step: your requests</b>
+        <p className="text-[14px] leading-[20px] text-[#484D56]">
+          {pending.occurrenceIds.length === 1 ? "1 time" : `${pending.occurrenceIds.length} times`} with {pending.coachNames.join(" and ")} need
+          the coach to accept. Hold your card now; it's charged only if they accept.
+        </p>
+        {error ? <p className="text-[14px] text-[#972B2B]">{error}</p> : null}
+        <div className="flex flex-wrap gap-2">
+          <button
+            type="button"
+            className="inline-flex h-[34px] items-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium text-[#F1F1E6] disabled:opacity-50"
+            disabled={opening}
+            onClick={go}
+          >
+            {opening ? "Opening…" : "Hold card and send requests"}
+          </button>
+          <button
+            type="button"
+            className="inline-flex h-[34px] items-center px-2 text-[14px] font-medium text-[#767980] hover:underline"
+            onClick={() => {
+              clearPendingRequests();
+              setPending(null);
+            }}
+          >
+            Skip
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};
+
 const BookingConfirmationPage = () => {
   const [searchParams] = useSearchParams();
   const sessionId = searchParams.get("session_id");
-  return searchParams.get("request") === "1" && sessionId ? <RequestSent sessionId={sessionId} /> : <BookingConfirmation />;
+  if (searchParams.get("request") === "1" && sessionId) return <RequestSent sessionId={sessionId} />;
+  return (
+    <>
+      <PendingRequestsStep />
+      <BookingConfirmation />
+    </>
+  );
 };
 
 export default BookingConfirmationPage;
