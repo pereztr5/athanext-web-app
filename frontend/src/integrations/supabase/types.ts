@@ -3611,6 +3611,10 @@ export type Database = {
           role: string
         }[]
       }
+      get_conversation_context: {
+        Args: { p_conversation_id: string }
+        Returns: Json
+      }
       get_conversation_safeguard: {
         Args: { p_conversation_id: string }
         Returns: Json

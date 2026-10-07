@@ -319,15 +319,7 @@ const CoachProfile = () => {
           }
           onMessage={canSendMessage ? handleSendMessage : undefined}
           messaging={startingChat}
-          availability={
-            <div ref={availabilitySectionRef}>
-              <CoachAvailabilitySection
-                coachId={coach.id}
-                allowEditing={false}
-                onBookSlot={canBookSlots ? handleBookSlot : !user ? handleGuestSignInRedirect : undefined}
-              />
-            </div>
-          }
+          // The Working Copy has no weekly table here: Book opens Book a Session with this coach.
         />
         {coach ? (
           <>

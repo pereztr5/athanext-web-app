@@ -12,6 +12,7 @@ import { BrandPill } from "@/components/brand";
 import { bookAPI, type BookableSession, type BookingCoach } from "@/api/book";
 import { TimePicker } from "@/components/book/TimePicker";
 import { RequestTimeDialog, ReviewDialog } from "@/components/book/BookDialogs";
+import { PackageSavings } from "@/components/book/PackageSavings";
 import { card, meta, primaryButton, secondaryButton, segButton, segGroup, textButton } from "@/components/schedule/styles";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useRole } from "@/hooks/useRole";
@@ -188,6 +189,12 @@ const BookSessionPage = () => {
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-[20px] font-medium tracking-[-0.04em] text-[#1A202C]">{coach.name}</span>
         <span className={meta}>{sub}</span>
+        {coach.groupFrom || coach.hourlyRate ? (
+          <span className="flex flex-wrap gap-x-3 text-[12px] text-[#484D56]">
+            {coach.groupFrom ? <span className="text-[#117A96]">Group from {money(coach.groupFrom)}</span> : null}
+            {coach.hourlyRate ? <span>1-on-1 from {money(coach.hourlyRate)}</span> : null}
+          </span>
+        ) : null}
       </div>
       <span className="flex flex-wrap items-center gap-2">
         {coach.credits ? (
@@ -289,6 +296,7 @@ const BookSessionPage = () => {
                 selectedCoach,
                 [selectedCoach.specialties.slice(0, 2).join(", "), selectedCoach.locations[0]].filter(Boolean).join(" · ")
               )}
+              <PackageSavings coach={selectedCoach} />
               {selectedCoach.nextSession ? (
                 <p className="flex items-center gap-2 rounded-[8px] bg-[#E5EDF7] px-3 py-2.5 text-[14px] text-[#0054B4]">
                   <CalendarDays className="size-4" strokeWidth={1.5} aria-hidden="true" />

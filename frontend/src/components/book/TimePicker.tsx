@@ -259,6 +259,9 @@ export const TimePicker = ({
           Request a time
         </button>
       </div>
+      <p className="text-[12px] leading-[16px] text-[#767980]">
+        Tap one or more times. Times are in your time zone. Free cancellation up to 24 hours before.
+      </p>
     </section>
   );
 };

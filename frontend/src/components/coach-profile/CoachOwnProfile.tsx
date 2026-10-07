@@ -32,7 +32,7 @@ import { BrandLogos } from "./BrandLogos";
 import { CoachBioEditor } from "./CoachBioEditor";
 import { GearAndDealsCard } from "./GearAndDealsCard";
 import { ManageBrandsDialog } from "./ManageBrandsDialog";
-import { ProfileStrengthMeter } from "./ProfileStrengthMeter";
+import { OwnProfilePreview } from "./OwnProfilePreview";
 import { SharePricingDialog } from "./SharePricingDialog";
 import type { CoachFaqItem } from "./FAQSection";
 import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
@@ -240,8 +240,23 @@ export function CoachOwnProfile({
           ) : null}
         </header>
 
-        {!editing ? <ProfileStrengthMeter coach={coach} onEdit={onStartEdit} variant="card" /> : null}
-
+        {!editing ? (
+          <OwnProfilePreview
+            coach={coach}
+            packages={packages}
+            averageRating={averageRating}
+            totalReviews={totalReviews}
+            ratingDistribution={ratingDistribution}
+            reviews={reviews}
+            locationLabel={locationLabel === "Location not set" ? "" : locationLabel}
+            faqs={shownFaqs.filter((faq) => faq.question?.trim() && faq.answer?.trim())}
+            brandNames={brands.map((brand) => brand.name)}
+            onSharePricing={() => setSharePricingOpen(true)}
+            onStartEdit={onStartEdit}
+            onCoachUpdated={onCoachUpdated}
+          />
+        ) : (
+        <>
         <div className="grid w-full grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px] lg:items-stretch">
           <div className="flex flex-col items-start gap-2">
             <div className="relative aspect-square w-[179px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] lg:w-full">
@@ -655,6 +670,8 @@ export function CoachOwnProfile({
             />
           </div>
         </div>
+        </>
+        )}
       </div>
 
       <ManageBrandsDialog open={brandsOpen} onOpenChange={setBrandsOpen} coachId={coach.id} currentBrands={brands} />

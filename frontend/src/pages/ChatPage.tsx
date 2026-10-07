@@ -11,6 +11,7 @@ import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
 import { SafeguardingStrip } from "@/components/chat/SafeguardingStrip";
+import { ComposerShortcuts, ConversationHeaderActions, conversationSubline, useConversationContext } from "@/components/chat/ConversationTools";
 import { cn } from "@/lib/utils";
 import {
   chatAPI,
@@ -755,6 +756,8 @@ const ChatPage = () => {
     [hasMoreMessages, isLoadingMoreMessages, isMessagesLoading, loadOlderMessages]
   );
 
+  const conversationContext = useConversationContext(selectedConversation?.id, Boolean(selectedConversation?.is_group)).data;
+
   const handleSend = async () => {
     const trimmed = messageInput.trim();
     if (!trimmed || !selectedConversation || !user) return;
@@ -1104,7 +1107,7 @@ const ChatPage = () => {
                         </button>
                       ) : (
                         <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
-                          {conversationHandle(selectedConversation)}
+                          {conversationSubline(conversationContext) ?? conversationHandle(selectedConversation)}
                         </p>
                       )}
                     </div>
@@ -1121,6 +1124,7 @@ const ChatPage = () => {
                       Leave
                     </button>
                   ) : null}
+                  {!selectedConversation?.is_group ? <ConversationHeaderActions ctx={conversationContext} /> : null}
                   {selectedConversation?.otherCoachId ? (
                     <button
                       type="button"
@@ -1203,10 +1207,17 @@ const ChatPage = () => {
                   )}
                 </div>
 
+                {!selectedConversation?.is_group ? (
+                  <ComposerShortcuts ctx={conversationContext} onFill={(text) => setMessageInput(text)} />
+                ) : null}
                 <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-5 py-[15px]">
                     <input
                       type="text"
-                      placeholder="Write a message"
+                      placeholder={
+                        selectedConversation && !selectedConversation.is_group
+                          ? `Write to ${getConversationName(selectedConversation).split(" ")[0]}`
+                          : "Write to the group"
+                      }
                       autoCapitalize="sentences"
                       value={messageInput}
                       onChange={(e) => setMessageInput(e.target.value)}
