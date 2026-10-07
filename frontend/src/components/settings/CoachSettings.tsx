@@ -1,8 +1,8 @@
 /**
  * Coach Account Settings (ATH-87). Five tabs that edit in place: Account, Notifications,
  * Booking and calendar, Privacy and safety, Password and account. Account fields show a save
- * bar once something changes; switches save as soon as they flip. AthaNext stores no card,
- * bank or payout details here.
+ * bar once something changes; switches save as soon as they flip. AthaNext stores no card or
+ * bank details; payouts are set up on Stripe's pages.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -14,6 +14,7 @@ import { BookingRulesSection, CalendarSyncSection } from "@/components/schedule/
 import { card, dangerButton, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
 import { Switch } from "@/components/ui/switch";
+import { PayoutsCard } from "@/components/settings/PayoutsCard";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -452,6 +453,7 @@ const BookingTab = ({ coachId, payMode, payNote }: { coachId: string; payMode: "
   return (
     <>
       <HowFamiliesPay coachId={coachId} payMode={payMode} payNote={payNote} />
+      {payMode === "app" ? <PayoutsCard /> : null}
       <Card icon={<CalendarSync className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Booking and calendar">
         {schedule.isLoading ? <p className={meta}>Loading…</p> : null}
         <BookingRulesSection rules={schedule.data?.rules} />

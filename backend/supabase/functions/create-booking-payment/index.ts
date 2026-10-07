@@ -203,6 +203,25 @@ const callReconcileEndpointForBookings = async (bookingIds: string[]) => {
   }
 };
 
+// Coach payouts: send the coach's (and any org's) share as soon as a booking is paid.
+const callPayoutTransfersForBookings = async (bookingIds: string[]) => {
+  const ids = Array.from(new Set(bookingIds));
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!ids.length || !supabaseUrl || !serviceRole) return;
+  try {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/stripe-payouts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRole}` },
+      body: JSON.stringify({ action: "transfer_bookings", booking_ids: ids }),
+    });
+    const text = await resp.text();
+    if (!resp.ok) console.error("Payout transfers failed:", resp.status, text);
+  } catch (e) {
+    console.error("Payout transfers call error:", e);
+  }
+};
+
 const callNotificationEndpointForBookings = async (bookingIds: string[]) => {
   const uniqueIds = Array.from(new Set(bookingIds));
   if (!uniqueIds.length) return;
@@ -600,6 +619,7 @@ serve(async (req) => {
       if (paid && newlyPaid) {
         await callReconcileEndpointForBookings(bookingIds);
         await callNotificationEndpointForBookings(bookingIds);
+        await callPayoutTransfersForBookings(bookingIds);
       }
 
       return new Response(
@@ -642,6 +662,7 @@ serve(async (req) => {
             if (paid && newlyPaid) {
               await callReconcileEndpointForBookings(bookingIds);
               await callNotificationEndpointForBookings(bookingIds);
+              await callPayoutTransfersForBookings(bookingIds);
             }
           } catch (updErr: any) {
             console.error("Failed to mark bookings paid:", updErr);
@@ -671,6 +692,7 @@ serve(async (req) => {
       if (paid && newlyPaid) {
         await callReconcileEndpointForBookings(bookingIds);
         await callNotificationEndpointForBookings(bookingIds);
+        await callPayoutTransfersForBookings(bookingIds);
       }
 
       return new Response(

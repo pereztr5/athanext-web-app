@@ -1076,6 +1076,53 @@ export type Database = {
           },
         ]
       }
+      coach_payout_accounts: {
+        Row: {
+          bank_last4: string | null
+          charges_enabled: boolean
+          coach_id: string
+          created_at: string
+          details_submitted: boolean
+          payout_day: string
+          payouts_enabled: boolean
+          stripe_account_id: string
+          transfers_active: boolean
+          updated_at: string
+        }
+        Insert: {
+          bank_last4?: string | null
+          charges_enabled?: boolean
+          coach_id: string
+          created_at?: string
+          details_submitted?: boolean
+          payout_day?: string
+          payouts_enabled?: boolean
+          stripe_account_id: string
+          transfers_active?: boolean
+          updated_at?: string
+        }
+        Update: {
+          bank_last4?: string | null
+          charges_enabled?: boolean
+          coach_id?: string
+          created_at?: string
+          details_submitted?: boolean
+          payout_day?: string
+          payouts_enabled?: boolean
+          stripe_account_id?: string
+          transfers_active?: boolean
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_payout_accounts_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: true
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_reviews: {
         Row: {
           coach_id: string
@@ -2477,6 +2524,76 @@ export type Database = {
           },
         ]
       }
+      payout_transfers: {
+        Row: {
+          amount: number
+          booking_id: string
+          coach_id: string
+          created_at: string
+          currency: string
+          error: string | null
+          id: string
+          kind: string
+          organization_id: string | null
+          sent_at: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_transfer_id: string | null
+        }
+        Insert: {
+          amount: number
+          booking_id: string
+          coach_id: string
+          created_at?: string
+          currency?: string
+          error?: string | null
+          id?: string
+          kind: string
+          organization_id?: string | null
+          sent_at?: string | null
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_transfer_id?: string | null
+        }
+        Update: {
+          amount?: number
+          booking_id?: string
+          coach_id?: string
+          created_at?: string
+          currency?: string
+          error?: string | null
+          id?: string
+          kind?: string
+          organization_id?: string | null
+          sent_at?: string | null
+          status?: string
+          stripe_charge_id?: string | null
+          stripe_transfer_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "payout_transfers_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "coach_slot_bookings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_transfers_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "payout_transfers_organization_id_fkey"
+            columns: ["organization_id"]
+            isOneToOne: false
+            referencedRelation: "organizations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       privacy_policy: {
         Row: {
           content: string
@@ -3526,6 +3643,30 @@ export type Database = {
       organization_slug: {
         Args: { p_name: string; p_org_id?: string }
         Returns: string
+      }
+      plan_booking_transfers: {
+        Args: { p_booking_id: string }
+        Returns: {
+          amount: number
+          booking_id: string
+          coach_id: string
+          created_at: string
+          currency: string
+          error: string | null
+          id: string
+          kind: string
+          organization_id: string | null
+          sent_at: string | null
+          status: string
+          stripe_charge_id: string | null
+          stripe_transfer_id: string | null
+        }[]
+        SetofOptions: {
+          from: "*"
+          to: "payout_transfers"
+          isOneToOne: false
+          isSetofReturn: true
+        }
       }
       prepare_account_deletion: {
         Args: { p_user_id: string }
