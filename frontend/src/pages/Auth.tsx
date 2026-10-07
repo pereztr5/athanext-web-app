@@ -19,7 +19,6 @@ import { PhoneInput } from "@/components/common/PhoneInput";
 import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
 import { Loader2, Eye, EyeOff, MapPin } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
-import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswordValidation";
 import {
   Select,
@@ -37,6 +36,8 @@ import { useCoaches } from "@/hooks/useCoaches";
 import { createAthleteInitiatedReferral, getCoachName } from "@/api/referrals";
 import { useReferralInvite } from "@/hooks/useReferrals";
 import { INVITE_TOKEN_STORAGE_KEY, clearJoinCoach, readJoinCoach } from "@/utils/referralHelpers";
+import { readSignupRole } from "@/utils/signup";
+import { SignUpFlow } from "@/components/auth/SignUpFlow";
 import { ROUTES } from "@/routes";
 
 import { fetchLocationFromZipCode, formatLocationDisplay, hasValidLocationData, type LocationInfo } from "@/utils/geolocation";
@@ -120,7 +121,6 @@ const Auth = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showSigninPassword, setShowSigninPassword] = useState(false);
-  const [showSignupPassword, setShowSignupPassword] = useState(false);
   const [name, setName] = useState("");
   const [persona, setPersona] = useState<PersonaType | null>(null);
   const [phone, setPhone] = useState("");
@@ -177,10 +177,6 @@ const Auth = () => {
     enabled: Boolean(joinCoachId),
     staleTime: Infinity,
   });
-  const {
-    items: signupPasswordValidationItems,
-    allValid: isSignupPasswordStrong,
-  } = usePasswordValidation(password);
   const sportOptions = useMemo(
     () => (persona === PROFILE_TYPE.coach ? SPORTS_OPTIONS : ATHLETE_SPORTS_OPTIONS),
     [persona]
@@ -375,8 +371,9 @@ const Auth = () => {
         return;
       }
 
-      // Don't check if we just completed the profile
-      if (justCompletedProfileRef.current) {
+      // Don't check if we just completed the profile, or while the new sign-up is
+      // finishing its profile step (ATH-93).
+      if (justCompletedProfileRef.current || readSignupRole()) {
         return;
       }
 
@@ -564,41 +561,6 @@ const Auth = () => {
     setIsLoading(false);
   };
 
-  const validateStep1 = () => {
-    if (!persona) {
-      return {
-        isValid: false,
-        errors: { persona: "Please select who you are" } as Record<string, string>,
-      };
-    }
-    return { isValid: true, errors: {} as Record<string, string> };
-  };
-
-  const validateStep2 = () => {
-    const newErrors: Record<string, string> = {};
-    try {
-      const step2Schema = z.object({
-        phone: signupSchema.shape.phone,
-        email: signupSchema.shape.email,
-        password: signupSchema.shape.password,
-      });
-      step2Schema.parse({ phone, email, password });
-
-      if (!isSignupPasswordStrong) {
-        newErrors.password = PASSWORD_RULE_MESSAGE;
-      }
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        error.issues.forEach((err) => {
-          if (err.path[0]) {
-            newErrors[err.path[0] as string] = err.message;
-          }
-        });
-      }
-    }
-    return { isValid: Object.keys(newErrors).length === 0, errors: newErrors };
-  };
-
   const validateProfileCompletion = () => {
     try {
       const dataToValidate: { persona?: PersonaType | null; name: string; sport: string; position?: string | null; phone: string; gender: string; zipCode: string; dateOfBirth?: string } = {
@@ -710,72 +672,6 @@ const Auth = () => {
       zipCode,
     ]
   );
-
-  const handleSignUp = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const step1 = validateStep1();
-    const step2 = validateStep2();
-    const combinedErrors = { ...step1.errors, ...step2.errors };
-    if (Object.keys(combinedErrors).length > 0) {
-      setErrors(combinedErrors);
-      return;
-    }
-    if (!persona) return;
-    setErrors({});
-
-    setIsLoading(true);
-
-    try {
-      const normalizedEmail = email.trim().toLowerCase();
-
-      const signupData: {
-        name: string;
-        persona_type: PersonaType;
-        phone_number: string;
-      } = {
-        name: name || normalizedEmail.split('@')[0],
-        persona_type: persona,
-        phone_number: phone,
-      };
-
-      const { error: authError } = await authAPI.signUp({
-        email: normalizedEmail,
-        password,
-        name: name || normalizedEmail.split('@')[0],
-        metadata: signupData,
-        emailRedirectTo: `${window.location.origin}/auth?mode=complete-profile${
-          inviteToken ? `&invite=${inviteToken}` : ""
-        }`,
-      });
-
-      if (authError) {
-        toast({
-          title: "Sign up failed",
-          description: authError.message,
-          variant: "destructive",
-        });
-        return;
-      }
-
-      toast({
-        title: "Check your email",
-        description: "We've sent you a confirmation link.",
-      });
-
-      const confirmationUrl = `${ROUTES.SIGN_UP_CONFIRMATION}?email=${encodeURIComponent(normalizedEmail)}`;
-      navigate(confirmationUrl);
-
-    } catch (error) {
-      console.error('Signup error:', error);
-      toast({
-        title: "Something went wrong",
-        description: "Please try again later.",
-        variant: "destructive",
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   const handleGoogleSignIn = async (mode: 'signin' | 'signup' = 'signin') => {
     setIsLoading(true);
@@ -1608,125 +1504,7 @@ const Auth = () => {
                     </div>
                   </div>
 
-                  <form onSubmit={handleSignUp} className="flex flex-col gap-4">
-                    <div className="space-y-4 max-h-[360px] overflow-y-auto pr-3 pl-1">
-                      <div className="space-y-1.5">
-                        <Label className={fieldLabel}>I am a</Label>
-                        <div className="grid grid-cols-3 gap-2.5">
-                          {PERSONA_TYPES.map((type) => (
-                            <div
-                            key={type}
-                            role="button"
-                            aria-pressed={persona === type}
-                            tabIndex={0}
-                            onClick={() => {
-                              setPersona(type);
-                              clearFieldError("persona");
-                            }}
-                            onKeyDown={(e) => {
-                              if (e.key === "Enter" || e.key === " ") {
-                                e.preventDefault();
-                                setPersona(type);
-                                clearFieldError("persona");
-                              }
-                            }}
-                            className={cn(
-                              choiceTile(persona === type),
-                              "flex h-[38px] cursor-pointer items-center justify-center px-2 text-center"
-                            )}
-                          >
-                            <span className="block text-[14px] font-medium capitalize tracking-[-0.03em]">
-                              {type}
-                            </span>
-                          </div>
-                        ))}
-                      </div>
-                      {errors.persona && (
-                        <p className={fieldError}>{errors.persona}</p>
-                      )}
-                      </div>
-                  
-                      <div className="space-y-1.5">
-                      <Label htmlFor="phone" className={fieldLabel}>Phone number</Label>
-                      <PhoneInput
-                        id="phone"
-                        value={phone}
-                        onChange={handlePhoneChange}
-                        invalid={Boolean(errors.phone)}
-                        disabled={isLoading}
-                      />
-                      {errors.phone && (
-                        <p className={fieldError}>{errors.phone}</p>
-                      )}
-                      </div>
-                  
-                      <div className="space-y-1.5">
-                      <Label htmlFor="signup-email" className={fieldLabel}>{strings.form.labels.email}</Label>
-                      <Input
-                        id="signup-email"
-                        type="email"
-                        placeholder="Enter your email"
-                        value={email}
-                        onChange={(e) => {
-                          const nextValue = e.target.value;
-                          setEmail(nextValue);
-                          if (nextValue) {
-                            clearFieldError("email");
-                          }
-                        }}
-                        disabled={isLoading}
-                      />
-                      {errors.email && (
-                        <p className={fieldError}>{errors.email}</p>
-                      )}
-                      </div>
-                  
-                      <div className="space-y-1.5">
-                      <Label htmlFor="signup-password" className={fieldLabel}>{strings.form.labels.password}</Label>
-                      <div className="relative">
-                        <Input
-                          id="signup-password"
-                          type={showSignupPassword ? "text" : "password"}
-                          placeholder="Create a password"
-                          value={password}
-                          onChange={(e) => {
-                            const nextValue = e.target.value;
-                            setPassword(nextValue);
-                            if (nextValue) {
-                              clearFieldError("password");
-                            }
-                          }}
-                          disabled={isLoading}
-                          className="pr-10"
-                        />
-                        <button
-                          type="button"
-                          onClick={() => setShowSignupPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
-                          aria-label={showSignupPassword ? "Hide password" : "Show password"}
-                        >
-                          {showSignupPassword ? <EyeOff strokeWidth={1.5} className="h-4 w-4" /> : <Eye strokeWidth={1.5} className="h-4 w-4" />}
-                        </button>
-                      </div>
-                      <PasswordRequirements
-                        items={signupPasswordValidationItems}
-                        className="mt-1"
-                      />
-                      {errors.password && (
-                        <p className={fieldError}>{errors.password}</p>
-                      )}
-                      </div>
-                    </div>
-                  
-                    <Button
-                      type="submit"
-                      size="lg"
-                      className="w-full"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Creating account…" : "Create account"}
-                    </Button>
-                  </form>
+                  <SignUpFlow inviteToken={inviteToken} joinCoachId={joinCoachId} />
                 </div>
               </TabsContent>
             </Tabs>

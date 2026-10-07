@@ -17,6 +17,7 @@ import { Switch } from "@/components/ui/switch";
 import { PayoutsCard } from "@/components/settings/PayoutsCard";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
+import { PASSWORD_RULE_MESSAGE, usePasswordValidation } from "@/hooks/usePasswordValidation";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useToast } from "@/hooks/use-toast";
@@ -553,6 +554,8 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
   const [confirm, setConfirm] = useState("");
   const [pwError, setPwError] = useState<string | null>(null);
   const strength = passwordStrength(next);
+  // The same rules as sign-up: upper and lower case, a number and a symbol.
+  const { allValid: meetsRules } = usePasswordValidation(next);
 
 
   const resetPw = () => {
@@ -581,7 +584,7 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
 
   const submitPassword = () => {
     if (!current) return setPwError("Enter your current password");
-    if (strength.score < 3) return setPwError("Use 8 or more characters with a number and a symbol");
+    if (!meetsRules) return setPwError(PASSWORD_RULE_MESSAGE.replace("New password", "Your new password"));
     if (next !== confirm) return setPwError("Passwords don't match");
     setPwError(null);
     updatePassword.mutate();
