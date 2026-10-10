@@ -445,7 +445,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <Settings strokeWidth={1.5} />
           <span>Account Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem onClick={() => navigate(ROUTES.CONTACT_US)} className={itemClass}>
+        <DropdownMenuItem onClick={() => navigate(ROUTES.HELP)} className={itemClass}>
           <CircleHelp strokeWidth={1.5} />
           <span>Help</span>
         </DropdownMenuItem>

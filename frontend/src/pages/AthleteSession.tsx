@@ -268,7 +268,7 @@ const AthleteSessionPage = () => {
           <p className="text-[14px] leading-[18px] text-[#484D56]">
             Questions about this session go to {coachFirst}. Billing questions go to AthaNext support.
           </p>
-          <Link to={ROUTES.CONTACT_US} className={cn(secondaryButton, "self-start")}>
+          <Link to={ROUTES.HELP} className={cn(secondaryButton, "self-start")}>
             Get help
           </Link>
         </section>

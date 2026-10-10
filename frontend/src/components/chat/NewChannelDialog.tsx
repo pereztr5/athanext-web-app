@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { chatAPI } from "@/api/chat";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { dialogContent, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { dialogContent, input, label, meta, primaryButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
@@ -34,19 +34,16 @@ export const NewChannelDialog = ({ open, onClose, onCreated }: { open: boolean; 
         </DialogHeader>
         <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
           <label className="flex flex-col gap-1.5">
-            <span className={label}>Name</span>
-            <input className={input} maxLength={60} placeholder="For example, U14 group" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <span className={label}>Channel name</span>
+            <input className={input} maxLength={60} placeholder="For example, Keepers group" value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className={label}>What it's for (optional)</span>
-            <input className={cn(input)} maxLength={140} placeholder="Saturday group sessions and updates" value={about} onChange={(e) => setAbout(e.target.value)} />
+            <span className={label}>What it is for (optional)</span>
+            <input className={cn(input)} maxLength={140} placeholder="Weekly keeper sessions, tips and updates" value={about} onChange={(e) => setAbout(e.target.value)} />
           </label>
-          <div className="flex justify-end gap-2">
-            <button type="button" className={secondaryButton} onClick={close}>Cancel</button>
-            <button type="button" className={primaryButton} disabled={!title.trim() || create.isPending} onClick={() => create.mutate()}>
-              {create.isPending ? "Creating…" : "Create channel"}
-            </button>
-          </div>
+          <button type="button" className={cn(primaryButton, "w-full")} disabled={!title.trim() || create.isPending} onClick={() => create.mutate()}>
+            {create.isPending ? "Creating…" : "Create channel"}
+          </button>
         </div>
       </DialogContent>
     </Dialog>

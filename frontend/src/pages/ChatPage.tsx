@@ -6,8 +6,9 @@ import {
   useState,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { MessageCircle, MessageCircleMore, Search, Menu, ArrowLeft, Plus, Users } from "lucide-react";
+import { MessageCircle, Pencil, Search, Menu, ArrowLeft, Plus, Send } from "lucide-react";
 import { NewChannelDialog } from "@/components/chat/NewChannelDialog";
+import { NewMessageDialog } from "@/components/chat/NewMessageDialog";
 import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
 import MessageBubble from "@/components/chat/MessageBubble";
 import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
@@ -69,6 +70,7 @@ const ChatPage = () => {
   const firstMessageNotifiedRef = useRef<Set<string>>(new Set());
   const firstReplyNotifiedRef = useRef<Set<string>>(new Set());
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const [newMessageOpen, setNewMessageOpen] = useState(false);
   const { role: personaType } = useRole();
 
 
@@ -856,6 +858,7 @@ const ChatPage = () => {
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5">
       <NewChannelDialog open={newChannelOpen} onClose={() => setNewChannelOpen(false)} onCreated={(id) => void handleOpenMyChannel(id)} />
+      <NewMessageDialog open={newMessageOpen} onClose={() => setNewMessageOpen(false)} />
       <div className="relative mx-auto flex h-[min(930px,calc(100vh-8.5rem))] w-full max-w-[1000px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
         <aside
           className={cn(
@@ -878,18 +881,28 @@ const ChatPage = () => {
                   <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
                   New channel
                 </button>
-              ) : null}
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setNewMessageOpen(true)}
+                  className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                  aria-label="New message"
+                >
+                  <Pencil className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                </button>
+              )}
             </div>
-            <div className="flex items-center gap-[10px] rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-[10px]">
-              <Search className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} />
+            <label className="relative block">
+              <span className="sr-only">Search messages</span>
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
               <input
                 type="text"
-                placeholder="Search conversations"
+                placeholder="Search messages"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full bg-transparent text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#1A202C] outline-none placeholder:text-[#767980]"
+                className="h-[38px] w-full rounded-[8px] bg-[#F1F1E6] pl-9 pr-3 text-[14px] text-[#1A202C] outline-none placeholder:text-[#A3A6AB] focus-visible:ring-2 focus-visible:ring-[#6698D2]"
               />
-            </div>
+            </label>
           </div>
 
           <div className="flex-1 overflow-y-auto">
@@ -1213,6 +1226,19 @@ const ChatPage = () => {
                 {!selectedConversation?.is_group ? (
                   <ComposerShortcuts ctx={conversationContext} onFill={(text) => setMessageInput(text)} />
                 ) : null}
+                {selectedConversation?.is_group &&
+                !selectedConversation.conversation_participants?.some((p) => p.user_id === user?.id) ? (
+                  <div className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] px-5 py-4">
+                    <p className="text-[14px] leading-[18px] text-[#484D56]">Join to see this channel.</p>
+                    <button
+                      type="button"
+                      className="inline-flex h-[34px] items-center justify-center self-start rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium text-[#F1F1E6]"
+                      onClick={() => void chatAPI.joinChannel(selectedConversation.id).then(() => fetchConversations({ silent: true }))}
+                    >
+                      Join channel
+                    </button>
+                  </div>
+                ) : (
                 <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-5 py-[15px]">
                     <input
                       type="text"
@@ -1236,15 +1262,15 @@ const ChatPage = () => {
                       type="button"
                       onClick={handleSend}
                       disabled={!messageInput.trim() || isSending}
-                      aria-label="Send message"
                       className={cn(
-                        "inline-flex size-6 shrink-0 items-center justify-center text-[#767980]",
-                        !messageInput.trim() || isSending ? "cursor-not-allowed opacity-40" : "hover:text-[#1A202C]"
+                        "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium text-[#F1F1E6] disabled:cursor-not-allowed disabled:opacity-40"
                       )}
                     >
-                      <MessageCircleMore className="size-6" strokeWidth={1.5} />
+                      <Send className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                      Send
                     </button>
                   </div>
+                )}
                 </div>
               </>
             )}

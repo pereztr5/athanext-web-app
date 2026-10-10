@@ -124,9 +124,9 @@ export const SettingsShell = <T extends string>({
 
         {banner}
 
-        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[220px_minmax(0,1fr)]">
-          <nav className={cn(card, "gap-1 p-2 md:p-3")} aria-label="Settings">
-            <span className={cn(label, "hidden px-2 pb-1 md:block")}>Settings</span>
+        <div className="grid grid-cols-1 items-start gap-6 md:grid-cols-[240px_minmax(0,1fr)]">
+          <nav className={cn(card, "gap-3 p-[18px] md:p-[22px]")} aria-label="Settings">
+            <span className={cn(label, "px-0")}>Settings</span>
             <div className="flex gap-1 overflow-x-auto md:flex-col">
               {tabs.map(([key, text]) => (
                 <button
@@ -136,7 +136,7 @@ export const SettingsShell = <T extends string>({
                   onClick={() => openTab(key)}
                   className={cn(
                     "shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-[14px] font-medium leading-[18px] tracking-[-0.42px] transition-colors",
-                    tab === key ? "bg-[#E5EDF7] text-[#0054B4]" : "text-[#484D56] hover:bg-[#F1F1E6]"
+                    tab === key ? "bg-[#F4F4EB] text-[#1A202C]" : "text-[#767980] hover:bg-[#F1F1E6] hover:text-[#1A202C]"
                   )}
                 >
                   {text}

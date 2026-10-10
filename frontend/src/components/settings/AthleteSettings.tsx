@@ -6,10 +6,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation } from "@tanstack/react-query";
-import { Download, Lock, ShieldCheck, User } from "lucide-react";
+import { Download, Lock, Plus, ShieldCheck, User, UserPlus } from "lucide-react";
 import { userProfilesAPI } from "@/api";
+import { BrandPill } from "@/components/brand";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
-import { input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { dialogContent, input, label, meta, primaryButton, secondaryButton, smallButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
@@ -18,7 +20,7 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { ATHLETE_NOTIFICATIONS, DELETE_WORD, DELETION_GRACE_DAYS } from "@/utils/settings";
 import { downloadJson } from "@/utils/download";
-import { Card, ConfirmWordCard, Field, NotificationsTab, SecurityTab, SettingsShell, sub } from "./CoachSettings";
+import { Card, ConfirmWordCard, Field, NotificationsTab, SecurityTab, SettingsShell, ToggleRow, sub } from "./CoachSettings";
 
 type Tab = "account" | "notifications" | "privacy" | "security";
 const RELATIONSHIPS = ["Parent", "Guardian", "Other family member"] as const;
@@ -50,7 +52,7 @@ export const AthleteSettings = () => {
 
   return (
     <SettingsShell<Tab>
-      subtitle={isParent ? `${athleteFirst}'s account, managed by you. Edit anything right here.` : "Your account, notifications and privacy."}
+      subtitle={isParent ? `${athleteFirst}'s account, managed by ${extras.name || "you"}. Edit anything right here.` : "Your account, notifications and privacy."}
       tabs={tabs}
       defaultTab="account"
       dirty={dirty}
@@ -58,7 +60,7 @@ export const AthleteSettings = () => {
       banner={extras.deletion_requested_at ? <DeletionBanner requestedAt={extras.deletion_requested_at} /> : null}
       render={(tab) => (
         <>
-          {tab === "account" ? <AccountTab isParent={isParent} athleteFirst={athleteFirst} onDirtyChange={setDirty} /> : null}
+          {tab === "account" ? <AccountTab isParent={isParent} athleteFirst={athleteFirst} parentName={extras.name || "you"} onDirtyChange={setDirty} /> : null}
           {tab === "notifications" ? (
             <NotificationsTab kinds={ATHLETE_NOTIFICATIONS} caption="Email on the web app, push on the mobile app. Safety messages always come through." />
           ) : null}
@@ -76,9 +78,10 @@ export const AthleteSettings = () => {
 
 type Draft = { name: string; relationship: string; phone: string };
 
-const AccountTab = ({ isParent, athleteFirst, onDirtyChange }: {
+const AccountTab = ({ isParent, athleteFirst, parentName, onDirtyChange }: {
   isParent: boolean;
   athleteFirst: string;
+  parentName: string;
   onDirtyChange: (dirty: boolean) => void;
 }) => {
   const { user, userProfile, refreshUserProfile, setUserName } = useAuth();
@@ -121,11 +124,19 @@ const AccountTab = ({ isParent, athleteFirst, onDirtyChange }: {
   };
 
   return (
+    <>
     <Card icon={<User className="size-5 text-[#767980]" strokeWidth={1.5} />} title={isParent ? "Parent or guardian" : "Account"}>
+      {isParent ? (
+        <div className="-mt-1 flex flex-wrap items-center gap-2">
+          <BrandPill tone="blue">Account holder</BrandPill>
+        </div>
+      ) : null}
       {isParent ? (
         <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
           <ShieldCheck className="mt-[1px] size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-          <span className={sub}>You hold {athleteFirst}'s account: you book, pay and message coaches for {athleteFirst}.</span>
+          <span className={sub}>
+            {athleteFirst} is under 18, so {parentName} holds the account. {parentName} is part of every message about {athleteFirst} and sees session notes. No separate parent login is needed.
+          </span>
         </div>
       ) : null}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -146,7 +157,7 @@ const AccountTab = ({ isParent, athleteFirst, onDirtyChange }: {
             </select>
           </Field>
         ) : null}
-        <Field label="Email" hint="Sign-in email and receipts. Contact support to change it.">
+        <Field label="Email" hint="Sign-in email and receipts">
           <input className={cn(input, "text-[#767980]")} value={extras.email || user?.email || ""} readOnly />
         </Field>
         <Field label="Phone" error={errors.phone}>
@@ -168,6 +179,7 @@ const AccountTab = ({ isParent, athleteFirst, onDirtyChange }: {
         {isParent ? `${athleteFirst}'s` : "Your"} details (name, birthday, position, team) are on{" "}
         <Link to={ROUTES.DASHBOARD} className="font-medium text-[#0054B4] hover:underline">Home</Link>.
       </p>
+      {isParent ? <ReceiptsToggle name={parentName} /> : null}
       {dirty ? (
         <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-[#CCDDF0] bg-[#E5EDF7] px-4 py-3 md:bottom-4">
           <span className={sub}>You have unsaved changes</span>
@@ -182,6 +194,147 @@ const AccountTab = ({ isParent, athleteFirst, onDirtyChange }: {
         </div>
       ) : null}
     </Card>
+    {isParent ? <GuardianCard athleteFirst={athleteFirst} holder={parentName} /> : null}
+  </>
+  );
+};
+
+const prefKey = (kind: string, id: string) => `athanext.pref.${kind}.${id}`;
+const readPref = (kind: string, id: string, fallback = false) => {
+  try {
+    const raw = localStorage.getItem(prefKey(kind, id));
+    return raw == null ? fallback : raw === "1";
+  } catch {
+    return fallback;
+  }
+};
+const writePref = (kind: string, id: string, value: boolean) => {
+  try {
+    localStorage.setItem(prefKey(kind, id), value ? "1" : "0");
+  } catch {
+    /* ignore */
+  }
+};
+
+const ReceiptsToggle = ({ name }: { name: string }) => {
+  const { user } = useAuth();
+  const id = user?.id || "me";
+  const [on, setOn] = useState(() => readPref("receipts", id, true));
+  return (
+    <ToggleRow
+      title="Copy on receipts and reminders"
+      detail={`Send booking receipts and session reminders to ${name}`}
+      checked={on}
+      onChange={(next) => {
+        setOn(next);
+        writePref("receipts", id, next);
+      }}
+      ariaLabel="Copy on receipts"
+    />
+  );
+};
+
+type Invite = { name: string; email: string; rel: string };
+const invitesKey = (id: string) => `athanext.guardians.${id}`;
+const readInvites = (id: string): Invite[] => {
+  try {
+    const raw = localStorage.getItem(invitesKey(id));
+    return raw ? (JSON.parse(raw) as Invite[]) : [];
+  } catch {
+    return [];
+  }
+};
+
+const GuardianCard = ({ athleteFirst, holder }: { athleteFirst: string; holder: string }) => {
+  const { user } = useAuth();
+  const { toast } = useToast();
+  const id = user?.id || "me";
+  const [open, setOpen] = useState(false);
+  const [list, setList] = useState<Invite[]>(() => readInvites(id));
+  const [form, setForm] = useState({ name: "", email: "", rel: "Parent" });
+  const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
+
+  const persist = (next: Invite[]) => {
+    setList(next);
+    try {
+      localStorage.setItem(invitesKey(id), JSON.stringify(next));
+    } catch {
+      /* ignore */
+    }
+  };
+
+  const send = () => {
+    const next: typeof errors = {};
+    if (!form.name.trim()) next.name = "Required";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = "Enter a valid email";
+    setErrors(next);
+    if (Object.keys(next).length) return;
+    persist([...list, { name: form.name.trim(), email: form.email.trim(), rel: form.rel }]);
+    setOpen(false);
+    setForm({ name: "", email: "", rel: "Parent" });
+    toast({ title: "Invite sent" });
+  };
+
+  return (
+    <>
+      <Card icon={<UserPlus className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Second guardian">
+        <p className={sub}>Add another parent or guardian who can book and message coaches for {athleteFirst}.</p>
+        <button type="button" className={cn(secondaryButton, smallButton, "self-start")} onClick={() => setOpen(true)}>
+          <Plus strokeWidth={1.5} aria-hidden="true" />
+          Invite a guardian
+        </button>
+        {list.map((g) => (
+          <div key={g.email} className="flex items-center gap-2.5 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
+            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E5EDF7] text-[12px] font-medium text-[#0054B4]">
+              {g.name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "G"}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+              <span className="text-[14px] font-medium">{g.name}</span>
+              <span className={meta}>{g.email} · invite sent</span>
+            </span>
+            <button
+              type="button"
+              className="text-[14px] font-medium text-[#767980] hover:text-[#1A202C]"
+              onClick={() => {
+                persist(list.filter((x) => x.email !== g.email));
+                toast({ title: "Guardian removed" });
+              }}
+            >
+              Remove
+            </button>
+          </div>
+        ))}
+      </Card>
+      <Dialog open={open} onOpenChange={setOpen}>
+        <DialogContent className={dialogContent}>
+          <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
+            <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Invite a guardian</DialogTitle>
+            <DialogDescription className={meta}>
+              They can book, pay and message coaches for {athleteFirst}. {holder} stays the account holder.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
+            <Field label="Full name" error={errors.name}>
+              <input className={input} value={form.name} onChange={(e) => setForm((f) => ({ ...f, name: e.target.value }))} />
+            </Field>
+            <Field label="Email" error={errors.email}>
+              <input className={input} type="email" value={form.email} onChange={(e) => setForm((f) => ({ ...f, email: e.target.value }))} />
+            </Field>
+            <Field label="Relationship">
+              <select className={input} value={form.rel} onChange={(e) => setForm((f) => ({ ...f, rel: e.target.value }))}>
+                {RELATIONSHIPS.map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </Field>
+            <div className="flex justify-end gap-2">
+              <button type="button" className={secondaryButton} onClick={() => setOpen(false)}>Cancel</button>
+              <button type="button" className={primaryButton} onClick={send}>Send invite</button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
   );
 };
 
@@ -219,10 +372,13 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
 
   return (
     <Card icon={<ShieldCheck className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Privacy and safety">
+      <HideNameToggle athleteFirst={athleteFirst} storageId={athleteId || user?.id || "me"} />
       <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
         <Lock className="mt-[1px] size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
         <span className={sub}>
-          Coaches you book with see {whose} profile and the notes they write after sessions.
+          {isParent
+            ? `${athleteFirst}'s profile is visible only to you and ${athleteFirst}'s coaches. No photos of athletes are shown on AthaNext.`
+            : "Your profile is visible only to you and your coaches. No photos of athletes are shown on AthaNext."}
         </span>
       </div>
       <button type="button" className={cn(secondaryButton, "self-start")} disabled={exportData.isPending} onClick={() => exportData.mutate()}>
@@ -230,6 +386,22 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
         {exportData.isPending ? "Preparing…" : `Download ${whose} data`}
       </button>
     </Card>
+  );
+};
+
+const HideNameToggle = ({ athleteFirst, storageId }: { athleteFirst: string; storageId: string }) => {
+  const [on, setOn] = useState(() => readPref("hideRoster", storageId, false));
+  return (
+    <ToggleRow
+      title={`Keep ${athleteFirst}'s name private in group sessions`}
+      detail="Other athletes see a spot count, not names"
+      checked={on}
+      onChange={(next) => {
+        setOn(next);
+        writePref("hideRoster", storageId, next);
+      }}
+      ariaLabel="Hide name in groups"
+    />
   );
 };
 

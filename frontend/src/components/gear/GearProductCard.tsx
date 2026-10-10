@@ -12,8 +12,8 @@ export const GearProductCard = ({ product }: { product: ShopifyProduct }) => {
       to={`${ROUTES.GEAR}/${product.handle}`}
       className="group flex min-w-0 flex-col overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
     >
-      <div className="p-[7px]">
-        <div className="relative aspect-square overflow-hidden rounded-[6px] bg-[#FCFCFA]">
+      <div>
+        <div className="relative aspect-square overflow-hidden bg-[#F4F4EB]">
           {image ? (
             <img
               src={image.url}
@@ -29,12 +29,12 @@ export const GearProductCard = ({ product }: { product: ShopifyProduct }) => {
           )}
         </div>
       </div>
-      <div className="flex min-w-0 flex-1 flex-col gap-[5px] px-[17px] pb-[15px] pt-[3px]">
+      <div className="flex min-w-0 flex-1 flex-col gap-1 px-4 pb-4 pt-3.5">
         <p className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#767980]">{product.vendor}</p>
-        <h2 className="line-clamp-2 text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+        <h2 className="line-clamp-2 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
           {product.title}
         </h2>
-        <p className="mt-auto pt-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+        <p className="mt-auto pt-2 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
           {product.availableForSale ? formatPriceRange(product) : <span className="text-[#A3A6AB]">Sold out</span>}
         </p>
       </div>

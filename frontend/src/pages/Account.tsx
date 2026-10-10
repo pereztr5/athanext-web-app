@@ -102,7 +102,7 @@ const AccountPage = () => {
         <span className="px-[5px] text-[12px] font-medium leading-[13px] text-[#A3A6AB]">Account</span>
         <div className="flex flex-col rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
           <Row to={ROUTES.SETTINGS} icon={<Settings strokeWidth={1.5} />} title="Account Settings" sub={isParent ? "Parent details, notifications and privacy" : "Notifications and privacy"} />
-          <Row to={ROUTES.CONTACT_US} icon={<CircleHelp strokeWidth={1.5} />} title="Help" sub="Guides and contact" />
+          <Row to={ROUTES.HELP} icon={<CircleHelp strokeWidth={1.5} />} title="Help" sub="Guides and contact" />
           <Row
             icon={<LogOut strokeWidth={1.5} />}
             title="Sign out"

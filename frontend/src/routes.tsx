@@ -24,6 +24,7 @@ import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import ContactUs from "./pages/ContactUs";
+import Help from "./pages/Help";
 import OrganizationProfile from "./pages/OrganizationProfile";
 import MyOrganization from "./pages/MyOrganization";
 import OrganizationInvite from "./pages/OrganizationInvite";
@@ -101,6 +102,7 @@ export const ROUTES = {
   PRIVACY_POLICY: "/privacy-policy",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",
   CONTACT_US: "/contact",
+  HELP: "/help",
   PROFILE: "/profile",
   CHAT: "/chat",
   ADMIN_REFERRALS: "/admin/referrals",
@@ -166,6 +168,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.MY_COACHES, element: <ProtectedRoute><MyCoaches /></ProtectedRoute> },
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
+  { path: ROUTES.HELP, element: <ProtectedRoute><Help /></ProtectedRoute> },
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
   { path: ROUTES.BOOK, element: <ProtectedRoute><BookSession /></ProtectedRoute> },
