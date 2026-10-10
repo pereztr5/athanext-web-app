@@ -13,6 +13,11 @@ export interface Review {
   created_at: string;
   reviewer_name?: string;
   athlete_id?: string;
+  /** The coach's public reply (20261010220000_coach_profile.sql). */
+  coach_reply?: string | null;
+  coach_reply_at?: string | null;
+  /** Athlete's age when the review was left, for "Parent of a U16 athlete". */
+  athlete_age?: number | null;
 }
 
 export interface ReviewSummary {
@@ -94,6 +99,17 @@ export const reviewsAPI = {
       },
       error: null,
     };
+  },
+
+  /**
+   * The signed-in coach replies to a review of themselves. An empty reply removes it.
+   */
+  async saveReply(reviewId: string, reply: string): Promise<ApiResponse<null>> {
+    return apiClient.rpc(
+      'set_review_reply',
+      { p_review_id: reviewId, p_reply: reply },
+      `Reply to review: ${reviewId}`
+    );
   },
 
   /**

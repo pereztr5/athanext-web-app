@@ -1,6 +1,6 @@
 /**
  * Coach Home (ATH-76, Working Copy): today and this week first, in one 760px column.
- * Money strip (earned, still owed, next payout), Today (every session with who's coming and
+ * Money strip (earned, still owed, next payout), intro calls (when there are any), Today (every session with who's coming and
  * payment, the next one highlighted, feedback due on the card) and This week (7 day cards,
  * open slots, groups, requests, and the Sunday check-in sheet).
  */
@@ -19,6 +19,7 @@ import { card, pageTitle, primaryButton, secondaryButton, segButton, segGroup, s
 import { invoicesAPI } from "@/api/invoices";
 import { useToast } from "@/hooks/use-toast";
 import { WeekOffDialog } from "./WeekOffDialog";
+import { IntroCallsHomeCard } from "@/components/intro-calls";
 import { useAuth } from "@/contexts/AuthContext";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
@@ -306,6 +307,8 @@ export const CoachHome = () => {
                 </div>
               </section>
             ) : null}
+
+            <IntroCallsHomeCard />
 
             <section className={dayCard}>
               <div className="flex flex-wrap items-center justify-between gap-3">

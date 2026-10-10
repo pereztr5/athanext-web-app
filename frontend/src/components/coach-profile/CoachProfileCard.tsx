@@ -4,19 +4,23 @@ import type { ReactNode } from "react";
 interface CoachProfileCardProps {
   children: ReactNode;
   className?: string;
+  id?: string;
+  "aria-label"?: string;
 }
 
-/** Figma WIP card: #F7F7F0 on page #F1F1E6, 10px radius, 30×25 padding */
-export function CoachProfileCard({ children, className }: CoachProfileCardProps) {
+/** Working Copy `.card`: #F7F7F0 on page #F1F1E6, 10px radius, 30/25/25 padding, 22/18/20 on phone */
+export function CoachProfileCard({ children, className, id, "aria-label": ariaLabel }: CoachProfileCardProps) {
   return (
-    <div
+    <section
+      id={id}
+      aria-label={ariaLabel}
       className={cn(
-        "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px]",
+        "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]",
         className
       )}
     >
       {children}
-    </div>
+    </section>
   );
 }
 

@@ -307,19 +307,11 @@ const CoachProfile = () => {
           packages={packages}
           averageRating={averageRating}
           totalReviews={totalReviews}
-          ratingDistribution={ratingDistribution}
           reviews={reviews}
-          bookAction={
-            <BookSessionButton
-              coachId={coach.id}
-              coachName={coach.name}
-              onBookSlot={canBookSlots ? handleBookSlot : undefined}
-              onMessageCoach={handleSendMessage}
-            />
-          }
+          // The Working Copy has no weekly table here: Book opens Book a Session with this coach.
+          canBook={canBookSlots}
           onMessage={canSendMessage ? handleSendMessage : undefined}
           messaging={startingChat}
-          // The Working Copy has no weekly table here: Book opens Book a Session with this coach.
         />
         {coach ? (
           <>

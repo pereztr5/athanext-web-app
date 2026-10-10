@@ -29,13 +29,13 @@ export const OrganizationCard = ({
     <Link
       to={page ? `/organizations/${page.slug}` : organizationPath(name)}
       aria-label={`Open ${name}`}
-      className="flex min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] transition-colors hover:border-[#C1C1B8] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+      className="flex min-w-0 flex-col gap-[14px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[18px] pb-5 pt-[22px] transition-colors hover:border-[#C1C1B8] md:px-[25px] md:pb-[25px] md:pt-[30px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
     >
-      <div className="flex min-w-0 items-center gap-[10px]">
+      <div className="flex min-w-0 items-center gap-3">
         {page?.logoUrl ? (
           <img src={page.logoUrl} alt="" className="size-14 shrink-0 rounded-[10px] bg-[#F9F9F5] object-contain" />
         ) : (
-          <span className="flex size-14 shrink-0 items-center justify-center rounded-[10px] bg-[#CCDDF0] text-[20px] font-semibold tracking-[-0.03em] text-[#00326C]">
+          <span className="flex size-14 shrink-0 items-center justify-center rounded-[10px] bg-[#E5EDF7] text-[18px] font-medium tracking-[-0.03em] text-[#0054B4]">
             {initialsOf(name)}
           </span>
         )}
@@ -60,7 +60,7 @@ export const OrganizationCard = ({
       </div>
 
       {page?.about ? (
-        <p className="line-clamp-3 text-[14px] leading-[20px] tracking-[-0.03em] text-[#484D56]">{page.about}</p>
+        <p className="line-clamp-2 text-[13px] leading-[18px] tracking-[-0.03em] text-[#484D56]">{page.about}</p>
       ) : null}
 
       {sports.length > 0 ? (
@@ -97,7 +97,7 @@ export const OrganizationCard = ({
         <span className="flex items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
           {rating ? (
             <>
-              <BrandStar size={12} />
+              <BrandStar size={14} />
               {rating}
               <span className="text-[12px] font-normal text-[#A3A6AB]">({totalReviews})</span>
             </>
