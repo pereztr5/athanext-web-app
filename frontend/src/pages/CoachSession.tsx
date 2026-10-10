@@ -1,8 +1,9 @@
 /**
- * The coach's page for one session (ATH-80), simplified: title, one status tag and the type;
+ * The coach's page for one session (ATH-80, Working Copy): title, one status tag and the type;
  * one facts card (when, where with Directions, how it was paid, who); the focus from last
  * time on upcoming 1-on-1s; each group athlete with payment and attendance; the feedback card
- * after the session. Only Message and Reschedule as buttons, and Cancel as a quiet link.
+ * after the session. Requests get Decline and Accept; booked sessions get Message and
+ * Reschedule, with Cancel as a quiet link. On a phone the buttons sit at the bottom.
  */
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -10,11 +11,18 @@ import AthleteSessionPage from "./AthleteSession";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarClock, ChevronLeft, ChevronRight, Clock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Calendar, CalendarSync, ChevronLeft, ChevronRight, Eye, FileText, Lock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
 import { BrandPill } from "@/components/brand";
+import { bookingRequestsAPI } from "@/api/bookingRequests";
+import { chatAPI } from "@/api/chat";
 import { coachSessionAPI, type CoachSessionBooking } from "@/api/coachSession";
-import { card, dangerTextButton, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { meta, primaryButton, secondaryButton, textButton, dangerTextButton } from "@/components/schedule/styles";
+import { AddToGroupDialog } from "@/components/coach-session/AddToGroupDialog";
+import { CancelDialog } from "@/components/coach-session/CancelDialog";
+import { DeclineDialog } from "@/components/coach-session/DeclineDialog";
+import { RescheduleDialog } from "@/components/coach-session/RescheduleDialog";
+import { Avatar, InfoBox } from "@/components/coach-session/parts";
+import { cap, h3, spCard } from "@/components/coach-session/styles";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -22,22 +30,36 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { scoreWord } from "@/utils/feedback";
-import { ALL_START_MINUTES, addDaysISO, formatDayISO, formatMinutes, minutesInZone, plural, sessionEnd, sessionStart, viewerToEastern } from "@/utils/schedule";
+import { formatDayISO, formatMinutes, minutesInZone, plural, sessionEnd, sessionStart } from "@/utils/schedule";
 import { formatInstantSpan, isoDateInZone } from "@/utils/viewerTime";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+const money2 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 const LIVE = new Set(["requested", "pending_payment", "booked", "completed", "no_show"]);
+const SHOWN = 5;
+// Closed bookings that aren't a family cancelling.
+const NOT_FAMILY = /^(Declined|Cancelled by coach|Request expired|Coach suggested another time|Account deleted)/;
 
+/** Group payment tags (Working Copy): nothing for families who pay the coach directly. */
 const payPill = (b: CoachSessionBooking) =>
   b.status === "requested" ? (
     <BrandPill tone="amber">Request</BrandPill>
-  ) : b.paymentStatus === "direct" ? (
-    <BrandPill tone="neutral">Pays you directly</BrandPill>
+  ) : b.paymentStatus === "direct" ? null : b.paymentStatus === "refunded" ? (
+    <BrandPill tone="sunk">Refunded</BrandPill>
+  ) : b.paymentStatus === "credit" ? (
+    <BrandPill tone="sunk">Credit</BrandPill>
   ) : b.paymentStatus === "paid" ? (
     <BrandPill tone="green">Paid</BrandPill>
+  ) : b.paymentStatus === "outside" ? (
+    <BrandPill tone="green">Paid outside</BrandPill>
+  ) : b.status === "pending_payment" || b.paymentStatus === "requires_action" ? (
+    <BrandPill tone="amber">Due</BrandPill>
   ) : (
     <BrandPill tone="amber">Not paid</BrandPill>
   );
+
+/** "Parent Dana Patel" / "Athlete, 18+". */
+const whoLine = (b: CoachSessionBooking) => (b.parentName ? `Parent ${b.parentName}` : b.age != null && b.age >= 18 ? "Athlete, 18+" : "Athlete");
 
 const CoachSessionPage = () => {
   const { id } = useParams();
@@ -46,10 +68,8 @@ const CoachSessionPage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const timeZone = useViewerTimeZone();
-  const [mode, setMode] = useState<"reschedule" | "cancel" | null>(null);
-  const [newDate, setNewDate] = useState("");
-  const [newStart, setNewStart] = useState(17 * 60);
-  const [message, setMessage] = useState("");
+  const [mode, setMode] = useState<"reschedule" | "cancel" | "decline" | "add" | null>(null);
+  const [showAll, setShowAll] = useState(false);
 
   const query = useQuery({
     queryKey: ["coach-session", id],
@@ -62,31 +82,33 @@ const CoachSessionPage = () => {
   const { coach: me } = useCoachDetails(isCoach ? profile?.userProfile?.coach_id ?? undefined : undefined);
   const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
 
-  const done = (title: string) => {
-    toast({ title });
-    setMode(null);
+  const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["coach-session", id] });
     queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
+    queryClient.invalidateQueries({ queryKey: ["booking-requests"] });
     queryClient.invalidateQueries({ queryKey: ["sessions"] });
+  };
+  const done = (title: string, description?: string) => {
+    toast({ title, description });
+    setMode(null);
+    refresh();
   };
   const fail = (error: unknown) =>
     toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
 
-  const reschedule = useMutation({
-    mutationFn: () => {
-      const at = viewerToEastern(newDate, newStart, timeZone);
-      return coachSessionAPI.reschedule(id!, at.date, at.start, message);
-    },
-    onSuccess: (sent) =>
-      done(`Moved to ${formatDayISO(newDate, { weekday: "short", month: "short", day: "numeric" })}, ${formatMinutes(newStart)}${sent ? `. ${plural(sent, "family", "families")} told` : ""}`),
-    onError: fail,
+  // Opens the athlete's thread or the coach's group channel; plain Messages if that fails.
+  const message = useMutation({
+    mutationFn: (athleteId: string | null) => (athleteId ? bookingRequestsAPI.openConversation(athleteId) : chatAPI.openMyCoachChannel()),
+    onSuccess: (conversationId) => navigate(conversationId ? `${ROUTES.CHAT}?conversationId=${conversationId}` : ROUTES.CHAT),
+    onError: () => navigate(ROUTES.CHAT),
   });
-  const cancel = useMutation({
-    mutationFn: () => coachSessionAPI.cancel(id!, message),
-    onSuccess: (sent) => {
-      done(`Session cancelled${sent ? `. ${plural(sent, "family", "families")} told` : ""}`);
-      navigate(ROUTES.MY_SESSIONS);
-    },
+  const accept = useMutation({
+    mutationFn: (bookingId: string) => bookingRequestsAPI.respond(bookingId, true),
+    onSuccess: (status) =>
+      done(
+        "Request accepted",
+        status === "charged" ? "It's booked and the family's card was charged." : status === "booked" ? "It's booked." : "The family can now pay to confirm the booking."
+      ),
     onError: fail,
   });
 
@@ -107,273 +129,342 @@ const CoachSessionPage = () => {
   const end = sessionEnd(s);
   const live = s.bookings.filter((b) => LIVE.has(b.status));
   const booked = live.filter((b) => b.status !== "requested");
-  const first = live[0];
-  const now = new Date();
+  const lastCancelled = [...s.bookings].reverse().find((b) => b.status === "canceled") ?? null;
   const happening = s.started && !s.ended;
-  const upcoming = !s.started && s.isEnabled;
-  const cancelled = !s.isEnabled;
+  const declined = !group && !live.length && Boolean(lastCancelled?.cancellationReason?.startsWith("Declined"));
+  // A 1-on-1 the family cancelled stays open on the coach's schedule; the page shows it as cancelled.
+  const familyCancelled =
+    !group && s.isEnabled && !live.length && Boolean(lastCancelled) && !declined && !NOT_FAMILY.test(lastCancelled?.cancellationReason ?? "");
+  const first = live[0] ?? (declined || familyCancelled ? lastCancelled ?? undefined : undefined);
+  const cancelled = !s.isEnabled || familyCancelled;
+  const request = !group && !cancelled && first?.status === "requested";
+  const isLive = !cancelled && !s.ended && !request && (group || booked.length > 0);
   const noShow = s.feedback?.noShow;
-  const title = group ? s.sessionName : `1-on-1 with ${first?.name ?? "an athlete"}`;
+  const who = first?.name ?? "an athlete";
+  const title = group ? s.sessionName : `1-on-1 with ${who}`;
+  const dayLabel = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
+  const shortDay = (iso: string) => formatDayISO(iso, { month: "short", day: "numeric" });
+  const startLabel = formatMinutes(minutesInZone(start, timeZone));
+
   const status = cancelled ? (
     <BrandPill tone="amber">Cancelled</BrandPill>
-  ) : first?.status === "requested" && !group ? (
+  ) : declined ? (
+    <BrandPill tone="sunk">Declined</BrandPill>
+  ) : request ? (
     <BrandPill tone="amber">Request</BrandPill>
   ) : happening ? (
     <BrandPill tone="blue">Happening now</BrandPill>
   ) : s.ended && noShow ? (
     <BrandPill tone="amber">No-show</BrandPill>
   ) : s.ended ? (
-    <BrandPill tone="neutral">Completed</BrandPill>
+    <BrandPill tone="sunk">Completed</BrandPill>
   ) : group ? (
     <BrandPill tone="teal">Group</BrandPill>
+  ) : !first ? (
+    <BrandPill tone="neutral">Open</BrandPill>
   ) : (
     <BrandPill tone="green">Confirmed</BrandPill>
   );
   const sub = group
-    ? `${s.pillar ? `${s.pillar} · ` : ""}${booked.length} of ${s.capacity} spots · ${money(s.price)} per athlete`
+    ? `${s.pillar ? `${s.pillar} · ` : ""}${live.length} of ${s.capacity} spots · ${money(s.price)} per athlete`
     : `${s.pillar ? `${s.pillar} · ` : ""}${s.durationMinutes} min`;
-  const where = s.location === "online" ? "Video call" : s.place || "In person";
-  const payLine = !first
-    ? "Nobody booked yet"
-    : first.status === "requested"
-      ? paysDirect
-        ? "The family pays you directly once you accept"
-        : "Charged when you accept"
-      : first.paymentStatus === "direct"
-        ? `Family pays you directly, ${money(s.price)}`
-        : first.paymentStatus === "paid"
-          ? `Paid in app, ${money(s.price)}`
-          : `Waiting for payment, ${money(s.price)}`;
 
-  const openReschedule = () => {
-    setNewDate(getZonedISODate(start, timeZone) < isoDateInZone(now, timeZone) ? isoDateInZone(now, timeZone) : getZonedISODate(start, timeZone));
-    setNewStart(minutesInZone(start, timeZone));
-    setMessage("");
-    setMode("reschedule");
+  // Two lines: how it was paid, and the amount or credits left.
+  const payLine = (): [string, string] => {
+    if (!first) return paysDirect ? ["Family pays you directly", money(s.price)] : ["Not charged", ""];
+    const p = first.paymentStatus;
+    if (first.status === "requested") return paysDirect ? ["Family pays you directly", money(s.price)] : ["Charged when you accept", ""];
+    if (p === "direct") return ["Family pays you directly", money(s.price)];
+    if (p === "refunded") return ["Refunded", ""];
+    if (p === "credit") return ["Paid with a credit", s.ended || first.status === "canceled" ? "" : `${plural(first.creditsLeft, "credit")} left`];
+    if (p === "paid") return ["Paid in app", money2(first.paidAmount ?? s.price)];
+    if (p === "outside") return ["Paid outside AthaNext", money(s.price)];
+    if (first.status === "canceled") return ["Not charged", ""];
+    return ["Waiting for payment", `${money(s.price)} due`];
   };
+  const [pay1, pay2] = payLine();
 
-  const fact = (Icon: typeof Clock, a: string, b?: string | null, right?: JSX.Element | null) => (
-    <div className="flex items-start gap-3 py-3">
-      <Icon className="mt-[2px] size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+  // "Cancelled by you/the family on Oct 9. Weather. The family got a session credit."
+  const cancelLine = (() => {
+    if (!cancelled) return null;
+    const parts: string[] = [];
+    if (familyCancelled && lastCancelled) {
+      const reason = lastCancelled.cancellationReason;
+      const refund = lastCancelled.creditBack
+        ? lastCancelled.paymentStatus === "credit"
+          ? "The package credit went back"
+          : "They got a session credit"
+        : ["paid", "credit"].includes(lastCancelled.paymentStatus)
+          ? "Not refunded, less than 24 hours' notice"
+          : "Nothing was charged";
+      parts.push(`Cancelled by the family${lastCancelled.canceledAt ? ` on ${shortDay(isoDateInZone(new Date(lastCancelled.canceledAt), timeZone))}` : ""}`);
+      if (reason && !/^Cancelled by the family$/i.test(reason)) parts.push(reason);
+      parts.push(refund);
+    } else {
+      const at = s.cancel?.at ? ` on ${shortDay(isoDateInZone(new Date(s.cancel.at), timeZone))}` : "";
+      parts.push(`Cancelled by you${at}`);
+      if (s.cancel?.reason) parts.push(s.cancel.reason);
+      if (s.cancel?.refund) parts.push(s.cancel.refund);
+    }
+    return `${parts.join(". ")}.`;
+  })();
+
+  const fact = (Icon: typeof Calendar, a: string, b?: string | null, right?: JSX.Element | null) => (
+    <div className="flex items-start gap-3">
+      <Icon className="mt-[2px] size-[17px] flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <b className="text-[14px] font-medium">{a}</b>
-        {b ? <span className={meta}>{b}</span> : null}
+        <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{a}</span>
+        {b ? <span className={cap}>{b}</span> : null}
       </span>
       {right}
     </div>
   );
 
-  const actions = upcoming ? (
+  const actions = request ? (
     <>
-      <Link to={ROUTES.CHAT} className={secondaryButton}>
+      <button type="button" className={secondaryButton} onClick={() => setMode("decline")}>
+        Decline
+      </button>
+      <button type="button" className={primaryButton} disabled={accept.isPending} onClick={() => accept.mutate(first!.id)}>
+        Accept
+      </button>
+    </>
+  ) : isLive ? (
+    <>
+      <button type="button" className={secondaryButton} disabled={message.isPending} onClick={() => message.mutate(group ? null : first?.athleteId ?? null)}>
         <MessageCircle strokeWidth={1.5} aria-hidden="true" />
         Message{group ? " group" : ""}
-      </Link>
-      <button type="button" className={secondaryButton} onClick={openReschedule}>
-        <CalendarClock strokeWidth={1.5} aria-hidden="true" />
+      </button>
+      <button type="button" className={secondaryButton} onClick={() => setMode("reschedule")}>
+        <CalendarSync strokeWidth={1.5} aria-hidden="true" />
         Reschedule
       </button>
     </>
-  ) : s.started && !cancelled && live.length ? (
+  ) : s.ended && !cancelled && booked.length ? (
     <Link to={`${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${s.id}`} className={s.feedback ? secondaryButton : primaryButton}>
-      {s.feedback ? <Pencil strokeWidth={1.5} aria-hidden="true" /> : <Plus strokeWidth={1.5} aria-hidden="true" />}
+      {s.feedback ? <Pencil strokeWidth={1.5} aria-hidden="true" /> : <FileText strokeWidth={1.5} aria-hidden="true" />}
       {s.feedback ? "Edit feedback" : "Add feedback"}
     </Link>
   ) : null;
 
+  const athleteRow = (b: CoachSessionBooking, extra?: JSX.Element | null, line?: string) => (
+    <Link
+      key={b.id}
+      to={`/athletes/${b.athleteId}`}
+      className="flex items-center gap-2.5 py-2 [&+&]:border-t [&+&]:border-[#EAEADF] hover:opacity-90"
+    >
+      <Avatar name={b.name} imageUrl={b.imageUrl} />
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+        <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{b.name}</span>
+        <span className={cap}>{line ?? whoLine(b)}</span>
+      </span>
+      {extra}
+    </Link>
+  );
+
+  const lastFocus = isLive && !group && first ? s.lastFocus : null;
+  const shown = showAll ? live : live.slice(0, SHOWN);
+  const notesFor = booked.filter((b) => b.note);
+  const fb = s.feedback;
+  const sharedWith = group ? "each family" : first?.parentName ?? "the family";
+
   return (
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
-        <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => navigate(-1)}>
+      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+        <button type="button" className={cn(textButton, "-mb-1.5 self-start text-[#767980]")} onClick={() => navigate(-1)}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
           Back
         </button>
-        <header className="flex flex-wrap items-start justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[24px] md:text-[28px] font-bold leading-[28px] md:leading-[30px] tracking-[-1.2px] text-[#1A202C]">{title}</h1>
+        <header className="flex items-center gap-4">
+          <div className="flex min-w-0 grow flex-col gap-1">
+            <div className="flex flex-wrap items-center gap-2.5">
+              <h1 className="text-[24px] font-bold leading-[1.15] tracking-[-0.05em] text-[#1A202C] md:text-[32px] md:leading-[1.1]">{title}</h1>
               {status}
             </div>
-            <span className={meta}>{sub}</span>
+            <span className="text-[14px] leading-[18px] text-[#767980]">{sub}</span>
           </div>
-          {actions ? <div className="flex gap-2">{actions}</div> : null}
+          {actions ? <div className="hidden flex-wrap items-center gap-2 md:flex">{actions}</div> : null}
         </header>
 
-        <section className={cn(card, "gap-0 divide-y divide-[#EAEADF] py-2")}>
-          {fact(Clock, formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" }), formatInstantSpan(start, end, timeZone))}
+        {cancelLine ? <InfoBox>{cancelLine}</InfoBox> : null}
+
+        <section className={spCard}>
+          {fact(Calendar, dayLabel, formatInstantSpan(start, end, timeZone))}
           {s.location === "online"
-            ? fact(Video, "Video call", "The link goes out with the confirmation")
+            ? fact(Video, "Video call", "Link sent 15 minutes before")
             : fact(
                 MapPin,
-                where,
+                s.place || "In person",
                 null,
                 s.place ? (
-                  <a className={textButton} href={`https://www.google.com/maps/search/${encodeURIComponent(s.place)}`} target="_blank" rel="noreferrer">
+                  <a
+                    className="text-[13px] font-medium text-[#0054B4] hover:underline"
+                    href={`https://www.google.com/maps/search/${encodeURIComponent(s.place)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
                     Directions
                   </a>
                 ) : null
               )}
-          {!group ? fact(Ticket, payLine) : null}
+          {!group ? fact(Ticket, pay1, pay2) : null}
           {!group && first ? (
-            <Link to={`/athletes/${first.athleteId}`} className="flex items-center gap-3 py-3 hover:bg-[#F4F4EB]">
-              <span className="flex size-[36px] items-center justify-center rounded-full bg-[#D9D9CF] text-[12px] font-semibold text-[#484D56]">
-                {first.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
-              </span>
-              <span className="flex min-w-0 flex-1 flex-col">
-                <b className="text-[14px] font-medium">{first.name}</b>
-                <span className={meta}>{s.ended && first.attendance ? (first.attendance === "present" ? "Came" : "Didn't come") : "Athlete"}</span>
-              </span>
-              <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-            </Link>
+            <>
+              <div className="h-px bg-[#EAEADF]" />
+              {athleteRow(
+                first,
+                <ChevronRight className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />,
+                s.ended && first.attendance && !cancelled ? (first.attendance === "present" ? "Attended" : "No-show") : request ? `${whoLine(first)} · request` : undefined
+              )}
+            </>
           ) : null}
         </section>
 
-        {upcoming && !group && s.lastSummary ? (
-          <div className="flex items-start gap-3 rounded-[10px] bg-[#E5EDF7] p-4">
-            <Target className="mt-[2px] size-4 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
-            <span className="flex flex-col gap-0.5">
-              <span className={meta}>From last time ({formatDayISO(s.lastSummary.date, { month: "short", day: "numeric" })})</span>
-              <span className="text-[14px] text-[#1A202C]">{s.lastSummary.summary}</span>
+        {lastFocus ? (
+          <div className="flex items-center gap-3 rounded-[12px] bg-[#E5EDF7] px-4 py-3">
+            <Target className="size-[18px] flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+            <span className="flex min-w-0 flex-col gap-0.5">
+              <span className={cn(cap, "text-[#0054B4]")}>Focus from last time</span>
+              <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{lastFocus.text}</span>
             </span>
           </div>
         ) : null}
 
         {group ? (
-          <section className={card}>
-            <h2 className="text-[18px] font-medium">Athletes</h2>
+          <section className={spCard}>
+            <div className="flex items-center justify-between gap-3">
+              <h3 className={h3}>Athletes</h3>
+              {isLive && live.length < s.capacity ? (
+                <button type="button" className={textButton} onClick={() => setMode("add")}>
+                  <Plus strokeWidth={1.5} aria-hidden="true" />
+                  Add
+                </button>
+              ) : null}
+            </div>
             {live.length ? (
-              <div className="flex flex-col divide-y divide-[#EAEADF]">
-                {live.map((b) => (
-                  <Link key={b.id} to={`/athletes/${b.athleteId}`} className="flex items-center gap-3 py-2.5 hover:bg-[#F4F4EB]">
-                    <span className="flex size-[32px] items-center justify-center rounded-full bg-[#D9D9CF] text-[11px] font-semibold text-[#484D56]">
-                      {b.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
-                    </span>
-                    <span className="grow text-[14px]">{b.name}</span>
-                    {s.ended && b.attendance && b.attendance !== "present" ? <BrandPill tone="amber">Absent</BrandPill> : null}
-                    {payPill(b)}
-                  </Link>
-                ))}
+              <div className="flex flex-col">
+                {shown.map((b) =>
+                  athleteRow(
+                    b,
+                    <>
+                      {s.ended && b.attendance && b.attendance !== "present" ? <BrandPill tone="amber">Absent</BrandPill> : null}
+                      {payPill(b)}
+                    </>
+                  )
+                )}
               </div>
             ) : (
-              <p className={meta}>Nobody yet. Share it from My Schedule.</p>
+              <p className={cn(cap, "py-2")}>Nobody yet. Share it from My Schedule.</p>
             )}
+            {live.length > SHOWN ? (
+              <button type="button" className={cn(textButton, "self-start")} onClick={() => setShowAll(!showAll)}>
+                {showAll ? "Show fewer" : `Show ${live.length - SHOWN} more`}
+              </button>
+            ) : null}
           </section>
         ) : null}
 
-        {s.ended && !cancelled && live.length ? (
-          s.feedback ? (
-            <section className={card}>
-              <div className="flex items-baseline justify-between gap-3">
-                <h2 className="text-[18px] font-medium">{s.feedback.noShow ? "No-show" : "Feedback"}</h2>
-                {!s.feedback.noShow && s.feedback.score ? (
-                  <span className="text-[14px]">
-                    <b className="text-[18px] font-semibold">{s.feedback.score}</b>/10 · {scoreWord(s.feedback.score)}
+        {s.ended && !cancelled && booked.length ? (
+          fb ? (
+            <section className={spCard}>
+              <div className="flex items-center justify-between gap-3">
+                <h3 className={h3}>{fb.noShow ? "No-show" : "Feedback"}</h3>
+                {!fb.noShow && fb.score ? (
+                  <span className="text-[14px] font-medium text-[#0054B4]">
+                    <b className="text-[20px] font-bold">{fb.score}</b>/10 · {scoreWord(fb.score)}
                   </span>
                 ) : null}
               </div>
-              {s.feedback.summary ? (
-                <p className="whitespace-pre-wrap text-[14px] leading-[20px] text-[#484D56]">{s.feedback.summary}</p>
-              ) : (
-                <p className={meta}>{s.feedback.noShow ? "No message sent. The session stays charged." : "No summary."}</p>
-              )}
-              <span className={meta}>
-                {s.feedback.summary ? `Shared with ${group ? "each family who came" : `${first?.name.split(" ")[0]}'s family`}` : ""}
-                {s.feedback.editCount ? " · Edited" : ""}
+              {fb.summary ? (
+                <p className="whitespace-pre-wrap text-[14px] leading-[20px] text-[#1A202C]">{fb.summary}</p>
+              ) : fb.noShow ? (
+                <p className="text-[14px] text-[#767980]">No message sent. The session stays charged.</p>
+              ) : null}
+              <span className={cn(cap, "inline-flex items-center gap-1.5")}>
+                {fb.summary ? <Eye className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <Lock className="size-3" strokeWidth={1.5} aria-hidden="true" />}
+                {fb.summary ? `Shared with ${sharedWith}${fb.editCount ? " · Edited" : ""}` : "Private, only you can see this"}
               </span>
               {group ? (
-                <Link to={`${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${s.id}&notes=1`} className={cn(textButton, "self-start")}>
-                  <Plus strokeWidth={1.5} aria-hidden="true" />
-                  Note for an athlete
-                </Link>
+                <>
+                  <div className="h-px bg-[#EAEADF]" />
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <span className={cap}>
+                      {notesFor.length ? `Notes sent for ${notesFor.map((b) => b.name.split(" ")[0]).join(", ")}` : "No notes for individual athletes yet"}
+                    </span>
+                    <Link to={`${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${s.id}&notes=1`} className={textButton}>
+                      <Plus strokeWidth={1.5} aria-hidden="true" />
+                      Note for an athlete
+                    </Link>
+                  </div>
+                </>
               ) : null}
             </section>
           ) : (
-            <p className="rounded-[10px] bg-[#FCEFDA] px-4 py-3 text-[14px] text-[#906A29]">
-              Feedback due. {group ? "Families see it" : "The family sees it"} once you send it.
-            </p>
+            <InfoBox warm icon="clock">
+              Feedback due. {group ? "Families see it" : "The family sees it"} once you complete the session.
+            </InfoBox>
           )
         ) : null}
 
-        {upcoming ? (
-          <button type="button" className={cn(dangerTextButton, "self-start")} onClick={() => { setMessage(""); setMode("cancel"); }}>
+        {actions ? <div className="grid grid-cols-[1.3fr_1fr] gap-2 md:hidden [&>*]:w-full">{actions}</div> : null}
+
+        {isLive ? (
+          <button type="button" className={cn(dangerTextButton, "self-center md:self-start")} onClick={() => setMode("cancel")}>
             Cancel session
           </button>
         ) : null}
       </div>
 
-      <Dialog open={mode !== null} onOpenChange={(open) => !open && setMode(null)}>
-        <DialogContent className={dialogContent}>
-          <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-            <DialogTitle className="text-[22px] font-semibold tracking-[-0.05em]">{mode === "cancel" ? "Cancel this session?" : "Reschedule"}</DialogTitle>
-            <DialogDescription className={meta}>
-              {booked.length || live.length
-                ? `${plural(live.length, "family", "families")} ${live.length === 1 ? "gets" : "get"} a message.`
-                : "Nobody is booked yet."}
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
-            {mode === "reschedule" ? (
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1.5">
-                  <span className={label}>New day</span>
-                  <input
-                    className={input}
-                    type="date"
-                    min={isoDateInZone(now, timeZone)}
-                    max={addDaysISO(isoDateInZone(now, timeZone), 90)}
-                    value={newDate}
-                    onChange={(e) => setNewDate(e.target.value)}
-                  />
-                </label>
-                <label className="flex flex-col gap-1.5">
-                  <span className={label}>Start</span>
-                  <select className={input} value={newStart} onChange={(e) => setNewStart(Number(e.target.value))}>
-                    {ALL_START_MINUTES.map((m) => (
-                      <option key={m} value={m}>
-                        {formatMinutes(m)}
-                      </option>
-                    ))}
-                  </select>
-                </label>
-              </div>
-            ) : (
-              <p className="text-[14px] leading-[20px] text-[#484D56]">
-                The session is removed from your schedule and anyone booked is told. Sessions a family has already paid for can't be
-                cancelled here yet; message them to move it instead.
-              </p>
-            )}
-            <label className="flex flex-col gap-1.5">
-              <span className={label}>Message (optional)</span>
-              <textarea
-                className={cn(input, "h-auto py-2")}
-                rows={3}
-                value={message}
-                onChange={(e) => setMessage(e.target.value)}
-                placeholder={mode === "cancel" ? "For example: Sorry, I'm unwell today." : "For example: Can we do the morning instead?"}
-              />
-            </label>
-            <div className="flex justify-end gap-2">
-              <button type="button" className={secondaryButton} onClick={() => setMode(null)}>
-                Back
-              </button>
-              {mode === "reschedule" ? (
-                <button type="button" className={primaryButton} disabled={!newDate || reschedule.isPending} onClick={() => reschedule.mutate()}>
-                  Move session
-                </button>
-              ) : (
-                <button
-                  type="button"
-                  className="inline-flex h-[34px] items-center rounded-[8px] border border-[#FDB5B5] bg-[#FEDADA] px-4 text-[14px] font-medium text-[#972B2B] disabled:opacity-50"
-                  disabled={cancel.isPending}
-                  onClick={() => cancel.mutate()}
-                >
-                  Cancel session
-                </button>
-              )}
-            </div>
-          </div>
-        </DialogContent>
-      </Dialog>
+      <RescheduleDialog
+        open={mode === "reschedule"}
+        occurrenceId={s.id}
+        title={title}
+        start={start}
+        durationMinutes={s.durationMinutes}
+        onClose={() => setMode(null)}
+        onMoved={(label, told) => done(`Moved to ${label}`, told ? `${plural(told, "family", "families")} told` : undefined)}
+        onError={fail}
+      />
+      <CancelDialog
+        open={mode === "cancel"}
+        occurrenceId={s.id}
+        sub={`${title}, ${shortDay(getZonedISODate(start, timeZone))} at ${startLabel}`}
+        group={group}
+        paymentStatus={group ? null : first?.paymentStatus ?? null}
+        onClose={() => setMode(null)}
+        onCancelled={({ sent, credits }) => {
+          done(
+            "Session cancelled",
+            [credits ? `${plural(credits, "credit")} given back` : "", sent ? `${plural(sent, "family", "families")} told` : ""].filter(Boolean).join(". ") || undefined
+          );
+          navigate(ROUTES.MY_SESSIONS);
+        }}
+        onError={fail}
+      />
+      <DeclineDialog
+        open={mode === "decline"}
+        bookingId={request ? first?.id ?? null : null}
+        sub={`${first?.parentName ? `${first.parentName} for ` : ""}${who}, ${shortDay(getZonedISODate(start, timeZone))} at ${startLabel}`}
+        onClose={() => setMode(null)}
+        onDeclined={() => {
+          done("Request declined", "The slot is open again.");
+          navigate(-1);
+        }}
+        onError={fail}
+      />
+      {group ? (
+        <AddToGroupDialog
+          open={mode === "add"}
+          occurrenceId={s.id}
+          title={s.sessionName}
+          sub={`${dayLabel} at ${startLabel} · ${plural(Math.max(0, s.capacity - live.length), "spot")} left`}
+          price={s.price}
+          bookedIds={live.map((b) => b.athleteId)}
+          onClose={() => setMode(null)}
+          onAdded={(text) => done(text)}
+          onError={fail}
+        />
+      ) : null}
     </div>
   );
 };

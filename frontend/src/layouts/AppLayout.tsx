@@ -14,9 +14,9 @@ export const AppLayout = () => {
   return (
     <SidebarProvider className="bg-[#F1F1E6]">
       <AppSidebar />
-      <SidebarInset className="min-w-0 overflow-x-hidden bg-[#F1F1E6]">
+      <SidebarInset className="min-w-0 overflow-x-clip bg-[#F1F1E6]">
         <AppTopBar />
-        <main className="min-w-0 flex-1 overflow-x-hidden pb-16 md:pb-0">
+        <main className="min-w-0 flex-1 overflow-x-clip pb-16 md:pb-0">
           <Outlet />
         </main>
         <MainTabBar items={isCoach ? COACH_TABS : ATHLETE_NAV} badges={isCoach && overdue ? { [ROUTES.BUSINESS]: overdue } : undefined} />

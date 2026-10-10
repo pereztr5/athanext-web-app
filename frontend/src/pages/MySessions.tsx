@@ -10,7 +10,6 @@ import {
   ChevronDown,
   Filter,
   History,
-  Inbox,
   Info,
   MapPin,
   PlayCircle,
@@ -39,6 +38,8 @@ import { computeSessionPrice } from "@/utils/referralHelpers";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
+import { CoachSessionCard, CoachSessionSection } from "@/components/my-session/CoachSessionCard";
+import { useOccurrenceInfo, type CoachCardKind } from "@/components/my-session/coachSessions";
 import {
   upsertSlotFeedback,
   getExistingFeedback,
@@ -62,8 +63,6 @@ import { PROFILE_TYPE } from "@/utils/db";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
-import { bookingRequestsAPI, type BookingRequest } from "@/api/bookingRequests";
-import { formatExpiry, isRequestExpiringSoon } from "@/utils/requestWaiting";
 import { formatDateInZone } from "@/utils/viewerTime";
 import { sportFromText } from "@/utils/coachSport";
 
@@ -440,48 +439,6 @@ const EmptySessionNote = ({ children }: { children: string }) => (
   </div>
 );
 
-/** A held individual-session request the coach must accept or decline (ATH-49). */
-const BookingRequestCard = ({
-  request,
-  busy,
-  onRespond,
-}: {
-  request: BookingRequest;
-  busy: boolean;
-  onRespond: (accept: boolean) => void;
-}) => {
-  const timeZone = useViewerTimeZone();
-  return (
-    <div className={cardShellClass}>
-      <div className="flex min-w-0 flex-col gap-5">
-        <div className="flex flex-wrap items-center gap-[10px]">
-          <p className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{request.sessionName}</p>
-          <BrandPill tone="blue">Requested</BrandPill>
-          {/* Requests are held 24 hours (ATH-71); flag ones about to expire. */}
-          {isRequestExpiringSoon(request.expiresAt) ? <BrandPill tone="amber">{formatExpiry(request.expiresAt)}</BrandPill> : null}
-        </div>
-        <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <CardField label="Athlete" value={request.athleteName} />
-          <CardField label="Date" value={formatWeekdayDate(request.start, new Date(), timeZone)} />
-          <CardField label="Time" value={formatTimeSpan(request.start, request.end, timeZone, true)} />
-          {request.notes ? <CardField label="Note" value={request.notes} /> : null}
-        </div>
-      </div>
-      <div className={cardAsideClass}>
-        <PriceBlock price={formatWholePrice(request.price)} />
-        <div className="flex gap-2">
-          <Button variant="outline" size="sm" disabled={busy} onClick={() => onRespond(false)}>
-            Decline
-          </Button>
-          <Button size="sm" disabled={busy} onClick={() => onRespond(true)}>
-            Accept
-          </Button>
-        </div>
-      </div>
-    </div>
-  );
-};
-
 const PAGE = 5;
 
 const SessionGroup = ({
@@ -577,38 +534,6 @@ const MySessions = () => {
     if (persona === PROFILE_TYPE.athlete || persona === PROFILE_TYPE.parent) return PROFILE_TYPE.athlete;
     return null;
   }, [persona]);
-
-  // Held requests for coaches who confirm before booking (ATH-49).
-  const { data: bookingRequests = [] } = useQuery({
-    queryKey: ["booking-requests"],
-    enabled: role === PROFILE_TYPE.coach,
-    queryFn: () => bookingRequestsAPI.listForCoach(),
-  });
-  const respondToRequest = useMutation({
-    mutationFn: ({ bookingId, accept }: { bookingId: string; accept: boolean }) =>
-      bookingRequestsAPI.respond(bookingId, accept),
-    onSuccess: (status, { accept }) => {
-      toast({
-        title: accept ? "Request accepted" : "Request declined",
-        description: !accept
-          ? "The slot is open again."
-          : status === "charged"
-            ? "It's booked and the family's card was charged."
-            : status === "booked"
-              ? "It's booked."
-              : "The athlete can now pay to confirm the booking.",
-      });
-      queryClient.invalidateQueries({ queryKey: ["booking-requests"] });
-      queryClient.invalidateQueries({ queryKey: ["sessions"] });
-    },
-    onError: (error: unknown) => {
-      toast({
-        title: "Couldn't update the request",
-        description: error instanceof Error ? error.message : "Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
 
   const sessionSport = useMemo<Enums<'sport_type'> | undefined>(() => {
     return sportFromText((profile?.data as any)?.sport || (profile?.userProfile as any)?.sport);
@@ -976,6 +901,20 @@ const MySessions = () => {
     return due(a) - due(b) || new Date(b.start).getTime() - new Date(a.start).getTime();
   });
 
+  const isCoach = role === PROFILE_TYPE.coach;
+  const occurrenceIds = useMemo(
+    () =>
+      Array.from(
+        new Set(
+          [...sortedInProgress, ...sortedUpcoming, ...sortedPastCompleted]
+            .map((s) => s.occurrenceId)
+            .filter((id): id is string => Boolean(id))
+        )
+      ),
+    [sortedInProgress, sortedUpcoming, sortedPastCompleted]
+  );
+  const { data: occurrenceInfo = {} } = useOccurrenceInfo(occurrenceIds, isCoach);
+
   const selectedSessionSafe = useMemo(() => {
     if (!selectedSession) return null;
     // Convert athlete names to athlete objects
@@ -1069,39 +1008,60 @@ const MySessions = () => {
     ? filters.date.split("-").reverse().join(".")
     : "dd.mm.yyyy";
 
+  const coachLocation = (session: UISession) => {
+    const place = session.occurrenceId ? occurrenceInfo[session.occurrenceId]?.place : null;
+    if (session.location === "online") return "Online";
+    return place || formatLocationSentence(session.location) || "-";
+  };
+
+  const renderCoachCard = (session: UISession, kind: CoachCardKind) => (
+    <CoachSessionCard
+      key={session.id}
+      session={session}
+      kind={kind}
+      now={now}
+      date={formatWeekdayDate(session.start, now, timeZone)}
+      time={formatTimeSpan(session.start, session.end, timeZone, true)}
+      location={coachLocation(session)}
+      price={sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc)}
+      info={session.occurrenceId ? occurrenceInfo[session.occurrenceId] : undefined}
+      hasFeedback={hasSubmittedFeedback(session)}
+      onViewDetails={() => openSession(session)}
+    />
+  );
+
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+      <div className={cn("mx-auto flex w-full flex-col gap-6", isCoach ? "max-w-[920px]" : "max-w-[1000px]")}>
         <div className="flex flex-col gap-[10px]">
           <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">
             My Sessions
           </h1>
-          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-            {role === PROFILE_TYPE.coach ? "Check in athletes and send feedback after each session." : "Everything booked on your account."}
-          </p>
+          {isCoach ? (
+            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+              Check in athletes and send feedback after each session.
+            </p>
+          ) : (
+            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">Everything booked on your account.</p>
+          )}
         </div>
 
         {/* The Working Copy has no filter panel here: three sections, five at a time. */}
 
-        {role === PROFILE_TYPE.coach && bookingRequests.length > 0 ? (
-          <SessionGroup
-            iconBg="bg-[#E5EDF7] text-[#0054B4]"
-            icon={<Inbox className="size-4" strokeWidth={1.5} />}
-            title="Booking requests"
-            count={bookingRequests.length}
-            empty="No booking requests"
-          >
-            {bookingRequests.map((request) => (
-              <BookingRequestCard
-                key={request.bookingId}
-                request={request}
-                busy={respondToRequest.isPending}
-                onRespond={(accept) => respondToRequest.mutate({ bookingId: request.bookingId, accept })}
-              />
-            ))}
-          </SessionGroup>
-        ) : null}
-
+        {isCoach ? (
+          <>
+            <CoachSessionSection kind="now" title="In progress sessions" empty="No sessions in progress">
+              {inProgressSessions.map((session) => renderCoachCard(session, "now"))}
+            </CoachSessionSection>
+            <CoachSessionSection kind="up" title="Upcoming sessions" empty="No upcoming sessions. Create one from My Schedule.">
+              {upcomingSessions.map((session) => renderCoachCard(session, "up"))}
+            </CoachSessionSection>
+            <CoachSessionSection kind="past" title="Previous sessions" empty="No previous sessions yet">
+              {pastCompletedSessions.map((session) => renderCoachCard(session, "past"))}
+            </CoachSessionSection>
+          </>
+        ) : (
+        <>
         <SessionGroup
           iconBg="bg-[#E5EDF7] text-[#0054B4]"
           icon={<PlayCircle className="size-4" strokeWidth={1.5} />}
@@ -1165,7 +1125,7 @@ const MySessions = () => {
               onFeedbackNavigate={handleFeedbackNavigate}
               role={role}
               hasFeedbackSubmitted={hasSubmittedFeedback(session)}
-              showFeedbackAction={role === PROFILE_TYPE.coach || persona === PROFILE_TYPE.athlete}
+              showFeedbackAction={persona === PROFILE_TYPE.athlete}
               platformFeePerc={platformFeePerc}
               stripeFeePerc={stripeFeePerc}
               waived={waivedCoachIds.has(session.coachId)}
@@ -1175,6 +1135,8 @@ const MySessions = () => {
             />
           ))}
         </SessionGroup>
+        </>
+        )}
       </div>
 
       <Dialog

@@ -1,74 +1,81 @@
 /**
- * Session feedback (ATH-82), the simplest version: one screen with who came (everyone starts
- * as here), a 0 to 10 score only the coach sees, and one summary for every family who came.
- * Nobody came: a no-show with an optional message, still charged. After a group session the
- * coach can add a note for any athlete who came; only that family sees it.
- * Open with ?slotId=<session>; add &notes=1 to go straight to the notes.
+ * Session feedback (ATH-82), as in the Working Copy check-in: a session card, who was present
+ * (everyone starts as present), a 0 to 10 score only the coach sees, one summary for every
+ * family who came and, on a group, optional notes for each athlete sent with it. Nobody came:
+ * a no-show with an optional message, still charged. After sending, the coach moves on to the
+ * next session in the feedback-due queue.
+ * Open with ?slotId=<session>; add &notes=1 to go straight to the notes for athletes.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarX, Check, Plus, Send, UserPlus, X } from "lucide-react";
+import { CalendarX, Check, ChevronLeft, ChevronRight, Plus, Send, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { feedbackAPI, type FeedbackAthlete } from "@/api/feedback";
-import { scoreWord } from "@/utils/feedback";
-import { AddWalkInAthleteDialog } from "@/components/coach/AddWalkInAthleteDialog";
-import { card, dialogContent, iconButton, input, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { AthleteNotes } from "@/components/feedback/AthleteNotes";
+import { ScoreBox } from "@/components/feedback/ScoreBox";
+import { SessionHero } from "@/components/feedback/SessionHero";
+import { FeedbackAvatar, FeedbackBar, Question, StarterChips } from "@/components/feedback/parts";
+import {
+  NO_SHOW_STARTERS,
+  appendSentence,
+  caption,
+  families,
+  firstName,
+  lastName,
+  shortName,
+  summaryStarters,
+  textarea,
+} from "@/components/feedback/helpers";
+import { card, dialogContent, iconButton, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { formatClock, formatDayISO, plural, sessionStart } from "@/utils/schedule";
+import { formatClock, formatDayISO, sessionStart } from "@/utils/schedule";
 import { getZonedISODate } from "@/utils/dateHelpers";
 
-const shortName = (name: string) => {
-  const parts = name.split(" ").filter(Boolean);
-  return parts.length > 1 ? `${parts[0]} ${parts[parts.length - 1][0]}.` : name;
-};
-const initials = (name: string) =>
-  name
-    .split(/\s+/)
-    .filter(Boolean)
-    .slice(0, 2)
-    .map((p) => p[0]!.toUpperCase())
-    .join("");
-
-const Avatar = ({ athlete }: { athlete: FeedbackAthlete }) => (
-  <span className="flex size-[36px] flex-none items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[12px] font-semibold text-[#0054B4]" aria-hidden="true">
-    {athlete.imageUrl ? <img src={athlete.imageUrl} alt="" className="size-full object-cover" /> : initials(athlete.name)}
-  </span>
-);
+const roundButton = cn(iconButton, "size-[30px] flex-none rounded-full bg-[#F7F7F0]");
+const feedbackLink = (id: string) => `${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${id}`;
 
 const SessionFeedbackPage = () => {
   const { isCoach, ready } = useRole();
   const [searchParams] = useSearchParams();
   const slotId = searchParams.get("slotId");
+
+  if (!ready) return null;
+  if (!isCoach) return <Navigate to={ROUTES.DASHBOARD} replace />;
+  if (!slotId) return <Navigate to={ROUTES.MY_SESSIONS} replace />;
+  // Remount per session so moving through the queue starts each one fresh.
+  return <SessionFeedback key={slotId} slotId={slotId} startOnNotes={Boolean(searchParams.get("notes"))} />;
+};
+
+const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNotes: boolean }) => {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const timeZone = useViewerTimeZone();
 
-  const screenQuery = useQuery({
-    queryKey: ["feedback-screen", slotId],
-    enabled: Boolean(slotId) && isCoach,
-    queryFn: () => feedbackAPI.screen(slotId!),
-  });
+  const screenQuery = useQuery({ queryKey: ["feedback-screen", slotId], queryFn: () => feedbackAPI.screen(slotId) });
   const screen = screenQuery.data;
+  const dueQuery = useQuery({ queryKey: ["feedback-due", "queue"], queryFn: () => feedbackAPI.due() });
+  const due = dueQuery.data ?? [];
 
   const [absent, setAbsent] = useState<Set<string>>(new Set());
   const [score, setScore] = useState(0);
   const [summary, setSummary] = useState("");
-  const [stage, setStage] = useState<"form" | "notes">(searchParams.get("notes") ? "notes" : "form");
+  const [notes, setNotes] = useState<Record<string, string>>({});
+  const [stage, setStage] = useState<"form" | "notes">(startOnNotes ? "notes" : "form");
   const [noteFor, setNoteFor] = useState<FeedbackAthlete | null>(null);
   const [noteText, setNoteText] = useState("");
-  const [walkInOpen, setWalkInOpen] = useState(false);
 
   useEffect(() => {
     if (!screen) return;
     setAbsent(new Set(screen.athletes.filter((a) => a.attendance && a.attendance !== "present").map((a) => a.athleteId)));
     setScore(screen.score ?? 0);
     setSummary(screen.summary ?? "");
+    setNotes(Object.fromEntries(screen.athletes.map((a) => [a.bookingId, a.note ?? ""])));
   }, [screen]);
 
   const refresh = () => {
@@ -76,36 +83,62 @@ const SessionFeedbackPage = () => {
     queryClient.invalidateQueries({ queryKey: ["feedback-due"] });
     queryClient.invalidateQueries({ queryKey: ["sessions"] });
   };
+  const leave = () => {
+    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
+    if (idx > 0) navigate(-1);
+    else navigate(ROUTES.MY_SESSIONS);
+  };
 
   const group = screen?.sessionType === "group";
   const athletes = useMemo(() => screen?.athletes ?? [], [screen]);
   const came = athletes.filter((a) => !absent.has(a.athleteId));
-  const first = athletes[0]?.name.split(" ")[0] ?? "";
+  const missed = athletes.filter((a) => absent.has(a.athleteId));
+  const a0 = athletes[0];
+  const first = a0 ? firstName(a0.name) : "";
+  const adult = a0?.age != null && a0.age >= 18;
+  const recipient = adult ? first : `${first}'s family`;
   const noShow = athletes.length > 0 && came.length === 0;
   const locked = Boolean(screen?.submitted && screen.editCount >= 1);
   const canSend = !locked && (noShow || score > 0);
+  const withNotes = came.filter((a) => (notes[a.bookingId] ?? "").trim());
+
+  // Only notes that changed, for athletes who came; an emptied note clears it.
+  const changedNotes = () =>
+    group && !noShow
+      ? Object.fromEntries(
+          came.filter((a) => (notes[a.bookingId] ?? "").trim() !== (a.note ?? "").trim()).map((a) => [a.bookingId, (notes[a.bookingId] ?? "").trim()])
+        )
+      : {};
+
+  const goNext = (message: string) => {
+    const next = due.find((d) => d.id !== slotId);
+    if (next) {
+      navigate(feedbackLink(next.id), { replace: true });
+      toast({ title: `${message}. Next: ${next.title}, ${formatDayISO(next.date, { weekday: "short", month: "short", day: "numeric" })}` });
+    } else {
+      leave();
+      toast({ title: message });
+    }
+  };
 
   const send = useMutation({
-    mutationFn: () => feedbackAPI.submit(slotId!, [...absent], noShow ? null : score, summary),
+    mutationFn: () => feedbackAPI.submit(slotId, [...absent], noShow ? null : score, summary, changedNotes()),
     onSuccess: (result) => {
       refresh();
-      const wasEdit = screen?.submitted;
-      if (result.noShow) {
-        toast({ title: "Marked as no-show", description: summary.trim() ? "Your message was sent." : "The session stays charged." });
-        navigate(-1);
-        return;
-      }
-      if (wasEdit) {
+      if (screen?.submitted) {
         toast({ title: "Feedback updated" });
-        navigate(-1);
+        leave();
         return;
       }
-      if (!group) {
-        toast({ title: "Session completed", description: `Feedback sent to ${first}'s family.` });
-        navigate(-1);
+      if (result.noShow) {
+        goNext(`Marked as no-show${summary.trim() ? `. Message sent to ${group ? "families" : recipient}` : ""}`);
         return;
       }
-      setStage("notes");
+      goNext(
+        group
+          ? `Feedback sent to ${families(came.length)}${withNotes.length ? ` with ${withNotes.length} personal ${withNotes.length === 1 ? "note" : "notes"}` : ""}`
+          : `Feedback sent to ${recipient}`
+      );
     },
     onError: (error: unknown) =>
       toast({ title: "Couldn't send feedback", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" }),
@@ -114,17 +147,13 @@ const SessionFeedbackPage = () => {
   const saveNote = useMutation({
     mutationFn: () => feedbackAPI.setNote(noteFor!.bookingId, noteText),
     onSuccess: () => {
-      toast({ title: `Note sent to ${noteFor!.name.split(" ")[0]}'s family` });
+      toast({ title: `Note sent to ${firstName(noteFor!.name)}'s family` });
       setNoteFor(null);
       refresh();
     },
     onError: (error: unknown) =>
       toast({ title: "Couldn't save the note", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" }),
   });
-
-  if (!ready) return null;
-  if (!isCoach) return <Navigate to={ROUTES.DASHBOARD} replace />;
-  if (!slotId) return <Navigate to={ROUTES.MY_SESSIONS} replace />;
 
   if (screenQuery.isError) {
     return (
@@ -135,71 +164,35 @@ const SessionFeedbackPage = () => {
   }
   if (!screen) return <p className={cn(meta, "px-4 py-10 text-center")}>Loading…</p>;
 
-  const start = sessionStart({ date: screen.date, startTime: screen.startTime });
-  const subtitle = `${group ? screen.sessionName : "1-on-1"} · ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`;
-  const header = (title: string) => (
-    <div className="flex items-start gap-3">
-      <button type="button" className={iconButton} aria-label="Close" onClick={() => navigate(-1)}>
-        <X strokeWidth={1.5} />
-      </button>
-      <div className="flex min-w-0 flex-col gap-1">
-        <h1 className="text-[24px] font-semibold leading-[28px] tracking-[-0.05em] text-[#1A202C]">{title}</h1>
-        <span className={meta}>{subtitle}</span>
-      </div>
-    </div>
-  );
-
-  const noteDialog = (
-    <Dialog open={Boolean(noteFor)} onOpenChange={(open) => !open && setNoteFor(null)}>
-      <DialogContent className={dialogContent}>
-        <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[22px] font-semibold tracking-[-0.05em]">Note for {noteFor?.name.split(" ")[0]}</DialogTitle>
-          <DialogDescription className={meta}>Only {noteFor?.name.split(" ")[0]}'s family sees this.</DialogDescription>
-        </DialogHeader>
-        <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
-          <textarea
-            className={cn(input, "h-auto py-2")}
-            rows={4}
-            maxLength={2000}
-            value={noteText}
-            onChange={(e) => setNoteText(e.target.value)}
-            placeholder="What they did well and one thing to work on"
-            autoFocus
-          />
-          <div className="flex justify-end gap-2">
-            <button type="button" className={secondaryButton} onClick={() => setNoteFor(null)}>
-              Cancel
-            </button>
-            <button type="button" className={primaryButton} disabled={!noteText.trim() || saveNote.isPending} onClick={() => saveNote.mutate()}>
-              Send note
-            </button>
-          </div>
-        </div>
-      </DialogContent>
-    </Dialog>
-  );
+  const wrap = "mx-auto flex w-full max-w-[640px] flex-col gap-3.5";
 
   if (stage === "notes") {
+    const start = sessionStart(screen);
     const present = athletes.filter((a) => a.attendance === "present" || (!a.attendance && !absent.has(a.athleteId)));
+    const family = (a: FeedbackAthlete) => {
+      const last = lastName(a.name);
+      return a.age != null && a.age < 18 && last ? `the ${last} family` : `${firstName(a.name)}'s family`;
+    };
     return (
       <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
-        <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
-          {searchParams.get("notes") ? (
-            header("Notes for athletes")
-          ) : (
-            <div className="flex flex-col items-center gap-2 py-4 text-center">
-              <span className="flex size-[48px] items-center justify-center rounded-full bg-[#CBE7D1] text-[#1E7431]">
-                <Check className="size-6" strokeWidth={2} aria-hidden="true" />
+        <div className={wrap}>
+          <div className="mb-1 flex items-center gap-3">
+            <button type="button" className={roundButton} aria-label="Close" onClick={leave}>
+              <X strokeWidth={1.5} />
+            </button>
+            <div className="flex min-w-0 flex-col gap-1">
+              <h1 className="text-[22px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C] md:text-[24px]">Notes for athletes</h1>
+              <span className="text-[14px] text-[#767980]">
+                {group ? screen.sessionName : "1-on-1"} · {formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} ·{" "}
+                {formatClock(start, timeZone)}
               </span>
-              <h1 className="text-[24px] font-semibold tracking-[-0.05em]">Session completed</h1>
-              <p className={meta}>Feedback sent to {plural(present.length, "family", "families")}.</p>
             </div>
-          )}
-          <div className="flex flex-col gap-1">
-            <h2 className="text-[18px] font-medium">Add a note for anyone?</h2>
-            <p className={meta}>Optional. Only that athlete's family sees it.</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="flex flex-col gap-1">
+            <h2 className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Add a note for anyone?</h2>
+            <span className={caption}>Optional. Only that athlete's family sees it.</span>
+          </div>
+          <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
             {present.length ? (
               present.map((a) => (
                 <button
@@ -210,20 +203,20 @@ const SessionFeedbackPage = () => {
                     setNoteFor(a);
                   }}
                   className={cn(
-                    "flex items-center gap-2 rounded-[10px] border p-2.5 text-left",
-                    a.note ? "border-[#B9DDE7] bg-[#E7F4F8]" : "border-[#EAEADF] bg-[#F9F9F5] hover:bg-[#F1F1E6]"
+                    "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-[16px] border py-2 pl-2.5 pr-3 text-left transition-colors",
+                    a.note ? "border-[#BFDDC6] bg-[#CBE7D1]" : "border-[#EAEADF] bg-[#F7F7F0] hover:border-[#99BBE1]"
                   )}
                 >
-                  <Avatar athlete={a} />
-                  <span className="flex min-w-0 flex-col">
-                    <b className="truncate text-[14px] font-medium">{shortName(a.name)}</b>
+                  <FeedbackAvatar name={a.name} imageUrl={a.imageUrl} />
+                  <span className="flex min-w-0 flex-col gap-1">
+                    <b className="truncate text-[15px] font-medium">{shortName(a.name)}</b>
                     {a.note ? (
-                      <span className="flex items-center gap-1 text-[12px] text-[#117A96]">
+                      <span className="inline-flex items-center gap-[3px] text-[12px] font-semibold text-[#1E7431]">
                         <Check className="size-3" strokeWidth={2} aria-hidden="true" />
                         Note sent
                       </span>
                     ) : (
-                      <span className="flex items-center gap-1 text-[12px] text-[#0054B4]">
+                      <span className="inline-flex items-center gap-[3px] text-[12px] font-semibold text-[#0054B4]">
                         <Plus className="size-3" strokeWidth={2} aria-hidden="true" />
                         Note
                       </span>
@@ -232,233 +225,247 @@ const SessionFeedbackPage = () => {
                 </button>
               ))
             ) : (
-              <p className={meta}>Nobody came to this session.</p>
+              <span className={caption}>Nobody came to this session.</span>
             )}
           </div>
-          <div className="flex items-center justify-between gap-3 border-t border-[#EAEADF] pt-4">
-            <span className={meta}>You can add notes later from the session.</span>
-            <button type="button" className={secondaryButton} onClick={() => navigate(-1)}>
+          <FeedbackBar>
+            <span className={caption}>You can add notes later from the session page.</span>
+            <button type="button" className={secondaryButton} onClick={leave}>
               Done
             </button>
-          </div>
+          </FeedbackBar>
         </div>
-        {noteDialog}
+        <Dialog open={Boolean(noteFor)} onOpenChange={(open) => !open && setNoteFor(null)}>
+          <DialogContent className={dialogContent}>
+            <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
+              <DialogTitle className="text-[22px] font-semibold tracking-[-0.05em]">Note for {noteFor ? firstName(noteFor.name) : ""}</DialogTitle>
+              <DialogDescription className={meta}>Only {noteFor ? family(noteFor) : ""} sees this.</DialogDescription>
+            </DialogHeader>
+            <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
+              <label className="flex flex-col gap-1.5">
+                <span className={label}>Note</span>
+                <textarea
+                  className={textarea}
+                  rows={4}
+                  maxLength={2000}
+                  value={noteText}
+                  onChange={(e) => setNoteText(e.target.value)}
+                  placeholder={`What should ${noteFor ? firstName(noteFor.name) : ""}'s family know?`}
+                  autoFocus
+                />
+              </label>
+              <div className="flex justify-end gap-2">
+                <button type="button" className={secondaryButton} onClick={() => setNoteFor(null)}>
+                  Cancel
+                </button>
+                <button type="button" className={primaryButton} disabled={!noteText.trim() || saveNote.isPending} onClick={() => saveNote.mutate()}>
+                  <Send strokeWidth={1.5} aria-hidden="true" />
+                  Send note
+                </button>
+              </div>
+            </div>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
 
+  const qi = due.findIndex((d) => d.id === slotId);
+  const step = (by: number) => navigate(feedbackLink(due[(qi + by + due.length) % due.length].id), { replace: true });
+  const starters = noShow ? NO_SHOW_STARTERS : summaryStarters(screen.pillar);
+
+  const line = locked
+    ? "Feedback was already edited once, so it can't change again. You can still add notes."
+    : noShow
+      ? `${group ? "Everyone marked absent" : "Marked as no-show"} · still charged`
+      : !score
+        ? "Slide the score above 0 to send"
+        : group
+          ? [
+              families(came.length),
+              missed.length ? `${missed.map((a) => firstName(a.name)).join(", ")} absent` : null,
+              withNotes.length ? `${withNotes.length} personal ${withNotes.length === 1 ? "note" : "notes"} included` : null,
+            ]
+              .filter(Boolean)
+              .join(" · ")
+          : `Goes to ${recipient}`;
+
   return (
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
-        {header(group ? "Feedback" : `Feedback for ${first}`)}
+      <div className={wrap}>
+        <div className="flex items-center justify-between gap-3">
+          <button type="button" className={roundButton} aria-label="Close" onClick={leave}>
+            <X strokeWidth={1.5} />
+          </button>
+          {qi >= 0 ? (
+            <div className="flex items-center gap-2">
+              <button type="button" className={roundButton} aria-label="Previous session" disabled={due.length < 2} onClick={() => step(-1)}>
+                <ChevronLeft strokeWidth={1.5} />
+              </button>
+              <span className="flex min-w-[84px] flex-col items-center gap-0.5">
+                <b className="text-[14px] font-semibold text-[#1A202C]">
+                  {qi + 1} of {due.length}
+                </b>
+                <span className={caption}>feedback due</span>
+              </span>
+              <button type="button" className={roundButton} aria-label="Next session" disabled={due.length < 2} onClick={() => step(1)}>
+                <ChevronRight strokeWidth={1.5} />
+              </button>
+            </div>
+          ) : null}
+        </div>
+
+        <SessionHero screen={screen} timeZone={timeZone} />
 
         {!screen.started ? (
           <p className={cn(card, "text-[14px] text-[#484D56]")}>Feedback opens once the session starts.</p>
         ) : (
           <>
             {group ? (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-baseline justify-between">
-                  <h2 className="text-[18px] font-medium">Who came?</h2>
-                  <span className={meta}>
+              <>
+                <Question title="Who was present?">
+                  <span className="text-[14px] font-semibold text-[#0054B4]">
                     {came.length} of {athletes.length}
                   </span>
+                </Question>
+                <span className={caption}>Tap anyone who missed it.</span>
+                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+                  {athletes.length ? (
+                    athletes.map((a) => {
+                      const isAbsent = absent.has(a.athleteId);
+                      return (
+                        <button
+                          key={a.bookingId}
+                          type="button"
+                          aria-pressed={!isAbsent}
+                          disabled={locked}
+                          onClick={() =>
+                            setAbsent((cur) => {
+                              const next = new Set(cur);
+                              if (next.has(a.athleteId)) next.delete(a.athleteId);
+                              else next.add(a.athleteId);
+                              return next;
+                            })
+                          }
+                          className={cn(
+                            "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-[16px] border py-2 pl-2.5 pr-3 text-left transition-colors disabled:cursor-not-allowed",
+                            isAbsent ? "border-dashed border-[#C9C9BD] bg-transparent" : "border-[#EAEADF] bg-[#F7F7F0] hover:enabled:border-[#99BBE1]"
+                          )}
+                        >
+                          <FeedbackAvatar name={a.name} imageUrl={a.imageUrl} className={cn(isAbsent && "opacity-45")} />
+                          <span className="flex min-w-0 flex-col gap-1">
+                            <b className={cn("truncate text-[15px] font-medium", isAbsent ? "text-[#A3A6AB]" : "text-[#1A202C]")}>{shortName(a.name)}</b>
+                            {isAbsent ? <span className="text-[11px] font-semibold text-[#906A29]">Absent</span> : null}
+                          </span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <span className={caption}>No athletes on this session.</span>
+                  )}
                 </div>
-                <div className="flex items-center justify-between gap-2">
-                  <p className={meta}>Tap anyone who missed it.</p>
-                  {!locked ? (
-                    <button type="button" className={cn(secondaryButton, "h-[30px] px-3")} onClick={() => setWalkInOpen(true)}>
-                      <UserPlus strokeWidth={1.5} aria-hidden="true" />
-                      Add athlete
-                    </button>
-                  ) : null}
-                </div>
-                <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-                  {athletes.map((a) => {
-                    const isAbsent = absent.has(a.athleteId);
-                    return (
-                      <button
-                        key={a.bookingId}
-                        type="button"
-                        aria-pressed={!isAbsent}
-                        disabled={locked}
-                        onClick={() =>
-                          setAbsent((cur) => {
-                            const next = new Set(cur);
-                            if (next.has(a.athleteId)) next.delete(a.athleteId);
-                            else next.add(a.athleteId);
-                            return next;
-                          })
-                        }
-                        className={cn(
-                          "flex items-center gap-2 rounded-[10px] border p-2.5 text-left transition-colors",
-                          isAbsent ? "border-dashed border-[#C1C1B8] bg-transparent opacity-60" : "border-[#EAEADF] bg-[#F9F9F5] hover:bg-[#F1F1E6]"
-                        )}
-                      >
-                        <Avatar athlete={a} />
-                        <span className="flex min-w-0 flex-col">
-                          <b className="truncate text-[14px] font-medium">{shortName(a.name)}</b>
-                          {isAbsent ? <span className="text-[12px] font-medium text-[#906A29]">Absent</span> : null}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </section>
+              </>
             ) : (
-              <section className="flex flex-col gap-3">
-                <h2 className="text-[18px] font-medium">Did {first} come?</h2>
-                <div className="flex gap-2">
-                  {[
-                    [true, "Yes"],
-                    [false, "No"],
-                  ].map(([yes, label]) => {
+              <>
+                <Question title={`Was ${first} present?`} />
+                <div className="grid grid-cols-2 gap-2">
+                  {([true, false] as const).map((yes) => {
                     const on = yes ? !noShow : noShow;
                     return (
                       <button
-                        key={String(label)}
+                        key={String(yes)}
                         type="button"
                         aria-pressed={on}
                         disabled={locked}
                         onClick={() => setAbsent(yes ? new Set() : new Set(athletes.map((a) => a.athleteId)))}
                         className={cn(
-                          "inline-flex h-[40px] flex-1 items-center justify-center gap-1.5 rounded-[8px] border text-[14px] font-medium",
+                          "inline-flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border text-[15px] font-medium transition-colors disabled:cursor-not-allowed [&>svg]:size-4",
                           on
                             ? yes
-                              ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]"
-                              : "border-[#F0B144] bg-[#FCEFDA] text-[#906A29]"
-                            : "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C]"
+                              ? "border-[#0054B4] bg-[#0054B4] text-white"
+                              : "border-[#906A29] bg-[#FCEFDA] text-[#906A29]"
+                            : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]"
                         )}
                       >
-                        {yes ? <Check className="size-4" strokeWidth={1.5} /> : <X className="size-4" strokeWidth={1.5} />}
-                        {label}
+                        {yes ? <Check strokeWidth={1.5} aria-hidden="true" /> : <X strokeWidth={1.5} aria-hidden="true" />}
+                        {yes ? "Yes" : "No"}
                       </button>
                     );
                   })}
                 </div>
-              </section>
-            )}
-
-            {noShow ? (
-              <section className="flex flex-col gap-3">
-                <div className="flex items-start gap-3 rounded-[10px] bg-[#F1F1E6] p-4">
-                  <CalendarX className="mt-[2px] size-5 flex-none text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="flex flex-col gap-0.5">
-                    <b className="text-[14px] font-medium">{group ? "Nobody came" : `${first} didn't come`}</b>
-                    <span className={meta}>No score or summary needed. The session stays charged.</span>
-                  </span>
-                </div>
-                <label className="flex flex-col gap-1.5">
-                  <span className="flex items-baseline justify-between">
-                    <span className="text-[16px] font-medium">Message to {group ? "families" : `${first}'s family`}</span>
-                    <span className={meta}>Optional</span>
-                  </span>
-                  <textarea
-                    className={cn(input, "h-auto py-2")}
-                    rows={3}
-                    value={summary}
-                    disabled={locked}
-                    onChange={(e) => setSummary(e.target.value)}
-                    placeholder={group ? "For example: We missed you all today. The next session is on…" : `For example: We missed ${first} today. Want to book a make-up session?`}
-                  />
-                </label>
-              </section>
-            ) : (
-              <>
-                <section className="flex flex-col gap-3">
-                  <h2 className="text-[18px] font-medium">How was the session?</h2>
-                  <div className="flex flex-col gap-2 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4">
-                    <div className="flex items-baseline justify-between">
-                      <span className={meta}>Only you see this score</span>
-                      <span className="text-[14px]">
-                        <b className="text-[20px] font-semibold">{score}</b>/10{score ? ` · ${scoreWord(score)}` : ""}
-                      </span>
-                    </div>
-                    <input
-                      type="range"
-                      min={0}
-                      max={10}
-                      step={1}
-                      value={score}
-                      disabled={locked}
-                      onChange={(e) => setScore(Number(e.target.value))}
-                      aria-label="Session score from 0 to 10"
-                      aria-valuetext={score ? `${score} out of 10, ${scoreWord(score)}` : "Not scored"}
-                      className="w-full accent-[#0054B4]"
-                    />
-                    <div className="flex justify-between text-[12px] text-[#767980]">
-                      <span>0</span>
-                      <span>10</span>
-                    </div>
-                  </div>
-                </section>
-                <label className="flex flex-col gap-1.5">
-                  <span className="text-[18px] font-medium">Summary</span>
-                  <textarea
-                    className={cn(input, "h-auto py-2")}
-                    rows={4}
-                    maxLength={4000}
-                    value={summary}
-                    disabled={locked}
-                    onChange={(e) => setSummary(e.target.value)}
-                    placeholder={group ? "What you worked on, for every family" : `What you worked on with ${first}`}
-                  />
-                  <span className={meta}>{group ? "Goes to every family that came." : `Goes to ${first}'s family.`}</span>
-                </label>
               </>
             )}
 
-            <div className="flex flex-wrap items-center justify-between gap-3 border-t border-[#EAEADF] pt-4">
-              <span className={meta}>
-                {locked
-                  ? "Feedback was already edited once, so it can't change again. You can still add notes."
-                  : noShow
-                    ? `${group ? "Everyone marked absent" : "Marked as no-show"} · still charged`
-                    : group
-                      ? absent.size
-                        ? `${athletes.filter((a) => absent.has(a.athleteId)).map((a) => a.name.split(" ")[0]).join(", ")} marked absent · still charged`
-                        : "Everyone came"
-                      : `Goes to ${first}'s family`}
-              </span>
-              <span className="flex gap-2">
-                {group && screen.submitted ? (
+            {noShow ? (
+              <div className="flex items-center gap-3.5 rounded-[14px] bg-[#FCEFDA] p-4">
+                <span className="flex size-[44px] flex-none items-center justify-center rounded-full bg-[#F7F7F0] text-[#906A29]">
+                  <CalendarX className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                </span>
+                <span className="flex flex-col gap-1">
+                  <b className="text-[14px] font-medium text-[#1A202C]">{group ? "Nobody was present" : `${first} wasn't present`}</b>
+                  <span className={caption}>No score needed. The session stays charged.</span>
+                </span>
+              </div>
+            ) : (
+              <>
+                <Question title="How was the session?" />
+                <ScoreBox score={score} onChange={setScore} disabled={locked} />
+              </>
+            )}
+
+            <Question title={noShow ? `Message to ${group ? "families" : recipient}` : group ? "Summary for every family" : "Summary"}>
+              {noShow || group ? <span className={caption}>Optional</span> : null}
+            </Question>
+            <StarterChips
+              chips={starters}
+              disabled={locked}
+              onPick={(c) => {
+                setSummary((cur) => appendSentence(cur, c));
+                document.getElementById("fb-summary")?.focus();
+              }}
+            />
+            <textarea
+              id="fb-summary"
+              className={textarea}
+              rows={4}
+              maxLength={4000}
+              value={summary}
+              disabled={locked}
+              onChange={(e) => setSummary(e.target.value)}
+              aria-label={noShow ? "Message" : "Summary"}
+              placeholder={
+                noShow
+                  ? group
+                    ? "For example: We missed you all today. The next session is on…"
+                    : `For example: We missed ${first} today. Want to book a make-up session?`
+                  : group
+                    ? "What the group worked on today"
+                    : `What you worked on with ${first}`
+              }
+            />
+
+            {group && !noShow && !locked && came.length ? (
+              <AthleteNotes athletes={came} notes={notes} onChange={(id, note) => setNotes((cur) => ({ ...cur, [id]: note }))} />
+            ) : null}
+
+            <FeedbackBar>
+              <span className={caption}>{line}</span>
+              {locked ? (
+                group ? (
                   <button type="button" className={secondaryButton} onClick={() => setStage("notes")}>
                     Notes for athletes
                   </button>
-                ) : null}
-                {!locked ? (
-                  <button type="button" className={primaryButton} disabled={!canSend || send.isPending} onClick={() => send.mutate()}>
-                    {noShow ? <CalendarX strokeWidth={1.5} aria-hidden="true" /> : <Send strokeWidth={1.5} aria-hidden="true" />}
-                    {noShow
-                      ? "Mark as no-show"
-                      : screen.submitted
-                        ? "Send update"
-                        : group
-                          ? `Send to ${plural(came.length, "family", "families")}`
-                          : `Send to ${first}'s family`}
-                  </button>
-                ) : null}
-              </span>
-            </div>
-            {!noShow && !score && !locked ? <p className={meta}>Slide the score above 0 to send.</p> : null}
+                ) : null
+              ) : (
+                <button type="button" className={primaryButton} disabled={!canSend || send.isPending} onClick={() => send.mutate()}>
+                  {noShow ? <CalendarX strokeWidth={1.5} aria-hidden="true" /> : <Send strokeWidth={1.5} aria-hidden="true" />}
+                  {noShow ? "Mark as no-show" : screen.submitted ? "Send update" : group ? `Send to ${families(came.length)}` : `Send to ${recipient}`}
+                </button>
+              )}
+            </FeedbackBar>
           </>
         )}
       </div>
-      {noteDialog}
-      <AddWalkInAthleteDialog
-        open={walkInOpen}
-        onOpenChange={setWalkInOpen}
-        slotId={slotId}
-        sessionDate={screen.date}
-        onAdded={(result) => {
-          setWalkInOpen(false);
-          refresh();
-          toast({
-            title: `${result.athlete.name.split(" ")[0]} added`,
-            description: result.requiresPayment ? "They still need to pay. The family can pay from My Sessions." : undefined,
-          });
-        }}
-      />
     </div>
   );
 };

@@ -1,9 +1,12 @@
 /**
- * The coach's page for one session (ATH-80): details, reschedule and cancel.
+ * The coach's page for one session (ATH-80, Working Copy): details, move, cancel with a reason
+ * (paid bookings come back as credits) and the note on a declined request.
  */
 import { supabase } from "@/integrations/supabase/client";
 
 type Row = Record<string, any>;
+const rpc = (name: string, args: Record<string, unknown>) =>
+  supabase.rpc(name as never, args as never) as unknown as Promise<{ data: unknown; error: Error | null }>;
 
 export interface CoachSessionBooking {
   id: string;
@@ -14,6 +17,16 @@ export interface CoachSessionBooking {
   paymentStatus: string;
   attendance: "present" | "absent" | "no_show" | null;
   notes: string | null;
+  cancellationReason: string | null;
+  canceledAt: string | null;
+  age: number | null;
+  parentName: string | null;
+  creditsLeft: number;
+  paidAmount: number | null;
+  /** The coach's note for this athlete after the session. */
+  note: string | null;
+  /** A cancelled paid or credit booking came back as a credit. */
+  creditBack: boolean;
 }
 
 export interface CoachSessionDetail {
@@ -35,6 +48,9 @@ export interface CoachSessionDetail {
   bookings: CoachSessionBooking[];
   feedback: { summary: string | null; noShow: boolean; editCount: number; score: number | null } | null;
   lastSummary: { date: string; summary: string } | null;
+  lastFocus: { date: string; text: string } | null;
+  /** Set when the coach cancelled the session. */
+  cancel: { at: string | null; reason: string | null; refund: string | null } | null;
 }
 
 export const coachSessionAPI = {
@@ -67,6 +83,14 @@ export const coachSessionAPI = {
         paymentStatus: b.payment_status,
         attendance: b.attendance ?? null,
         notes: b.notes ?? null,
+        cancellationReason: b.cancellation_reason ?? null,
+        canceledAt: b.canceled_at ?? null,
+        age: b.age != null ? Number(b.age) : null,
+        parentName: b.parent_name ?? null,
+        creditsLeft: Number(b.credits_left) || 0,
+        paidAmount: b.paid_amount != null ? Number(b.paid_amount) : null,
+        note: b.note ?? null,
+        creditBack: Boolean(b.credit_back),
       })),
       feedback: raw.feedback
         ? {
@@ -77,24 +101,29 @@ export const coachSessionAPI = {
           }
         : null,
       lastSummary: raw.last_summary?.summary ? { date: raw.last_summary.date, summary: raw.last_summary.summary } : null,
+      lastFocus: raw.last_focus?.text ? { date: raw.last_focus.date, text: raw.last_focus.text } : null,
+      cancel: raw.cancel ? { at: raw.cancel.at ?? null, reason: raw.cancel.reason ?? null, refund: raw.cancel.refund ?? null } : null,
     };
   },
 
-  /** New Eastern date and "HH:MM". Each booked family gets the message. Returns how many were told. */
-  async reschedule(occurrenceId: string, date: string, start: string, message: string): Promise<number> {
-    const { data, error } = await supabase.rpc("schedule_reschedule_session", {
-      p_occurrence_id: occurrenceId,
-      p_date: date,
-      p_start: start,
-      p_message: message,
-    });
+  /** Moves to a new Eastern date and "HH:MM", taking over open slots there. Returns how many families were told. */
+  async move(occurrenceId: string, date: string, start: string, message: string): Promise<number> {
+    const { data, error } = await rpc("coach_move_session", { p_occurrence_id: occurrenceId, p_date: date, p_start: start, p_message: message });
     if (error) throw error;
     return Number(data) || 0;
   },
 
-  async cancel(occurrenceId: string, message: string): Promise<number> {
-    const { data, error } = await supabase.rpc("schedule_cancel_session", { p_occurrence_id: occurrenceId, p_message: message });
+  /** Cancels with a reason. Paid bookings come back as session credits; credit bookings get theirs back. */
+  async cancel(occurrenceId: string, reason: string, message = ""): Promise<{ sent: number; credits: number }> {
+    const { data, error } = await rpc("coach_cancel_session", { p_occurrence_id: occurrenceId, p_reason: reason, p_message: message });
     if (error) throw error;
-    return Number(data) || 0;
+    const row = (data ?? {}) as Row;
+    return { sent: Number(row.sent) || 0, credits: Number(row.credits) || 0 };
+  },
+
+  /** After declining a request: keeps the reason and sends the family the message, if any. */
+  async declineNote(bookingId: string, reason: string, message: string): Promise<void> {
+    const { error } = await rpc("coach_decline_note", { p_booking_id: bookingId, p_reason: reason, p_message: message });
+    if (error) throw error;
   },
 };
