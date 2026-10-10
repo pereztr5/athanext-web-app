@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Children, memo, useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -38,6 +38,7 @@ import { computeSessionPrice } from "@/utils/referralHelpers";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
+import { AthleteSessionsList, sessionListTitle } from "@/components/my-session/AthleteSessionsList";
 import { CoachSessionCard, CoachSessionSection } from "@/components/my-session/CoachSessionCard";
 import { useOccurrenceInfo, type CoachCardKind } from "@/components/my-session/coachSessions";
 import {
@@ -58,7 +59,7 @@ import {
   getInitialsFromName,
   getStartMeta,
 } from "@/utils/sessionFormatting";
-import { parseISODateLocal } from "@/utils/dateHelpers";
+import { getZonedISODate, parseISODateLocal } from "@/utils/dateHelpers";
 import { PROFILE_TYPE } from "@/utils/db";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
@@ -483,8 +484,9 @@ const SessionGroup = ({
 
 const MySessions = () => {
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
   const timeZone = useViewerTimeZone();
-  const { userProfile, loading: authLoading } = useAuth();
+  const { userProfile, userName, loading: authLoading } = useAuth();
   const { profile } = useProfile();
   const queryClient = useQueryClient();
   const [filters, setFilters] = useState<SessionFilters>({
@@ -778,8 +780,7 @@ const MySessions = () => {
   const handleFeedbackNavigate = (slotId: string, session?: UISession) => {
     
     if (!slotId) return;
-    if (persona === PROFILE_TYPE.parent) return;
-    if (persona === PROFILE_TYPE.athlete && session) {
+    if ((persona === PROFILE_TYPE.athlete || persona === PROFILE_TYPE.parent) && session) {
       setRateSession(session);
       setRating(0);
       setHoverRating(null);
@@ -882,7 +883,7 @@ const MySessions = () => {
 
   const allCoachIds = useMemo(() => {
     const ids = new Set<string>();
-    [...filteredGrouped.inProgress, ...filteredGrouped.upcoming, ...filteredGrouped.past, ...filteredGrouped.completed].forEach((session) => {
+    [...filteredGrouped.inProgress, ...filteredGrouped.upcoming, ...filteredGrouped.past, ...filteredGrouped.completed, ...filteredGrouped.canceled].forEach((session) => {
       if (session.coachId) {
         ids.add(session.coachId);
       }
@@ -900,6 +901,23 @@ const MySessions = () => {
     const due = (x: UISession) => (role === PROFILE_TYPE.coach ? !x.hasSessionFeedback : !x.hasSlotFeedback) ? 0 : 1;
     return due(a) - due(b) || new Date(b.start).getTime() - new Date(a.start).getTime();
   });
+  const canceledSessions = withDefaults(
+    [...filteredGrouped.canceled].sort((a, b) => new Date(b.start).getTime() - new Date(a.start).getTime()),
+    avatarMapByName,
+    coachAvatarMapById
+  );
+
+  useEffect(() => {
+    const rateId = searchParams.get("rate");
+    if (!rateId || rateDialogOpen) return;
+    const match = [...inProgressSessions, ...upcomingSessions, ...pastCompletedSessions].find(
+      (s) => s.id === rateId || s.occurrenceId === rateId || s.slotId === rateId
+    );
+    if (!match) return;
+    handleFeedbackNavigate(match.slotId || match.id, match);
+    searchParams.delete("rate");
+    setSearchParams(searchParams, { replace: true });
+  }, [searchParams, inProgressSessions, upcomingSessions, pastCompletedSessions, rateDialogOpen]);
 
   const isCoach = role === PROFILE_TYPE.coach;
   const occurrenceIds = useMemo(
@@ -1033,23 +1051,16 @@ const MySessions = () => {
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className={cn("mx-auto flex w-full flex-col gap-6", isCoach ? "max-w-[920px]" : "max-w-[1000px]")}>
+        {isCoach ? (
+          <>
         <div className="flex flex-col gap-[10px]">
           <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">
             My Sessions
           </h1>
-          {isCoach ? (
             <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
               Check in athletes and send feedback after each session.
             </p>
-          ) : (
-            <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">Everything booked on your account.</p>
-          )}
         </div>
-
-        {/* The Working Copy has no filter panel here: three sections, five at a time. */}
-
-        {isCoach ? (
-          <>
             <CoachSessionSection kind="now" title="In progress sessions" empty="No sessions in progress">
               {inProgressSessions.map((session) => renderCoachCard(session, "now"))}
             </CoachSessionSection>
@@ -1061,81 +1072,16 @@ const MySessions = () => {
             </CoachSessionSection>
           </>
         ) : (
-        <>
-        <SessionGroup
-          iconBg="bg-[#E5EDF7] text-[#0054B4]"
-          icon={<PlayCircle className="size-4" strokeWidth={1.5} />}
-          title="In progress sessions"
-          count={inProgressSessions.length}
-          empty="No sessions in progress"
-        >
-          {inProgressSessions.map((session) => (
-            <SessionCard
-              key={session.id}
-              session={session}
-              now={now}
-              onSelect={openSession}
-              role={role}
-              platformFeePerc={platformFeePerc}
-              stripeFeePerc={stripeFeePerc}
-              waived={waivedCoachIds.has(session.coachId)}
-              canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
-              paying={payingBookingId === session.bookingId}
-              onPay={() => void handlePay(session)}
-            />
-          ))}
-        </SessionGroup>
-
-        <SessionGroup
-          iconBg="bg-[#E7F4F8] text-[#1599BC]"
-          icon={<CalendarCheck className="size-4" strokeWidth={1.5} />}
-          title="Upcoming sessions"
-          count={upcomingSessions.length}
-          empty="No upcoming sessions"
-        >
-          {upcomingSessions.map((session) => (
-            <SessionCard
-              key={session.id}
-              session={session}
-              now={now}
-              onSelect={openSession}
-              role={role}
-              platformFeePerc={platformFeePerc}
-              stripeFeePerc={stripeFeePerc}
-              waived={waivedCoachIds.has(session.coachId)}
-              canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
-              paying={payingBookingId === session.bookingId}
-              onPay={() => void handlePay(session)}
-            />
-          ))}
-        </SessionGroup>
-
-        <SessionGroup
-          iconBg="bg-[#F4F4EB] text-[#767980]"
-          icon={<History className="size-4" strokeWidth={1.5} />}
-          title="Previous sessions"
-          count={pastCompletedSessions.length}
-          empty="No previous sessions"
-        >
-          {pastCompletedSessions.map((session) => (
-            <PastDraftCard
-              key={session.id}
-              session={session}
-              onSelect={openSession}
-              onFeedbackNavigate={handleFeedbackNavigate}
-              role={role}
-              hasFeedbackSubmitted={hasSubmittedFeedback(session)}
-              showFeedbackAction={persona === PROFILE_TYPE.athlete}
-              platformFeePerc={platformFeePerc}
-              stripeFeePerc={stripeFeePerc}
-              waived={waivedCoachIds.has(session.coachId)}
-              canPay={persona === PROFILE_TYPE.athlete && sessionNeedsPayment(session)}
-              paying={payingBookingId === session.bookingId}
-              onPay={() => void handlePay(session)}
-            />
-          ))}
-        </SessionGroup>
-        </>
+          <AthleteSessionsList
+            upcoming={[...inProgressSessions, ...upcomingSessions]}
+            past={pastCompletedSessions}
+            canceled={canceledSessions}
+            timeZone={timeZone}
+            todayISO={getZonedISODate(new Date(), timeZone)}
+            athleteFirst={(userName || "your athlete").split(" ")[0]}
+            isParent={persona === PROFILE_TYPE.parent}
+            onOpen={openSession}
+          />
         )}
       </div>
 
@@ -1297,7 +1243,7 @@ const MySessions = () => {
         session={rateSession ? {
           id: rateSession.id,
           athleteId: userProfile?.id || "",
-          title: rateSession.title,
+          title: sessionListTitle(rateSession),
           status: rateSession.computedStatus === "in-progress" ? "in-progress" : rateSession.computedStatus === "upcoming" ? "upcoming" : "past",
           type: rateSession.type === "group" ? "Group" : "Individual",
           start: rateSession.start,

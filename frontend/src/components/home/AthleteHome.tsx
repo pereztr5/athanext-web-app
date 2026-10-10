@@ -4,12 +4,13 @@
  * session with what they're working on, their coaches, and About.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, ChevronRight, Lock, Pencil, Plus, Video } from "lucide-react";
+import { BrandPill } from "@/components/brand";
 import { athleteHomeAPI, type AthleteProfileEdit } from "@/api/athleteHome";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { card, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { card, dialogContent, input, label, meta, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { PATHWAY_TAGS } from "@/constants/pathwayTags";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
@@ -22,31 +23,31 @@ import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatDayISO, plural } from "@/utils/schedule";
 import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
 
-const h3 = "text-[18px] font-medium leading-[22px] tracking-[-0.6px] text-[#1A202C]";
-const POSITIONS = ["Goalkeeper", "Field player"];
+const h3 = "text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]";
+const splitName = (full: string) => {
+  const parts = full.trim().split(/\s+/);
+  return { first: parts[0] ?? "", last: parts.slice(1).join(" ") };
+};
 
 const initials = (name: string) =>
   name.trim().split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "A";
 
-const Avatar = ({ name, photo, size }: { name: string; photo: string | null; size: number }) => (
+const Avatar = ({ name, photo, size, className }: { name: string; photo: string | null; size: number; className?: string }) => (
   <span
-    className="inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] font-medium text-[#0054B4]"
+    className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] font-medium text-[#0054B4]", className)}
     style={{ width: size, height: size, fontSize: size / 2.6 }}
   >
     {photo ? <img src={photo} alt="" className="size-full object-cover" /> : initials(name)}
   </span>
 );
 
-const Pill = ({ children }: { children: string }) => (
-  <span className="rounded-full border border-[#EAEADF] bg-[#F4F4EB] px-2.5 py-0.5 text-[12px] font-medium text-[#484D56]">{children}</span>
-);
-
 export const AthleteHome = () => {
   const timeZone = useViewerTimeZone();
   const today = getZonedISODate(new Date(), timeZone);
   const { profile } = useProfile();
+  const [params, setParams] = useSearchParams();
   const home = useQuery({ queryKey: ["athlete-home"], queryFn: () => athleteHomeAPI.get() });
-  const [editing, setEditing] = useState<ProfileItemKey | "open" | null>(null);
+  const [editing, setEditing] = useState<ProfileItemKey | "open" | null>(params.get("edit") ? "open" : null);
 
   const a = home.data?.athlete ?? null;
   const isParent = profile?.userProfile?.persona_type === "parent";
@@ -84,19 +85,19 @@ export const AthleteHome = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
-        <section className={cn(card, "flex-col gap-4 sm:flex-row sm:items-center")}>
-          <Avatar name={a.fullName} photo={a.photo} size={80} />
-          <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <h1 className="text-[24px] md:text-[28px] font-bold leading-[28px] md:leading-[30px] tracking-[-1.2px] text-[#1A202C]">{a.fullName || "Your athlete"}</h1>
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-5">
+        <section className={cn(card, "flex-row flex-wrap items-center gap-5 max-[820px]:gap-3.5")}>
+          <Avatar name={a.fullName} photo={a.photo} size={80} className="max-[820px]:!size-14 max-[820px]:!text-[18px]" />
+          <div className="flex min-w-0 flex-1 flex-col gap-2 max-[820px]:basis-[calc(100%-80px)]">
+            <h1 className={pageTitle}>{a.fullName || "Your athlete"}</h1>
             {line ? <span className="text-[14px] text-[#767980]">{line}</span> : null}
             <div className="flex flex-wrap gap-1.5">
-              {a.sport ? <Pill>{sportLabel(a.sport)}</Pill> : null}
-              {a.pathway ? <Pill>{a.pathway}</Pill> : null}
+              {a.sport ? <BrandPill tone="teal">{sportLabel(a.sport)}</BrandPill> : null}
+              {a.pathway ? <BrandPill tone="neutral">{a.pathway}</BrandPill> : null}
             </div>
           </div>
-          <div className="flex flex-wrap gap-2 sm:flex-col">
-            <Link to={ROUTES.BOOK} className={primaryButton}>
+          <div className="flex flex-wrap gap-2 max-[820px]:w-full">
+            <Link to={ROUTES.BOOK} className={cn(primaryButton, "max-[820px]:flex-1")}>
               <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
               Book a session
             </Link>
@@ -108,7 +109,7 @@ export const AthleteHome = () => {
         </section>
 
         {done < items.length ? (
-          <section className={card}>
+          <section className={cn(card, "border-[#99BBE1]")}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <span className={h3}>Finish {whose} profile</span>
@@ -116,12 +117,12 @@ export const AthleteHome = () => {
               </div>
               <span className="text-[14px] font-medium">{done} of {items.length}</span>
             </div>
-            <div className="h-1.5 overflow-hidden rounded-full bg-[#EAEADF]" aria-hidden="true">
+            <div className="h-[5px] overflow-hidden rounded-full bg-[#D9D9CF]" aria-hidden="true">
               <div className="h-full rounded-full bg-[#0054B4]" style={{ width: `${Math.round((done / items.length) * 100)}%` }} />
             </div>
             <div className="flex flex-wrap gap-2">
               {items.filter((i) => !i.done).map((i) => (
-                <button key={i.key} type="button" className={secondaryButton} onClick={() => setEditing(i.key)}>
+                <button key={i.key} type="button" className={cn(secondaryButton, smallButton)} onClick={() => setEditing(i.key)}>
                   <Plus strokeWidth={1.5} aria-hidden="true" />
                   {i.label}
                 </button>
@@ -130,41 +131,40 @@ export const AthleteHome = () => {
           </section>
         ) : null}
 
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+        <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
           <section className={card}>
             <div className="flex items-center justify-between">
               <span className={h3}>Next session</span>
-              <Link to={ROUTES.MY_SESSIONS} className={textButton}>All sessions</Link>
+              <Link to={ROUTES.MY_SESSIONS} className={cn(textButton, smallButton)}>All sessions</Link>
             </div>
             {next ? (
-              <Link to={ROUTES.MY_SESSIONS} className="flex items-center gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] p-3 hover:border-[#CCDDF0]">
-                <span className="flex w-12 shrink-0 flex-col items-center rounded-[8px] bg-[#E5EDF7] py-1.5 text-[#0054B4]">
-                  <small className="text-[11px] font-medium uppercase">{formatDateInZone(new Date(next.start), timeZone, { weekday: "short" })}</small>
-                  <b className="text-[18px] font-semibold leading-[20px]">{formatDateInZone(new Date(next.start), timeZone, { day: "numeric" })}</b>
+              <Link to={`/sessions/${next.id}`} className="flex items-center gap-3 text-left hover:opacity-90">
+                <span className="flex size-11 shrink-0 flex-col items-center justify-center rounded-[8px] bg-[#F4F4EB]">
+                  <small className="text-[10px] font-medium uppercase leading-[12px] text-[#767980]">{formatDateInZone(new Date(next.start), timeZone, { weekday: "short" })}</small>
+                  <b className="text-[16px] font-bold leading-[18px]">{formatDateInZone(new Date(next.start), timeZone, { day: "numeric" })}</b>
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <b className="truncate text-[14px] font-medium">{next.title} with {next.coachName}</b>
                   <span className={meta}>
                     {formatInstantSpan(new Date(next.start), new Date(next.end), timeZone)}
                     {next.place ? ` · ${next.place === "online" ? "Video call" : next.place === "in-person" ? "In person" : next.place}` : ""}
-                    {next.status === "requested" ? " · waiting for the coach" : next.status === "pending_payment" ? " · payment due" : ""}
                   </span>
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                <ChevronRight className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             ) : (
               <>
                 <p className={meta}>Nothing booked yet.</p>
-                <Link to={ROUTES.BOOK} className={cn(primaryButton, "self-start")}>
+                <Link to={ROUTES.BOOK} className={cn(primaryButton, smallButton, "self-start")}>
                   <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
                   Book a session
                 </Link>
               </>
             )}
             {focus ? (
-              <div className="flex flex-col gap-1 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
                 <span className={label}>Working on</span>
-                <span className="text-[14px] leading-[18px] text-[#1A202C]">{focus.text}</span>
+                <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{focus.text}</span>
                 <span className={meta}>
                   From {focus.coachName.split(" ")[0]}'s feedback, {formatDayISO(focus.date, { month: "short", day: "numeric" })}
                 </span>
@@ -205,10 +205,10 @@ export const AthleteHome = () => {
             <span className={h3}>About {isParent ? first : "you"}</span>
             <span className={cn(meta, "inline-flex items-center gap-1.5")}>
               <Lock className="size-3" strokeWidth={1.5} aria-hidden="true" />
-              Coaches see this once {isParent ? `${first} has` : "you've"} booked with them
+              Only coaches {isParent ? first : "you"} {isParent ? "has" : "have"} booked with see this
             </span>
           </div>
-          <div className="grid grid-cols-2 gap-4 sm:grid-cols-3">
+          <div className="grid grid-cols-1 gap-x-6 gap-y-3.5 sm:grid-cols-2">
             {details.map(([l, v]) => (
               <div key={l} className="flex flex-col gap-1">
                 <span className={label}>{l}</span>
@@ -220,7 +220,7 @@ export const AthleteHome = () => {
               </div>
             ))}
           </div>
-          <div className="flex flex-col gap-1 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
+          <div className="flex flex-col gap-1 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
             <span className={label}>Season goal</span>
             {a.seasonGoal ? (
               <span className="text-[14px] font-medium text-[#1A202C]">{a.seasonGoal}</span>
@@ -241,7 +241,18 @@ export const AthleteHome = () => {
         </section>
       </div>
 
-      <EditProfileDialog athlete={a} focus={editing} onClose={() => setEditing(null)} isParent={isParent} />
+      <EditProfileDialog
+        athlete={a}
+        focus={editing}
+        onClose={() => {
+          setEditing(null);
+          if (params.has("edit")) {
+            params.delete("edit");
+            setParams(params, { replace: true });
+          }
+        }}
+        isParent={isParent}
+      />
     </div>
   );
 };
@@ -333,11 +344,27 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
         <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
           <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Edit profile</DialogTitle>
           <DialogDescription className={meta}>
-            Coaches see this once {isParent ? "your athlete has" : "you've"} booked with them.
+            Only coaches {isParent ? "your athlete has" : "you have"} booked with see this.
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
-          {field("fullName", "Full name", <input id="ep-name" className={input} value={form.fullName} onChange={set("fullName")} />)}
+          <div className="grid grid-cols-2 gap-3">
+            {field("fullName", "First name", (
+              <input
+                id="ep-name"
+                className={input}
+                value={splitName(form.fullName).first}
+                onChange={(e) => setForm((f) => ({ ...f, fullName: [e.target.value, splitName(f.fullName).last].filter(Boolean).join(" ") }))}
+              />
+            ))}
+            {field("fullName", "Last name", (
+              <input
+                className={input}
+                value={splitName(form.fullName).last}
+                onChange={(e) => setForm((f) => ({ ...f, fullName: [splitName(f.fullName).first, e.target.value].filter(Boolean).join(" ") }))}
+              />
+            ))}
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {field("dateOfBirth", "Date of birth", <input className={input} type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} />)}
             {field("sport", "Sport", (
@@ -349,12 +376,7 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
           </div>
           <div className="grid grid-cols-2 gap-3">
             {field("position", "Position", (
-              <select id="ep-position" className={input} value={form.position} onChange={set("position")}>
-                <option value="">Choose one</option>
-                {[...POSITIONS, ...(form.position && !POSITIONS.includes(form.position) ? [form.position] : [])].map((p) => (
-                  <option key={p}>{p}</option>
-                ))}
-              </select>
+              <input id="ep-position" className={input} value={form.position} onChange={set("position")} placeholder="For example, central midfielder" />
             ))}
             {field("team", "Club or team (optional)", <input id="ep-team" className={input} value={form.team} onChange={set("team")} placeholder="Riverside FC" />)}
           </div>

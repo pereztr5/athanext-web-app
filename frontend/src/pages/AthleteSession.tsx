@@ -6,11 +6,13 @@
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, ChevronLeft, ChevronRight, Clock, CreditCard, MapPin, MessageCircle, Ticket, Users, Video } from "lucide-react";
+import { CalendarPlus, ChevronLeft, ChevronRight, Clock, CreditCard, Info, MapPin, MessageCircle, Repeat, Star, Ticket, Users, Video } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { athleteSessionAPI } from "@/api/athleteSession";
 import { startOccurrenceCheckout } from "@/api/bookings";
-import { card, dangerButton, dialogContent, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { InfoBox } from "@/components/book/checkoutParts";
+import { card, dangerButton, dangerTextButton, dialogContent, input, label, meta, pageTitle, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { buildIcs, downloadIcs } from "@/utils/ics";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
@@ -19,7 +21,7 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { coachProfilePath } from "@/utils/coachSlug";
 import { getZonedISODate } from "@/utils/dateHelpers";
-import { formatDayISO, plural, sessionEnd, sessionStart } from "@/utils/schedule";
+import { formatClock, formatDayISO, plural, sessionEnd, sessionStart } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
@@ -36,6 +38,7 @@ const AthleteSessionPage = () => {
 
   const queryClient = useQueryClient();
   const [confirmCancel, setConfirmCancel] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
   const cancel = useMutation({
     mutationFn: () => athleteSessionAPI.cancel(s!.booking.id),
     onSuccess: ({ credit }) => {
@@ -74,7 +77,10 @@ const AthleteSessionPage = () => {
   const status = s.booking.status;
   const cancelled = status === "canceled" || status === "refunded";
   const coachFirst = s.coach.name.split(" ")[0];
-  const title = group ? s.sessionName || "Group session" : `${s.pillar || "1-on-1"} with ${coachFirst}`;
+  const title = group ? s.sessionName || "Group session" : `${s.pillar || "1-on-1"} with ${s.coach.name}`;
+  const late = start.getTime() - Date.now() < 24 * 3600 * 1000;
+  const freeUntil = new Date(start.getTime() - 24 * 3600 * 1000);
+  const upcoming = !cancelled && !s.ended && !s.started && status === "booked";
   const where = s.location === "online" ? "Video call" : s.place || "In person";
   const missed = s.ended && s.attendance && s.attendance !== "present";
 
@@ -125,22 +131,40 @@ const AthleteSessionPage = () => {
     </div>
   );
 
+  const addToCalendar = () => {
+    downloadIcs(
+      title,
+      buildIcs([
+        {
+          uid: `${s.id}@athanext`,
+          title,
+          start,
+          end,
+          location: where,
+          description: `${title} with ${s.coach.name}`,
+        },
+      ])
+    );
+  };
+
   return (
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-5">
         <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => navigate(-1)}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
           Back
         </button>
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-2">
-            <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[24px] md:text-[28px] font-bold leading-[28px] md:leading-[30px] tracking-[-1.2px] text-[#1A202C]">{title}</h1>
-              {tag}
-            </div>
-            <span className={meta}>
-              {group ? `Group · ${plural(s.taken, "spot")} of ${s.capacity} taken` : `1-on-1 · ${s.durationMinutes} min`}
+            <h1 className={pageTitle}>{title}</h1>
+            <span className="text-[14px] leading-[18px] text-[#767980]">
+              {formatDayISO(getZonedISODate(start, timeZone), { weekday: "long", month: "long", day: "numeric" })}, {formatInstantSpan(start, end, timeZone)}
             </span>
+            <div className="flex flex-wrap gap-1.5">
+              {tag}
+              {group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="neutral">1-on-1</BrandPill>}
+              {s.pillar ? <BrandPill tone="neutral">{s.pillar}</BrandPill> : null}
+            </div>
           </div>
           <div className="flex flex-wrap gap-2">
             {status === "pending_payment" && !s.started ? (
@@ -151,38 +175,54 @@ const AthleteSessionPage = () => {
             ) : null}
             <Link to={ROUTES.CHAT} className={secondaryButton}>
               <MessageCircle strokeWidth={1.5} aria-hidden="true" />
-              Message {coachFirst}
+              Message
             </Link>
-            {!cancelled && !s.started && ["booked", "pending_payment", "requested"].includes(status) ? (
-              <button type="button" className={secondaryButton} onClick={() => setConfirmCancel(true)}>
-                Cancel
+            {upcoming ? (
+              <button type="button" className={secondaryButton} onClick={addToCalendar}>
+                <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
+                Add to calendar
               </button>
             ) : null}
-            {s.ended || cancelled ? (
-              <Link to={`${ROUTES.BOOK}?coach=${s.coach.id}`} className={secondaryButton}>
-                <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
+            {s.ended && !cancelled ? (
+              <Link to={`${ROUTES.BOOK}?coach=${s.coach.id}`} className={primaryButton}>
+                <Repeat strokeWidth={1.5} aria-hidden="true" />
                 Book again
               </Link>
+            ) : null}
+            {s.ended && !cancelled ? (
+              <button type="button" className={secondaryButton} onClick={() => navigate(`${ROUTES.MY_SESSIONS}?rate=${s.id}`)}>
+                <Star strokeWidth={1.5} aria-hidden="true" />
+                Rate session
+              </button>
+            ) : null}
+            {!cancelled && !s.started && ["booked", "pending_payment", "requested"].includes(status) ? (
+              <button type="button" className={dangerTextButton} onClick={() => setConfirmCancel(true)}>
+                Cancel session
+              </button>
             ) : null}
           </div>
         </header>
 
+        <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_317px]">
+        <div className="flex flex-col gap-5">
         <section className={cn(card, "gap-0 divide-y divide-[#EAEADF] py-2")}>
           {fact(Clock, formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" }), formatInstantSpan(start, end, timeZone))}
           {s.location === "online"
-            ? fact(Video, "Video call", "The link comes from your coach before the session")
+            ? fact(Video, "Video call", "Link sent 15 minutes before")
             : fact(
                 MapPin,
                 where,
                 null,
                 s.place ? (
-                  <a className={textButton} href={`https://www.google.com/maps/search/${encodeURIComponent(s.place)}`} target="_blank" rel="noreferrer">
+                  <a className={cn(textButton, "text-[12px]")} href={`https://www.google.com/maps/search/${encodeURIComponent(s.place)}`} target="_blank" rel="noreferrer">
                     Directions
                   </a>
                 ) : null
               )}
-          {fact(Ticket, payLine)}
-          {group ? fact(Users, `${plural(s.taken, "athlete")} booked`, `${s.capacity - s.taken > 0 ? plural(s.capacity - s.taken, "spot") + " left" : "Full"}. Only your coach sees who's coming.`) : null}
+          {fact(Ticket, s.booking.paymentStatus === "credit" ? "Package credit" : payLine)}
+          {fact(Clock, "Duration", `${s.durationMinutes} minutes`)}
+          {fact(Users, "Session type", s.pillar || (group ? "Group" : "1-on-1"))}
+          {group ? fact(Users, `${plural(s.taken, "athlete")} booked`, `${s.capacity - s.taken > 0 ? plural(s.capacity - s.taken, "spot") + " left" : "Full"}. Other athletes stay private.`) : null}
           <Link to={coachProfilePath(s.coach.slug || s.coach.id)} className="flex items-center gap-3 py-3 hover:bg-[#F4F4EB]">
             <span className="flex size-[36px] items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[12px] font-semibold text-[#0054B4]">
               {s.coach.photo ? <img src={s.coach.photo} alt="" className="size-full object-cover" /> : s.coach.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}
@@ -193,6 +233,13 @@ const AthleteSessionPage = () => {
             </span>
             <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
           </Link>
+          {upcoming ? (
+            <p className={cn(meta, "py-3")}>
+              {late
+                ? `Less than 24 hours away. Cancelling now is not refunded.`
+                : `Free cancellation until ${formatClock(freeUntil, timeZone)} on ${formatDayISO(getZonedISODate(freeUntil, timeZone), { weekday: "short", month: "short", day: "numeric" })}. The session comes back as a credit.`}
+            </p>
+          ) : null}
         </section>
 
         {s.ended && !cancelled ? (
@@ -211,10 +258,21 @@ const AthleteSessionPage = () => {
                 ) : null}
               </>
             ) : (
-              <p className={meta}>{coachFirst} hasn't shared feedback yet.</p>
+              <p className={meta}>{coachFirst} usually shares notes within a day. You'll get a notification.</p>
             )}
           </section>
         ) : null}
+        </div>
+        <section className={card}>
+          <h2 className="text-[16px] font-medium leading-[18px]">Need help?</h2>
+          <p className="text-[14px] leading-[18px] text-[#484D56]">
+            Questions about this session go to {coachFirst}. Billing questions go to AthaNext support.
+          </p>
+          <Link to={ROUTES.CONTACT_US} className={cn(secondaryButton, "self-start")}>
+            Get help
+          </Link>
+        </section>
+        </div>
       </div>
       <Dialog open={confirmCancel} onOpenChange={setConfirmCancel}>
         <DialogContent className={dialogContent}>
@@ -223,20 +281,36 @@ const AthleteSessionPage = () => {
               {status === "requested" ? "Cancel this request?" : "Cancel this session?"}
             </DialogTitle>
             <DialogDescription className={meta}>
-              {status === "booked" && ["paid", "credit"].includes(s.booking.paymentStatus)
-                ? start.getTime() - Date.now() >= 24 * 3600 * 1000
-                  ? `It comes back as a credit with ${coachFirst} for another session, valid for 90 days.`
-                  : "It's less than 24 hours away, so it won't come back as a credit."
-                : status === "requested"
-                  ? `${coachFirst} won't see it anymore${s.coach.paysDirect ? "" : " and nothing is charged"}.`
-                  : "The time opens again for other families."}
+              {title}, {formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })}
             </DialogDescription>
           </DialogHeader>
-          <div className="flex justify-end gap-2 px-5 pb-5 sm:px-[25px]">
-            <button type="button" className={secondaryButton} onClick={() => setConfirmCancel(false)}>Keep it</button>
-            <button type="button" className={dangerButton} disabled={cancel.isPending} onClick={() => cancel.mutate()}>
-              {cancel.isPending ? "Cancelling…" : "Cancel session"}
-            </button>
+          <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
+            <InfoBox icon={Info} className={late && status === "booked" ? "bg-[#FCEFDA]" : undefined}>
+              {status === "booked" && ["paid", "credit"].includes(s.booking.paymentStatus)
+                ? late
+                  ? `This session is less than 24 hours away, so it is not refunded.`
+                  : s.booking.paymentStatus === "credit"
+                    ? "Your package credit comes back right away."
+                    : `You get a session credit with ${coachFirst} right away.`
+                : status === "requested"
+                  ? `${coachFirst} is told you no longer need this time. Nothing was charged.`
+                  : "The time opens again for other families."}
+            </InfoBox>
+            <label className="flex flex-col gap-1.5">
+              <span className={label}>Reason</span>
+              <select className={input} value={cancelReason} onChange={(e) => setCancelReason(e.target.value)}>
+                <option value="">Choose a reason</option>
+                {["Schedule conflict", "Sick or injured", "Travel", "Weather", "Other"].map((r) => (
+                  <option key={r}>{r}</option>
+                ))}
+              </select>
+            </label>
+            <div className="flex justify-between gap-2">
+              <button type="button" className={secondaryButton} onClick={() => setConfirmCancel(false)}>Keep session</button>
+              <button type="button" className={dangerButton} disabled={cancel.isPending || !cancelReason} onClick={() => cancel.mutate()}>
+                {cancel.isPending ? "Cancelling…" : "Cancel session"}
+              </button>
+            </div>
           </div>
         </DialogContent>
       </Dialog>

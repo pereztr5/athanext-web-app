@@ -45,3 +45,13 @@ export const buildIcs = (events: CalendarEvent[], now = new Date()): string => {
   lines.push("END:VCALENDAR");
   return `${lines.map(fold).join("\r\n")}\r\n`;
 };
+
+export const downloadIcs = (filename: string, ics: string) => {
+  const blob = new Blob([ics], { type: "text/calendar;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename.endsWith(".ics") ? filename : `${filename}.ics`;
+  a.click();
+  URL.revokeObjectURL(url);
+};

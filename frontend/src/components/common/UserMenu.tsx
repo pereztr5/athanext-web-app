@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, CircleHelp, LogOut, Settings, Store } from "lucide-react";
+import { Building2, CircleHelp, LogOut, Settings, Store, User } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { useMyOrganization } from "@/hooks/useOrganizations";
 import { AvatarFallback } from "@radix-ui/react-avatar";
@@ -434,6 +434,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             ) : null}
             <div className={divider} />
           </div>
+        ) : null}
+        {!isCoach ? (
+          <DropdownMenuItem onClick={() => navigate(ROUTES.ACCOUNT)} className={itemClass}>
+            <User strokeWidth={1.5} />
+            <span>Account</span>
+          </DropdownMenuItem>
         ) : null}
         <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)} className={itemClass}>
           <Settings strokeWidth={1.5} />
