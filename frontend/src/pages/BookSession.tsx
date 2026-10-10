@@ -1,26 +1,43 @@
 /**
- * Book a Session (ATH-73): book with a coach the family already trains with, or book by pillar
- * (then Goalkeeper or Field player). Pick several times across days and coaches and book them
- * in one go (ATH-94).
- * Families new to a coach send a request when the coach approves new families first.
+ * Book a Session (ATH-73, ATH-94): book with a coach the family already trains with, or book
+ * by pillar. Pick several times across days and coaches; Review and pay books them in one go.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, ChevronLeft, ChevronRight, LayoutGrid, Plus, Star, Ticket, User, Users, X, Zap, Clock } from "lucide-react";
+import {
+  CalendarCheck,
+  CalendarDays,
+  ChevronLeft,
+  ChevronRight,
+  LayoutGrid,
+  Plus,
+  Search,
+  Star,
+  Ticket,
+  User,
+  Users,
+  Clock,
+  Zap,
+} from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { bookAPI, type BookableSession, type BookingCoach } from "@/api/book";
-import { TimePicker } from "@/components/book/TimePicker";
+import { MobilePayBar, PickBar, PickFoot } from "@/components/book/BookBars";
 import { RequestTimeDialog, ReviewDialog } from "@/components/book/BookDialogs";
+import { BookingSummary } from "@/components/book/BookingSummary";
+import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import { PackageSavings } from "@/components/book/PackageSavings";
-import { card, meta, primaryButton, secondaryButton, segButton, segGroup, textButton } from "@/components/schedule/styles";
+import { TimePicker } from "@/components/book/TimePicker";
+import { card, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
 import { useProfile } from "@/contexts/ProfileContext";
+import { useBookingFees } from "@/hooks/useBookingFees";
 import { useRole } from "@/hooks/useRole";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { NO_POSITION_PILLARS, bookableStart, money, pillarCopy, type BookFormat } from "@/utils/booking";
-import { coachPricingPath, coachProfilePath } from "@/utils/coachSlug";
+import { NO_POSITION_PILLARS, money, pillarCopy, type BookFormat } from "@/utils/booking";
+import { planBooking } from "@/utils/bookPlan";
+import { coachProfilePath } from "@/utils/coachSlug";
 import { PROFILE_TYPE } from "@/utils/db";
 import { DEFAULT_PILLARS, ICON_MAP } from "@/utils/pillarIcons";
 import { formatClock, formatDayISO, plural } from "@/utils/schedule";
@@ -49,7 +66,7 @@ const Avatar = ({ coach, size = 48 }: { coach: Pick<BookingCoach, "name" | "imag
 
 const whenText = (date: string, startTime: string, timeZone: string) => {
   const start = zonedWallTimeToUtc(date, startTime) ?? new Date(NaN);
-  return `${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`;
+  return `${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })}, ${formatClock(start, timeZone)}`;
 };
 
 const BookSessionPage = () => {
@@ -60,8 +77,9 @@ const BookSessionPage = () => {
   const todayISO = isoDateInZone(new Date(), timeZone);
   const athleteId =
     profile?.type === PROFILE_TYPE.athlete && profile?.data ? ((profile.data as { id?: string }).id ?? null) : null;
-  const athletePosition =
-    profile?.type === PROFILE_TYPE.athlete && profile?.data ? ((profile.data as { position?: string }).position ?? "") : "";
+  const athleteData = profile?.type === PROFILE_TYPE.athlete && profile?.data ? (profile.data as { position?: string; full_name?: string; first_name?: string }) : null;
+  const athletePosition = athleteData?.position ?? "";
+  const athleteFirst = athleteData?.first_name || athleteData?.full_name?.split(" ")[0] || null;
 
   const myCoachesQuery = useQuery({ queryKey: ["my-coaches"], queryFn: () => bookAPI.myCoaches() });
   const myCoaches = useMemo(() => myCoachesQuery.data ?? [], [myCoachesQuery.data]);
@@ -75,8 +93,12 @@ const BookSessionPage = () => {
   const [pillarCoachId, setPillarCoachId] = useState<string | null>(null);
   const [picked, setPicked] = useState<BookableSession[]>([]);
   const [pickedCoaches, setPickedCoaches] = useState<Record<string, BookingCoach>>({});
+  const [pillarOf, setPillarOf] = useState<Record<string, string>>({});
+  const [useCredits, setUseCredits] = useState(true);
   const [reviewOpen, setReviewOpen] = useState(false);
   const [requestCoach, setRequestCoach] = useState<BookingCoach | null>(null);
+  const [packagesCoach, setPackagesCoach] = useState<BookingCoach | null>(null);
+  const fees = useBookingFees(athleteId);
 
   useEffect(() => {
     if (/keeper/i.test(athletePosition)) setPosition("Goalkeeper");
@@ -86,7 +108,6 @@ const BookSessionPage = () => {
   const defaultCoach = myCoaches.find((c) => c.credits > 0) ?? myCoaches[0];
   const selectedCoachId = coachId ?? defaultCoach?.id ?? null;
 
-  // A coach opened from a link or profile may not be one of the family's coaches yet.
   const linkedCoachQuery = useQuery({
     queryKey: ["booking-coach", selectedCoachId],
     enabled: Boolean(selectedCoachId) && !myCoaches.some((c) => c.id === selectedCoachId),
@@ -106,93 +127,66 @@ const BookSessionPage = () => {
   );
   const pillarCoach = pillarCoaches.find((c) => c.id === pillarCoachId) ?? (pillarQuery.data ?? []).find((c) => c.id === pillarCoachId) ?? null;
 
+  const sortedPicked = useMemo(
+    () => [...picked].sort((a, b) => `${a.date}${a.startTime}`.localeCompare(`${b.date}${b.startTime}`)),
+    [picked]
+  );
+  const plan = planBooking(sortedPicked, pickedCoaches, useCredits, fees);
+
   if (!ready) return null;
   if (isCoach) return <Navigate to={ROUTES.SCHEDULE} replace />;
 
   const toggle = (coach: BookingCoach) => (session: BookableSession) => {
     setPickedCoaches((cur) => ({ ...cur, [coach.id]: coach }));
-    setPicked((cur) => (cur.some((s) => s.id === session.id) ? cur.filter((s) => s.id !== session.id) : [...cur, session]));
+    setPicked((cur) => {
+      if (cur.some((s) => s.id === session.id)) {
+        setPillarOf((map) => {
+          const next = { ...map };
+          delete next[session.id];
+          return next;
+        });
+        return cur.filter((s) => s.id !== session.id);
+      }
+      if (currentMode === "pillar" && pillar) setPillarOf((map) => ({ ...map, [session.id]: pillar }));
+      return [...cur, session];
+    });
   };
-  const untoggle = (session: BookableSession) => setPicked((cur) => cur.filter((s) => s.id !== session.id));
-  const pickedCoachIds = [...new Set(picked.map((s) => s.coachId))];
-  const onlyCoach = pickedCoachIds.length === 1 ? pickedCoaches[pickedCoachIds[0]] : null;
+  const untoggle = (session: BookableSession) => {
+    setPicked((cur) => cur.filter((s) => s.id !== session.id));
+    setPillarOf((map) => {
+      const next = { ...map };
+      delete next[session.id];
+      return next;
+    });
+  };
   const switchMode = (next: Mode) => {
     setMode(next);
     setPillarCoachId(null);
   };
+  const openReview = () => setReviewOpen(true);
 
-  const total = picked.reduce((n, s) => n + s.price, 0);
-  const pickBar = picked.length ? (
-    <div className="sticky bottom-0 z-10 -mx-4 flex flex-col gap-3 border-t border-[#EAEADF] bg-[#F7F7F0]/95 px-4 py-3 backdrop-blur md:mx-0 md:rounded-[10px] md:border">
-      <div className="flex flex-wrap gap-1.5">
-        {picked.map((s) => {
-          const start = bookableStart(s);
-          return (
-            <button
-              key={s.id}
-              type="button"
-              onClick={() => untoggle(s)}
-              className="inline-flex items-center gap-1 rounded-full border border-[#6698D2] bg-[#E5EDF7] px-2.5 py-1 text-[12px] font-medium text-[#0054B4]"
-              aria-label={`Remove ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })}, ${formatClock(start, timeZone)}`}
-            >
-              {formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", day: "numeric" })} · {formatClock(start, timeZone)}
-              <X className="size-3" strokeWidth={2} aria-hidden="true" />
-            </button>
-          );
-        })}
-      </div>
-      <div className="flex items-center justify-between gap-3">
-        <span className="flex flex-col">
-          <span className={meta}>
-            {onlyCoach
-              ? `${plural(picked.length, onlyCoach.needsRequest ? "request" : "session")} with ${onlyCoach.name.split(" ")[0]}`
-              : `${plural(picked.length, "session")} with ${plural(pickedCoachIds.length, "coach", "coaches")}`}
-          </span>
-          <b className="text-[20px] font-semibold">{money(total)}</b>
-        </span>
-        <span className="flex gap-2">
-          <button type="button" className={textButton} onClick={() => setPicked([])}>
-            Clear
-          </button>
-          <button type="button" className={cn(primaryButton, "h-[40px]")} onClick={() => setReviewOpen(true)}>
-            Continue
-          </button>
-        </span>
-      </div>
-    </div>
-  ) : null;
-
-  const header = (
-    <header className="flex flex-col gap-4">
-      <div className="flex flex-col gap-[10px]">
-        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Book a session</h1>
-        <p className="text-[16px] leading-[18px] text-[#767980]">
-          {currentMode === "pillar" ? "Pick what to work on, then a coach and your times." : "Pick your coach, then the days and times that work."}
-        </p>
-      </div>
-      <div className={cn(segGroup, "sm:w-[360px]")} role="group" aria-label="How to book">
-        <button type="button" className={segButton(currentMode === "coach")} aria-pressed={currentMode === "coach"} onClick={() => switchMode("coach")}>
-          <User strokeWidth={1.5} aria-hidden="true" />
-          Book with coach
-        </button>
-        <button type="button" className={segButton(currentMode === "pillar")} aria-pressed={currentMode === "pillar"} onClick={() => switchMode("pillar")}>
-          <LayoutGrid strokeWidth={1.5} aria-hidden="true" />
-          Book by pillar
-        </button>
-      </div>
-    </header>
-  );
+  const pickingTimes = (currentMode === "coach" && Boolean(selectedCoach)) || Boolean(pillar && pillarCoach);
 
   const coachHeader = (coach: BookingCoach, sub: string) => (
     <div className="flex flex-wrap items-center gap-3">
       <Avatar coach={coach} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
         <span className="text-[20px] font-medium tracking-[-0.04em] text-[#1A202C]">{coach.name}</span>
-        <span className={meta}>{sub}</span>
+        <span className="text-[14px] leading-[18px] text-[#767980]">{sub}</span>
         {coach.groupFrom || coach.hourlyRate ? (
-          <span className="flex flex-wrap gap-x-3 text-[12px] text-[#484D56]">
-            {coach.groupFrom ? <span className="text-[#117A96]">Group from {money(coach.groupFrom)}</span> : null}
-            {coach.hourlyRate ? <span>1-on-1 from {money(coach.hourlyRate)}</span> : null}
+          <span className="flex flex-wrap gap-x-3 text-[13px] text-[#484D56]">
+            {coach.groupFrom ? (
+              <span className="inline-flex items-center gap-1 text-[#117A96]">
+                <Users className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                Group from {money(coach.groupFrom)}
+              </span>
+            ) : null}
+            {coach.hourlyRate ? (
+              <span className="inline-flex items-center gap-1">
+                <User className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                1-on-1 from {money(coach.hourlyRate)}
+              </span>
+            ) : null}
           </span>
         ) : null}
       </div>
@@ -203,9 +197,9 @@ const BookSessionPage = () => {
             {plural(coach.credits, "credit")} left
           </BrandPill>
         ) : null}
-        <Link to={coachPricingPath(coach.slug || coach.id)} className={cn(secondaryButton, "h-[30px] px-3")}>
+        <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setPackagesCoach(coach)}>
           Packages
-        </Link>
+        </button>
         <Link to={coachProfilePath(coach.slug || coach.id)} className={textButton}>
           Profile
         </Link>
@@ -225,7 +219,36 @@ const BookSessionPage = () => {
       todayISO={todayISO}
       onRequestTime={() => setRequestCoach(coach)}
       lockedBy={null}
+      fees={fees}
+      useCredits={useCredits}
+      athleteFirst={athleteFirst}
+      footer={<PickFoot plan={plan} count={picked.length} onContinue={openReview} />}
     />
+  );
+
+  const summary = (
+    <BookingSummary
+      picked={sortedPicked}
+      coaches={pickedCoaches}
+      plan={plan}
+      pillarOf={pillarOf}
+      timeZone={timeZone}
+      useCredits={useCredits}
+      onUseCreditsChange={setUseCredits}
+      onRemove={untoggle}
+      onClear={() => {
+        setPicked([]);
+        setPillarOf({});
+      }}
+      onReview={openReview}
+    />
+  );
+
+  const twoCol = (left: JSX.Element) => (
+    <div className="flex items-start gap-6">
+      <div className="flex min-w-0 flex-1 flex-col gap-6">{left}</div>
+      <aside className="sticky top-16 hidden w-[340px] flex-none min-[1400px]:block">{summary}</aside>
+    </div>
   );
 
   let content: JSX.Element;
@@ -235,7 +258,7 @@ const BookSessionPage = () => {
     } else if (!myCoaches.length && !selectedCoach) {
       content = (
         <section className={cn(card, "items-center py-10 text-center")}>
-          <CalendarDays className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+          <Search className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
           <b className="text-[18px] font-medium">Find your first coach</b>
           <p className="max-w-[420px] text-[14px] text-[#767980]">
             Once you train with a coach, they show up here and you can book them in a few taps. Or book by pillar to see every coach with open times.
@@ -253,7 +276,7 @@ const BookSessionPage = () => {
     } else {
       const rail = [...myCoaches];
       if (selectedCoach && !rail.some((c) => c.id === selectedCoach.id)) rail.unshift(selectedCoach);
-      content = (
+      content = twoCol(
         <>
           <section className={card}>
             <div className="flex items-center justify-between">
@@ -262,31 +285,28 @@ const BookSessionPage = () => {
                 Find a new coach
               </Link>
             </div>
-            <div className="flex gap-3 overflow-x-auto pb-1">
+            <div className="flex gap-4 overflow-x-auto pb-1">
               {rail.map((c) => (
                 <button
                   key={c.id}
                   type="button"
                   aria-pressed={c.id === selectedCoachId}
                   onClick={() => setCoachId(c.id)}
-                  className={cn(
-                    "flex w-[96px] flex-none flex-col items-center gap-1.5 rounded-[10px] border p-2 text-center",
-                    c.id === selectedCoachId ? "border-[#6698D2] bg-[#E5EDF7]" : "border-transparent hover:bg-[#F1F1E6]"
-                  )}
+                  className="flex w-24 flex-none flex-col items-center gap-2 text-center"
                 >
-                  <span className={cn("rounded-full p-[2px]", c.nextSession ? "ring-2 ring-[#0054B4]" : "ring-2 ring-[#D9D9CF]")}>
-                    <Avatar coach={c} size={56} />
+                  <span className={cn("rounded-full border-2 p-[3px]", c.id === selectedCoachId ? "border-[#0054B4]" : "border-transparent")}>
+                    <Avatar coach={c} size={60} />
                   </span>
-                  <b className="text-[13px] font-medium">{c.name.split(" ")[0]}</b>
-                  <small className="line-clamp-1 text-[11px] text-[#767980]">{c.specialties[0] ?? (c.isClient ? "Your coach" : "Coach")}</small>
+                  <b className="text-[14px] font-medium">{c.name.split(" ")[0]}</b>
+                  <small className="line-clamp-1 text-[12px] leading-[14px] text-[#767980]">{c.specialties[0] ?? (c.isClient ? "Your coach" : "Coach")}</small>
                 </button>
               ))}
-              <Link to={ROUTES.COACHES} className="flex w-[96px] flex-none flex-col items-center gap-1.5 rounded-[10px] p-2 text-center hover:bg-[#F1F1E6]">
+              <Link to={ROUTES.COACHES} className="flex w-24 flex-none flex-col items-center gap-2 text-center">
                 <span className="flex size-[60px] items-center justify-center rounded-full border border-dashed border-[#C1C1B8] text-[#767980]">
                   <Plus className="size-5" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <b className="text-[13px] font-medium">Add coach</b>
-                <small className="text-[11px] text-[#767980]">Browse</small>
+                <b className="text-[14px] font-medium">Add coach</b>
+                <small className="text-[12px] text-[#767980]">Browse</small>
               </Link>
             </div>
           </section>
@@ -294,13 +314,13 @@ const BookSessionPage = () => {
             <div className="flex flex-col gap-4">
               {coachHeader(
                 selectedCoach,
-                [selectedCoach.specialties.slice(0, 2).join(", "), selectedCoach.locations[0]].filter(Boolean).join(" · ")
+                [selectedCoach.specialties.slice(0, 2).join(", "), "60 min", selectedCoach.locations[0]].filter(Boolean).join(" · ")
               )}
-              <PackageSavings coach={selectedCoach} />
+              <PackageSavings coach={selectedCoach} onOpen={() => setPackagesCoach(selectedCoach)} />
               {selectedCoach.nextSession ? (
-                <p className="flex items-center gap-2 rounded-[8px] bg-[#E5EDF7] px-3 py-2.5 text-[14px] text-[#0054B4]">
-                  <CalendarDays className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                  Next session with {selectedCoach.name.split(" ")[0]}: {whenText(selectedCoach.nextSession.date, selectedCoach.nextSession.startTime, timeZone)}
+                <p className="flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] text-[#767980]">
+                  <CalendarCheck className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
+                  Next session with {selectedCoach.name.split(" ")[0]}: {whenText(selectedCoach.nextSession.date, selectedCoach.nextSession.startTime, timeZone)}.
                 </p>
               ) : null}
               {picker(selectedCoach, false)}
@@ -310,25 +330,25 @@ const BookSessionPage = () => {
       );
     }
   } else if (pillar && pillarCoach) {
-    content = (
+    content = twoCol(
       <div className="flex flex-col gap-4">
-        <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => setPillarCoachId(null)}>
+        <button type="button" className={cn(textButton, "-mb-3 self-start text-[#767980]")} onClick={() => setPillarCoachId(null)}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
           {pillar} coaches
         </button>
-        {coachHeader(pillarCoach, [pillar, pillarCoach.locations[0]].filter(Boolean).join(" · "))}
+        {coachHeader(pillarCoach, [pillar, "60 min", pillarCoach.locations[0]].filter(Boolean).join(" · "))}
         {picker(pillarCoach, true)}
       </div>
     );
   } else {
-    content = (
+    content = twoCol(
       <>
-        <section className={card}>
+        <section className={cn(card, !pillar && "min-h-0 flex-1")}>
           <div className="flex flex-col gap-1">
             <h2 className="text-[20px] font-medium tracking-[-0.04em]">What do you want to work on?</h2>
-            <p className={meta}>Pick a pillar to see coaches and their next open times.</p>
+            <p className="text-[14px] leading-[18px] text-[#767980]">Pick a pillar to see coaches and their next open times.</p>
           </div>
-          <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
+          <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
             {DEFAULT_PILLARS.soccer.map((p) => {
               const Icon = ICON_MAP[p.iconKey];
               const on = pillar === p.title;
@@ -338,18 +358,26 @@ const BookSessionPage = () => {
                   type="button"
                   aria-pressed={on}
                   title={pillarCopy(p.title).blurb}
-                  onClick={() => { setPillar(on ? null : p.title); setPillarCoachId(null); }}
+                  onClick={() => {
+                    setPillar(on ? null : p.title);
+                    setPillarCoachId(null);
+                  }}
                   className={cn(
-                    "flex items-center gap-3 rounded-[10px] border p-3 text-left transition-colors",
-                    on ? "border-[#6698D2] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB] hover:bg-[#EAEADF]"
+                    "flex items-center gap-3 rounded-[12px] border px-3.5 py-3 text-left transition-colors max-md:flex-col max-md:items-start max-md:gap-2",
+                    on ? "border-[#0054B4] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB] hover:border-[#6698D2]"
                   )}
                 >
-                  <span className={cn("flex size-[36px] flex-none items-center justify-center rounded-[8px]", on ? "bg-[#0054B4] text-[#F1F1E6]" : "bg-[#F9F9F5] text-[#0054B4]")}>
-                    <Icon className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />
+                  <span
+                    className={cn(
+                      "flex size-[34px] flex-none items-center justify-center rounded-full border",
+                      on ? "border-[#99BBE1] bg-[#F7F7F0] text-[#0054B4]" : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]"
+                    )}
+                  >
+                    <Icon className="size-[17px]" strokeWidth={1.5} aria-hidden="true" />
                   </span>
                   <span className="flex min-w-0 flex-col">
-                    <b className="text-[14px] font-medium">{p.title}</b>
-                    <small className="line-clamp-1 text-[12px] text-[#767980]">{pillarCopy(p.title).blurb}</small>
+                    <b className="text-[14px] font-semibold leading-[18px]">{p.title}</b>
+                    <small className="mt-0.5 text-[12px] text-[#A3A6AB]">{pillarCopy(p.title).blurb}</small>
                   </span>
                 </button>
               );
@@ -358,11 +386,29 @@ const BookSessionPage = () => {
         </section>
 
         {pillar ? (
+          <section className="flex items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-3.5 py-3 md:hidden">
+            <span className="flex size-9 flex-none items-center justify-center rounded-full border border-[#99BBE1] bg-[#F7F7F0] text-[#0054B4]">
+              {(() => {
+                const Icon = ICON_MAP[DEFAULT_PILLARS.soccer.find((p) => p.title === pillar)?.iconKey ?? "activity"];
+                return <Icon className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />;
+              })()}
+            </span>
+            <span className="flex min-w-0 flex-1 flex-col">
+              <b className="text-[15px] font-semibold">{pillar}</b>
+              <small className="text-[12px] leading-4 text-[#767980]">{pillarQuery.data ? plural(pillarCoaches.length, "coach", "coaches") : "Coaches"}</small>
+            </span>
+            <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => { setPillar(null); setPillarCoachId(null); }}>
+              Change
+            </button>
+          </section>
+        ) : null}
+
+        {pillar ? (
           <section className={card}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex flex-col gap-1">
                 <h2 className="text-[20px] font-medium tracking-[-0.04em]">{pillar} coaches</h2>
-                <p className={meta}>
+                <p className="text-[14px] leading-[18px] text-[#767980]">
                   {pillarCopy(pillar).blurb}
                   {pillarQuery.data ? ` · ${plural(pillarCoaches.length, "coach", "coaches")}` : ""}
                   {usesPosition ? ` for ${position === "Goalkeeper" ? "goalkeepers" : "field players"}` : ""}
@@ -370,15 +416,15 @@ const BookSessionPage = () => {
               </div>
               <div className="flex flex-wrap gap-2">
                 {usesPosition ? (
-                  <div className={segGroup} role="group" aria-label="Position">
+                  <div className={cn(segGroup, "w-fit")} role="group" aria-label="Position">
                     {["Goalkeeper", "Field player"].map((p) => (
-                      <button key={p} type="button" className={segButton(position === p)} aria-pressed={position === p} onClick={() => setPosition(p)}>
+                      <button key={p} type="button" className={cn(segButton(position === p), "flex-none")} aria-pressed={position === p} onClick={() => setPosition(p)}>
                         {p}
                       </button>
                     ))}
                   </div>
                 ) : null}
-                <div className={segGroup} role="group" aria-label="Session type">
+                <div className={cn(segGroup, "w-fit")} role="group" aria-label="Session type">
                   {(
                     [
                       ["all", "All"],
@@ -386,7 +432,7 @@ const BookSessionPage = () => {
                       ["individual", "1-on-1"],
                     ] as [BookFormat, string][]
                   ).map(([v, l]) => (
-                    <button key={v} type="button" className={segButton(format === v)} aria-pressed={format === v} onClick={() => setFormat(v)}>
+                    <button key={v} type="button" className={cn(segButton(format === v), "flex-none")} aria-pressed={format === v} onClick={() => setFormat(v)}>
                       {l}
                     </button>
                   ))}
@@ -401,11 +447,12 @@ const BookSessionPage = () => {
                 {pillarCoaches.map((c) => {
                   const next = format === "group" ? null : c.nextOpen;
                   const group = format === "individual" ? null : c.nextGroup;
-                  const nextLine = next && (!group || next.date <= group.date)
-                    ? `Next open ${whenText(next.date, next.startTime, timeZone)}`
-                    : group
-                      ? `Next group ${whenText(group.date, group.startTime, timeZone)} · ${group.spotsLeft} of ${group.capacity} spots left`
-                      : null;
+                  const nextLine =
+                    next && (!group || next.date <= group.date)
+                      ? { kind: "open" as const, when: whenText(next.date, next.startTime, timeZone) }
+                      : group
+                        ? { kind: "group" as const, when: whenText(group.date, group.startTime, timeZone), spots: `${group.spotsLeft} of ${group.capacity} spots left` }
+                        : null;
                   return (
                     <div key={c.id} className="flex flex-col gap-3 py-4">
                       <div className="flex items-start gap-3">
@@ -428,7 +475,7 @@ const BookSessionPage = () => {
                             )}
                             {c.credits ? <BrandPill tone="green">{plural(c.credits, "credit")} left</BrandPill> : null}
                           </span>
-                          <span className="flex flex-wrap gap-3 text-[12px] text-[#484D56]">
+                          <span className="flex flex-wrap gap-3 text-[13px] text-[#484D56]">
                             {c.groupFrom != null ? (
                               <span className="flex items-center gap-1 text-[#117A96]">
                                 <Users className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
@@ -442,7 +489,9 @@ const BookSessionPage = () => {
                               </span>
                             ) : null}
                           </span>
-                          <span className={meta}>{[c.specialties.slice(0, 2).join(", "), c.locations[0]].filter(Boolean).join(" · ")}</span>
+                          <span className={meta}>
+                            {[c.specialties.slice(0, 2).join(", ") || null, "60 min", c.locations[0]].filter(Boolean).join(" · ")}
+                          </span>
                         </div>
                         {c.totalReviews ? (
                           <span className="flex flex-none items-center gap-1 text-[14px]">
@@ -452,22 +501,29 @@ const BookSessionPage = () => {
                           </span>
                         ) : null}
                       </div>
-                      <p className="flex items-center gap-2 text-[14px] text-[#484D56]">
+                      <p className="flex items-center gap-2 rounded-[8px] bg-[#F4F4EB] px-3 py-2 text-[13px] text-[#484D56]">
                         <CalendarDays className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-                        {nextLine ?? "No open times in the next 4 weeks"}
+                        {nextLine ? (
+                          <span>
+                            Next {nextLine.kind === "group" ? "group" : "open"} <b>{nextLine.when}</b>
+                            {nextLine.kind === "group" ? ` · ${nextLine.spots}` : ""}
+                          </span>
+                        ) : (
+                          "No open times in the next 4 weeks"
+                        )}
                       </p>
                       <div className="flex gap-2">
                         {nextLine ? (
-                          <button type="button" className={primaryButton} onClick={() => setPillarCoachId(c.id)}>
+                          <button type="button" className={cn(primaryButton, "max-md:h-11")} onClick={() => setPillarCoachId(c.id)}>
                             Pick a time
                             <ChevronRight strokeWidth={1.5} aria-hidden="true" />
                           </button>
                         ) : (
-                          <button type="button" className={primaryButton} onClick={() => setRequestCoach(c)}>
+                          <button type="button" className={cn(primaryButton, "max-md:h-11")} onClick={() => setRequestCoach(c)}>
                             Request a time
                           </button>
                         )}
-                        <Link to={coachProfilePath(c.slug || c.id)} className={secondaryButton}>
+                        <Link to={coachProfilePath(c.slug || c.id)} className={cn(secondaryButton, "max-md:h-11")}>
                           View profile
                         </Link>
                       </div>
@@ -477,6 +533,7 @@ const BookSessionPage = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
+                <Search className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
                 <b className="text-[16px] font-medium">
                   No {usesPosition ? (position === "Goalkeeper" ? "goalkeeper " : "field player ") : ""}coaches for {pillar} yet
                 </b>
@@ -495,26 +552,52 @@ const BookSessionPage = () => {
   }
 
   return (
-    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[860px] flex-col gap-5">
-        {header}
+    <div
+      className={cn(
+        "overflow-x-clip px-4 pb-8 pt-1 md:px-5 md:pb-12",
+        sortedPicked.length > 0 && "max-[820px]:pb-[180px]"
+      )}
+    >
+      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-5">
+        <header className="flex flex-col gap-4">
+          <div className="flex flex-col gap-2.5">
+            <h1 className={pageTitle}>Book a session</h1>
+            <p className="text-[14px] leading-[18px] text-[#767980]">
+              {currentMode === "pillar" ? "Pick what to work on, then a coach and your times." : "Pick your coach, then the days and times that work."}
+            </p>
+          </div>
+          <div className={cn(segGroup, "-mt-2 w-fit")} role="group" aria-label="How to book">
+            <button type="button" className={cn(segButton(currentMode === "coach"), "flex-none")} aria-pressed={currentMode === "coach"} onClick={() => switchMode("coach")}>
+              <User strokeWidth={1.5} aria-hidden="true" />
+              Book with coach
+            </button>
+            <button type="button" className={cn(segButton(currentMode === "pillar"), "flex-none")} aria-pressed={currentMode === "pillar"} onClick={() => switchMode("pillar")}>
+              <LayoutGrid strokeWidth={1.5} aria-hidden="true" />
+              Book by pillar
+            </button>
+          </div>
+        </header>
         {content}
-        {pickBar}
       </div>
+      <PickBar picked={sortedPicked} coaches={pickedCoaches} plan={plan} timeZone={timeZone} onRemove={untoggle} onContinue={openReview} />
+      <MobilePayBar plan={plan} count={picked.length} onPhone={!pickingTimes} onReview={openReview} />
       <ReviewDialog
         open={reviewOpen}
         onOpenChange={setReviewOpen}
         coaches={pickedCoaches}
-        picked={picked}
+        picked={sortedPicked}
         pillar={currentMode === "pillar" ? pillar : null}
         athleteId={athleteId}
         timeZone={timeZone}
+        useCredits={useCredits}
+        onUseCreditsChange={setUseCredits}
         onRemove={(s) => {
           untoggle(s);
           if (picked.length <= 1) setReviewOpen(false);
         }}
         onBooked={() => {
           setPicked([]);
+          setPillarOf({});
           setReviewOpen(false);
         }}
       />
@@ -525,6 +608,7 @@ const BookSessionPage = () => {
         timeZone={timeZone}
         onClose={() => setRequestCoach(null)}
       />
+      <BuyPackagesDialog coach={packagesCoach} onClose={() => setPackagesCoach(null)} />
     </div>
   );
 };

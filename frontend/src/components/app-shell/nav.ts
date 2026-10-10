@@ -25,7 +25,7 @@ export const ORG_NAV: NavItem = { title: "Organization page", short: "Organizati
 // Athlete navigation (ATH-91): Home, Book, Sessions, Coaches, Gear on web and phone.
 export const ATHLETE_NAV: NavItem[] = [
   { title: "Home", short: "Home", url: ROUTES.DASHBOARD, icon: House },
-  { title: "Book a Session", short: "Book", url: ROUTES.BOOK, icon: CalendarPlus },
+  { title: "Book a Session", short: "Book", url: ROUTES.BOOK, icon: CalendarPlus, also: [ROUTES.BOOKING_CONFIRMATION] },
   { title: "My Sessions", short: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "Coaches", short: "Coaches", url: ROUTES.COACHES, icon: Search, also: [ROUTES.MY_COACHES, "/coach/", "/organizations/"] },
   { title: "Gear", short: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },

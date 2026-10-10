@@ -11,7 +11,7 @@ import { isPublicCoachRatingVisible } from "@/utils/publicRating";
 import { useCoachBrands } from "@/hooks/useBrands";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { packagesAPI } from "@/api/packages";
+import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import type { Brand } from "@/utils/brands";
 import { agesLine, cancellationLine, coachesLine, repliesLabel, withBaseService } from "./own/shared";
 import { coachAcademy, organizationPath } from "@/utils/coachAcademy";
@@ -186,7 +186,7 @@ export function CoachProfileView({
     navigate(`${ROUTES.BOOK}?coach=${coach.id}`, { state: { from: location } });
   };
 
-  const buy = async (pkg: CoachPackage) => {
+  const buy = (pkg: CoachPackage) => {
     if (isOwn) {
       toast({ title: "This is your own profile", description: "Families buy your packages here." });
       return;
@@ -196,15 +196,6 @@ export function CoachProfileView({
       return;
     }
     setBuying(pkg.id);
-    try {
-      const payment = await packagesAPI.createPackagePayment({ package_id: pkg.id, coach_id: pkg.coach_id || coach.id });
-      if (payment.error) throw new Error(payment.error.message);
-      if (!payment.data?.url) throw new Error("No checkout link came back.");
-      window.location.href = payment.data.url;
-    } catch (err) {
-      toast({ title: "Couldn't start checkout", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
-      setBuying(null);
-    }
   };
 
   const scrollToReviews = () => document.getElementById(REVIEWS_ANCHOR)?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -257,7 +248,7 @@ export function CoachProfileView({
             sessions={sessions}
             cancellation={cancellation}
             paysDirect={paysDirect}
-            buying={buying}
+            buying={null}
             onBuy={buy}
             onAsk={onMessage}
             mostBookedId={extras?.mostBookedPackageId}
@@ -277,6 +268,11 @@ export function CoachProfileView({
           brandNames={brands.map((brand) => brand.name)}
         />
       </div>
+      <BuyPackagesDialog
+        coach={buying ? { id: coach.id, name: coach.name, slug: coach.slug ?? null, paysDirect, credits: 0 } : null}
+        initialPackageId={buying}
+        onClose={() => setBuying(null)}
+      />
     </div>
   );
 }

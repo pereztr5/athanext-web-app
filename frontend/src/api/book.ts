@@ -150,7 +150,7 @@ export const bookAPI = {
     occurrenceIds: string[],
     athleteId: string,
     useCredits = true
-  ): Promise<{ url?: string; requested?: boolean; direct?: boolean; booked?: boolean; creditsUsed: number }> {
+  ): Promise<{ url?: string; requested?: boolean; direct?: boolean; booked?: boolean; creditsUsed: number; bookingIds: string[] }> {
     const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
       body: { occurrence_ids: occurrenceIds, athlete_id: athleteId, use_credits: useCredits },
     });
@@ -166,6 +166,8 @@ export const bookAPI = {
       direct: Boolean(data?.direct),
       booked: Boolean(data?.booked),
       creditsUsed: Number(data?.credits_used) || 0,
+      /** Credits-only and pay-direct calls return the bookings they made; Stripe ones don't. */
+      bookingIds: Array.isArray(data?.booking_ids) ? (data.booking_ids as unknown[]).map(String) : [],
     };
   },
 };

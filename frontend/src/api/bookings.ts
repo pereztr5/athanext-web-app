@@ -96,6 +96,9 @@ export const fetchBookingConfirmation = async (
          )`
       )
       .eq('stripe_session_id', sessionId)
+      // One checkout can cover several bookings; the full list comes from api/receipts.
+      .order('created_at', { ascending: true })
+      .limit(1)
       .maybeSingle();
 
     if (error) {

@@ -21,4 +21,13 @@ describe("planBooking", () => {
   it("charges every paid session when credits are off", () => {
     expect(planBooking(picked, coaches, false).dueNow).toBe(100);
   });
+
+  it("adds fees to paid times only, and skips the platform fee for waived coaches", () => {
+    const fees = { platformPerc: 10, stripePerc: 3, waived: new Set<string>() };
+    const p = planBooking(picked, coaches, true, fees);
+    expect([p.subtotal, p.fees, p.dueNow, p.ifAccepted]).toEqual([50, 6.5, 56.5, 79.1]);
+    expect(p.feeOf(picked[1])).toBe(0);
+    const w = planBooking(picked, coaches, false, { ...fees, waived: new Set(["a"]) });
+    expect([w.fees, w.dueNow]).toEqual([3, 103]);
+  });
 });
