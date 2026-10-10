@@ -3,6 +3,7 @@
  * pillars, bio, facts, group chats, sessions and packages, credentials, reviews) and, on the
  * right, profile completeness, ratings, quick info, FAQ and gear.
  */
+import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -233,6 +234,7 @@ export const OwnProfilePreview = ({
               </div>
             </>
           ) : null}
+          <CoachAcademyPackages coachId={coach.id} canBuy={false} />
           <p className="flex items-start gap-2 rounded-[8px] bg-[#E5EDF7] px-3 py-2.5 text-[13px] text-[#00326C]">
             <ShieldCheck className="mt-px size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
             {coach.cancellation_policy || "Free cancellation with 24 hours notice."}

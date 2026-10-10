@@ -3,6 +3,8 @@ import {
   attendanceLabel,
   coachRows,
   isValidRate,
+  packageSaving,
+  savingLine,
   money,
   orgTotals,
   splitExample,
@@ -74,5 +76,31 @@ describe("organization numbers", () => {
     expect(attendanceLabel({ noShow: false, marked: false, type: "group", came: 0 })).toBe("Not marked");
     expect(attendanceLabel({ noShow: false, marked: true, type: "group", came: 5 })).toBe("5 came");
     expect(attendanceLabel({ noShow: true, marked: true, type: "individual", came: 0 })).toBe("No-show");
+  });
+});
+
+describe("packageSaving", () => {
+  const coaches = [
+    { id: "m", name: "Michael Torres", price: 90 },
+    { id: "d", name: "Diego Ramirez", price: 80 },
+  ];
+
+  it("compares a 1-on-1 package with each included coach's single price", () => {
+    const k = packageSaving({ kind: "individual", sessionCount: 8, price: 600, coachIds: ["m", "d"] }, coaches, []);
+    expect(k.per).toBe(75);
+    expect(k.rows.map((r) => r.save)).toEqual([120, 40]);
+    expect(savingLine(k)).toBe("Saves $40 to $120 vs single sessions");
+  });
+
+  it("compares a group pass with upcoming group prices", () => {
+    const k = packageSaving({ kind: "group", sessionCount: 4, price: 140, coachIds: ["m"] }, coaches, [35, 55, 55]);
+    expect(k.rows.map((r) => r.save)).toEqual([0, 80]);
+    expect(savingLine(k)).toBe("Saves up to $80 vs single sessions");
+  });
+
+  it("says nothing when the package costs more", () => {
+    const k = packageSaving({ kind: "individual", sessionCount: 4, price: 400, coachIds: ["d"] }, coaches, []);
+    expect(k.max).toBe(-80);
+    expect(savingLine(k)).toBe("");
   });
 });

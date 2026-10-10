@@ -1,16 +1,18 @@
 /**
- * Org page tab (ATH-90): name, logo, one line, a short description, which coaches show and in
- * what order, and pricing options. Only the owner can edit; families see it once saved.
+ * Organization page (ATH-90, Working Copy): name, logo, one line, a short description, which
+ * coaches show and in what order, and academy packages. Only the owner can edit; families see
+ * the page once saved. Coach prices come from each coach's profile and group sessions from the
+ * schedule, so packages are the only prices set here.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, ImageIcon, Plus, X } from "lucide-react";
-import { organizationsAPI } from "@/api/organizations";
-import { Switch } from "@/components/ui/switch";
-import { card, iconButton, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { ChevronDown, ChevronUp, ImageIcon, Plus } from "lucide-react";
+import { orgPackagesAPI, organizationsAPI, type OrgPackage } from "@/api/organizations";
+import { OrgPackageDialog, type PackageCoach } from "@/components/organization/OrgPackages";
+import { card, input, label, meta, primaryButton, secondaryButton, smallButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { ABOUT_MAX, initials, type MyOrganization, type OrgPricing } from "@/utils/organizations";
+import { ABOUT_MAX, initials, packageSaving, type MyOrganization, type OrgPricing } from "@/utils/organizations";
 
 type Draft = {
   name: string;
@@ -49,17 +51,35 @@ const OrderButtons = ({ i, n, onMove, what }: { i: number; n: number; onMove: (d
   </span>
 );
 
-export const OrgLogo = ({ name, url, size = 56 }: { name: string; url: string | null; size?: number }) =>
+/** Org logo (Working Copy `.og-logo`): 64px, 12px radius, ink with light initials. */
+export const OrgLogo = ({ name, url, size = 64 }: { name: string; url: string | null; size?: number }) =>
   url ? (
-    <img src={url} alt="" style={{ width: size, height: size }} className="shrink-0 rounded-[10px] bg-[#F9F9F5] object-contain" />
+    <img src={url} alt="" style={{ width: size, height: size }} className={cn("shrink-0 bg-[#F9F9F5] object-contain", size >= 64 ? "rounded-[12px]" : "rounded-[10px]")} />
   ) : (
     <span
-      style={{ width: size, height: size, fontSize: Math.round(size / 3) }}
-      className="flex shrink-0 items-center justify-center rounded-[10px] bg-[#CCDDF0] font-bold tracking-[-0.03em] text-[#00326C]"
+      style={{ width: size, height: size, fontSize: Math.round(size / 3.2) }}
+      className={cn("flex shrink-0 items-center justify-center bg-[#1A202C] font-bold tracking-[-0.05em] text-[#F1F1E6]", size >= 64 ? "rounded-[12px]" : "rounded-[10px]")}
     >
       {initials(name)}
     </span>
   );
+
+const h3 = "text-[20px] font-medium leading-[18px] tracking-[-0.05em]";
+const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+
+/** Prototype switch: 36x20 track, 16px knob. */
+const MiniSwitch = ({ on, onChange, label: aria }: { on: boolean; onChange: (on: boolean) => void; label: string }) => (
+  <button
+    type="button"
+    role="switch"
+    aria-checked={on}
+    aria-label={aria}
+    onClick={() => onChange(!on)}
+    className={cn("flex h-5 w-9 flex-none items-center rounded-[10px] p-0.5 transition-colors", on ? "justify-end bg-[#0054B4]" : "justify-start bg-[#D9D9CF]")}
+  >
+    <span className="size-4 rounded-full bg-[#FDFDFC]" />
+  </button>
+);
 
 export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
   const { toast } = useToast();
@@ -72,14 +92,25 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
   const dirty = JSON.stringify(draft) !== JSON.stringify(saved);
   const coachName = (id: string) => org.coaches.find((c) => c.coachId === id)?.name ?? "Coach";
   const set = (patch: Partial<Draft>) => setDraft((d) => ({ ...d, ...patch }));
-  const setPrice = (i: number, patch: Partial<OrgPricing>) =>
-    set({ pricing: draft.pricing.map((p, j) => (j === i ? { ...p, ...patch } : p)) });
+  const packagesQuery = useQuery({ queryKey: ["org-packages"], queryFn: () => orgPackagesAPI.mine() });
+  const extras = useQuery({ queryKey: ["org-page-extras", org.slug], queryFn: () => orgPackagesAPI.pageExtras(org.slug) });
+  const [editing, setEditing] = useState<OrgPackage | "new" | null>(null);
+  const packageCoaches: PackageCoach[] = useMemo(
+    () => org.coaches.map((c) => ({ id: c.coachId, name: c.name, price: extras.data?.coachPrices[c.coachId] ?? c.hourlyRate ?? 0, photo: c.photo })),
+    [org.coaches, extras.data]
+  );
+  const groupPrices = useMemo(() => {
+    const out: Record<string, number[]> = {};
+    for (const g of extras.data?.groups ?? []) (out[g.coachId] ??= []).push(g.price);
+    return out;
+  }, [extras.data]);
 
   const save = useMutation({
     mutationFn: () =>
       organizationsAPI.savePage({
         ...draft,
-        pricing: draft.pricing.filter((p) => p.name.trim()),
+        // Free-text pricing isn't edited here any more; whatever was saved stays as it was.
+        pricing: draft.pricing.filter((p: OrgPricing) => p.name.trim()),
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ["my-organization"] });
@@ -108,20 +139,19 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
 
   const shown = draft.coaches.filter((c) => c.shown).length;
 
+  const packages = packagesQuery.data ?? [];
+
   return (
-    <div className="flex flex-col gap-5">
-      <section className={card}>
-        <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em]">Basics</h2>
+    <div className="flex max-w-[760px] flex-col gap-5">
+      <section className={cn(card, "gap-4")}>
+        <h2 className={h3}>Basics</h2>
         <div className="flex flex-wrap items-center gap-4">
           <OrgLogo name={draft.name || org.name} url={draft.logoUrl} />
           <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={(e) => onLogo(e.target.files?.[0])} />
-          <button type="button" className={secondaryButton} disabled={uploading} onClick={() => fileRef.current?.click()}>
+          <button type="button" className={cn(secondaryButton, smallButton)} disabled={uploading} onClick={() => fileRef.current?.click()}>
             <ImageIcon strokeWidth={1.5} aria-hidden="true" />
             {uploading ? "Uploading…" : "Change logo"}
           </button>
-          {draft.logoUrl ? (
-            <button type="button" className={textButton} onClick={() => set({ logoUrl: null })}>Remove logo</button>
-          ) : null}
         </div>
         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
           <label className="flex flex-col gap-1.5">
@@ -130,81 +160,94 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
           </label>
           <label className="flex flex-col gap-1.5">
             <span className={label}>One line under the name</span>
-            <input className={input} maxLength={120} placeholder="City · what you're known for" value={draft.line} onChange={(e) => set({ line: e.target.value })} />
+            <input className={input} maxLength={120} value={draft.line} onChange={(e) => set({ line: e.target.value })} />
           </label>
         </div>
         <label className="flex flex-col gap-1.5">
           <span className={label}>Short description</span>
           <textarea
-            className={cn(input, "h-auto py-2")}
+            className={cn(input, "h-auto resize-none py-2.5 leading-[18px]")}
             rows={3}
             maxLength={ABOUT_MAX}
             placeholder="Two or three sentences families see under your name"
             value={draft.about}
             onChange={(e) => set({ about: e.target.value })}
           />
-          <span className={meta}>{draft.about.length} of {ABOUT_MAX}</span>
+          <span className={meta}>
+            {draft.about.length} of {ABOUT_MAX}
+          </span>
         </label>
       </section>
 
-      <section className={card}>
+      <section className={cn(card, "gap-4")}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em]">Coaches on the page</h2>
+          <h2 className={h3}>Coaches on the page</h2>
           <span className={meta}>{shown} shown</span>
         </div>
         <div className="flex flex-col">
-          {draft.coaches.map((c, i) => (
-            <div key={c.coachId} className="flex items-center gap-3 border-b border-[#EAEADF] py-2.5 last:border-0">
-              <OrderButtons i={i} n={draft.coaches.length} what={coachName(c.coachId)} onMove={(d) => set({ coaches: move(draft.coaches, i, d) })} />
-              <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{coachName(c.coachId)}</span>
-              <Switch
-                checked={c.shown}
-                aria-label={`Show ${coachName(c.coachId)} on the page`}
-                onCheckedChange={(on) => set({ coaches: draft.coaches.map((x, j) => (j === i ? { ...x, shown: on } : x)) })}
-              />
-            </div>
-          ))}
+          {draft.coaches.map((c, i) => {
+            const coach = org.coaches.find((x) => x.coachId === c.coachId);
+            return (
+              <div key={c.coachId} className="flex items-center gap-3 border-t border-[#EAEADF] py-[14px] first:border-t-0">
+                <OrderButtons i={i} n={draft.coaches.length} what={coachName(c.coachId)} onMove={(d) => set({ coaches: move(draft.coaches, i, d) })} />
+                <span className="flex size-7 flex-none items-center justify-center overflow-hidden rounded-full bg-[#F1F1E6] text-[12px] font-medium text-[#484D56]">
+                  {coach?.photo ? <img src={coach.photo} alt="" className="size-full object-cover" /> : initials(coachName(c.coachId))}
+                </span>
+                <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{coachName(c.coachId)}</span>
+                <MiniSwitch
+                  on={c.shown}
+                  label={`Show ${coachName(c.coachId)} on the page`}
+                  onChange={(on) => set({ coaches: draft.coaches.map((x, j) => (j === i ? { ...x, shown: on } : x)) })}
+                />
+              </div>
+            );
+          })}
         </div>
       </section>
 
-      <section className={card}>
+      <section className={cn(card, "gap-4")}>
         <div className="flex items-center justify-between gap-3">
-          <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em]">Pricing</h2>
-          <button
-            type="button"
-            className={textButton}
-            disabled={draft.pricing.length >= 12}
-            onClick={() => set({ pricing: [...draft.pricing, { name: "", who: "", price: "", unit: "" }] })}
-          >
+          <h2 className={h3}>Academy packages</h2>
+          <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setEditing("new")}>
             <Plus strokeWidth={1.5} aria-hidden="true" />
-            Add option
+            New package
           </button>
         </div>
-        {draft.pricing.length ? (
-          <div className="flex flex-col">
-            {draft.pricing.map((p, i) => (
-              <div key={i} className="flex items-start gap-2 border-b border-[#EAEADF] py-2.5 last:border-0">
-                <OrderButtons i={i} n={draft.pricing.length} what="option" onMove={(d) => set({ pricing: move(draft.pricing, i, d) })} />
-                <div className="grid min-w-0 flex-1 grid-cols-1 gap-2 md:grid-cols-[1fr_1.4fr_0.6fr_0.7fr]">
-                  <input className={input} aria-label="Option name" placeholder="Name" maxLength={80} value={p.name} onChange={(e) => setPrice(i, { name: e.target.value })} />
-                  <input className={input} aria-label="Who it's for" placeholder="Who it's for" maxLength={120} value={p.who} onChange={(e) => setPrice(i, { who: e.target.value })} />
-                  <input className={input} aria-label="Price" placeholder="$0" maxLength={40} value={p.price} onChange={(e) => setPrice(i, { price: e.target.value })} />
-                  <input className={input} aria-label="Price note" placeholder="per session" maxLength={40} value={p.unit} onChange={(e) => setPrice(i, { unit: e.target.value })} />
+        <p className={cn(meta, "-mt-1.5")}>
+          Coach prices on this page come from each coach's own profile, and group sessions come from the schedule. Packages are the only prices you set here.
+        </p>
+        <div className="flex flex-col">
+          {packages.length ? (
+            packages.map((p) => {
+              const k = packageSaving(p, packageCoaches, []);
+              return (
+                <div key={p.id} className="flex items-center gap-3 border-t border-[#EAEADF] py-[14px] first:border-t-0">
+                  <div className="flex min-w-0 grow flex-col gap-1">
+                    <span className="text-[14px] font-medium">{p.name}</span>
+                    <span className="text-[12px] leading-[14px] text-[#767980]">
+                      {p.sessionCount} {p.kind === "group" ? "group sessions" : "sessions"} · {dollars(k.per)} each ·{" "}
+                      {p.renewsMonthly ? "renews monthly" : `valid ${p.validityDays} days`} ·{" "}
+                      {p.kind === "group" ? "any academy coach" : packageCoaches.filter((c) => p.coachIds.includes(c.id)).map((c) => c.name.split(" ")[0]).join(", ")}
+                    </span>
+                  </div>
+                  <b className="text-[14px] font-medium">{dollars(p.price)}</b>
+                  <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setEditing(p)}>
+                    Edit
+                  </button>
                 </div>
-                <button type="button" className={iconButton} aria-label="Remove option" onClick={() => set({ pricing: draft.pricing.filter((_, j) => j !== i) })}>
-                  <X strokeWidth={1.5} />
-                </button>
-              </div>
-            ))}
-          </div>
-        ) : (
-          <p className={meta}>No pricing yet.</p>
-        )}
+              );
+            })
+          ) : (
+            <p className="text-[14px] text-[#767980]">{packagesQuery.isLoading ? "Loading…" : "No academy packages yet."}</p>
+          )}
+        </div>
       </section>
 
-      <div className="sticky bottom-[72px] z-10 flex flex-wrap items-center justify-end gap-2 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]/95 px-4 py-3 backdrop-blur md:bottom-4">
+      <div className="sticky bottom-16 z-10 flex items-center justify-end gap-2 bg-[#F1F1E6] py-3 md:bottom-0">
         <span className={cn(meta, "mr-auto")}>Only you can edit this page</span>
-        <button type="button" className={secondaryButton} disabled={!dirty || save.isPending} onClick={() => setDraft(saved)}>Cancel</button>
+        <button type="button" className={secondaryButton} disabled={!dirty || save.isPending} onClick={() => setDraft(saved)}>
+          Cancel
+        </button>
         <button
           type="button"
           className={primaryButton}
@@ -214,6 +257,14 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
           {save.isPending ? "Saving…" : "Save"}
         </button>
       </div>
+
+      <OrgPackageDialog
+        open={editing !== null}
+        pkg={editing === "new" ? null : editing}
+        coaches={packageCoaches}
+        groupPrices={groupPrices}
+        onClose={() => setEditing(null)}
+      />
     </div>
   );
 };

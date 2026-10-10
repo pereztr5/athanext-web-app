@@ -34,7 +34,7 @@ const notificationWhen = (iso: string) => {
 };
 
 // Pages that already have their own main action, so the top bar doesn't repeat it.
-const COACH_ACTION_HIDDEN = [ROUTES.DASHBOARD, ROUTES.SCHEDULE, ROUTES.MY_SESSIONS, ROUTES.ATHLETES, ROUTES.MY_ORGANIZATION, "/sessions/", "/coach-session-feedback"];
+const COACH_ACTION_HIDDEN = [ROUTES.DASHBOARD, ROUTES.SCHEDULE, ROUTES.MY_SESSIONS, ROUTES.ATHLETES, ROUTES.MY_ORGANIZATION, "/organizations/", "/sessions/", "/coach-session-feedback"];
 const ATHLETE_ACTION_HIDDEN = [ROUTES.BOOK, ROUTES.MY_SESSIONS, ROUTES.BOOKING_CONFIRMATION];
 
 export const AppTopBar = () => {

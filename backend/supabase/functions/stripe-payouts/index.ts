@@ -4,7 +4,7 @@
 //   { action: "status" }            -> { account } refresh setup status, then send any waiting transfers
 //   { action: "dashboard" }         -> { url }     Stripe Express dashboard login link
 //   { action: "payout_day", day }   -> { account } weekly payout day
-//   { action: "payouts" }           -> { balance, payouts } for the Payments page
+//   { action: "payouts" }           -> { balance, payouts } for the Payments page (sends waiting shares first)
 // Service role (from checkout):
 //   { action: "transfer_bookings", booking_ids } -> { sent, waiting, failed }
 //   { action: "transfer_invoices", invoice_ids } -> { sent, waiting, failed }  (invoices paid by card)
@@ -94,7 +94,9 @@ const chargeIdFor = async (admin: SupabaseClient, bookingId: string): Promise<st
   if (pay?.stripe_charge_id) return pay.stripe_charge_id;
   let intentId = pay?.stripe_payment_intent as string | null;
   if (!intentId) {
-    const { data: booking } = await admin.from("coach_slot_bookings").select("stripe_payment_intent").eq("id", bookingId).maybeSingle();
+    const { data: booking } = await admin.from("coach_slot_bookings").select("stripe_payment_intent, credit_purchase_id").eq("id", bookingId).maybeSingle();
+    // A session paid with an academy credit is funded by the package payment.
+    if (booking?.credit_purchase_id) return await chargeIdForPackage(admin, booking.credit_purchase_id as string);
     intentId = (booking?.stripe_payment_intent as string | null) ?? null;
   }
   if (!intentId) return null;
@@ -261,6 +263,11 @@ serve(async (req) => {
     }
 
     if (body.action === "payouts") {
+      // Shares planned later (academy credits, unused credits) go out when the coach looks.
+      if (existing.transfers_active) {
+        const { data: waiting } = await admin.from("payout_transfers").select("*").eq("coach_id", coachId).in("status", ["waiting", "failed"]).limit(50);
+        await sendTransfers(admin, waiting ?? []);
+      }
       const [balance, payouts] = await Promise.all([
         stripe().balance.retrieve({}, { stripeAccount: accountId }),
         stripe().payouts.list({ limit: 12 }, { stripeAccount: accountId }),

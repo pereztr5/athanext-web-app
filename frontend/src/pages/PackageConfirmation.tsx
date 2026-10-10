@@ -17,6 +17,8 @@ const PackageConfirmation = () => {
   const packageId = searchParams.get("package_id");
   const coachIdParam = searchParams.get("coach_id");
   const sessionId = searchParams.get("session_id");
+  // Academy packages (Working Copy): credits with the coaches in the package, no single coach.
+  const academy = Boolean(searchParams.get("org_package_id"));
   const navigate = useNavigate();
 
   const [pkg, setPkg] = useState<Package | null>(null);
@@ -60,7 +62,11 @@ const PackageConfirmation = () => {
 
         if (state === "reconciled") {
           setStatus("success");
-          setStatusMessage("Payment confirmed. Your package is ready.");
+          setStatusMessage(
+            academy
+              ? "Payment confirmed. Your credits are ready to use when you book with the coaches in this package."
+              : "Payment confirmed. Your package is ready."
+          );
           setError(null);
           return;
         }
@@ -89,7 +95,7 @@ const PackageConfirmation = () => {
       cancelled = true;
       if (retryTimeout) clearTimeout(retryTimeout);
     };
-  }, [sessionId, attemptKey]);
+  }, [sessionId, attemptKey, academy]);
 
   useEffect(() => {
     const loadPackage = async () => {
@@ -169,7 +175,7 @@ const PackageConfirmation = () => {
           </div>
         </div>
         {/* Package details (hidden when verification failed and there's nothing to show) */}
-        {(status !== "error" || error) && (
+        {!academy && (status !== "error" || error) && (
         <>
         <div className="h-px bg-[#EAEADF]" />
         <div className="flex flex-col gap-5 px-[25px] py-5">

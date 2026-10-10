@@ -135,3 +135,45 @@ export const initials = (name: string) =>
 /** Book on an org page: signed-in families pick a coach and time; others see the org's coaches. */
 export const bookPathFor = (isAuthenticated: boolean, orgName: string) =>
   isAuthenticated ? "/book" : `/coaches?academy=${encodeURIComponent(orgName)}`;
+
+/** Academy package savings vs single sessions (Working Copy `pkgCalc`). */
+export interface PackageSaving {
+  /** Package price per session, rounded to dollars. */
+  per: number;
+  rows: { key: string; name: string; single: number; save: number }[];
+  min: number;
+  max: number;
+}
+
+const wholeDollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
+
+export const packageSaving = (
+  pkg: { kind: "individual" | "group"; sessionCount: number; price: number; coachIds: string[] },
+  coaches: { id: string; name: string; price: number }[],
+  groupPrices: number[]
+): PackageSaving => {
+  const per = Math.round(pkg.price / Math.max(1, pkg.sessionCount));
+  const rows =
+    pkg.kind === "group"
+      ? [...new Set(groupPrices.filter((p) => p > 0))].map((p) => ({
+          key: `g${p}`,
+          name: `${wholeDollars(p)} group sessions`,
+          single: p * pkg.sessionCount,
+          save: p * pkg.sessionCount - pkg.price,
+        }))
+      : coaches
+          .filter((c) => pkg.coachIds.includes(c.id) && c.price > 0)
+          .map((c) => ({ key: c.id, name: c.name, single: c.price * pkg.sessionCount, save: c.price * pkg.sessionCount - pkg.price }));
+  const saves = rows.map((r) => r.save);
+  return { per, rows, min: rows.length ? Math.min(...saves) : 0, max: rows.length ? Math.max(...saves) : 0 };
+};
+
+/** "Saves $40 to $120 vs single sessions", or "" when there's nothing to save. */
+export const savingLine = (k: PackageSaving, suffix = " vs single sessions") =>
+  !k.rows.length || k.max <= 0
+    ? ""
+    : k.min === k.max
+      ? `Saves ${wholeDollars(k.max)}${suffix}`
+      : k.min <= 0
+        ? `Saves up to ${wholeDollars(k.max)}${suffix}`
+        : `Saves ${wholeDollars(k.min)} to ${wholeDollars(k.max)}${suffix}`;

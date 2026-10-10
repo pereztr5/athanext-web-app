@@ -830,6 +830,23 @@ serve(async (req) => {
         });
       }
 
+      // Group pass renewals (academy packages): each monthly payment adds a month of credits.
+      // The first month is handled with checkout.session.completed below.
+      if (event.type === "invoice.paid") {
+        const invoice = event.data.object as Stripe.Invoice;
+        if (invoice.billing_reason === "subscription_cycle") {
+          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/reconcile-package-payment`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
+            body: JSON.stringify({ invoice_id: invoice.id }),
+          }).catch((e) => console.error("Renewal reconcile call error:", e));
+        }
+        return new Response(JSON.stringify({ received: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
       if (event.type === "checkout.session.completed") {
         const session = event.data.object as Stripe.Checkout.Session;
 
@@ -1062,6 +1079,8 @@ serve(async (req) => {
       platformFeePerc: number;
       feeFactor: number;
       credits: number;
+      /** Credits by kind: the coach's own (any session), academy 1-on-1 and academy group passes. */
+      creditCounts: { own: number; individual: number; group: number };
     };
     const plans: Plan[] = [];
     for (const cid of [...new Set(occurrences.map((o) => o.coach_id as string))]) {
@@ -1113,11 +1132,17 @@ serve(async (req) => {
       const needsRequest = !coversAllPending && !isClient && !offeredToMe && settings?.new_family_booking === "request";
       const mode: Plan["mode"] = settings?.pay_mode === "self" ? "direct" : needsRequest ? "request" : "instant";
 
-      // Package and cancellation credits with this coach are used first (ATH-94).
+      // Package and cancellation credits with this coach are used first (ATH-94), then academy
+      // credits that include the coach: 1-on-1 packages for 1-on-1s, group passes for groups.
       let credits = 0;
+      const creditCounts = { own: 0, individual: 0, group: 0 };
       if (mode === "instant" && useCredits && callerOwnsAthlete && !coversAllPending) {
-        const { data: left } = await supabaseClient.rpc("coach_credits_left" as any, { p_coach_id: cid, p_athlete_id: athleteId });
-        credits = Number(left) || 0;
+        const { data: counts } = await supabaseClient.rpc("coach_credit_counts" as any, { p_coach_id: cid, p_athlete_id: athleteId });
+        const c = (counts ?? {}) as Record<string, unknown>;
+        creditCounts.own = Number(c.own) || 0;
+        creditCounts.individual = Number(c.individual) || 0;
+        creditCounts.group = Number(c.group) || 0;
+        credits = creditCounts.own + creditCounts.individual + creditCounts.group;
       }
       plans.push({
         coachId: cid,
@@ -1127,6 +1152,7 @@ serve(async (req) => {
         platformFeePerc,
         feeFactor: 1 + platformFeePerc / 100 + stripeFeePerc / 100,
         credits,
+        creditCounts,
       });
     }
 
@@ -1238,7 +1264,14 @@ serve(async (req) => {
       const byDate = [...occurrences].sort((a, b) => `${a.occurrence_date}${a.start_time}`.localeCompare(`${b.occurrence_date}${b.start_time}`));
       const creditOccs: typeof occurrences = [];
       for (const plan of plans) {
-        creditOccs.push(...byDate.filter((o) => o.coach_id === plan.coachId).slice(0, plan.credits));
+        const left = { ...plan.creditCounts };
+        for (const occ of byDate.filter((o) => o.coach_id === plan.coachId)) {
+          const kind = (occ as { session_type?: string }).session_type === "group" ? "group" : "individual";
+          if (left.own > 0) left.own--;
+          else if (left[kind] > 0) left[kind]--;
+          else continue;
+          creditOccs.push(occ);
+        }
       }
       for (const occ of creditOccs) {
         const { data: row, error } = await supabaseClient

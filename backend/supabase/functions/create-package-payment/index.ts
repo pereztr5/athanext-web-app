@@ -33,7 +33,57 @@ serve(async (req) => {
       );
     }
 
-    const { package_id, coach_id } = await req.json();
+    const { package_id, coach_id, org_package_id } = await req.json();
+
+    // Academy packages (Working Copy): credits with the listed coaches, paid per session used.
+    // Group passes renew monthly as a Stripe subscription.
+    if (org_package_id) {
+      const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
+      const { data: pkg } = await admin
+        .from('org_packages')
+        .select('id, organization_id, name, kind, session_count, price, validity_days, renews_monthly, is_active, organizations(name, slug)')
+        .eq('id', org_package_id)
+        .maybeSingle();
+      if (!pkg || !pkg.is_active) {
+        return new Response(JSON.stringify({ error: 'Package not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      }
+      const org = (pkg as any).organizations as { name: string; slug: string } | null;
+      const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', { apiVersion: '2023-10-16' });
+      const found = await stripe.customers.list({ email: user.email, limit: 1 });
+      const customer = found.data[0] ?? (await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } }));
+      const days = pkg.renews_monthly ? 31 : pkg.validity_days;
+      const expiry = new Date();
+      expiry.setDate(expiry.getDate() + days);
+      const metadata = {
+        type: 'package_purchase',
+        org_package_id: pkg.id,
+        organization_id: pkg.organization_id,
+        user_id: user.id,
+        sessions_total: String(pkg.session_count),
+        validity_days: String(days),
+        expiry_date: expiry.toISOString(),
+      };
+      const priceData = {
+        currency: 'usd',
+        unit_amount: Math.round(Number(pkg.price) * 100),
+        product_data: {
+          name: `${pkg.name} - ${org?.name ?? 'Academy'}`,
+          description: `${pkg.session_count} ${pkg.kind === 'group' ? 'group sessions' : 'sessions'}${pkg.renews_monthly ? ' every month' : ` | Valid for ${pkg.validity_days} days`}`,
+        },
+      };
+      const origin = req.headers.get('origin');
+      const session = await stripe.checkout.sessions.create({
+        customer: customer.id,
+        payment_method_types: ['card'],
+        line_items: [{ price_data: pkg.renews_monthly ? { ...priceData, recurring: { interval: 'month' } } : priceData, quantity: 1 }],
+        mode: pkg.renews_monthly ? 'subscription' : 'payment',
+        ...(pkg.renews_monthly ? { subscription_data: { metadata } } : {}),
+        success_url: `${origin}/package-confirmation?session_id={CHECKOUT_SESSION_ID}&org_package_id=${pkg.id}`,
+        cancel_url: `${origin}/organizations/${org?.slug ?? ''}`,
+        metadata,
+      });
+      return new Response(JSON.stringify({ url: session.url, session_id: session.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+    }
 
     if (!package_id || !coach_id) {
       return new Response(

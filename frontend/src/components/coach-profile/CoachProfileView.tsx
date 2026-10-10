@@ -1,6 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { ArrowLeft, BadgeCheck, ChevronDown, MessageCircle } from "lucide-react";
+import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
 import { formatRichTextForRender } from "@/utils/richText";
 import "@/styles/richText.css";
 import type { ProfileData } from "@/utils/profileCompletion";
@@ -333,6 +334,7 @@ export function CoachProfileView({
                 </li>
               ))}
             </ul>
+            <CoachAcademyPackages coachId={coach.id} canBuy={!paysDirect} />
             {paysDirect && activePackages.length ? (
               <p className={caption}>{first} takes payment directly, so packages are arranged with them. Ask to buy one.</p>
             ) : null}

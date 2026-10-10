@@ -21,6 +21,63 @@ export interface PublicOrganization {
   memberIds: string[];
 }
 
+/** Academy package (Working Copy): credits with some of the org's coaches, paid per session used. */
+export interface OrgPackage {
+  id: string;
+  name: string;
+  kind: "individual" | "group";
+  sessionCount: number;
+  /** Dollars. */
+  price: number;
+  validityDays: number;
+  renewsMonthly: boolean;
+  coachIds: string[];
+  orgName?: string;
+  orgSlug?: string;
+  /** On coach profiles: single prices to work out the saving. */
+  coachPrices?: Record<string, number>;
+  groupPrices?: number[];
+}
+
+export interface OrgGroupSession {
+  id: string;
+  coachId: string;
+  coachName: string;
+  title: string;
+  date: string;
+  startTime: string;
+  price: number;
+  capacity: number;
+  booked: number;
+}
+
+export interface OrgPageExtras {
+  ownerId: string | null;
+  ownerName: string;
+  packages: OrgPackage[];
+  /** Each coach's single 1-on-1 price, to work out savings. */
+  coachPrices: Record<string, number>;
+  groups: OrgGroupSession[];
+}
+
+const orgPackage = (p: Row): OrgPackage => ({
+  id: p.id,
+  name: p.name,
+  kind: p.kind === "group" ? "group" : "individual",
+  sessionCount: Number(p.session_count) || 1,
+  price: Number(p.price) || 0,
+  validityDays: Number(p.validity_days) || 90,
+  renewsMonthly: Boolean(p.renews_monthly),
+  coachIds: (p.coach_ids as string[]) ?? [],
+  orgName: p.org_name ?? undefined,
+  orgSlug: p.org_slug ?? undefined,
+  coachPrices: p.coach_prices ? Object.fromEntries(Object.entries(p.coach_prices as Record<string, unknown>).map(([k, v]) => [k, Number(v) || 0])) : undefined,
+  groupPrices: p.group_prices ? (p.group_prices as unknown[]).map(Number) : undefined,
+});
+
+// Functions added in 20261010130000_academy_packages; not in the generated types yet.
+const rpc = (name: string, args?: Record<string, unknown>) => supabase.rpc(name as never, args as never) as unknown as Promise<{ data: unknown; error: Error | null }>;
+
 export interface OrganizationInvite {
   kind: "join" | "rate";
   status: "pending" | "accepted" | "declined" | "cancelled";
@@ -47,6 +104,76 @@ const email = async (body: Record<string, unknown>) => {
     throw new Error(message || error.message);
   }
   return data!;
+};
+
+export const orgPackagesAPI = {
+  async mine(): Promise<OrgPackage[]> {
+    const { data, error } = await rpc("get_my_org_packages");
+    if (error) throw error;
+    return ((data as Row[]) ?? []).map(orgPackage);
+  },
+
+  async save(input: Pick<OrgPackage, "name" | "kind" | "sessionCount" | "price" | "validityDays" | "coachIds"> & { id?: string }): Promise<OrgPackage> {
+    const { data, error } = await rpc("save_org_package", {
+      p_id: input.id ?? null,
+      p_name: input.name,
+      p_kind: input.kind,
+      p_session_count: input.sessionCount,
+      p_price: input.price,
+      p_validity_days: input.validityDays,
+      p_coach_ids: input.coachIds,
+    });
+    if (error) throw error;
+    return orgPackage(data as Row);
+  },
+
+  async remove(id: string) {
+    const { error } = await rpc("remove_org_package", { p_id: id });
+    if (error) throw error;
+  },
+
+  async restore(id: string) {
+    const { error } = await rpc("restore_org_package", { p_id: id });
+    if (error) throw error;
+  },
+
+  async pageExtras(slug: string): Promise<OrgPageExtras> {
+    const { data, error } = await rpc("get_org_page_extras", { p_slug: slug });
+    if (error) throw error;
+    const raw = (data as Row) ?? {};
+    return {
+      ownerId: raw.owner_id ?? null,
+      ownerName: raw.owner_name ?? "",
+      packages: ((raw.packages as Row[]) ?? []).map(orgPackage),
+      coachPrices: Object.fromEntries(Object.entries((raw.coach_prices as Record<string, unknown>) ?? {}).map(([k, v]) => [k, Number(v) || 0])),
+      groups: ((raw.groups as Row[]) ?? []).map((g) => ({
+        id: g.id,
+        coachId: g.coach_id,
+        coachName: g.coach_name ?? "Coach",
+        title: g.title || "Group session",
+        date: g.date,
+        startTime: g.start_time,
+        price: Number(g.price) || 0,
+        capacity: Number(g.capacity) || 0,
+        booked: Number(g.booked) || 0,
+      })),
+    };
+  },
+
+  async forCoach(coachId: string): Promise<OrgPackage[]> {
+    const { data, error } = await rpc("get_coach_org_packages", { p_coach_id: coachId });
+    if (error) return [];
+    return ((data as Row[]) ?? []).map(orgPackage);
+  },
+
+  /** Opens Stripe's page for an academy package. */
+  async buy(orgPackageId: string): Promise<string> {
+    const { data, error } = await supabase.functions.invoke<{ url?: string; error?: string }>("create-package-payment", {
+      body: { org_package_id: orgPackageId },
+    });
+    if (error || !data?.url) throw new Error(data?.error || error?.message || "Couldn't open checkout");
+    return data.url;
+  },
 };
 
 export const organizationsAPI = {

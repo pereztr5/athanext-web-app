@@ -1,7 +1,9 @@
 // Finishes a package purchase after Stripe's page (ATH-94): the package's sessions become
 // credits with that coach, and the coach is paid the whole package right away.
+// Academy packages become credits with the listed coaches and pay out per session used, so
+// nothing is sent here. A group pass renews monthly: each paid renewal adds a month of credits.
 // Family:  { session_id } -> { state: "reconciled" | "pending" }
-// Service: same body from the checkout webhook.
+// Service: same body from the checkout webhook, or { invoice_id } for a subscription renewal.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -30,7 +32,39 @@ serve(async (req) => {
       userId = user.id;
     }
 
-    const { session_id: sessionId } = (await req.json().catch(() => ({}))) as { session_id?: string };
+    const { session_id: sessionId, invoice_id: invoiceId } = (await req.json().catch(() => ({}))) as { session_id?: string; invoice_id?: string };
+
+    // A group pass renewal (service role only): a new month of credits.
+    if (invoiceId) {
+      if (!isService) return json({ error: "Unauthorized" }, 401);
+      const invoice = await stripe.invoices.retrieve(invoiceId);
+      const subId = typeof (invoice as any).subscription === "string" ? (invoice as any).subscription : (invoice as any).parent?.subscription_details?.subscription;
+      if (!subId || invoice.status !== "paid") return json({ state: "pending" });
+      const sub = await stripe.subscriptions.retrieve(subId);
+      const meta = sub.metadata ?? {};
+      if (meta.type !== "package_purchase" || !meta.org_package_id) return json({ error: "Not found" }, 404);
+      const periodStart = new Date(((invoice as any).period_start ?? invoice.created) * 1000);
+      const expiry = new Date(periodStart);
+      expiry.setDate(expiry.getDate() + (Number(meta.validity_days) || 31));
+      const sessions = Number(meta.sessions_total) || 1;
+      const { error } = await admin.from("package_purchases").insert({
+        org_package_id: meta.org_package_id,
+        organization_id: meta.organization_id,
+        user_id: meta.user_id,
+        source: "package",
+        sessions_total: sessions,
+        sessions_remaining: sessions,
+        status: "active",
+        purchase_date: periodStart.toISOString(),
+        expiry_date: expiry.toISOString(),
+        total_amount: (invoice.amount_paid ?? 0) / 100,
+        stripe_subscription_id: subId,
+      });
+      // The unique (subscription, period) index makes a repeat call a no-op.
+      if (error && !/duplicate/i.test(error.message)) throw error;
+      return json({ state: "reconciled" });
+    }
+
     if (!sessionId) return json({ error: "session_id required" }, 400);
     const session = await stripe.checkout.sessions.retrieve(sessionId);
     const meta = session.metadata ?? {};
@@ -42,12 +76,17 @@ serve(async (req) => {
     let purchaseId = existing?.id as string | undefined;
     if (!purchaseId) {
       const sessions = Number(meta.sessions_total) || 1;
+      const academy = Boolean(meta.org_package_id);
+      const subscriptionId = typeof session.subscription === "string" ? session.subscription : session.subscription?.id ?? null;
       const { data: row, error } = await admin
         .from("package_purchases")
         .insert({
-          coach_id: meta.coach_id,
+          coach_id: academy ? null : meta.coach_id,
+          org_package_id: academy ? meta.org_package_id : null,
+          organization_id: academy ? meta.organization_id : null,
+          stripe_subscription_id: subscriptionId,
           user_id: meta.user_id,
-          package_id: meta.package_id,
+          package_id: academy ? null : meta.package_id,
           source: "package",
           sessions_total: sessions,
           sessions_remaining: sessions,
@@ -68,6 +107,8 @@ serve(async (req) => {
         return json({ state: "reconciled", purchase_id: again.id });
       }
       purchaseId = row.id as string;
+      // Academy packages pay out per session used (plan_academy_credit_transfers), not now.
+      if (academy) return json({ state: "reconciled", purchase_id: purchaseId });
       await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/stripe-payouts`, {
         method: "POST",
         headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceKey}` },

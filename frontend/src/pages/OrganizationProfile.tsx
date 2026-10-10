@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, BadgeCheck, Building2, Calendar, Handshake, MapPin, Star, Users } from "lucide-react";
+import { ArrowLeft, BadgeCheck, Building2, Calendar, ChevronLeft, Handshake, Info, MapPin, Star, Users } from "lucide-react";
 import { BrandStar } from "@/components/brand";
 import { Skeleton } from "@/components/ui/skeleton";
 import { coachesAPI } from "@/api/coaches";
@@ -11,8 +11,7 @@ import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { organizationPartners } from "@/utils/brands";
 import { OrgFamilyPage } from "@/components/organization/OrgFamilyPage";
-import { bookPathFor } from "@/utils/organizations";
-import { usePublicOrganizations } from "@/hooks/useOrganizations";
+import { useMyOrganization, usePublicOrganizations } from "@/hooks/useOrganizations";
 import {
   academySlug,
   applyOrganizations,
@@ -59,6 +58,7 @@ const cardTitle = "flex items-center gap-2 text-[20px] font-medium leading-[18px
 const OrganizationProfile = () => {
   const { slug = "" } = useParams();
   const { isAuthenticated } = useRole();
+  const { data: myOrg } = useMyOrganization();
 
   const { data: coaches = [], isLoading } = useQuery({
     queryKey: ["coaches-public"],
@@ -126,11 +126,28 @@ const OrganizationProfile = () => {
     const shown = orgPage.coachIds
       .map((id) => coaches.find((coach) => coach.id === id))
       .filter((coach): coach is PublicCoach => Boolean(coach));
+    const preview = myOrg?.slug === orgPage.slug;
     return (
       <div className={shell}>
         <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
-          {backLink}
-          <OrgFamilyPage org={orgPage} coaches={shown} bookTo={bookPathFor(isAuthenticated, orgPage.name)} />
+          {preview ? (
+            <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+              <Link
+                to={ROUTES.MY_ORGANIZATION}
+                className="inline-flex w-fit items-center gap-1 text-[14px] font-medium text-[#767980] hover:text-[#1A202C]"
+              >
+                <ChevronLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                Organization page
+              </Link>
+              <div className="flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] px-[14px] py-3 text-[12px] leading-[14px] text-[#767980]">
+                <Info className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+                <span>This is what families see.</span>
+              </div>
+            </div>
+          ) : (
+            backLink
+          )}
+          <OrgFamilyPage org={orgPage} coaches={shown} preview={preview} />
         </div>
       </div>
     );
