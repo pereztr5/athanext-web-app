@@ -70,6 +70,13 @@ export const invoicesAPI = {
       emailed: boolean;
     }>,
 
+  /** The coach's share of gear sales per Eastern day ("Gear and deals"); empty until the function is deployed. */
+  async gearEarnings(days: number): Promise<{ date: string; amount: number }[]> {
+    const { data, error } = await supabase.rpc("get_coach_gear_earnings" as never, { p_days: days } as never);
+    if (error) return [];
+    return ((data as unknown as Row[]) ?? []).map((d) => ({ date: d.date, amount: Number(d.amount) || 0 }));
+  },
+
   remind: (invoiceId: string) => call({ action: "remind", invoice_id: invoiceId }) as Promise<{ reminders: number; emailed: boolean }>,
 
   async markPaid(invoiceId: string) {

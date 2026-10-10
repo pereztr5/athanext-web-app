@@ -14,12 +14,13 @@ import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 import { useMyOrganization } from "@/hooks/useOrganizations";
-import { useCoachPayMode } from "@/hooks/useCoachPayMode";
 import { useQuery } from "@tanstack/react-query";
 import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { useCoachReferrals } from "@/hooks/useReferrals";
 import { isAwaitingCoachApproval } from "@/utils/referralHelpers";
-import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PAYMENTS_NAV, isNavActive, type NavItem } from "./nav";
+import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PROFILE_NAV, isNavActive, type NavItem } from "./nav";
+import { useOverdueInvoices } from "@/hooks/useOverdueInvoices";
+import { cn } from "@/lib/utils";
 
 // Working Copy `.nav button`: 28px rows, the current page grows to 38px on the active tint.
 const navItemClass =
@@ -33,14 +34,20 @@ export const AppSidebar = () => {
   const { userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
   const { data: myOrg } = useMyOrganization();
-  const { data: payMode } = useCoachPayMode();
+  const overdue = useOverdueInvoices();
   // Badges as in the Working Copy: requests waiting on My Schedule, new families on My Athletes.
   const requests = useQuery({ queryKey: ["booking-requests"], queryFn: () => bookingRequestsAPI.listForCoach(), enabled: isCoach, staleTime: 60_000 });
   const referrals = useCoachReferrals(isCoach ? userProfile?.coach_id ?? undefined : undefined);
   const approvals = (referrals.data ?? []).filter(isAwaitingCoachApproval).length;
   const badgeFor = (url: string) =>
-    url === ROUTES.SCHEDULE && requests.data?.length ? String(requests.data.length) : url === ROUTES.ATHLETES && approvals ? `${approvals} new` : null;
-  const business = isCoach ? [...(myOrg ? [ORG_NAV] : []), ...(payMode === "app" ? [PAYMENTS_NAV] : [])] : [];
+    url === ROUTES.SCHEDULE && requests.data?.length
+      ? String(requests.data.length)
+      : url === ROUTES.ATHLETES && approvals
+        ? `${approvals} new`
+        : url === ROUTES.PAYMENTS && isCoach && overdue
+          ? `${overdue} overdue`
+          : null;
+  const publicPages = isCoach ? [PROFILE_NAV, ...(myOrg ? [ORG_NAV] : [])] : [];
   const items = [
     ...(isCoach ? COACH_NAV : ATHLETE_NAV),
     ...(isAdmin
@@ -77,17 +84,19 @@ export const AppSidebar = () => {
                   <Link to={item.url} onClick={() => setOpenMobile(false)}>
                     <item.icon className="size-4" strokeWidth={1.5} />
                     <span>{item.title}</span>
-                    {badgeFor(item.url) ? <span className={navBadge}>{badgeFor(item.url)}</span> : null}
+                    {badgeFor(item.url) ? (
+                      <span className={cn(navBadge, item.url === ROUTES.PAYMENTS && "bg-[#FEDADA] text-[#972B2B]")}>{badgeFor(item.url)}</span>
+                    ) : null}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
-          {business.length ? (
+          {publicPages.length ? (
             <div className="flex flex-col gap-2">
-              <p className="px-[5px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#A3A6AB]">Business</p>
+              <p className="px-[5px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#A3A6AB]">Public pages</p>
               <SidebarMenu className="w-full gap-1">
-                {business.map((item) => (
+                {publicPages.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
                       <Link to={item.url} onClick={() => setOpenMobile(false)}>

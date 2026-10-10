@@ -1,21 +1,26 @@
-import { Building2, Calendar, CalendarDays, CalendarPlus, CreditCard, House, Search, ShoppingBag, Store, Users } from "lucide-react";
+import { Briefcase, Building2, Calendar, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "lucide-react";
 import { ROUTES } from "@/routes";
 
 export type NavItem = { title: string; short: string; url: string; icon: typeof House; also?: string[] };
 
-// Coach navigation (ATH-75): same order as the phone tab bar.
+// Coach navigation (ATH-75, Working Copy): Home, Sessions, Athletes, Schedule and Business.
 export const COACH_NAV: NavItem[] = [
-  { title: "Dashboard", short: "Home", url: ROUTES.DASHBOARD, icon: House },
+  { title: "Home", short: "Home", url: ROUTES.DASHBOARD, icon: House },
   { title: "My Sessions", short: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "My Athletes", short: "Athletes", url: ROUTES.ATHLETES, icon: Users },
   { title: "My Schedule", short: "Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
-  { title: "My Profile", short: "Profile", url: ROUTES.PROFILE, icon: Store },
+  { title: "Business", short: "Business", url: ROUTES.PAYMENTS, icon: Briefcase, also: [ROUTES.BUSINESS] },
 ];
 
-// Business section: My Organization shows only for org owners (ATH-90).
-export const ORG_NAV: NavItem = { title: "My Organization", short: "Organization", url: ROUTES.MY_ORGANIZATION, icon: Building2 };
-// Payments (ATH-89): hidden in booking only mode.
-export const PAYMENTS_NAV: NavItem = { title: "Payments", short: "Payments", url: ROUTES.PAYMENTS, icon: CreditCard };
+// Phone tab bar: the 5th tab opens the Business page with Payments and My Organization.
+export const COACH_TABS: NavItem[] = [
+  ...COACH_NAV.slice(0, 4),
+  { title: "Business", short: "Business", url: ROUTES.BUSINESS, icon: Briefcase, also: [ROUTES.PAYMENTS, ROUTES.MY_ORGANIZATION] },
+];
+
+// "Public pages": My Profile, and the Organization page for org owners (ATH-90).
+export const PROFILE_NAV: NavItem = { title: "My Profile", short: "Profile", url: ROUTES.PROFILE, icon: Store };
+export const ORG_NAV: NavItem = { title: "Organization page", short: "Organization", url: ROUTES.MY_ORGANIZATION, icon: Building2 };
 
 // Athlete navigation (ATH-91): Home, Book, Sessions, Coaches, Gear on web and phone.
 export const ATHLETE_NAV: NavItem[] = [

@@ -27,6 +27,7 @@ import OrganizationProfile from "./pages/OrganizationProfile";
 import MyOrganization from "./pages/MyOrganization";
 import OrganizationInvite from "./pages/OrganizationInvite";
 import Payments from "./pages/Payments";
+import Business from "./pages/Business";
 import FamilyInvoice from "./pages/FamilyInvoice";
 import SignupConfirmation from "./pages/SignupConfirmation";
 import Profile from "./pages/Profile";
@@ -102,6 +103,7 @@ export const ROUTES = {
   MY_ORGANIZATION: "/organization",
   ORG_INVITE: "/org-invite/:token",
   PAYMENTS: "/payments",
+  BUSINESS: "/business",
   FAMILY_INVOICE: "/invoices/:id",
   NOT_FOUND: "*",
 } as const;
@@ -172,6 +174,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.PACKAGE_CONFIRMATION, element: <ProtectedRoute><PackageConfirmation /></ProtectedRoute> },
   { path: ROUTES.MY_ORGANIZATION, element: <ProtectedRoute><MyOrganization /></ProtectedRoute> },
   { path: ROUTES.PAYMENTS, element: <ProtectedRoute><Payments /></ProtectedRoute> },
+  { path: ROUTES.BUSINESS, element: <ProtectedRoute><Business /></ProtectedRoute> },
   { path: ROUTES.FAMILY_INVOICE, element: <ProtectedRoute><FamilyInvoice /></ProtectedRoute> },
   { path: ROUTES.ORG_INVITE, element: <ProtectedRoute><OrganizationInvite /></ProtectedRoute> },
   { path: ROUTES.ADMIN_REFERRALS, element: <ProtectedRoute requireAdmin><AdminReferrals /></ProtectedRoute> },

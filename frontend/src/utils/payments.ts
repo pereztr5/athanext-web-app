@@ -96,7 +96,8 @@ export const paymentRows = (invoices: Invoice[], inApp: InAppPayment[], today: s
     })),
   ].sort((a, b) => b.date.localeCompare(a.date));
 
-export type MoneyEntry = { day: string; amount: number; own: boolean };
+/** `gear` marks the coach's share of gear sales ("Gear and deals"). */
+export type MoneyEntry = { day: string; amount: number; own: boolean; gear?: boolean };
 
 /** Money in: in-app payments plus invoices marked or paid, by day. */
 export const moneyEntries = (invoices: Invoice[], inApp: InAppPayment[], toDay: (iso: string) => string): MoneyEntry[] => [
@@ -122,8 +123,9 @@ export const moneySeries = (entries: MoneyEntry[], n: number, end: string) => {
   return {
     days,
     total: inRange.reduce((s, e) => s + e.amount, 0),
-    own: inRange.filter((e) => e.own).reduce((s, e) => s + e.amount, 0),
-    marketplace: inRange.filter((e) => !e.own).reduce((s, e) => s + e.amount, 0),
+    own: inRange.filter((e) => e.own && !e.gear).reduce((s, e) => s + e.amount, 0),
+    marketplace: inRange.filter((e) => !e.own && !e.gear).reduce((s, e) => s + e.amount, 0),
+    gear: inRange.filter((e) => e.gear).reduce((s, e) => s + e.amount, 0),
     previous: entries.filter((e) => e.day >= prevStart && e.day < start).reduce((s, e) => s + e.amount, 0),
   };
 };
