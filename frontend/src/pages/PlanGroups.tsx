@@ -1,18 +1,30 @@
 /**
  * Group week planner, "New schedule" (ATH-72): plan a week or a day of group sessions as
- * drafts, then publish them to the coach's group chat and a shareable link as one
+ * drafts, then publish them to the coach's group chats and a shareable link as one
  * pick-and-pay card. Families tick the sessions they want and pay once.
  */
 import { useMemo, useState } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Copy, Pencil, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight, Copy, Pencil, Plus, Users } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { Switch } from "@/components/ui/switch";
 import { chatAPI } from "@/api";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
 import { PlanSessionDialog } from "@/components/schedule/PlanSessionDialog";
-import { card, iconButton, meta, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
+import {
+  addSession,
+  dateTile,
+  dateTileNumber,
+  dateTileWeekday,
+  navArrow,
+  planRow,
+  planWrap,
+  rangeTitle,
+  sendPanel,
+  smallSwitch,
+} from "@/components/schedule/plan/parts";
+import { label, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
@@ -31,6 +43,7 @@ import {
   weekStartISO,
 } from "@/utils/schedule";
 import { formatInstantSpan, isoDateInZone } from "@/utils/viewerTime";
+import { money } from "@/utils/booking";
 
 type Mode = "week" | "day";
 
@@ -56,7 +69,9 @@ const PlanGroupsPage = () => {
   const [mode, setMode] = useState<Mode>("week");
   const [weekStart, setWeekStart] = useState(() => addDaysISO(weekStartISO(todayISO), 7));
   const [day, setDay] = useState(todayISO);
-  const [toChannel, setToChannel] = useState(true);
+  // Channels the coach switched off; every channel is on by default.
+  const [offChannels, setOffChannels] = useState<string[]>([]);
+  const [toMain, setToMain] = useState(true);
   const [withLink, setWithLink] = useState(true);
   const [editing, setEditing] = useState<ScheduleSession | null>(null);
   const [adding, setAdding] = useState(false);
@@ -76,11 +91,16 @@ const PlanGroupsPage = () => {
     enabled: Boolean(coachId),
     queryFn: () => scheduleAPI.get(addDaysISO(from, -1), addDaysISO(to, 1)),
   });
-  const channelQuery = useQuery({
-    queryKey: ["coach-channel", coachId],
+  const channelsQuery = useQuery({
+    queryKey: ["coach-channels", coachId, "owner"],
     enabled: Boolean(coachId),
-    queryFn: () => chatAPI.getCoachChannel(coachId!),
+    queryFn: () => chatAPI.getCoachChannels(coachId!),
+    staleTime: 60_000,
   });
+  const channels = useMemo(() => channelsQuery.data ?? [], [channelsQuery.data]);
+  const chosen = channels.filter((c) => !offChannels.includes(c.conversationId));
+  // No channel yet: the main one is created when the card is first posted.
+  const toChannel = channels.length ? chosen.length > 0 : toMain;
 
   const groups = useMemo(
     () =>
@@ -97,8 +117,9 @@ const PlanGroupsPage = () => {
   const live = groups.filter((s) => !s.isDraft);
   const spots = drafts.reduce((n, s) => n + s.capacity, 0);
 
+  const sameMonth = formatDayISO(from, { month: "short" }) === formatDayISO(to, { month: "short" });
   const title = weekly
-    ? `${formatDayISO(from, { month: "short", day: "numeric" })}–${formatDayISO(to, { month: "short", day: "numeric" })}`
+    ? `${formatDayISO(from, { month: "short", day: "numeric" })}–${formatDayISO(to, sameMonth ? { day: "numeric" } : { month: "short", day: "numeric" })}`
     : formatDayISO(day, { weekday: "long" });
   const small = weekly
     ? `Week ${weekNumber(from)}`
@@ -127,24 +148,26 @@ const PlanGroupsPage = () => {
       const closesAt = eightPm > new Date() ? eightPm : first ?? new Date();
       const label = weekly ? `Week of ${title}` : formatDayISO(day, { weekday: "long", month: "long", day: "numeric" });
       const when = weekly ? "Next week's" : `${formatDayISO(day, { weekday: "long" })}'s`;
-      return scheduleAPI.publishGroups({
+      const common = {
         from,
         to,
         title: label,
         closesAt: closesAt.toISOString(),
-        postToChannel: toChannel,
         message: `${when} group sessions are up. Tick the ones you're in for and pay once.${withLink ? " {link}" : ""}`,
         linkBase: `${window.location.origin}/offers/`,
-      });
+      };
+      // Nothing or just the main channel still goes through the older RPC.
+      const mainOnly = !channels.length || (chosen.length === 1 && chosen[0].isMain);
+      if (!toChannel || mainOnly) return scheduleAPI.publishGroups({ ...common, postToChannel: toChannel });
+      return scheduleAPI.publishGroupsTo({ ...common, channelIds: chosen.map((c) => c.conversationId) });
     },
     onSuccess: async (offerId) => {
       const link = `${window.location.origin}/offers/${offerId}`;
       if (withLink) await navigator.clipboard.writeText(link).catch(() => undefined);
+      const posted = channels.length ? chosen.map((c) => `#${c.title || "group chat"}`) : toMain ? ["your group chat"] : [];
       toast({
-        title: `${plural(drafts.length, "session")} published`,
-        description: [toChannel ? `Posted to ${channelQuery.data?.title ? `#${channelQuery.data.title}` : "your group chat"}` : null, withLink ? "Link copied" : null]
-          .filter(Boolean)
-          .join(" · "),
+        title: `${plural(drafts.length, "session")} published${posted.length ? ` to ${posted.join(" and ")}` : ""}`,
+        description: withLink ? "Link copied" : undefined,
       });
       queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
       navigate(ROUTES.SCHEDULE);
@@ -164,17 +187,27 @@ const PlanGroupsPage = () => {
   const canPublish = drafts.length > 0 && (toChannel || withLink);
   const publishLabel = weekly ? "Publish schedule" : day === todayISO ? "Publish today" : `Publish ${formatDayISO(day, { weekday: "long" })}`;
 
+  const switchRow = (key: string, name: string, caption: string, checked: boolean, onChange: (on: boolean) => void) => (
+    <div key={key} className="flex items-center justify-between gap-3">
+      <span className="flex min-w-0 flex-col gap-0.5">
+        <b className="truncate text-[14px] font-medium leading-[18px]">{name}</b>
+        <span className={meta}>{caption}</span>
+      </span>
+      <Switch checked={checked} onCheckedChange={onChange} aria-label={name} className={smallSwitch} />
+    </div>
+  );
+
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
-        <div className="flex items-center justify-between">
+      <div className={planWrap}>
+        <div className="-mb-1.5 flex items-center justify-between">
           <Link to={ROUTES.SCHEDULE} className="inline-flex items-center gap-1 text-[14px] font-medium text-[#767980] hover:text-[#1A202C]">
             <ChevronLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
             My Schedule
           </Link>
-          {drafts.length ? <BrandPill tone="neutral">Draft</BrandPill> : null}
+          {drafts.length ? <BrandPill tone="sunk">Draft</BrandPill> : null}
         </div>
-        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">New schedule</h1>
+        <h1 className={pageTitle}>New schedule</h1>
 
         <div className={segGroup} role="group" aria-label="Plan">
           <button type="button" className={segButton(weekly)} aria-pressed={weekly} onClick={() => setMode("week")}>
@@ -186,20 +219,20 @@ const PlanGroupsPage = () => {
         </div>
 
         <div className="flex items-center justify-between">
-          <button type="button" className={iconButton} aria-label="Previous" disabled={atStart} onClick={() => step(-1)}>
+          <button type="button" className={navArrow} aria-label="Previous" disabled={atStart} onClick={() => step(-1)}>
             <ChevronLeft strokeWidth={1.5} />
           </button>
-          <div className="flex flex-col items-center gap-1">
+          <div className="flex flex-col items-center text-center">
             <span className={meta}>{small}</span>
-            <span className="text-[24px] font-semibold leading-[28px] tracking-[-0.05em] text-[#1A202C]">{title}</span>
+            <span className={rangeTitle}>{title}</span>
           </div>
-          <button type="button" className={iconButton} aria-label="Next" onClick={() => step(1)}>
+          <button type="button" className={navArrow} aria-label="Next" onClick={() => step(1)}>
             <ChevronRight strokeWidth={1.5} />
           </button>
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <button type="button" className={cn(secondaryButton, "h-[30px] px-3")} disabled={copy.isPending} onClick={() => copy.mutate()}>
+          <button type="button" className={cn(secondaryButton, smallButton)} disabled={copy.isPending} onClick={() => copy.mutate()}>
             <Copy strokeWidth={1.5} aria-hidden="true" />
             Copy {previous}
           </button>
@@ -218,39 +251,41 @@ const PlanGroupsPage = () => {
               const d = getZonedISODate(start, timeZone);
               const booked = bookedAthletes(s).length;
               return (
-                <div
-                  key={s.id}
-                  className={cn(
-                    "flex items-center gap-3 rounded-[10px] border p-3",
-                    s.isDraft ? "border-dashed border-[#C1C1B8] bg-[#F9F9F5]" : "border-[#EAEADF] bg-[#F7F7F0]"
-                  )}
-                >
+                <div key={s.id} className={planRow(s.isDraft)}>
                   {weekly ? (
-                    <span className="flex w-[44px] flex-none flex-col items-center rounded-[8px] bg-[#F1F1E6] py-1.5">
-                      <small className="text-[11px] font-medium uppercase text-[#767980]">{formatDayISO(d, { weekday: "short" })}</small>
-                      <b className="text-[18px] font-semibold leading-[20px]">{formatDayISO(d, { day: "numeric" })}</b>
+                    <span className={dateTile}>
+                      <small className={dateTileWeekday}>{formatDayISO(d, { weekday: "short" })}</small>
+                      <b className={dateTileNumber}>{formatDayISO(d, { day: "numeric" })}</b>
                     </span>
                   ) : (
-                    <span className="flex w-[64px] flex-none flex-col">
-                      <b className="text-[14px] font-medium">{formatClock(start, timeZone)}</b>
+                    <span className="flex w-[68px] flex-none flex-col">
+                      <b className="text-[15px] font-semibold leading-[18px]">{formatClock(start, timeZone)}</b>
                       <small className={meta}>{s.durationMinutes} min</small>
                     </span>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <b className="text-[14px] font-medium">{s.sessionName}</b>
+                    <span className="text-[14px] font-medium leading-[18px]">{s.sessionName}</span>
                     <span className={meta}>
                       {weekly ? `${formatInstantSpan(start, sessionEnd(s), timeZone)} · ` : ""}
                       {s.location === "online" ? "Video call" : s.place || "In person"}
                     </span>
                     <span className="flex flex-wrap gap-1.5">
-                      <BrandPill tone="teal">Group</BrandPill>
-                      <BrandPill tone="neutral">${Math.round(s.price)}</BrandPill>
-                      <BrandPill tone="neutral">{plural(s.capacity, "spot")}</BrandPill>
+                      <BrandPill tone="teal">
+                        <Users strokeWidth={1.5} aria-hidden="true" />
+                        Group
+                      </BrandPill>
+                      <BrandPill tone="sunk">{money(s.price)}</BrandPill>
+                      <BrandPill tone="sunk">{plural(s.capacity, "spot")}</BrandPill>
                       {s.isDraft ? null : <BrandPill tone="green">Live · {booked} of {s.capacity}</BrandPill>}
                     </span>
                   </div>
                   {s.isDraft ? (
-                    <button type="button" className={iconButton} aria-label={`Edit ${s.sessionName}`} onClick={() => setEditing(s)}>
+                    <button
+                      type="button"
+                      className="inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F4F4EB] hover:text-[#1A202C] [&>svg]:size-4"
+                      aria-label={`Edit ${s.sessionName}`}
+                      onClick={() => setEditing(s)}
+                    >
                       <Pencil strokeWidth={1.5} />
                     </button>
                   ) : null}
@@ -264,35 +299,31 @@ const PlanGroupsPage = () => {
           )}
         </div>
 
-        <button
-          type="button"
-          disabled={!openDays.length}
-          onClick={() => setAdding(true)}
-          className="flex h-[44px] items-center justify-center gap-2 rounded-[10px] border border-dashed border-[#C1C1B8] text-[14px] font-medium text-[#0054B4] hover:bg-[#F4F4EB] disabled:opacity-50"
-        >
-          <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+        <button type="button" disabled={!openDays.length} onClick={() => setAdding(true)} className={addSession}>
+          <Plus strokeWidth={1.5} aria-hidden="true" />
           Add session
         </button>
 
-        <section className={card}>
-          <span className="text-[12px] font-medium text-[#767980]">Send to</span>
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex flex-col gap-0.5">
-              <b className="text-[14px] font-medium">#{channelQuery.data?.title || "your group chat"}</b>
-              <span className={meta}>
-                Group chat{channelQuery.data ? ` · ${plural(channelQuery.data.memberCount, "member")}` : ""}
-              </span>
-            </span>
-            <Switch checked={toChannel} onCheckedChange={setToChannel} aria-label="Post to your group chat" className="data-[state=checked]:bg-[#0054B4]" />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="flex flex-col gap-0.5">
-              <b className="text-[14px] font-medium">Shareable link</b>
-              <span className={meta}>For WhatsApp, Instagram or email</span>
-            </span>
-            <Switch checked={withLink} onCheckedChange={setWithLink} aria-label="Shareable link" className="data-[state=checked]:bg-[#0054B4]" />
-          </div>
-          <button type="button" className={cn(primaryButton, "h-[42px] w-full")} disabled={!canPublish || publish.isPending} onClick={() => publish.mutate()}>
+        <section className={sendPanel}>
+          <span className={label}>Send to</span>
+          {channels.length
+            ? channels.map((c) =>
+                switchRow(
+                  c.conversationId,
+                  `#${c.title || "group chat"}`,
+                  `Group chat · ${plural(c.memberCount, "family", "families")}`,
+                  !offChannels.includes(c.conversationId),
+                  (on) =>
+                    setOffChannels((current) =>
+                      on ? current.filter((id) => id !== c.conversationId) : [...current, c.conversationId]
+                    )
+                )
+              )
+            : channelsQuery.isLoading
+              ? null
+              : switchRow("main", "#your group chat", "Group chat · starts when you post", toMain, setToMain)}
+          {switchRow("link", "Shareable link", "For WhatsApp, Instagram or email", withLink, setWithLink)}
+          <button type="button" className={cn(primaryButton, "h-[48px] w-full")} disabled={!canPublish || publish.isPending} onClick={() => publish.mutate()}>
             {publish.isPending ? "Publishing…" : publishLabel}
           </button>
         </section>
@@ -310,8 +341,10 @@ const PlanGroupsPage = () => {
           session={editing}
           days={openDays}
           defaultDay={openDays[0] ?? todayISO}
+          dayMode={!weekly}
           timeZone={timeZone}
           rules={scheduleQuery.data.rules}
+          busy={scheduleQuery.data.busy}
         />
       ) : null}
     </div>

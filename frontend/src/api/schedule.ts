@@ -362,6 +362,57 @@ export const scheduleAPI = {
     const raw = (data ?? {}) as Row;
     return { sent: Number(raw.sent) || 0, channel: Boolean(raw.channel) };
   },
+
+  /** Like offerSession, but posts to any of the coach's channels (20261010200000_create_and_plan). */
+  async shareSession(occurrenceIds: string[], athleteIds: string[], channelIds: string[], message: string) {
+    const { data, error } = await supabase.rpc(
+      "schedule_share_session" as never,
+      { p_occurrence_ids: occurrenceIds, p_athlete_ids: athleteIds, p_channel_ids: channelIds, p_message: message } as never
+    );
+    if (error) throw error;
+    const raw = (data ?? {}) as Row;
+    return { sent: Number(raw.sent) || 0, channels: Number(raw.channels) || 0 };
+  },
+
+  /** The dates createSessions would skip because they clash, without creating anything. */
+  async checkClashes(input: Pick<CreateSessionsInput, "visibility" | "times" | "repeat" | "weeks" | "durationMinutes">) {
+    const payload = {
+      visibility: input.visibility,
+      times: input.times,
+      repeat: input.repeat,
+      weeks: input.weeks ?? 1,
+      duration_minutes: input.durationMinutes,
+    };
+    const { data, error } = await supabase.rpc("schedule_check_clashes" as never, { p_session: payload } as never);
+    if (error) throw error;
+    return ((data as unknown as { date: string; start: string }[]) ?? []).map((c) => ({ date: c.date, start: c.start }));
+  },
+
+  /** Publishes drafts in from..to and posts the card to each chosen channel; returns its id. */
+  async publishGroupsTo(input: {
+    from: string;
+    to: string;
+    title: string;
+    closesAt: string;
+    channelIds: string[];
+    message: string;
+    linkBase: string;
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc(
+      "schedule_publish_groups_to" as never,
+      {
+        p_from: input.from,
+        p_to: input.to,
+        p_title: input.title,
+        p_closes_at: input.closesAt,
+        p_channel_ids: input.channelIds,
+        p_message: input.message,
+        p_link_base: input.linkBase,
+      } as never
+    );
+    if (error) throw error;
+    return data as unknown as string;
+  },
 };
 
 /** Google Calendar (edge function google-calendar). */

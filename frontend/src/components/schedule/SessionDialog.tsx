@@ -1,18 +1,15 @@
 /**
  * Tapping a session in My Schedule (ATH-71).
  * Open and offered slots: share them, remove one week, change every week or stop repeating.
- * Groups: who's in, requests to join, share. Booked 1-on-1s and requests: who and payment.
+ * Groups open the group sheet. Booked 1-on-1s and requests go straight to the session page.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, MapPin, MessageCircle, Repeat, Video, X } from "lucide-react";
+import { CircleCheck, MapPin, Repeat, Video, X } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { BrandPill } from "@/components/brand";
 import { scheduleAPI, type ScheduleRules, type ScheduleSeries, type ScheduleSession } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { ROUTES } from "@/routes";
 import {
   ALL_START_MINUTES,
   bookedAthletes,
@@ -20,7 +17,6 @@ import {
   formatDayISO,
   formatMinutes,
   minutesInZone,
-  plural,
   requestsFor,
   sessionEnd,
   sessionKind,
@@ -31,6 +27,7 @@ import {
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatInstantSpan } from "@/utils/viewerTime";
 import { ShareSession } from "./ShareSession";
+import { GroupSheet } from "./views/GroupSheet";
 import {
   choice,
   dangerTextButton,
@@ -39,7 +36,6 @@ import {
   label,
   meta,
   primaryButton,
-  secondaryButton,
   textButton,
 } from "./styles";
 
@@ -71,11 +67,9 @@ export const SessionDialog = ({
   const [changing, setChanging] = useState(false);
   const [newStart, setNewStart] = useState(0);
   const [newPlace, setNewPlace] = useState("");
-  const [sharing, setSharing] = useState(false);
 
   useEffect(() => {
     setChanging(false);
-    setSharing(false);
   }, [session?.id]);
 
   const repeating = useMemo(
@@ -126,6 +120,10 @@ export const SessionDialog = ({
   if (!session) return <Dialog open={false} />;
 
   const kind = sessionKind(session);
+  if (kind === "group") {
+    return <GroupSheet session={session} timeZone={timeZone} onClose={onClose} onRespond={onRespond} respondingId={respondingId} />;
+  }
+
   const start = sessionStart(session);
   const end = sessionEnd(session);
   const day = getZonedISODate(start, timeZone);
@@ -134,47 +132,23 @@ export const SessionDialog = ({
   const booked = bookedAthletes(session);
   const requests = requestsFor(session);
   const removable = !booked.length && !requests.length;
-  const shareable = !session.isDraft && (kind === "open" || kind === "offered" || kind === "group");
+  const shareable = !session.isDraft && (kind === "open" || kind === "offered");
   const weekday = WEEKDAY_NAMES[(repeating?.dayOfWeek ?? 1) - 1];
 
   const title =
-    kind === "group"
-      ? session.sessionName
-      : kind === "open"
-        ? "Open slot"
-        : kind === "offered"
-          ? "Offered session"
-          : kind === "request"
-            ? `${requests[0]?.athleteName} · request`
-            : booked[0]?.athleteName ?? "1-on-1 session";
+    kind === "open"
+      ? "Open slot"
+      : kind === "offered"
+        ? "Offered session"
+        : kind === "request"
+          ? `${requests[0]?.athleteName} · request`
+          : booked[0]?.athleteName ?? "1-on-1 session";
 
   const startChange = () => {
     setNewStart(minutesInZone(start, timeZone));
     setNewPlace(session.location === "online" ? "Video call" : session.place || places[0]);
     setChanging(true);
   };
-
-  const statusPill = (status: string, paymentStatus: string) =>
-    status === "requested" ? (
-      <BrandPill tone="amber">Request</BrandPill>
-    ) : paymentStatus === "paid" ? (
-      <BrandPill tone="green">Paid</BrandPill>
-    ) : status === "pending_payment" ? (
-      <BrandPill tone="amber">Awaiting payment</BrandPill>
-    ) : (
-      <BrandPill tone="neutral">Booked</BrandPill>
-    );
-
-  const RequestButtons = ({ bookingId }: { bookingId: string }) => (
-    <span className="flex flex-none gap-1.5">
-      <button type="button" className={cn(secondaryButton, "h-[30px] px-3")} disabled={respondingId !== null} onClick={() => onRespond(bookingId, false)}>
-        Decline
-      </button>
-      <button type="button" className={cn(primaryButton, "h-[30px] px-3")} disabled={respondingId !== null} onClick={() => onRespond(bookingId, true)}>
-        Accept
-      </button>
-    </span>
-  );
 
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -191,9 +165,7 @@ export const SessionDialog = ({
             <CircleCheck className="mt-[1px] size-4 flex-none text-[#1E7431]" strokeWidth={1.5} aria-hidden="true" />
             <span className="flex flex-col gap-0.5">
               <b className="text-[14px] font-medium">
-                {kind === "group"
-                  ? `${session.capacity} spots · ${money(session.price)} per athlete`
-                  : `1-on-1 · ${session.durationMinutes} min · ${money(session.price)}`}
+                {`1-on-1 · ${session.durationMinutes} min · ${money(session.price)}`}
               </b>
               <span className={meta}>
                 {[
@@ -208,68 +180,7 @@ export const SessionDialog = ({
             </span>
           </div>
 
-          {session.isDraft ? (
-            <p className="rounded-[8px] bg-[#FCEFDA] px-3 py-2 text-[14px] text-[#906A29]">
-              Draft. Families can't see this yet.{" "}
-              <Link to={ROUTES.SCHEDULE_PLAN} className="font-medium underline">
-                Publish it from New schedule
-              </Link>
-              .
-            </p>
-          ) : null}
-
-          {kind === "group" ? (
-            <div className="flex flex-col gap-2">
-              <div className="flex items-center justify-between">
-                <b className="text-[16px] font-medium text-[#117A96]">
-                  {booked.length} of {session.capacity} booked
-                </b>
-                <span className={meta}>{plural(session.capacity - booked.length, "spot")} left</span>
-              </div>
-              {booked.length ? (
-                <ul className="flex flex-col divide-y divide-[#EAEADF]">
-                  {booked.map((b) => (
-                    <li key={b.id} className="flex items-center justify-between gap-3 py-2 text-[14px]">
-                      {b.athleteName}
-                      {statusPill(b.status, b.paymentStatus)}
-                    </li>
-                  ))}
-                </ul>
-              ) : (
-                <p className={meta}>Nobody has joined yet.</p>
-              )}
-            </div>
-          ) : null}
-
-          {kind === "booked" ? (
-            <div className="flex flex-col gap-2">
-              {booked.map((b) => (
-                <div key={b.id} className="flex items-center justify-between gap-3 text-[14px]">
-                  {b.athleteName}
-                  {statusPill(b.status, b.paymentStatus)}
-                </div>
-              ))}
-              {booked[0]?.notes ? <p className="text-[14px] italic text-[#484D56]">“{booked[0].notes}”</p> : null}
-            </div>
-          ) : null}
-
-          {requests.length ? (
-            <div className="flex flex-col gap-2">
-              <span className={label}>{kind === "group" ? "Asking to join" : "Request"}</span>
-              {requests.map((r) => (
-                <div key={r.id} className="flex items-center justify-between gap-3 rounded-[8px] bg-[#FCEFDA] px-3 py-2">
-                  <span className="flex flex-col gap-0.5">
-                    <b className="text-[14px] font-medium">{r.athleteName}</b>
-                    {r.notes ? <span className={meta}>“{r.notes}”</span> : null}
-                  </span>
-                  <RequestButtons bookingId={r.id} />
-                </div>
-              ))}
-              <span className={meta}>Requests are held for 24 hours. The family pays once you accept.</span>
-            </div>
-          ) : null}
-
-          {shareable && (sharing || kind !== "group") ? (
+          {shareable ? (
             <ShareSession
               sessions={[session]}
               coachId={coachId}
@@ -278,28 +189,6 @@ export const SessionDialog = ({
               timeZone={timeZone}
               onDone={() => onClose()}
             />
-          ) : null}
-          {kind === "group" && !sharing ? (
-            <div className="flex gap-2">
-              <button type="button" className={cn(secondaryButton, "flex-1")} onClick={() => setSharing(true)}>
-                Share or invite
-              </button>
-              <Link to={ROUTES.CHAT} className={cn(secondaryButton, "flex-1")}>
-                <MessageCircle strokeWidth={1.5} aria-hidden="true" />
-                Messages
-              </Link>
-            </div>
-          ) : null}
-          {kind === "booked" || kind === "request" ? (
-            <div className="flex gap-2">
-              <Link to={ROUTES.CHAT} className={cn(secondaryButton, "flex-1")}>
-                <MessageCircle strokeWidth={1.5} aria-hidden="true" />
-                Message
-              </Link>
-              <Link to={`/sessions/${session.id}`} className={cn(secondaryButton, "flex-1")}>
-                Session details
-              </Link>
-            </div>
           ) : null}
 
           {repeating && !changing ? (
@@ -349,7 +238,7 @@ export const SessionDialog = ({
             </div>
           ) : null}
 
-          {removable && (kind === "open" || kind === "offered" || kind === "group") ? (
+          {removable && (kind === "open" || kind === "offered") ? (
             <button
               type="button"
               className={cn(dangerTextButton, "self-start")}

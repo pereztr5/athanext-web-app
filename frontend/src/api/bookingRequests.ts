@@ -32,6 +32,9 @@ export interface BookingRequest {
   athleteBirthDate: string | null;
   /** The family's card is held and is charged when the coach accepts (ATH-85). */
   cardHeld: boolean;
+  /** The parent who asked, and a badge for a family the coach already knows ("Invited by you"). */
+  parentName: string | null;
+  familyBadge: string | null;
 }
 
 /**
@@ -79,6 +82,9 @@ export const bookingRequestsAPI = {
       athletePosition: row.athlete_position ?? null,
       athleteBirthDate: row.athlete_birth_date ?? null,
       cardHeld: row.payment_status === 'authorized',
+      // Added by 20261010190000_schedule_page.sql; not in the generated types yet.
+      parentName: (row as { parent_name?: string | null }).parent_name ?? null,
+      familyBadge: (row as { family_badge?: string | null }).family_badge ?? null,
     }));
   },
 
@@ -106,6 +112,18 @@ export const bookingRequestsAPI = {
     });
     if (error) throw error;
     return data as string;
+  },
+
+  /** Other time: offers 1 to 3 of the coach's open slots instead and closes the request. */
+  async suggestOpenTimes(bookingId: string, occurrenceIds: string[], message: string): Promise<number> {
+    // Added by 20261010190000_schedule_page.sql; not in the generated types yet.
+    const { data, error } = (await supabase.rpc('suggest_booking_open_times' as never, {
+      p_booking_id: bookingId,
+      p_occurrence_ids: occurrenceIds,
+      p_message: message,
+    } as never)) as unknown as { data: unknown; error: Error | null };
+    if (error) throw error;
+    return Number(data) || 0;
   },
 
   async waiting(): Promise<WaitingSuggestion[]> {

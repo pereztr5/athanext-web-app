@@ -1,26 +1,36 @@
 /**
- * Add or edit one draft group session in the week planner (ATH-72).
+ * Add or edit one draft group session in the week planner (ATH-72, Working Copy 2 coach6.js
+ * `pses`). A time that overlaps another session is still refused, so the coach is never booked
+ * twice at once; overlapping a Google Calendar busy time saves with a heads-up.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Minus, Plus, Video } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { scheduleAPI, type ScheduleRules, type ScheduleSession, type SessionPosition } from "@/api/schedule";
+import { Minus, Plus } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { scheduleAPI, type BusyBlock, type ScheduleRules, type ScheduleSession, type SessionPosition } from "@/api/schedule";
+import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { DEFAULT_PILLARS } from "@/utils/pillarIcons";
-import { getZonedISODate } from "@/utils/dateHelpers";
+import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import {
   ALL_START_MINUTES,
   formatDayISO,
   formatMinutes,
   minutesInZone,
+  minutesToHHMM,
   sessionStart,
   viewerToEastern,
 } from "@/utils/schedule";
-import { choice, dangerTextButton, dialogContent, iconButton, input, label, meta, primaryButton, secondaryButton, textButton } from "./styles";
+import { sheetBody, sheetContent, sheetFooter, sheetHeader, sheetTitle } from "./create/classes";
+import { dialogContent, iconButton, input, label, meta, primaryButton, secondaryButton, textButton } from "./styles";
 
 const LENGTHS = [45, 60, 75, 90, 120];
 const LEVELS = ["All levels", "Beginners welcome", "Club and up"];
+const VIDEO = "Video call";
+const stepButton = cn(iconButton, "size-[30px] bg-[#F7F7F0]");
+const field = "flex min-w-0 flex-col gap-1.5";
+/** `.fg2`: two columns, one on phone. */
+const pair = "grid grid-cols-1 gap-4 md:grid-cols-2";
 
 export const PlanSessionDialog = ({
   open,
@@ -28,8 +38,10 @@ export const PlanSessionDialog = ({
   session,
   days,
   defaultDay,
+  dayMode = false,
   timeZone,
   rules,
+  busy = [],
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -38,14 +50,16 @@ export const PlanSessionDialog = ({
   /** Days in the plan that haven't passed, in the coach's zone. */
   days: string[];
   defaultDay: string;
+  /** Planning a single day: the day is fixed. */
+  dayMode?: boolean;
   timeZone: string;
   rules: ScheduleRules;
+  /** Google Calendar busy times, to warn about after saving. */
+  busy?: BusyBlock[];
 }) => {
   const queryClient = useQueryClient();
-  const places = useMemo(
-    () => [...(rules.locations.length ? rules.locations : ["In person"]), "Video call"],
-    [rules.locations]
-  );
+  const { toast } = useToast();
+  const places = useMemo(() => [...(rules.locations.length ? rules.locations : ["In person"]), VIDEO], [rules.locations]);
 
   const [title, setTitle] = useState("");
   const [day, setDay] = useState(defaultDay);
@@ -72,7 +86,7 @@ export const PlanSessionDialog = ({
       setDay(getZonedISODate(startAt, timeZone));
       setStart(minutesInZone(startAt, timeZone));
       setLength(session.durationMinutes);
-      setPlace(session.location === "online" ? "Video call" : session.place || places[0]);
+      setPlace(session.location === "online" ? VIDEO : session.place || places[0]);
       setPrice(String(session.price));
       setSpots(session.capacity);
       setPillar(session.pillar ?? "");
@@ -108,8 +122,14 @@ export const PlanSessionDialog = ({
     ...(bring.trim() ? { bring: bring.trim() } : {}),
   });
   const where = () => {
-    const online = place === "Video call";
+    const online = place === VIDEO;
     return { location: online ? ("online" as const) : ("in-person" as const), place: online || place === "In person" ? null : place };
+  };
+
+  const overlapsBusy = () => {
+    const from = zonedWallTimeToUtc(day, `${minutesToHHMM(start)}:00`, timeZone)?.getTime() ?? 0;
+    const to = from + length * 60_000;
+    return busy.some((b) => new Date(b.startsAt).getTime() < to && from < new Date(b.endsAt).getTime());
   };
 
   const save = useMutation({
@@ -149,6 +169,13 @@ export const PlanSessionDialog = ({
     },
     onSuccess: () => {
       refresh();
+      toast({
+        title: overlapsBusy()
+          ? `Saved. Heads up: ${formatDayISO(day, { weekday: "short", month: "short", day: "numeric" })} at ${formatMinutes(start)} overlaps a busy time`
+          : session
+            ? "Session saved"
+            : "Session added to the draft",
+      });
       onOpenChange(false);
     },
     onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't save the session."),
@@ -158,6 +185,7 @@ export const PlanSessionDialog = ({
     mutationFn: () => scheduleAPI.removeSession(session!.id),
     onSuccess: () => {
       refresh();
+      toast({ title: "Session removed" });
       onOpenChange(false);
     },
     onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't remove the session."),
@@ -171,33 +199,40 @@ export const PlanSessionDialog = ({
   };
 
   const dayOptions = days.includes(day) ? days : [day, ...days];
+  const placeOptions = places.includes(place) ? places : [place, ...places];
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={dialogContent}>
-        <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">
-            {session ? "Edit session" : "Add session"}
-          </DialogTitle>
-          <DialogDescription className="sr-only">A draft group session. Families see it once you publish.</DialogDescription>
+      <DialogContent className={cn(dialogContent, sheetContent)} aria-describedby={undefined}>
+        <DialogHeader className={sheetHeader}>
+          <DialogTitle className={sheetTitle}>{session ? "Edit session" : "Add session"}</DialogTitle>
         </DialogHeader>
-        <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
-          <label className="flex flex-col gap-1.5">
+        <div className={sheetBody}>
+          <label className={field}>
             <span className={label}>Title</span>
             <input className={input} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="For example, Finishing clinic" />
           </label>
-          <div className="grid grid-cols-2 gap-3">
-            <label className="flex flex-col gap-1.5">
-              <span className={label}>Day</span>
-              <select className={input} value={day} onChange={(e) => setDay(e.target.value)} disabled={dayOptions.length < 2}>
-                {dayOptions.map((d) => (
-                  <option key={d} value={d}>
-                    {formatDayISO(d, { weekday: "short", month: "short", day: "numeric" })}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <label className="flex flex-col gap-1.5">
+          <div className={pair}>
+            {dayMode ? (
+              <div className={field}>
+                <span className={label}>Day</span>
+                <span className={cn(input, "flex items-center text-[#484D56]")}>
+                  {formatDayISO(day, { weekday: "short", month: "short", day: "numeric" })}
+                </span>
+              </div>
+            ) : (
+              <label className={field}>
+                <span className={label}>Day</span>
+                <select className={input} value={day} onChange={(e) => setDay(e.target.value)}>
+                  {dayOptions.map((d) => (
+                    <option key={d} value={d}>
+                      {formatDayISO(d, { weekday: "short", month: "short", day: "numeric" })}
+                    </option>
+                  ))}
+                </select>
+              </label>
+            )}
+            <label className={field}>
               <span className={label}>Start</span>
               <select className={input} value={start} onChange={(e) => setStart(Number(e.target.value))}>
                 {ALL_START_MINUTES.map((m) => (
@@ -208,8 +243,8 @@ export const PlanSessionDialog = ({
               </select>
             </label>
           </div>
-          <div className="grid grid-cols-3 gap-3">
-            <label className="flex flex-col gap-1.5">
+          <div className={pair}>
+            <label className={field}>
               <span className={label}>Length</span>
               <select className={input} value={length} onChange={(e) => setLength(Number(e.target.value))}>
                 {LENGTHS.map((l) => (
@@ -219,40 +254,50 @@ export const PlanSessionDialog = ({
                 ))}
               </select>
             </label>
-            <label className="flex flex-col gap-1.5">
+            <label className={field}>
+              <span className={label}>Location</span>
+              <select className={input} value={place} onChange={(e) => setPlace(e.target.value)}>
+                {placeOptions.map((p) => (
+                  <option key={p} value={p}>
+                    {p}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </div>
+          <div className={pair}>
+            <label className={field}>
               <span className={label}>Price per athlete</span>
-              <span className="relative flex items-center">
-                <span className="pointer-events-none absolute left-3 text-[14px] text-[#767980]">$</span>
-                <input className={cn(input, "pl-6")} type="number" min={0} inputMode="decimal" value={price} onChange={(e) => setPrice(e.target.value)} />
+              <span className="flex h-[38px] items-center rounded-[8px] bg-[#F1F1E6] focus-within:ring-2 focus-within:ring-[#6698D2]">
+                <span className="pl-3 text-[14px] text-[#767980]" aria-hidden="true">$</span>
+                <input
+                  className="h-full w-full min-w-0 bg-transparent pl-1 pr-3 text-[14px] text-[#1A202C] focus:outline-none"
+                  type="number"
+                  min={0}
+                  inputMode="decimal"
+                  value={price}
+                  onChange={(e) => setPrice(e.target.value)}
+                />
               </span>
             </label>
-            <div className="flex flex-col gap-1.5">
+            <div className={field}>
               <span className={label}>Spots</span>
-              <span className="flex h-[38px] items-center justify-between gap-1">
-                <button type="button" className={cn(iconButton, "size-[30px]")} aria-label="Fewer spots" onClick={() => setSpots((s) => Math.max(2, s - 1))}>
+              <span className="flex h-[38px] items-center gap-3.5">
+                <button type="button" className={stepButton} aria-label="Fewer spots" onClick={() => setSpots((s) => Math.max(2, s - 1))}>
                   <Minus strokeWidth={1.5} />
                 </button>
-                <b className="text-[16px]">{spots}</b>
-                <button type="button" className={cn(iconButton, "size-[30px]")} aria-label="More spots" onClick={() => setSpots((s) => Math.min(30, s + 1))}>
+                <b className="min-w-5 text-center text-[16px]">{spots}</b>
+                <button type="button" className={stepButton} aria-label="More spots" onClick={() => setSpots((s) => Math.min(30, s + 1))}>
                   <Plus strokeWidth={1.5} />
                 </button>
               </span>
             </div>
           </div>
-          <span className={label}>Where</span>
-          <div className="flex flex-wrap gap-2">
-            {places.map((p) => (
-              <button key={p} type="button" aria-pressed={place === p} className={choice(place === p)} onClick={() => setPlace(p)}>
-                {p === "Video call" ? <Video strokeWidth={1.5} aria-hidden="true" /> : <MapPin strokeWidth={1.5} aria-hidden="true" />}
-                {p}
-              </button>
-            ))}
-          </div>
 
           {more ? (
-            <div className="flex flex-col gap-3">
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1.5">
+            <>
+              <div className={pair}>
+                <label className={field}>
                   <span className={label}>Pillar</span>
                   <select className={input} value={pillar} onChange={(e) => setPillar(e.target.value)}>
                     <option value="">Not set</option>
@@ -263,7 +308,7 @@ export const PlanSessionDialog = ({
                     ))}
                   </select>
                 </label>
-                <label className="flex flex-col gap-1.5">
+                <label className={field}>
                   <span className={label}>Position</span>
                   <select className={input} value={position} onChange={(e) => setPosition(e.target.value as SessionPosition | "")}>
                     <option value="Field player">Field player</option>
@@ -272,12 +317,12 @@ export const PlanSessionDialog = ({
                   </select>
                 </label>
               </div>
-              <div className="grid grid-cols-2 gap-3">
-                <label className="flex flex-col gap-1.5">
+              <div className={pair}>
+                <label className={field}>
                   <span className={label}>Ages (optional)</span>
                   <input className={input} value={ages} onChange={(e) => setAges(e.target.value)} placeholder="12 to 15" />
                 </label>
-                <label className="flex flex-col gap-1.5">
+                <label className={field}>
                   <span className={label}>Level</span>
                   <select className={input} value={level} onChange={(e) => setLevel(e.target.value)}>
                     {LEVELS.map((l) => (
@@ -286,16 +331,16 @@ export const PlanSessionDialog = ({
                   </select>
                 </label>
               </div>
-              <label className="flex flex-col gap-1.5">
+              <label className={field}>
                 <span className={label}>What you'll work on (optional)</span>
-                <textarea className={cn(input, "h-auto py-2")} rows={3} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="One per line" />
-                <span className={meta}>Families see this before they book.</span>
+                <textarea className={cn(input, "h-auto py-2.5 leading-[18px]")} rows={3} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="One per line" />
+                <span className={meta}>Families see this before they book</span>
               </label>
-              <label className="flex flex-col gap-1.5">
+              <label className={field}>
                 <span className={label}>Bring (optional)</span>
                 <input className={input} value={bring} onChange={(e) => setBring(e.target.value)} />
               </label>
-            </div>
+            </>
           ) : (
             <button type="button" className={cn(textButton, "self-start")} onClick={() => setMore(true)}>
               <Plus strokeWidth={1.5} aria-hidden="true" />
@@ -304,14 +349,15 @@ export const PlanSessionDialog = ({
           )}
 
           {error ? (
-            <p role="alert" className="rounded-[8px] bg-[#FCEFDA] px-3 py-2 text-[14px] text-[#906A29]">
+            <p role="alert" className="rounded-[8px] bg-[#FCEFDA] px-3.5 py-3 text-[12px] leading-[14px] text-[#906A29]">
               {error}
             </p>
           ) : null}
-
-          <div className="flex items-center justify-between gap-2">
+        </div>
+        <div className={sheetFooter}>
+          <div className="grid w-full grid-cols-2 gap-2">
             {session ? (
-              <button type="button" className={dangerTextButton} disabled={remove.isPending} onClick={() => remove.mutate()}>
+              <button type="button" className={secondaryButton} disabled={remove.isPending} onClick={() => remove.mutate()}>
                 Delete
               </button>
             ) : (

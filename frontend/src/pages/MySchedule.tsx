@@ -1,12 +1,13 @@
 /**
- * My Schedule (ATH-71): one Create session button and a Day / Week / Month calendar of the
- * coach's sessions, open slots, requests and Google Calendar busy times. Replaces the
- * separate Calendar and Availability pages: weekly open times are repeating open sessions.
+ * My Schedule (ATH-71, Working Copy): one Create session button and a Day / Week / Month
+ * calendar of the coach's sessions, open slots, requests and Google Calendar busy times.
+ * Weekly open times are repeating open sessions. Booking requests open as a full page
+ * (?requests=1); Schedule settings is its own page.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Inbox, Plus, Settings, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Inbox, Plus, Settings } from "lucide-react";
 import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -18,9 +19,10 @@ import { calendarSyncAPI, scheduleAPI, type ScheduleSession } from "@/api/schedu
 import { DayView, MonthView, WeekAgenda, WeekColumns, type ScheduleViewHandlers } from "@/components/schedule/ScheduleViews";
 import { CreateSessionDialog } from "@/components/schedule/CreateSessionDialog";
 import { SessionDialog } from "@/components/schedule/SessionDialog";
-import { ClearDayDialog, ScheduleSettingsDialog } from "@/components/schedule/ScheduleDialogs";
-import { RequestsDialog } from "@/components/schedule/RequestsDialog";
-import { card, iconButton, meta, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
+import { ClearDayDialog } from "@/components/schedule/ScheduleDialogs";
+import { RequestsPage } from "@/components/schedule/RequestsPage";
+import { meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton } from "@/components/schedule/styles";
+import { calendarCard, navArrow } from "@/components/schedule/views/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import {
@@ -31,12 +33,16 @@ import {
   monthGrid,
   monthStartISO,
   plural,
+  sessionKind,
   weekDates,
   weekStartISO,
 } from "@/utils/schedule";
 import { isoDateInZone, timeZoneAbbreviation } from "@/utils/viewerTime";
 
 type View = "day" | "week" | "month";
+
+// The Schedule settings page (route added with the page).
+const SCHEDULE_SETTINGS_PATH = "/schedule/settings";
 
 const MySchedulePage = () => {
   const { isCoach, ready } = useRole();
@@ -47,6 +53,8 @@ const MySchedulePage = () => {
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const [searchParams, setSearchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const showRequests = Boolean(searchParams.get("requests"));
 
   const [now, setNow] = useState(() => new Date());
   const todayISO = isoDateInZone(now, timeZone);
@@ -56,8 +64,6 @@ const MySchedulePage = () => {
   const [createDate, setCreateDate] = useState(todayISO);
   const [openSession, setOpenSession] = useState<ScheduleSession | null>(null);
   const [clearDate, setClearDate] = useState<string | null>(null);
-  const [settingsOpen, setSettingsOpen] = useState(false);
-  const [requestsOpen, setRequestsOpen] = useState(false);
 
   const currentView: View = view ?? (isMobile ? "day" : "week");
 
@@ -67,14 +73,12 @@ const MySchedulePage = () => {
     return () => window.clearInterval(id);
   }, []);
 
-  // Links from Coach Home: ?day=YYYY-MM-DD opens that day, ?create=1 opens Create session;
-  // from notifications: ?requests=1 opens booking requests (ATH-98).
+  // Links from Coach Home: ?day=YYYY-MM-DD opens that day, ?create=1 opens Create session.
+  // ?requests=1 (Home, notifications) shows the booking requests page and stays in the URL.
   useEffect(() => {
     const day = searchParams.get("day");
     const create = searchParams.get("create");
-    const requests = searchParams.get("requests");
-    if (!day && !create && !requests) return;
-    if (requests) setRequestsOpen(true);
+    if (!day && !create) return;
     if (day && /^\d{4}-\d{2}-\d{2}$/.test(day)) {
       setAnchor(day);
       setView("day");
@@ -85,20 +89,17 @@ const MySchedulePage = () => {
     }
     searchParams.delete("day");
     searchParams.delete("create");
-    searchParams.delete("requests");
     setSearchParams(searchParams, { replace: true });
   }, [searchParams, setSearchParams, todayISO]);
 
-  // Back from Google sign-in.
+  // Back from Google sign-in: say how it went and continue on Schedule settings.
   useEffect(() => {
     const result = searchParams.get("calendar");
     if (!result) return;
     if (result === "connected") toast({ title: "Google Calendar connected", description: "Busy times now hide your open slots." });
     else if (result === "error") toast({ title: "Couldn't connect Google Calendar", description: "Please try again.", variant: "destructive" });
-    searchParams.delete("calendar");
-    setSearchParams(searchParams, { replace: true });
-    setSettingsOpen(true);
-  }, [searchParams, setSearchParams, toast]);
+    navigate(SCHEDULE_SETTINGS_PATH, { replace: true });
+  }, [searchParams, navigate, toast]);
 
   const weekStart = weekStartISO(anchor);
   const monthStart = monthStartISO(anchor);
@@ -186,7 +187,12 @@ const MySchedulePage = () => {
   });
   const respondingId = respond.isPending ? respond.variables?.bookingId ?? null : null;
   const handlers: ScheduleViewHandlers = {
-    onOpenSession: setOpenSession,
+    // Booked 1-on-1s and requests go straight to the session page; the rest open a sheet.
+    onOpenSession: (session) => {
+      const kind = sessionKind(session);
+      if (kind === "booked" || kind === "request") navigate(`/sessions/${session.id}`);
+      else setOpenSession(session);
+    },
     onRespond: (bookingId, accept) => respond.mutate({ bookingId, accept }),
     respondingId,
   };
@@ -215,7 +221,7 @@ const MySchedulePage = () => {
   if (!coachId) {
     return (
       <div className="mx-auto max-w-[1000px] px-4 py-10 md:px-0">
-        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
+        <h1 className={pageTitle}>My Schedule</h1>
         <p className="mt-[10px] text-[16px] leading-[18px] text-[#767980]">
           Your coach profile is still being set up. Finish onboarding to see your schedule.
         </p>
@@ -235,41 +241,55 @@ const MySchedulePage = () => {
     setAnchor((current) => (currentView === "month" ? addMonthsISO(monthStartISO(current), direction) : addDaysISO(weekStartISO(current), 7 * direction)));
 
   const clearDay = clearDate ? daysByDate.get(clearDate) : undefined;
-  const upcomingTimeOff = (schedule?.timeOff ?? []).filter((t) => t.date >= todayISO);
   const navLabel =
     currentView === "month"
       ? formatDayISO(monthStart, { month: "long", year: "numeric" })
       : `${formatDayISO(weekStart, { month: "short", day: "numeric" })} – ${formatDayISO(addDaysISO(weekStart, 6), { month: "short", day: "numeric" })}`;
 
+  const createButton = (className: string) => (
+    <button type="button" className={cn(primaryButton, className)} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
+      <Plus strokeWidth={1.5} aria-hidden="true" />
+      Create session
+    </button>
+  );
+
+  if (showRequests) {
+    return (
+      <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
+        <RequestsPage
+          requests={requests}
+          loading={requestsQuery.isLoading}
+          timeZone={timeZone}
+          now={now}
+          respondingId={respondingId}
+          onAccept={(bookingId) => respond.mutate({ bookingId, accept: true })}
+          onBack={() => navigate(ROUTES.SCHEDULE)}
+          onChanged={refresh}
+        />
+      </div>
+    );
+  }
+
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className={cn("mx-auto flex w-full flex-col gap-5", currentView === "week" ? "max-w-[1200px]" : "max-w-[760px]")}>
-        <header className="flex items-end justify-between gap-4">
-          <div className="flex flex-col gap-[10px]">
-            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
+      <div className={cn("mx-auto flex w-full flex-col gap-4", currentView === "week" ? "max-w-[1120px]" : "max-w-[760px]")}>
+        <header className="flex flex-wrap items-end justify-between gap-4">
+          <div className="flex min-w-0 flex-col gap-[10px]">
+            <h1 className={pageTitle}>My Schedule</h1>
             {timeZone !== "America/New_York" ? (
               <p className={meta}>
                 Times in {timeZone.replace(/_/g, " ")} ({timeZoneAbbreviation(timeZone, now)})
               </p>
             ) : null}
           </div>
-          <div className="flex gap-2">
-            <Link to={ROUTES.SCHEDULE_PLAN} className={cn(secondaryButton, "hidden sm:inline-flex")}>
-              <Users strokeWidth={1.5} aria-hidden="true" />
-              Plan group week
-            </Link>
-            <button type="button" className={cn(primaryButton, "hidden sm:inline-flex")} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
-              <Plus strokeWidth={1.5} aria-hidden="true" />
-              Create session
-            </button>
-          </div>
+          {createButton("hidden md:inline-flex")}
         </header>
 
         {requests.length ? (
           <button
             type="button"
-            onClick={() => setRequestsOpen(true)}
-            className="flex items-center gap-3 rounded-[10px] bg-[#FCEFDA] px-4 py-3 text-left text-[14px] font-medium text-[#906A29] hover:bg-[#F9E6C6]"
+            onClick={() => setSearchParams({ requests: "1" })}
+            className="flex items-center gap-[10px] rounded-[10px] bg-[#FCEFDA] px-[14px] py-3 text-left text-[14px] font-medium text-[#906A29] hover:bg-[#F9E6C6]"
           >
             <Inbox className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
             <span className="grow">{plural(requests.length, "booking request")} waiting</span>
@@ -280,35 +300,32 @@ const MySchedulePage = () => {
           </button>
         ) : null}
 
-        <div className="grid grid-cols-2 gap-2 sm:hidden">
-          <Link to={ROUTES.SCHEDULE_PLAN} className={cn(secondaryButton, "h-[42px]")}>
-            <Users strokeWidth={1.5} aria-hidden="true" />
-            Plan group week
-          </Link>
-          <button type="button" className={cn(primaryButton, "h-[42px]")} onClick={() => openCreate(currentView === "day" ? anchor : todayISO)}>
-            <Plus strokeWidth={1.5} aria-hidden="true" />
-            Create session
-          </button>
-        </div>
+        {createButton("h-[46px] w-full md:hidden")}
 
-        <section className={card}>
-          <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div className={cn(segGroup, "sm:w-[260px]")} role="group" aria-label="View">
+        <section className={calendarCard}>
+          <div className="flex flex-col gap-[10px] md:flex-row md:flex-wrap md:items-center md:justify-between">
+            <div className={cn(segGroup, "w-full md:inline-flex md:w-auto")} role="group" aria-label="View">
               {(["day", "week", "month"] as View[]).map((v) => (
-                <button key={v} type="button" className={segButton(currentView === v)} aria-pressed={currentView === v} onClick={() => setView(v)}>
+                <button
+                  key={v}
+                  type="button"
+                  className={cn(segButton(currentView === v), "md:min-w-[64px] md:flex-none")}
+                  aria-pressed={currentView === v}
+                  onClick={() => setView(v)}
+                >
                   {v === "day" ? "Day" : v === "week" ? "Week" : "Month"}
                 </button>
               ))}
             </div>
-            <div className="flex items-center gap-2">
-              <button type="button" className={iconButton} aria-label={currentView === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)}>
+            <div className="flex items-center justify-between gap-2 md:justify-start">
+              <button type="button" className={navArrow} aria-label={currentView === "month" ? "Previous month" : "Previous week"} onClick={() => step(-1)}>
                 <ChevronLeft strokeWidth={1.5} />
               </button>
-              <b className="min-w-[132px] text-center text-[14px] font-medium text-[#1A202C]">{navLabel}</b>
-              <button type="button" className={iconButton} aria-label={currentView === "month" ? "Next month" : "Next week"} onClick={() => step(1)}>
+              <b className="flex-1 text-center text-[15px] font-semibold leading-[18px] text-[#1A202C] md:min-w-[120px] md:flex-none">{navLabel}</b>
+              <button type="button" className={navArrow} aria-label={currentView === "month" ? "Next month" : "Next week"} onClick={() => step(1)}>
                 <ChevronRight strokeWidth={1.5} />
               </button>
-              <button type="button" className={cn(secondaryButton, "h-[30px] px-3")} onClick={() => setAnchor(todayISO)}>
+              <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setAnchor(todayISO)}>
                 Today
               </button>
             </div>
@@ -335,10 +352,10 @@ const MySchedulePage = () => {
             />
           ) : currentView === "week" ? (
             <>
-              <div className="hidden lg:block">
+              <div className="hidden md:block">
                 <WeekColumns days={weekDays} todayISO={todayISO} timeZone={timeZone} handlers={handlers} onOpenDay={openDay} />
               </div>
-              <div className="lg:hidden">
+              <div className="md:hidden">
                 <WeekAgenda days={weekDays} timeZone={timeZone} now={now} handlers={handlers} onOpenDay={openDay} />
               </div>
             </>
@@ -347,20 +364,19 @@ const MySchedulePage = () => {
           )}
         </section>
 
+        {/* A plain line under the calendar (Working Copy `.sch-set`). */}
         <button
           type="button"
-          onClick={() => setSettingsOpen(true)}
-          className="flex items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-4 py-3 text-left hover:bg-[#F4F4EB]"
+          onClick={() => navigate(SCHEDULE_SETTINGS_PATH)}
+          className="flex w-full items-center gap-2 px-0.5 py-1 text-left text-[13px] leading-[18px] text-[#767980] hover:text-[#484D56]"
         >
-          <Settings className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-          <span className="grow text-[14px] text-[#484D56]">
-            {schedule?.calendar
-              ? "Google Calendar synced: busy times hide your open slots"
-              : "Google Calendar not connected"}
+          <Settings className="size-[15px] flex-none" strokeWidth={1.5} aria-hidden="true" />
+          <span className="grow">
+            {schedule?.calendar ? "Google Calendar synced: busy times hide your open slots" : "Google Calendar not connected"}
           </span>
-          <span className="flex items-center gap-1 text-[14px] font-medium text-[#0054B4]">
+          <span className="inline-flex flex-none items-center gap-0.5 text-[12px] font-medium text-[#0054B4]">
             Schedule settings
-            <ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            <ChevronRight className="size-3" strokeWidth={1.5} aria-hidden="true" />
           </span>
         </button>
       </div>
@@ -408,22 +424,6 @@ const MySchedulePage = () => {
             ),
           });
         }}
-      />
-      <ScheduleSettingsDialog
-        open={settingsOpen}
-        onOpenChange={setSettingsOpen}
-        schedule={schedule}
-        upcomingTimeOff={upcomingTimeOff}
-        onRestoreDay={(date) => restore.mutate(date)}
-      />
-      <RequestsDialog
-        open={requestsOpen}
-        onOpenChange={setRequestsOpen}
-        requests={requests}
-        timeZone={timeZone}
-        now={now}
-        respondingId={respondingId}
-        onRespond={handlers.onRespond}
       />
     </div>
   );

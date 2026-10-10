@@ -17,6 +17,7 @@ import AccountSettings from "./pages/AccountSettings";
 import MySchedule from "./pages/MySchedule";
 import BookSession from "./pages/BookSession";
 import PlanGroups from "./pages/PlanGroups";
+import ScheduleSettings from "./pages/ScheduleSettings";
 import GroupOffer from "./pages/GroupOffer";
 import Analytics from "./pages/Analytics";
 import About from "./pages/About";
@@ -89,8 +90,9 @@ export const ROUTES = {
   BOOK: "/book",
   SCHEDULE: "/schedule",
   SCHEDULE_PLAN: "/schedule/plan",
+  SCHEDULE_SETTINGS: "/schedule/settings",
   GROUP_OFFER: "/offers/:id",
-  // Older links: both now open My Schedule (ATH-71).
+  // Older links: /availability opens Schedule settings, /calendar opens My Schedule.
   AVAILABILITY: "/availability",
   CALENDAR: "/calendar",
   ANALYTICS: "/analytics",
@@ -167,7 +169,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.BOOK, element: <ProtectedRoute><BookSession /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE_PLAN, element: <ProtectedRoute><PlanGroups /></ProtectedRoute> },
-  { path: ROUTES.AVAILABILITY, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
+  { path: ROUTES.SCHEDULE_SETTINGS, element: <ProtectedRoute><ScheduleSettings /></ProtectedRoute> },
+  { path: ROUTES.AVAILABILITY, element: <Navigate to={ROUTES.SCHEDULE_SETTINGS} replace /> },
   { path: ROUTES.CALENDAR, element: <Navigate to={ROUTES.SCHEDULE} replace /> },
   { path: ROUTES.ANALYTICS, element: <ProtectedRoute><Analytics /></ProtectedRoute> },
   { path: ROUTES.CREATE_ATHLETE_PROFILE, element: <ProtectedRoute><CreateAthleteProfile /></ProtectedRoute> },

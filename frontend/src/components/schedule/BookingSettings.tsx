@@ -1,6 +1,6 @@
 /**
- * Booking rules and Google Calendar sync, shared by My Schedule's Schedule settings and the
- * coach's Account Settings (ATH-87).
+ * Booking rules and Google Calendar sync for the coach's Account Settings (ATH-87). The
+ * Schedule settings page has its own cards (components/schedule/settings).
  */
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
