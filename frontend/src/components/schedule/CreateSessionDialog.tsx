@@ -39,6 +39,9 @@ import {
 import { ShareSession } from "./ShareSession";
 import {
   choice,
+  dayTile,
+  dayTileNumber,
+  dayTileWeekday,
   dialogContent,
   input,
   label,
@@ -48,6 +51,7 @@ import {
   segButton,
   segGroup,
   textButton,
+  timeTile,
 } from "./styles";
 
 type Kind = "individual" | "group";
@@ -435,15 +439,10 @@ export const CreateSessionDialog = ({
                       setTimes([]);
                       setOther(false);
                     }}
-                    className={cn(
-                      "flex flex-col items-center gap-0.5 rounded-[8px] border py-2",
-                      d === day ? "border-[#6698D2] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB] hover:bg-[#EAEADF]"
-                    )}
+                    className={cn(dayTile(d === day), d !== day && "bg-[#F7F7F0]")}
                   >
-                    <small className="text-[11px] font-medium uppercase text-[#767980]">{formatDayISO(d, { weekday: "short" })}</small>
-                    <b className={cn("text-[16px] font-semibold", d === day ? "text-[#0054B4]" : "text-[#1A202C]")}>
-                      {formatDayISO(d, { day: "numeric" })}
-                    </b>
+                    <small className={dayTileWeekday(d === day)}>{formatDayISO(d, { weekday: "short" })}</small>
+                    <b className={dayTileNumber}>{formatDayISO(d, { day: "numeric" })}</b>
                   </button>
                 ))}
               </div>
@@ -467,15 +466,15 @@ export const CreateSessionDialog = ({
                       type="button"
                       aria-pressed={on}
                       disabled={Boolean(taken) || past}
-                      className={cn(choice(on), "flex-col gap-0 py-1")}
+                      className={cn(timeTile(on), "h-[50px] text-[15px]")}
                       onClick={() => toggleTime(minutes)}
                     >
                       <span>{formatMinutes(minutes)}</span>
-                      {taken ? <small className="text-[11px] font-normal text-[#767980]">{taken}</small> : null}
+                      {taken ? <small className="text-[10px] font-medium">{taken}</small> : null}
                     </button>
                   );
                 })}
-                <button type="button" className={choice(other)} aria-pressed={other} onClick={() => setOther((v) => !v)}>
+                <button type="button" className={cn(timeTile(other), "h-[50px] text-[15px]", !other && "border-dashed text-[#0054B4]")} aria-pressed={other} onClick={() => setOther((v) => !v)}>
                   Other
                 </button>
               </div>

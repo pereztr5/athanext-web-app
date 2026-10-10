@@ -54,11 +54,11 @@ const AthleteDetailPage = () => {
   if (!isCoach) return <Navigate to={ROUTES.BOOK} replace />;
 
   if (detail.isLoading) {
-    return <p className={cn(meta, "px-4 py-8 md:px-10")}>Loading…</p>;
+    return <p className={cn(meta, "px-4 py-8 md:px-5")}>Loading…</p>;
   }
   if (detail.isError || !detail.data) {
     return (
-      <div className="px-4 py-8 md:px-10">
+      <div className="px-4 py-8 md:px-5">
         <p className="text-[16px] font-medium">Athlete not found</p>
         <p className={cn(meta, "mt-1")}>They may have left your roster.</p>
         <Link to={ROUTES.ATHLETES} className={cn(secondaryButton, "mt-4")}>Back to My Athletes</Link>
@@ -87,7 +87,7 @@ const AthleteDetailPage = () => {
   const since = athlete.joinedOn ? new Date(`${athlete.joinedOn.slice(0, 10)}T12:00:00`).toLocaleDateString("en-US", { month: "long", year: "numeric" }) : null;
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5">
         <Link to={ROUTES.ATHLETES} className={cn(textButton, "self-start text-[#767980]")}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
@@ -103,7 +103,7 @@ const AthleteDetailPage = () => {
               </span>
             )}
             <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="text-[32px] font-bold leading-[32px] tracking-[-1.6px] text-[#1A202C]">{athlete.name}</h1>
+              <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[32px] tracking-[-1.6px] text-[#1A202C]">{athlete.name}</h1>
               <p className="text-[14px] leading-[18px] text-[#767980]">{line || "Athlete"}</p>
             </div>
           </div>

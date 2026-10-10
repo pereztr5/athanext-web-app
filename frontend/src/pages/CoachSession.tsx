@@ -182,7 +182,7 @@ const CoachSessionPage = () => {
   ) : null;
 
   return (
-    <div className="px-4 pb-16 md:px-10">
+    <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
         <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => navigate(-1)}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
@@ -191,7 +191,7 @@ const CoachSessionPage = () => {
         <header className="flex flex-wrap items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-2">
             <div className="flex flex-wrap items-center gap-2">
-              <h1 className="text-[28px] font-bold leading-[30px] tracking-[-1.2px] text-[#1A202C]">{title}</h1>
+              <h1 className="text-[24px] md:text-[28px] font-bold leading-[28px] md:leading-[30px] tracking-[-1.2px] text-[#1A202C]">{title}</h1>
               {status}
             </div>
             <span className={meta}>{sub}</span>

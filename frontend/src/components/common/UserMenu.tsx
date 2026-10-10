@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, CircleHelp, CreditCard, LayoutGrid, ShoppingBag, LogOut, Settings, Store } from "lucide-react";
+import { Building2, CircleHelp, CreditCard, LogOut, Settings, Store } from "lucide-react";
 import { useRole } from "@/hooks/useRole";
 import { useMyOrganization } from "@/hooks/useOrganizations";
 import { useCoachPayMode } from "@/hooks/useCoachPayMode";
@@ -33,10 +33,12 @@ type UserMenuProps = {
   useFallbackDelay?: boolean;
   avatarReady?: boolean;
   /**
-   * Sidebar avatar matches the Figma 40px, 10px-radius mark.
-   * Header avatar is the brand-kit 28px circle with flat blue initials and no completion ring.
+   * "sidebar" renders the whole account row (avatar, name, line under it) as the menu button.
+   * "header" is the 28px circle used in the marketing header.
    */
   variant?: "default" | "sidebar" | "header";
+  /** Name and line shown in the sidebar row. */
+  label?: { name: string; sub?: string };
 };
 
 export const UserMenu: React.FC<UserMenuProps> = ({
@@ -47,6 +49,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   useFallbackDelay = false,
   avatarReady: avatarReadyProp,
   variant = "default",
+  label,
 }) => {
   const {
     signOut,
@@ -58,7 +61,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     setHasNewMessage,
     profileReady,
   } = useAuth();
-  const { profile, profileProgress } = useProfile();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const { isCoach } = useRole();
   const { data: myOrg } = useMyOrganization();
@@ -345,184 +348,118 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     img.src = nextSrc;
   }, [avatarReady, displayAvatarUrl, effectiveSrc]);
 
-  const {
-    profileCompletion,
-    isProfileComplete,
-    ringDegrees,
-    avatarNode,
-  } = useMemo(() => {
-    const completionSource = profileProgress?.completion ?? 0;
-    const clampedCompletion = Math.min(Math.max(completionSource, 0), 100);
-    const isComplete = clampedCompletion >= 100;
-    const degrees = clampedCompletion * 3.6;
-    const sidebarMark = variant === "sidebar";
-    const headerMark = variant === "header";
-    const node = (
-      <Avatar
-        className={cn(
-          "relative h-full w-full overflow-hidden",
-          sidebarMark
-            ? "rounded-[10px] bg-[#1599BC]"
-            : headerMark
-              ? "rounded-full bg-[#E5EDF7]"
-              : "rounded-full bg-[#E5EDF7]"
-        )}
-      >
+  const avatarNode = useMemo(
+    () => (
+      <Avatar className={cn("relative h-full w-full overflow-hidden rounded-full", isCoach ? "bg-[#E5EDF7]" : "bg-[#F1F1E6]")}>
         {shouldShowSkeleton ? (
-          <div className="w-full h-full flex items-center justify-center">
-            <Skeleton
-              className={cn(
-                "h-full w-full",
-                sidebarMark ? "rounded-[10px]" : "rounded-full",
-                headerMark && "bg-[#EAEADF]"
-              )}
-            />
-          </div>
+          <Skeleton className="h-full w-full rounded-full bg-[#EAEADF]" />
         ) : displayAvatarUrl ? (
-          <AvatarImage
-            loading="eager"
-            src={displayAvatarUrl}
-            alt={displayName}
-            className="object-cover"
-          />
+          <AvatarImage loading="eager" src={displayAvatarUrl} alt={displayName} className="object-cover" />
         ) : (
           <AvatarFallback
             className={cn(
-              "flex h-full w-full items-center justify-center",
-              sidebarMark
-                ? "rounded-[10px] bg-[#1599BC] text-[14px] font-medium text-[#F1F1E6]"
-                : headerMark
-                  ? "rounded-full bg-[#E5EDF7] text-[12px] font-medium tracking-[-0.03em] text-[#0054B4]"
-                  : "rounded-full bg-[#E5EDF7] text-[12px] font-medium tracking-[-0.03em] text-[#0054B4]"
+              "flex h-full w-full items-center justify-center rounded-full text-[12px] font-medium tracking-[-0.03em]",
+              isCoach ? "bg-[#E5EDF7] text-[#0054B4]" : "bg-[#F1F1E6] text-[#484D56]"
             )}
           >
             {initials}
           </AvatarFallback>
         )}
       </Avatar>
-    );
+    ),
+    [shouldShowSkeleton, displayAvatarUrl, displayName, initials, isCoach]
+  );
 
-    return {
-      profileCompletion: clampedCompletion,
-      isProfileComplete: isComplete,
-      ringDegrees: degrees,
-      avatarNode: node,
-    };
-  }, [shouldShowSkeleton, displayAvatarUrl, displayName, initials, profileProgress?.completion, variant]);
-
-  const headerVariant = variant === "header";
+  const sidebarVariant = variant === "sidebar";
+  // Working Copy `.menu button`: 14px medium ink, 9px 10px padding, 8px radius.
+  const itemClass =
+    "cursor-pointer gap-2 rounded-[8px] px-[10px] py-[9px] text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] focus:bg-[#F9F9F5] focus:text-[#1A202C] [&>svg]:size-4";
+  const divider = "my-1 h-px bg-[#EAEADF]";
 
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button
-          variant="ghost"
-          aria-label="Account menu"
-          className={cn(
-            "relative p-0 hover:bg-transparent",
-            headerVariant ? "h-7 w-7" : "h-10 w-10",
-            variant === "sidebar" ? "rounded-[10px]" : "rounded-full"
-          )}
-        >
-          {headerVariant ? (
-            <div className="relative h-7 w-7 overflow-hidden rounded-full">
-              {avatarNode}
-            </div>
-          ) : variant !== "sidebar" && profileCompletion > 0 && profileCompletion < 100 ? (
-            <div
-              className={cn(
-                "relative h-10 w-10 rounded-full p-[4px] transition-all duration-200",
-                "shadow-[0_0_0_1px_rgba(0,0,0,0.04)]"
-              )}
-              style={{
-                background: `conic-gradient(#22c55e ${ringDegrees}deg, #e5e7eb ${ringDegrees}deg)`,
-              }}
-              aria-label={`Profile completion ${profileCompletion}%`}
-            >
-              {avatarNode}
-            </div>
-          ) : (
-            <div className={cn("relative h-10 w-10", variant === "sidebar" ? "overflow-hidden rounded-[10px]" : "rounded-full")}>
-              {avatarNode}
-            </div>
-          )}
-          
-        </Button>
+        {sidebarVariant ? (
+          <button
+            type="button"
+            aria-label="Account menu"
+            className="flex w-full items-center gap-[10px] rounded-[8px] px-[5px] py-1.5 text-left transition-colors hover:bg-[#F9F9F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+          >
+            <span className="relative size-8 shrink-0">{avatarNode}</span>
+            <span className="flex min-w-0 flex-col">
+              <b className="truncate text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{label?.name ?? displayName}</b>
+              {label?.sub ? <span className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{label.sub}</span> : null}
+            </span>
+          </button>
+        ) : variant === "header" ? (
+          <button type="button" aria-label="Account menu" className="relative inline-flex size-7 shrink-0 overflow-hidden rounded-full">
+            {avatarNode}
+          </button>
+        ) : (
+          <button
+            type="button"
+            aria-label="Account menu"
+            className="relative ml-1.5 inline-flex size-[30px] shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+          >
+            <span className="relative size-[30px] overflow-hidden rounded-full">{avatarNode}</span>
+            <i className="absolute -bottom-px -right-px size-[10px] rounded-full border-2 border-[#F1F1E6] bg-[#22A04B]" aria-hidden="true" />
+          </button>
+        )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="flex w-[227px] flex-col gap-[5px] rounded-[10px] border-[#EAEADF] bg-[#F4F4EB] p-[10px] shadow-[0px_0px_15px_0px_rgba(0,0,0,0.05)]"
-        align={headerVariant ? "end" : "start"}
-        side={headerVariant ? "bottom" : "top"}
-        sideOffset={12}
+        className="flex w-[220px] flex-col rounded-[10px] border-[#EAEADF] bg-[#F7F7F0] p-1.5 shadow-[0_0_15px_rgba(0,0,0,0.05),0_12px_30px_-12px_rgba(16,19,26,0.18)]"
+        align={sidebarVariant ? "start" : "end"}
+        side={sidebarVariant ? "top" : "bottom"}
+        sideOffset={8}
         forceMount
       >
-        <DropdownMenuLabel className="flex flex-col gap-1 p-[5px] font-normal">
-          {displayName ? <p className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{displayName}</p> : null}
-          <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
-            {displayEmail}
-          </p>
+        <DropdownMenuLabel className="flex items-center gap-[10px] px-[10px] pb-[10px] pt-2 font-normal">
+          <span className="relative size-8 shrink-0">{avatarNode}</span>
+          <span className="flex min-w-0 flex-col gap-1">
+            {displayName ? <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{displayName}</span> : null}
+            <span className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{displayEmail}</span>
+          </span>
         </DropdownMenuLabel>
+        <div className="mb-1 h-px bg-[#EAEADF]" />
         {isCoach ? (
-          <DropdownMenuItem
-            onClick={() => navigate(ROUTES.PROFILE)}
-            className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
-          >
-            <Store className="size-4" strokeWidth={1.75} />
-            <span>My Profile</span>
-          </DropdownMenuItem>
-        ) : null}
-        {isCoach && myOrg ? (
-          <DropdownMenuItem
-            onClick={() => navigate(ROUTES.MY_ORGANIZATION)}
-            className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
-          >
-            <Building2 className="size-4" strokeWidth={1.75} />
-            <span>My Organization</span>
-          </DropdownMenuItem>
-        ) : null}
-        {isCoach && payMode === "app" ? (
-          <DropdownMenuItem
-            onClick={() => navigate(ROUTES.PAYMENTS)}
-            className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
-          >
-            <CreditCard className="size-4" strokeWidth={1.75} />
-            <span>Payments</span>
-          </DropdownMenuItem>
-        ) : null}
-        {!isCoach ? (
-          <>
-            <DropdownMenuItem onClick={() => navigate(ROUTES.DASHBOARD)} className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]">
-              <LayoutGrid className="size-4" strokeWidth={1.75} />
-              <span>Home</span>
+          // Phone only: the public pages live in the desktop sidebar.
+          <div className="flex flex-col md:hidden">
+            <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE)} className={itemClass}>
+              <Store strokeWidth={1.5} />
+              <span>My Profile</span>
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={() => navigate(ROUTES.GEAR)} className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]">
-              <ShoppingBag className="size-4" strokeWidth={1.75} />
-              <span>Gear</span>
-            </DropdownMenuItem>
-          </>
+            {myOrg ? (
+              <DropdownMenuItem onClick={() => navigate(ROUTES.MY_ORGANIZATION)} className={itemClass}>
+                <Building2 strokeWidth={1.5} />
+                <span>My Organization</span>
+              </DropdownMenuItem>
+            ) : null}
+            {payMode === "app" ? (
+              <DropdownMenuItem onClick={() => navigate(ROUTES.PAYMENTS)} className={itemClass}>
+                <CreditCard strokeWidth={1.5} />
+                <span>Payments</span>
+              </DropdownMenuItem>
+            ) : null}
+            <div className={divider} />
+          </div>
         ) : null}
-        <DropdownMenuItem
-          onClick={() => navigate(ROUTES.SETTINGS)}
-          className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
-        >
-          <Settings className="size-4" strokeWidth={1.75} />
+        <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)} className={itemClass}>
+          <Settings strokeWidth={1.5} />
           <span>Account Settings</span>
         </DropdownMenuItem>
-        <DropdownMenuItem
-          onClick={() => navigate(ROUTES.CONTACT_US)}
-          className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
-        >
-          <CircleHelp className="size-4" strokeWidth={1.75} />
+        <DropdownMenuItem onClick={() => navigate(ROUTES.CONTACT_US)} className={itemClass}>
+          <CircleHelp strokeWidth={1.5} />
           <span>Help</span>
         </DropdownMenuItem>
+        <div className={divider} />
         <DropdownMenuItem
           onClick={async () => {
             await signOut();
             navigate(ROUTES.HOME);
           }}
-          className="cursor-pointer gap-[5px] rounded-[5px] p-[5px] text-[14px] font-normal leading-[18px] tracking-[-0.7px] text-[#767980] focus:bg-[#F9F9F5] focus:text-[#767980]"
+          className={itemClass}
         >
-          <LogOut className="size-4" strokeWidth={1.75} />
+          <LogOut strokeWidth={1.5} />
           <span>Sign out</span>
         </DropdownMenuItem>
       </DropdownMenuContent>

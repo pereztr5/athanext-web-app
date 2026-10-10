@@ -205,7 +205,7 @@ export const formatTime = (time: string): string => {
   if (!isValidTimeFormat(time)) return '';
   const [hours, minutes] = time.split(':');
   const hour = parseInt(hours);
-  const ampm = hour >= 12 ? 'PM' : 'AM';
+  const ampm = hour >= 12 ? 'pm' : 'am';
   const displayHour = hour % 12 || 12;
   return `${displayHour}:${minutes} ${ampm}`;
 };

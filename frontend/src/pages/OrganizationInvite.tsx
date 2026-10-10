@@ -80,7 +80,7 @@ const OrganizationInvitePage = () => {
   })();
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5 pt-6">
         <section className={cn(card, "items-center py-10 text-center")}>
           <Building2 className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />

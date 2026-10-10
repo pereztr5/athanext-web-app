@@ -19,7 +19,7 @@ import {
 } from "@/utils/booking";
 import { addDaysISO, formatClock, formatDayISO, plural } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
-import { card, iconButton, meta, primaryButton, segButton, segGroup, textButton } from "@/components/schedule/styles";
+import { card, dayTile, dayTileNumber, dayTileWeekday, iconButton, meta, primaryButton, segButton, segGroup, textButton, timeTile, timeTileNote } from "@/components/schedule/styles";
 
 const FORMATS: [BookFormat, string][] = [
   ["all", "All"],
@@ -140,7 +140,7 @@ export const TimePicker = ({
         </span>
       </div>
 
-      <div className="grid grid-cols-7 gap-1.5" role="group" aria-label="Days">
+      <div className="grid grid-cols-7 gap-1.5 md:gap-2" role="group" aria-label="Days">
         {dates.map((d) => {
           const list = byDay.get(d) ?? [];
           const openCount = list.filter((s) => !s.myStatus).length;
@@ -154,19 +154,16 @@ export const TimePicker = ({
               disabled={!list.length}
               aria-label={`${formatDayISO(d, { weekday: "long", month: "long", day: "numeric" })}, ${openCount ? plural(openCount, "open time") : "no open times"}`}
               onClick={() => { setDay(d); setOpenId(null); }}
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-[8px] border py-2 transition-colors disabled:opacity-40",
-                on ? "border-[#6698D2] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB] hover:bg-[#EAEADF]"
-              )}
+              className={dayTile(on)}
             >
-              <small className="text-[11px] font-medium uppercase text-[#767980]">{formatDayISO(d, { weekday: "short" })}</small>
-              <b className={cn("text-[16px] font-semibold", on ? "text-[#0054B4]" : "text-[#1A202C]")}>{formatDayISO(d, { day: "numeric" })}</b>
+              <small className={dayTileWeekday(on)}>{formatDayISO(d, { weekday: "short" })}</small>
+              <b className={dayTileNumber}>{formatDayISO(d, { day: "numeric" })}</b>
               {pickedCount ? (
-                <em className="rounded-full bg-[#0054B4] px-1.5 text-[10px] font-semibold not-italic text-[#F1F1E6]">{pickedCount}</em>
+                <em className={cn("min-w-4 rounded-[8px] px-1 text-center text-[10px] font-bold not-italic leading-[14px]", on ? "bg-[#F1F1E6] text-[#0054B4]" : "bg-[#0054B4] text-[#F1F1E6]")}>{pickedCount}</em>
               ) : (
-                <span className="flex h-[6px] gap-[3px]" aria-hidden="true">
-                  {list.some((s) => !s.myStatus && s.sessionType === "group") ? <i className="size-[5px] rounded-full bg-[#117A96]" /> : null}
-                  {list.some((s) => !s.myStatus && s.sessionType === "individual") ? <i className="size-[5px] rounded-full bg-[#0054B4]" /> : null}
+                <span className="flex h-[5px] gap-[3px]" aria-hidden="true">
+                  {list.some((s) => !s.myStatus && s.sessionType === "group") ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#9FD9EA]" : "bg-[#117A96]")} /> : null}
+                  {list.some((s) => !s.myStatus && s.sessionType === "individual") ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#F1F1E6]" : "bg-[#0054B4]")} /> : null}
                 </span>
               )}
             </button>
@@ -186,9 +183,9 @@ export const TimePicker = ({
               const start = bookableStart(s);
               if (s.myStatus) {
                 return (
-                  <span key={s.id} className="flex flex-col items-start gap-0.5 rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-3 py-2 opacity-70">
-                    <b className="text-[14px] font-medium">{formatClock(start, timeZone)}</b>
-                    <small className={meta}>{s.myStatus === "requested" ? "Requested" : "Booked"}</small>
+                  <span key={s.id} className="flex h-[58px] flex-col items-center justify-center gap-0.5 rounded-[12px] border border-dashed border-[#EAEADF] text-[16px] font-semibold tabular-nums text-[#A3A6AB]">
+                    {formatClock(start, timeZone)}
+                    <small className="text-[11px] font-medium">{s.myStatus === "requested" ? "Requested" : "Booked"}</small>
                   </span>
                 );
               }
@@ -202,19 +199,10 @@ export const TimePicker = ({
                   aria-expanded={showDetails && !on ? openId === s.id : undefined}
                   disabled={Boolean(lockedBy)}
                   onClick={() => tap(s)}
-                  className={cn(
-                    "flex flex-col items-start gap-0.5 rounded-[8px] border px-3 py-2 text-left transition-colors disabled:opacity-50",
-                    on
-                      ? "border-[#6698D2] bg-[#E5EDF7]"
-                      : openId === s.id
-                        ? "border-[#6698D2] bg-[#F9F9F5]"
-                        : group
-                          ? "border-[#B9DDE7] bg-[#E7F4F8] hover:bg-[#DDEEF3]"
-                          : "border-[#EAEADF] bg-[#F4F4EB] hover:bg-[#EAEADF]"
-                  )}
+                  className={cn(timeTile(on, group), "h-[58px]", !on && openId === s.id && (group ? "border-2 border-[#117A96]" : "border-2 border-[#0054B4]"))}
                 >
-                  <b className="text-[14px] font-medium">{formatClock(start, timeZone)}</b>
-                  <small className={cn("flex items-center gap-1 text-[12px]", group ? "text-[#117A96]" : "text-[#767980]")}>
+                  {formatClock(start, timeZone)}
+                  <small className={timeTileNote(on, group)}>
                     {on ? (
                       <>
                         <Check className="size-3" strokeWidth={2} aria-hidden="true" />

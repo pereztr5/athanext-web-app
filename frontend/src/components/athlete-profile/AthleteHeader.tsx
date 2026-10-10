@@ -54,7 +54,7 @@ export const AthleteHeader = ({
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-[10px]">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[32px] font-bold leading-[34px] tracking-[-0.05em] text-[#1A202C]">{athlete.name}</h1>
+            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C]">{athlete.name}</h1>
             <CoachVerificationBadge className="size-5" />
           </div>
           <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">

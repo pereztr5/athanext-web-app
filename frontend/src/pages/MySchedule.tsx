@@ -215,7 +215,7 @@ const MySchedulePage = () => {
   if (!coachId) {
     return (
       <div className="mx-auto max-w-[1000px] px-4 py-10 md:px-0">
-        <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
+        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
         <p className="mt-[10px] text-[16px] leading-[18px] text-[#767980]">
           Your coach profile is still being set up. Finish onboarding to see your schedule.
         </p>
@@ -242,11 +242,11 @@ const MySchedulePage = () => {
       : `${formatDayISO(weekStart, { month: "short", day: "numeric" })} – ${formatDayISO(addDaysISO(weekStart, 6), { month: "short", day: "numeric" })}`;
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className={cn("mx-auto flex w-full flex-col gap-5", currentView === "week" ? "max-w-[1200px]" : "max-w-[760px]")}>
         <header className="flex items-end justify-between gap-4">
           <div className="flex flex-col gap-[10px]">
-            <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
+            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Schedule</h1>
             {timeZone !== "America/New_York" ? (
               <p className={meta}>
                 Times in {timeZone.replace(/_/g, " ")} ({timeZoneAbbreviation(timeZone, now)})

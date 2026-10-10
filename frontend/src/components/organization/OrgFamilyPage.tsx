@@ -43,7 +43,7 @@ export const OrgFamilyPage = ({
     <header className="flex items-center gap-5">
       <OrgLogo name={org.name} url={org.logoUrl} size={72} />
       <div className="flex min-w-0 flex-col gap-2">
-        <h1 className="text-[32px] font-bold leading-[34px] tracking-[-0.05em] text-[#1A202C] [text-wrap:balance]">{org.name}</h1>
+        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C] [text-wrap:balance]">{org.name}</h1>
         {org.line ? <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{org.line}</p> : null}
       </div>
     </header>

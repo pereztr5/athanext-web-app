@@ -20,16 +20,16 @@ describe("sessionInstantISO", () => {
 describe("formatSlotForViewer", () => {
   it("converts an Eastern slot to Pacific", () => {
     expect(formatSlotForViewer("2026-07-15", "09:00", "10:00", "America/Los_Angeles")).toEqual({
-      span: "6:00 to 7:00 AM",
+      span: "6:00 to 7:00 am",
       dayShift: null,
     });
   });
   it("keeps Eastern viewers on the stored clock", () => {
-    expect(formatSlotForViewer("2026-12-18", "16:00", "17:00", "America/New_York").span).toBe("4:00 to 5:00 PM");
+    expect(formatSlotForViewer("2026-12-18", "16:00", "17:00", "America/New_York").span).toBe("4:00 to 5:00 pm");
   });
   it("flags a calendar-day change", () => {
     const result = formatSlotForViewer("2026-07-15", "22:00", "23:00", "Asia/Tashkent");
-    expect(result.span).toBe("7:00 to 8:00 AM");
+    expect(result.span).toBe("7:00 to 8:00 am");
     expect(result.dayShift).toBe("Thu, Jul 16");
   });
   it("returns empty for missing inputs", () => {
@@ -41,7 +41,7 @@ describe("formatInstantSpan", () => {
   it("keeps both periods when they differ", () => {
     const start = new Date("2026-07-15T15:30:00Z");
     const end = new Date("2026-07-15T16:30:00Z");
-    expect(formatInstantSpan(start, end, "America/New_York")).toBe("11:30 AM to 12:30 PM");
+    expect(formatInstantSpan(start, end, "America/New_York")).toBe("11:30 am to 12:30 pm");
   });
 });
 

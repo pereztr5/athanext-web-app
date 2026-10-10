@@ -16,7 +16,7 @@ import {
   type ScheduleItem,
 } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
-import { ITEM_TONE, dangerTextButton, meta, secondaryButton, textButton } from "./styles";
+import { ITEM_TONE, dangerTextButton, dayTile, dayTileNumber, dayTileWeekday, meta, secondaryButton, textButton } from "./styles";
 
 export interface ScheduleViewHandlers {
   onOpenSession: (session: ScheduleSession) => void;
@@ -368,13 +368,13 @@ export const WeekAgenda = ({
   </div>
 );
 
-const dayDots = (day: ScheduleDay) => {
+const dayDots = (day: ScheduleDay, on = false) => {
   const kinds = new Set(day.items.map((i) => i.kind));
   return (
-    <span className="flex h-[6px] items-center gap-[3px]" aria-hidden="true">
-      {kinds.has("group") ? <i className="size-[5px] rounded-full bg-[#117A96]" /> : null}
-      {kinds.has("booked") ? <i className="size-[5px] rounded-full bg-[#0054B4]" /> : null}
-      {kinds.has("open") || kinds.has("offered") ? <i className="size-[5px] rounded-full border border-[#A3A6AB]" /> : null}
+    <span className="flex h-[5px] items-center gap-[3px]" aria-hidden="true">
+      {kinds.has("group") ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#9FD9EA]" : "bg-[#117A96]")} /> : null}
+      {kinds.has("booked") ? <i className={cn("size-[5px] rounded-full", on ? "bg-white" : "bg-[#0054B4]")} /> : null}
+      {kinds.has("open") || kinds.has("offered") ? <i className={cn("size-[5px] rounded-full border border-dashed", on ? "border-white" : "border-[#0054B4]")} /> : null}
     </span>
   );
 };
@@ -418,24 +418,16 @@ export const DayView = ({
               aria-pressed={on}
               aria-label={formatDayISO(d.date, { weekday: "long", month: "long", day: "numeric" })}
               onClick={() => onSelect(d.date)}
-              className={cn(
-                "flex flex-col items-center gap-1 rounded-[8px] border py-2 transition-colors",
-                on ? "border-[#6698D2] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB] hover:bg-[#EAEADF]",
-                d.date < todayISO && !on ? "opacity-60" : ""
-              )}
+              className={cn(dayTile(on), !on && "bg-[#F7F7F0]", d.date < todayISO && !on ? "opacity-60" : "")}
             >
-              <small className="text-[11px] font-medium uppercase leading-[13px] text-[#767980]">
-                {formatDayISO(d.date, { weekday: "short" })}
-              </small>
-              <b className={cn("text-[16px] font-semibold leading-[18px]", on ? "text-[#0054B4]" : "text-[#1A202C]")}>
-                {formatDayISO(d.date, { day: "numeric" })}
-              </b>
+              <small className={dayTileWeekday(on)}>{formatDayISO(d.date, { weekday: "short" })}</small>
+              <b className={dayTileNumber}>{formatDayISO(d.date, { day: "numeric" })}</b>
               {requests ? (
-                <em className="rounded-full bg-[#F0B144] px-1.5 text-[10px] font-semibold not-italic leading-[14px] text-[#1A202C]">
+                <em className={cn("min-w-4 rounded-[8px] px-1 text-center text-[10px] font-bold not-italic leading-[14px]", on ? "bg-white text-[#C26E12]" : "bg-[#C26E12] text-white")}>
                   {requests}
                 </em>
               ) : (
-                dayDots(d)
+                dayDots(d, on)
               )}
             </button>
           );

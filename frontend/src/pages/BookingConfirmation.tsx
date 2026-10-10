@@ -407,7 +407,7 @@ const RequestSent = ({ sessionId }: { sessionId: string }) => {
     error: ["We couldn't confirm your request", "Your card was not charged. Check My Sessions, or try again."],
   }[state];
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-6 text-center">
         <h1 className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em] text-[#1A202C]">{copy[0]}</h1>
         <p className="text-[14px] leading-[20px] text-[#484D56]">{copy[1]}</p>

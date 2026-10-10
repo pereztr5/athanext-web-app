@@ -854,7 +854,7 @@ const ChatPage = () => {
   };
 
   return (
-    <div className="overflow-x-hidden px-4 pb-10 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5">
       <NewChannelDialog open={newChannelOpen} onClose={() => setNewChannelOpen(false)} onCreated={(id) => void handleOpenMyChannel(id)} />
       <div className="relative mx-auto flex h-[min(930px,calc(100vh-8.5rem))] w-full max-w-[1000px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
         <aside

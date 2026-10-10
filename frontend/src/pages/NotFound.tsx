@@ -21,7 +21,7 @@ const NotFound = () => {
         </span>
         <div className="flex flex-col gap-[10px]">
           <p className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">Error 404</p>
-          <h1 className="text-[32px] font-bold leading-[28px] tracking-[-0.05em] text-[#1A202C]">Page not found</h1>
+          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-0.05em] text-[#1A202C]">Page not found</h1>
           <p className="text-[16px] leading-[20px] tracking-[-0.03em] text-[#767980]">
             The page you're looking for doesn't exist or has moved.
           </p>

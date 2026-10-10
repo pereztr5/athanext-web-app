@@ -3,7 +3,7 @@
  * Helper functions for formatting session data for display
  */
 import { parseISODateLocal } from "@/utils/dateHelpers";
-import { formatInstantSpan, timeZoneAbbreviation } from "@/utils/viewerTime";
+import { formatInstantSpan, lowerPeriod, timeZoneAbbreviation } from "@/utils/viewerTime";
 
 /**
  * Format amount as currency string
@@ -46,15 +46,15 @@ export const formatSessionTime = (timeString: string): string => {
   const [hours, minutes] = timeString.split(':');
   const date = new Date();
   date.setHours(parseInt(hours), parseInt(minutes));
-  return date.toLocaleTimeString([], {
+  return lowerPeriod(date.toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+  }));
 };
 
 /**
- * Format an ISO datetime string to a readable time (e.g., "10:00 AM").
+ * Format an ISO datetime string to a readable time (e.g., "10:00 am").
  * Accepts strings like "YYYY-MM-DDTHH:mm:ss".
  */
 export const formatISOTime = (isoString: string): string => {
@@ -62,23 +62,23 @@ export const formatISOTime = (isoString: string): string => {
   if (isNaN(date.getTime())) {
     return '';
   }
-  return date.toLocaleTimeString([], {
+  return lowerPeriod(date.toLocaleTimeString([], {
     hour: 'numeric',
     minute: '2-digit',
     hour12: true,
-  });
+  }));
 };
 
 /**
- * Format slot time string (HH:mm:ss) to readable format (e.g., "2:30 PM")
+ * Format slot time string (HH:mm:ss) to readable format (e.g., "2:30 pm")
  * Used for coach availability slot times
  */
 export const formatSlotTime = (time?: string | null): string => {
   if (!time) return "-";
-  return new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", {
+  return lowerPeriod(new Date(`2000-01-01T${time}`).toLocaleTimeString("en-US", {
     hour: "numeric",
     minute: "2-digit",
-  });
+  }));
 };
 
 /**
@@ -192,14 +192,14 @@ export const getAvatarUrlFromName = (name: string): string => {
 const timeParts = (date: Date) => {
   const hours = date.getHours();
   const minutes = date.getMinutes().toString().padStart(2, '0');
-  return { clock: `${hours % 12 || 12}:${minutes}`, period: hours < 12 ? 'AM' : 'PM' };
+  return { clock: `${hours % 12 || 12}:${minutes}`, period: hours < 12 ? 'am' : 'pm' };
 };
 
 /**
- * Format a start/end pair as "4:00 to 5:00 PM", keeping one AM/PM when both
- * times share it ("11:30 AM to 12:30 PM" otherwise).
+ * Format a start/end pair as "4:00 to 5:00 pm", keeping one am/pm when both
+ * times share it ("11:30 am to 12:30 pm" otherwise).
  * Accepts Date objects, ISO datetimes, or "HH:mm[:ss]" time strings.
- * With `showZone`, instants shown in `timeZone` get its abbreviation ("4:00 to 5:00 PM EDT").
+ * With `showZone`, instants shown in `timeZone` get its abbreviation ("4:00 to 5:00 pm EDT").
  */
 export const formatTimeSpan = (
   start: Date | string,

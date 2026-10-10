@@ -409,7 +409,7 @@ const MyOrganizationPage = () => {
 
   if (!org) {
     return (
-      <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+      <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
         <div className="mx-auto flex w-full max-w-[980px] flex-col gap-5">
           <section className={cn(card, "items-center py-10 text-center")}>
             <Building2 className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
@@ -428,12 +428,12 @@ const MyOrganizationPage = () => {
   const coachName = (id: string) => org.coaches.find((c) => c.coachId === id)?.name ?? "Coach";
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-5">
         <header className="flex items-center gap-4">
           <OrgLogo name={org.name} url={org.logoUrl} size={48} />
           <div className="flex min-w-0 flex-1 flex-col gap-[6px]">
-            <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Organization</h1>
+            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Organization</h1>
             <p className="truncate text-[16px] leading-[18px] text-[#767980]">
               {org.name} · {plural(org.coaches.length, "coach", "coaches")}
             </p>

@@ -53,7 +53,7 @@ const SectionSkeleton = ({ cards }: { cards: number }) => (
  * Displays placeholder session cards while data is being fetched
  */
 export const SessionsSkeleton = () => (
-  <div className="overflow-x-hidden px-4 pb-16 md:px-10" aria-busy="true" aria-label="Loading sessions">
+  <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" aria-busy="true" aria-label="Loading sessions">
     <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
       {/* Header */}
       <div className="flex flex-col gap-[10px]">

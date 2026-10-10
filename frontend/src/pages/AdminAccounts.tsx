@@ -140,10 +140,10 @@ export default function AdminAccounts() {
   };
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
     <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
       <header className="flex flex-col gap-[10px]">
-        <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Accounts</h1>
+        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Accounts</h1>
         <p className="max-w-[720px] text-[16px] font-normal leading-[20px] tracking-[-0.48px] text-[#767980]">
           Search for a person, then change their name, email, or persona. Deactivate keeps their sessions. Delete removes the login and does not refund payments.
         </p>

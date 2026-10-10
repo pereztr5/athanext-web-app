@@ -91,14 +91,14 @@ export const minutesInZone = (date: Date, timeZone: string): number => {
 const pad = (n: number) => String(n).padStart(2, "0");
 export const minutesToHHMM = (minutes: number): string => `${pad(Math.floor(minutes / 60))}:${pad(minutes % 60)}`;
 
-/** "4:00 PM" for minutes after midnight. */
+/** "4:00 pm" for minutes after midnight. */
 export const formatMinutes = (minutes: number): string => {
   const h = Math.floor(minutes / 60);
   const m = minutes % 60;
-  return `${h % 12 || 12}:${pad(m)} ${h >= 12 ? "PM" : "AM"}`;
+  return `${h % 12 || 12}:${pad(m)} ${h >= 12 ? "pm" : "am"}`;
 };
 
-/** "4:00 PM" for an instant in `timeZone`. */
+/** "4:00 pm" for an instant in `timeZone`. */
 export const formatClock = (date: Date, timeZone: string): string => formatMinutes(minutesInZone(date, timeZone));
 
 /** A day + clock time in the viewer's zone, as the Eastern date and "HH:MM" sessions are stored in. */

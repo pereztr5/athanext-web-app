@@ -44,7 +44,7 @@ const FamilyInvoicePage = () => {
   const due = inv ? new Date(`${inv.due}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[560px] flex-col gap-5 pt-6">
         <section className={cn(card, "gap-4")}>
           {invoice.isLoading ? <p className={meta}>Loading the invoice…</p> : null}

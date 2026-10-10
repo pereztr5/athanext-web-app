@@ -156,7 +156,7 @@ const CreateAthleteProfile = () => {
       <div className="mx-auto flex w-full max-w-[800px] flex-col gap-6">
         <div className="flex flex-col gap-[10px]">
           <BrandPill tone="blue" className="w-fit">New athlete profile</BrandPill>
-          <h1 className="text-[32px] font-bold leading-[34px] tracking-[-0.05em] text-[#1A202C]">Create your profile</h1>
+          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C]">Create your profile</h1>
           <p className="text-[16px] leading-[20px] tracking-[-0.03em] text-[#767980]">
             Share the basics so coaches can get to know you. You can add more details and photos later.
           </p>

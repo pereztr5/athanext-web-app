@@ -192,7 +192,7 @@ const PaymentsPage = () => {
   };
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-5">
         {payMode.data === "self" ? (
           <div className="flex flex-wrap items-center gap-2 rounded-[8px] bg-[#E5EDF7] px-4 py-3 text-[14px] text-[#00326C]">
@@ -204,7 +204,7 @@ const PaymentsPage = () => {
 
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-[10px]">
-            <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Payments</h1>
+            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Payments</h1>
             <p className="text-[16px] leading-[18px] text-[#767980]">Invoices, balances and payouts</p>
           </div>
           <div className="flex flex-wrap gap-2">

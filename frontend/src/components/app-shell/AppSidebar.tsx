@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { CircleHelp, Settings, Shield, Users } from "lucide-react";
+import { Shield, Users } from "lucide-react";
 import {
   Sidebar,
   SidebarMenu,
@@ -21,19 +21,10 @@ import { useCoachReferrals } from "@/hooks/useReferrals";
 import { isAwaitingCoachApproval } from "@/utils/referralHelpers";
 import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PAYMENTS_NAV, isNavActive, type NavItem } from "./nav";
 
-const FOOTER_NAV = [
-  { title: "Account Settings", url: ROUTES.SETTINGS, icon: Settings },
-  { title: "Help", url: ROUTES.CONTACT_US, icon: CircleHelp },
-];
-
-const FOOTER_LINKS = [
-  { title: "Support", url: ROUTES.CONTACT_US },
-  { title: "Privacy", url: ROUTES.PRIVACY_POLICY },
-  { title: "Terms", url: ROUTES.TERMS_AND_CONDITIONS },
-];
-
+// Working Copy `.nav button`: 28px rows, the current page grows to 38px on the active tint.
 const navItemClass =
-  "!h-8 !gap-[5px] !rounded-[5px] !border !border-transparent !px-[10px] !py-0 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none transition-colors hover:!bg-transparent hover:!text-[#1A202C] focus-visible:!ring-2 focus-visible:!ring-[#6698D2] data-[active=true]:!border-[#EAEADF] data-[active=true]:!bg-[#F9F9F5] data-[active=true]:font-medium data-[active=true]:!text-[#0054B4] data-[active=true]:shadow-none data-[active=true]:hover:!bg-[#F9F9F5] data-[active=true]:hover:!text-[#0054B4] [&>svg]:!size-4 [&>svg]:shrink-0";
+  "!h-7 !gap-[5px] !rounded-[8px] !px-[5px] !py-0 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980] shadow-none transition-colors hover:!bg-transparent hover:!text-[#1A202C] focus-visible:!ring-2 focus-visible:!ring-[#6698D2] data-[active=true]:!h-[38px] data-[active=true]:!bg-[#F9F9F5] data-[active=true]:!px-[10px] data-[active=true]:font-medium data-[active=true]:!text-[#0054B4] data-[active=true]:shadow-none data-[active=true]:hover:!bg-[#F9F9F5] data-[active=true]:hover:!text-[#0054B4] [&>svg]:!size-4 [&>svg]:shrink-0";
+const navBadge = "ml-auto rounded-[4px] bg-[#0054B4] px-2 py-[3px] text-[12px] font-medium leading-[13px] text-[#F1F1E6]";
 
 export const AppSidebar = () => {
   const location = useLocation();
@@ -72,34 +63,30 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar className="border-0">
-      <div className="flex h-full min-h-0 w-full flex-col rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-5">
+      <div className="flex h-full min-h-0 w-full flex-col gap-5 overflow-y-auto border-r border-[#EAEADF] bg-[#F7F7F0] px-[10px] py-5">
         <div className="flex w-full flex-col gap-5">
-          <div className="flex h-10 items-start">
+          <div className="flex items-center px-[10px] pb-1 pt-1.5">
             <Link to={ROUTES.DASHBOARD} aria-label="AthaNext home" className="inline-flex">
-              <img src={AthaNextLogo} alt="AthaNext" className="h-[22.55px] w-[100px] object-contain object-left" />
+              <img src={AthaNextLogo} alt="AthaNext" className="h-[22px] w-[98px] object-contain object-left" />
             </Link>
           </div>
-          <SidebarMenu className="w-full gap-[5px]">
+          <SidebarMenu className="w-full gap-1">
             {items.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
                   <Link to={item.url} onClick={() => setOpenMobile(false)}>
                     <item.icon className="size-4" strokeWidth={1.5} />
                     <span>{item.title}</span>
-                    {badgeFor(item.url) ? (
-                      <span className="ml-auto rounded-[4px] bg-[#0054B4] px-1.5 py-[2px] text-[11px] font-medium leading-[13px] text-[#F1F1E6]">
-                        {badgeFor(item.url)}
-                      </span>
-                    ) : null}
+                    {badgeFor(item.url) ? <span className={navBadge}>{badgeFor(item.url)}</span> : null}
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
             ))}
           </SidebarMenu>
           {business.length ? (
-            <div className="flex flex-col gap-[5px]">
-              <p className="px-[10px] text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">Business</p>
-              <SidebarMenu className="w-full gap-[5px]">
+            <div className="flex flex-col gap-2">
+              <p className="px-[5px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#A3A6AB]">Business</p>
+              <SidebarMenu className="w-full gap-1">
                 {business.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
@@ -114,40 +101,8 @@ export const AppSidebar = () => {
             </div>
           ) : null}
         </div>
-        <SidebarMenu className="mt-auto w-full gap-[5px] pb-3">
-            {FOOTER_NAV.map((item) => (
-              <SidebarMenuItem key={item.title}>
-                <SidebarMenuButton asChild isActive={location.pathname.startsWith(item.url)} className={navItemClass}>
-                  <Link to={item.url} onClick={() => setOpenMobile(false)}>
-                    <item.icon className="size-4" strokeWidth={1.5} />
-                    <span>{item.title}</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-            ))}
-          </SidebarMenu>
-        <nav aria-label="Support and legal" className="flex flex-wrap gap-x-3 gap-y-1 pb-4">
-          {FOOTER_LINKS.filter((link) => link.url !== ROUTES.CONTACT_US).map((link) => (
-            <Link
-              key={link.url}
-              to={link.url}
-              onClick={() => setOpenMobile(false)}
-              className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980] transition-colors hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
-            >
-              {link.title}
-            </Link>
-          ))}
-        </nav>
-        <div className="flex items-center gap-[10px]">
-          <UserMenu variant="sidebar" useFallbackDelay avatarReady={profileReady} />
-          <div className="min-w-0 text-left">
-            <p className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#484D56]">
-              {firstName}
-            </p>
-            <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]">
-              {sportLabel}
-            </p>
-          </div>
+        <div className="mt-auto border-t border-[#EAEADF] pt-4">
+          <UserMenu variant="sidebar" useFallbackDelay avatarReady={profileReady} label={{ name: firstName, sub: sportLabel }} />
         </div>
       </div>
     </Sidebar>

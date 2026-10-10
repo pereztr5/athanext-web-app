@@ -56,7 +56,7 @@ export const AthleteHome = () => {
   const done = items.filter((i) => i.done).length;
 
   if (home.isLoading) {
-    return <div className="px-4 py-10 md:px-10"><p className={meta}>Loading…</p></div>;
+    return <div className="px-4 py-10 md:px-5"><p className={meta}>Loading…</p></div>;
   }
   if (!a) {
     return (
@@ -83,12 +83,12 @@ export const AthleteHome = () => {
   ];
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
         <section className={cn(card, "flex-col gap-4 sm:flex-row sm:items-center")}>
           <Avatar name={a.fullName} photo={a.photo} size={80} />
           <div className="flex min-w-0 flex-1 flex-col gap-2">
-            <h1 className="text-[28px] font-bold leading-[30px] tracking-[-1.2px] text-[#1A202C]">{a.fullName || "Your athlete"}</h1>
+            <h1 className="text-[24px] md:text-[28px] font-bold leading-[28px] md:leading-[30px] tracking-[-1.2px] text-[#1A202C]">{a.fullName || "Your athlete"}</h1>
             {line ? <span className="text-[14px] text-[#767980]">{line}</span> : null}
             <div className="flex flex-wrap gap-1.5">
               {a.sport ? <Pill>{sportLabel(a.sport)}</Pill> : null}

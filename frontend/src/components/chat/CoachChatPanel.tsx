@@ -13,6 +13,7 @@ import {
   getInitials,
   sendConversationNotificationEmail,
 } from "@/utils/chatHelpers";
+import { lowerPeriod } from "@/utils/viewerTime";
 
 type CoachChatPanelProps = {
   coach: Coach;
@@ -22,7 +23,7 @@ type CoachChatPanelProps = {
 
 const formatTime = (iso: string) => {
   const date = new Date(iso);
-  return date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" });
+  return lowerPeriod(date.toLocaleTimeString([], { hour: "numeric", minute: "2-digit" }));
 };
 
 const getDayKey = (iso: string) => {

@@ -94,7 +94,7 @@ const OrganizationProfile = () => {
   });
 
   const shell = isAuthenticated
-    ? "overflow-x-hidden px-4 pb-16 md:px-10"
+    ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12"
     : "mt-[3.8rem] min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10";
   const backLink = (
     <Link
@@ -172,7 +172,7 @@ const OrganizationProfile = () => {
             {initialsOf(name)}
           </span>
           <div className="flex min-w-0 flex-[1_1_360px] flex-col gap-3">
-            <h1 className="text-[32px] font-bold leading-[34px] tracking-[-0.05em] text-[#1A202C] [text-wrap:balance]">{name}</h1>
+            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C] [text-wrap:balance]">{name}</h1>
             <div className="flex flex-wrap items-center gap-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
               {location ? (
                 <span className="inline-flex items-center gap-1">

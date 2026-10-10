@@ -121,8 +121,8 @@ describe("validateAvailabilityForm", () => {
 });
 
 describe("formatTime", () => {
-  it("formats PM times", () => expect(formatTime("13:05")).toBe("1:05 PM"));
-  it("formats midnight as 12 AM", () => expect(formatTime("00:30")).toBe("12:30 AM"));
+  it("formats PM times", () => expect(formatTime("13:05")).toBe("1:05 pm"));
+  it("formats midnight as 12 AM", () => expect(formatTime("00:30")).toBe("12:30 am"));
   it("returns empty for invalid input", () => expect(formatTime("9:30")).toBe(""));
 });
 

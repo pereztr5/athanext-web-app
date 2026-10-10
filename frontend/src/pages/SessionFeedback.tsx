@@ -182,7 +182,7 @@ const SessionFeedbackPage = () => {
   if (stage === "notes") {
     const present = athletes.filter((a) => a.attendance === "present" || (!a.attendance && !absent.has(a.athleteId)));
     return (
-      <div className="px-4 pb-16 md:px-10">
+      <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
         <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
           {searchParams.get("notes") ? (
             header("Notes for athletes")
@@ -248,7 +248,7 @@ const SessionFeedbackPage = () => {
   }
 
   return (
-    <div className="px-4 pb-16 md:px-10">
+    <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-6">
         {header(group ? "Feedback" : `Feedback for ${first}`)}
 

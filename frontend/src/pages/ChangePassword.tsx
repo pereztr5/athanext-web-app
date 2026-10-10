@@ -115,10 +115,10 @@ const ChangePassword = () => {
   const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
         <header className="flex flex-col gap-[10px]">
-          <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">Change password</h1>
+          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Change password</h1>
           <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
             Choose a new password to keep your account secure.
           </p>

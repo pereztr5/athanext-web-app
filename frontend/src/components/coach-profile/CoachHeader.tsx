@@ -1253,7 +1253,7 @@ export function CoachHeader({
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex min-w-0 flex-col gap-[10px]">
                                 <div className="flex flex-wrap items-end gap-[6px]">
-                                    <h1 className="text-[32px] font-bold leading-[28px] tracking-[-0.05em] text-[#1A202C]">
+                                    <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-0.05em] text-[#1A202C]">
                                         {editedCoach?.name ?? coach.name}
                                     </h1>
                                     {coach?.is_verified && (

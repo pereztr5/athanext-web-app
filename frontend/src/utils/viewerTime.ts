@@ -46,10 +46,10 @@ const clockParts = (date: Date, timeZone: string) => {
     hour12: true,
   }).formatToParts(date);
   const get = (type: Intl.DateTimeFormatPartTypes) => parts.find((part) => part.type === type)?.value ?? "";
-  return { clock: `${get("hour")}:${get("minute")}`, period: get("dayPeriod").toUpperCase() };
+  return { clock: `${get("hour")}:${get("minute")}`, period: get("dayPeriod").toLowerCase() };
 };
 
-/** "4:00 to 5:00 PM" in `timeZone`, keeping one AM/PM when both times share it. */
+/** "4:00 to 5:00 pm" in `timeZone`, keeping one am/pm when both times share it. */
 export const formatInstantSpan = (start: Date, end: Date, timeZone: string): string => {
   if (isNaN(start.getTime()) || isNaN(end.getTime())) return "";
   const s = clockParts(start, timeZone);
@@ -59,11 +59,14 @@ export const formatInstantSpan = (start: Date, end: Date, timeZone: string): str
     : `${s.clock} ${s.period} to ${e.clock} ${e.period}`;
 };
 
+/** Lower-case the day period, as the brand writes times ("4:00 pm"). */
+export const lowerPeriod = (text: string): string => text.replace(/\b(AM|PM)\b/g, (p) => p.toLowerCase());
+
 export const formatDateInZone = (
   date: Date,
   timeZone: string,
   options: Intl.DateTimeFormatOptions
-): string => (isNaN(date.getTime()) ? "" : new Intl.DateTimeFormat("en-US", { ...options, timeZone }).format(date));
+): string => (isNaN(date.getTime()) ? "" : lowerPeriod(new Intl.DateTimeFormat("en-US", { ...options, timeZone }).format(date)));
 
 /** Calendar date (YYYY-MM-DD) of an instant in `timeZone`. */
 export const isoDateInZone = (date: Date, timeZone: string): string => getZonedISODate(date, timeZone);

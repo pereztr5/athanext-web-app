@@ -202,7 +202,7 @@ export function CoachOwnProfile({
     setFaqs(ownFaqs.map((faq, i) => (i === index ? { ...faq, ...patch } : faq)));
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
         {editing ? (
           <div className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-[10px] border border-[#CCDDF0] bg-[#E5EDF7] px-4 py-3 shadow-[0_0_15px_rgba(0,0,0,0.05)]">
@@ -217,7 +217,7 @@ export function CoachOwnProfile({
 
         <header className="flex flex-wrap items-end justify-between gap-3">
           <div className="flex flex-col gap-[10px]">
-            <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Profile</h1>
+            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">My Profile</h1>
             <p className="text-[16px] leading-[18px] text-[#767980]">
               {editing ? "Update anything families see. Turn off what you don't want shown." : "This is what families see when they find you."}
             </p>

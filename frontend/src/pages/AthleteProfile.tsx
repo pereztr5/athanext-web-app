@@ -1027,7 +1027,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
 
             {/* Athlete Info */}
             <div className="flex w-full min-w-0 flex-1 flex-col gap-[10px]">
-              <h1 className="break-words text-[32px] font-bold leading-[34px] tracking-[-0.05em] text-[#1A202C]">
+              <h1 className="break-words text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C]">
                 {activeProfile.fullName}
               </h1>
               {locationInfo && (

@@ -1041,10 +1041,10 @@ const AllCoaches = () => {
   ];
 
   return (
-    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-16 md:px-10" : "min-h-screen bg-[#F1F1E6] font-sans"}>
+    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-[#F1F1E6] font-sans"}>
       {isAuthenticated ? (
         <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-[10px]">
-          <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">
+          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">
             Browse coaches
           </h1>
           <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">

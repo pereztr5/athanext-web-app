@@ -99,7 +99,7 @@ describe("layoutDays", () => {
       sessions: [
         session({ id: "late", date: "2026-10-06", startTime: "18:00:00", endTime: "19:00:00" }),
         session({ id: "early", date: "2026-10-06", startTime: "09:00:00", endTime: "10:00:00" }),
-        // 1:00 AM Eastern on the 8th is 10:00 PM on the 7th in Los Angeles.
+        // 1:00 am Eastern on the 8th is 10:00 pm on the 7th in Los Angeles.
         session({ id: "night", date: "2026-10-08", startTime: "01:00:00", endTime: "02:00:00" }),
       ],
       busy: [],

@@ -220,7 +220,7 @@ export function CoachProfileView({
   const shownReviews = allReviews ? reviews : reviews.slice(0, 2);
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[860px] flex-col gap-6">
         <Link
           to={ROUTES.COACHES}
@@ -241,7 +241,7 @@ export function CoachProfileView({
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex items-center gap-1.5">
-                <h1 className="text-[28px] font-bold leading-[30px] tracking-[-1.2px] text-[#1A202C]">{coach.name}</h1>
+                <h1 className="text-[24px] md:text-[28px] font-bold leading-[28px] md:leading-[30px] tracking-[-1.2px] text-[#1A202C]">{coach.name}</h1>
                 {coach.is_verified ? <BadgeCheck className="size-5 shrink-0 fill-[#0054B4] text-white" aria-label="Verified" /> : null}
               </div>
               <span className="text-[14px] text-[#767980]">{[position, locationLabel].filter(Boolean).join(" · ")}</span>

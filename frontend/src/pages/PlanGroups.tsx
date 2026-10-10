@@ -165,7 +165,7 @@ const PlanGroupsPage = () => {
   const publishLabel = weekly ? "Publish schedule" : day === todayISO ? "Publish today" : `Publish ${formatDayISO(day, { weekday: "long" })}`;
 
   return (
-    <div className="overflow-x-hidden px-4 pb-16 md:px-10">
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[640px] flex-col gap-5">
         <div className="flex items-center justify-between">
           <Link to={ROUTES.SCHEDULE} className="inline-flex items-center gap-1 text-[14px] font-medium text-[#767980] hover:text-[#1A202C]">
@@ -174,7 +174,7 @@ const PlanGroupsPage = () => {
           </Link>
           {drafts.length ? <BrandPill tone="neutral">Draft</BrandPill> : null}
         </div>
-        <h1 className="text-[32px] font-bold leading-[28px] tracking-[-1.6px] text-[#1A202C]">New schedule</h1>
+        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">New schedule</h1>
 
         <div className={segGroup} role="group" aria-label="Plan">
           <button type="button" className={segButton(weekly)} aria-pressed={weekly} onClick={() => setMode("week")}>
