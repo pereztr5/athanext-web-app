@@ -880,7 +880,7 @@ const Auth = () => {
       setTimeout(() => {
         const destination =
           persona === PROFILE_TYPE.coach
-            ? `${ROUTES.MY_CLIENTS}?onboarding=1`
+            ? `${ROUTES.INVITES}?onboarding=1`
             : invitePath ?? ROUTES.PROFILE;
         navigate(destination, { replace: true });
       }, 500);

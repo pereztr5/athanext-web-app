@@ -16,6 +16,14 @@ export interface SkippedRow {
   reason: string;
 }
 
+/** One pasted line as the Import tab lists it: ready (with the athlete) or skipped with a reason. */
+export interface ParsedLine {
+  line: number;
+  name: string;
+  athleteFirstName: string;
+  reason: string | null;
+}
+
 export const emptyFamily = (): FamilyInvite => ({ name: "", email: "", athleteFirstName: "" });
 
 export const cleanFamily = (row: FamilyInvite): FamilyInvite => ({
@@ -59,6 +67,7 @@ export const parseInviteList = (text: string, knownEmails: Iterable<string> = []
   const seen = new Set<string>();
   const rows: FamilyInvite[] = [];
   const skipped: SkippedRow[] = [];
+  const lines: ParsedLine[] = [];
 
   text.split(/\r?\n/).forEach((raw, index) => {
     const line = raw.trim();
@@ -67,16 +76,20 @@ export const parseInviteList = (text: string, knownEmails: Iterable<string> = []
     const lowerEmail = email.toLowerCase();
     if (index === 0 && !EMAIL_RE.test(lowerEmail) && /e-?mail/i.test(line)) return;
 
-    const skip = (reason: string) => skipped.push({ line: index + 1, text: line, reason });
-    if (!name) return skip("Missing name");
-    if (!EMAIL_RE.test(lowerEmail)) return skip(email ? "Email doesn't look right" : "Missing email");
+    const skip = (reason: string) => {
+      skipped.push({ line: index + 1, text: line, reason });
+      lines.push({ line: index + 1, name, athleteFirstName, reason });
+    };
+    if (!name) return skip("Missing parent name");
+    if (!EMAIL_RE.test(lowerEmail)) return skip(email ? "Email looks wrong" : "Missing parent email");
     if (known.has(lowerEmail)) return skip("Already a client or invited");
     if (seen.has(lowerEmail)) return skip("Listed twice");
     seen.add(lowerEmail);
     rows.push({ name, email: lowerEmail, athleteFirstName });
+    lines.push({ line: index + 1, name, athleteFirstName, reason: null });
   });
 
-  return { rows, skipped };
+  return { rows, skipped, lines };
 };
 
 /** "Send invite", or "Send 3 invites" when there are several. */

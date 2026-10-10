@@ -1,4 +1,6 @@
 import type { RosterAthlete } from "@/api/roster";
+import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
+import { formatClock, formatDayISO } from "@/utils/schedule";
 
 export type RosterSort = "name" | "next" | "pkg" | "pos" | "last" | "age" | "newest";
 
@@ -45,3 +47,18 @@ export const rosterSubtitle = (athlete: RosterAthlete) => {
   ].filter(Boolean);
   return bits.join(" · ");
 };
+
+/** "Mon, Sep 28, 4:00 pm", or "Today, 10:30 am", in the viewer's time zone. */
+export const rosterNextLabel = (date: string, start: string, timeZone: string, now = new Date()) => {
+  const at = zonedWallTimeToUtc(date, start);
+  if (!at) return "";
+  const day = getZonedISODate(at, timeZone);
+  const dayLabel = day === getZonedISODate(now, timeZone)
+    ? "Today"
+    : formatDayISO(day, { weekday: "short", month: "short", day: "numeric" });
+  return `${dayLabel}, ${formatClock(at, timeZone)}`;
+};
+
+/** Sessions left on the athlete's current package, or null without one. */
+export const packageLeft = (athlete: RosterAthlete) =>
+  athlete.packageTotal ? Math.max(0, athlete.packageTotal - (athlete.packageUsed ?? 0)) : null;

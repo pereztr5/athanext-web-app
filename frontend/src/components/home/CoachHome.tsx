@@ -228,7 +228,7 @@ export const CoachHome = () => {
                   [
                     ["Complete your profile", ROUTES.PROFILE, hasBio],
                     ["Set your weekly availability", ROUTES.SCHEDULE, Boolean(scheduleQuery.data?.sessions.length)],
-                    ["Invite the families you already coach", ROUTES.MY_CLIENTS, false],
+                    ["Invite the families you already coach", ROUTES.INVITES, false],
                   ] as [string, string, boolean][]
                 ).map(([text, to, done], i) => (
                   <Link key={to} to={to} className="flex items-center gap-3 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px] text-[#1A202C] hover:bg-[#EAEADF]">

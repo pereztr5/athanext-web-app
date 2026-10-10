@@ -1,36 +1,43 @@
 /**
  * Add athlete (ATH-78): one modal with three ways in. Email sends invites right away,
  * Import a list takes pasted rows or a CSV, and Share link is a sign-up link the coach
- * approves on My Clients.
+ * approves in Invites.
  */
-import { useMemo, useRef, useState } from "react";
-import { Copy, Plus, Upload, X } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { Check, Copy, FileUp, Info, Link as LinkIcon, Mail, Plus, X } from "lucide-react";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
-  dialogContent, input, label, meta, primaryButton, secondaryButton, segButton, segGroup, textButton,
+  dialogContent, input, label, primaryButton, secondaryButton, segButton, segGroup, textButton,
 } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { useAddClientReferrals, useCoachReferrals } from "@/hooks/useReferrals";
 import { cn } from "@/lib/utils";
 import { joinLinkFor } from "@/utils/referralHelpers";
 import {
-  cleanFamily, emptyFamily, isReadyFamily, parseInviteList, sendLabel, type FamilyInvite,
+  EMAIL_RE, cleanFamily, emptyFamily, isReadyFamily, parseInviteList, sendLabel, type FamilyInvite,
 } from "@/utils/invites";
 import { plural } from "@/utils/schedule";
 
 type Tab = "email" | "import" | "link";
 
-const TABS: [Tab, string][] = [["email", "Email"], ["import", "Import a list"], ["link", "Share link"]];
+const TABS: [Tab, string, typeof Mail][] = [["email", "Email", Mail], ["import", "Import a list", FileUp], ["link", "Share link", LinkIcon]];
+const cap = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
+const field = "flex min-w-0 flex-col gap-1.5";
 const MAX_ROWS = 50;
 
 interface AddAthleteModalProps {
   open: boolean;
   onClose: () => void;
   coachId: string | undefined;
+  /** Tab to open on, e.g. "import" from Invites. */
+  initialTab?: Tab;
 }
 
-export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps) => {
-  const [tab, setTab] = useState<Tab>("email");
+export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }: AddAthleteModalProps) => {
+  const [tab, setTab] = useState<Tab>(initialTab);
+  useEffect(() => {
+    if (open) setTab(initialTab);
+  }, [open, initialTab]);
   const [families, setFamilies] = useState<FamilyInvite[]>([emptyFamily()]);
   const [listText, setListText] = useState("");
   const fileRef = useRef<HTMLInputElement>(null);
@@ -47,7 +54,7 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
   const ready = tab === "email" ? families.filter(isReadyFamily).map(cleanFamily) : parsed.rows;
 
   const reset = () => {
-    setTab("email");
+    setTab(initialTab);
     setFamilies([emptyFamily()]);
     setListText("");
   };
@@ -76,7 +83,7 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
       const notes = [
         already ? `${plural(already, "family", "families")} already on your list` : "",
         failed ? `${failed} couldn't be added` : "",
-        notEmailed ? `${notEmailed} email${notEmailed === 1 ? "" : "s"} didn't go out; copy the link from My Clients` : "",
+        notEmailed ? `${notEmailed} email${notEmailed === 1 ? "" : "s"} didn't go out; copy the link from Invites` : "",
       ].filter(Boolean);
       toast({
         title: sent ? `${plural(sent, "invite")} sent` : "No new invites",
@@ -104,7 +111,7 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
   const copyLink = async () => {
     try {
       await navigator.clipboard.writeText(shareLink);
-      toast({ title: "Link copied", description: "Sign-ups through it wait for your approval." });
+      toast({ title: "Link copied" });
     } catch {
       toast({ title: "Copy failed", description: shareLink, variant: "destructive" });
     }
@@ -113,22 +120,20 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
   return (
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogContent
-        className={dialogContent}
+        className={cn(dialogContent, "sm:max-w-[640px]")}
+        aria-describedby={undefined}
         onOpenAutoFocus={(e) => {
           e.preventDefault();
           firstNameRef.current?.focus();
         }}
       >
-        <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Add athlete</DialogTitle>
-          <DialogDescription className={meta}>
-            Invites go to a parent or guardian, or to the athlete if 18 or older. They add their athlete after accepting.
-          </DialogDescription>
+        <DialogHeader className="border-b border-[#EAEADF] px-4 py-5 pr-14 text-left sm:px-[25px]">
+          <DialogTitle className="text-[20px] font-semibold leading-[24px] tracking-[-0.05em] sm:text-[24px] sm:leading-[30px]">Add athlete</DialogTitle>
         </DialogHeader>
 
-        <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
+        <div className="flex flex-col gap-4 px-4 py-5 sm:px-[25px]">
           <div className={segGroup} role="tablist" aria-label="How to add">
-            {TABS.map(([key, text]) => (
+            {TABS.map(([key, text, Icon]) => (
               <button
                 key={key}
                 type="button"
@@ -137,58 +142,69 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
                 className={segButton(tab === key)}
                 onClick={() => setTab(key)}
               >
+                <Icon strokeWidth={1.5} aria-hidden="true" />
                 {text}
               </button>
             ))}
           </div>
 
           {tab === "email" ? (
-            <div className="flex flex-col gap-3">
-              {families.map((family, index) => (
-                <div key={index} className="relative flex flex-col gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] p-3">
-                  {families.length > 1 ? (
-                    <button
-                      type="button"
-                      aria-label={`Remove family ${index + 1}`}
-                      className="absolute right-2 top-2 text-[#767980] hover:text-[#1A202C]"
-                      onClick={() => setFamilies((prev) => prev.filter((_, i) => i !== index))}
-                    >
-                      <X className="size-4" strokeWidth={1.5} />
-                    </button>
-                  ) : null}
-                  <label className="flex flex-col gap-1.5">
-                    <span className={label}>Name</span>
-                    <input
-                      className={cn(input, "bg-white")}
-                      ref={index === 0 ? firstNameRef : undefined}
-                      autoFocus={index > 0 && index === families.length - 1}
-                      placeholder="Parent or athlete name"
-                      value={family.name}
-                      onChange={(e) => updateFamily(index, "name", e.target.value)}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1.5">
-                    <span className={label}>Email</span>
-                    <input
-                      className={cn(input, "bg-white")}
-                      type="email"
-                      inputMode="email"
-                      placeholder="name@email.com"
-                      value={family.email}
-                      onChange={(e) => updateFamily(index, "email", e.target.value)}
-                    />
-                  </label>
-                  <label className="flex flex-col gap-1.5">
-                    <span className={label}>Athlete first name (optional)</span>
-                    <input
-                      className={cn(input, "bg-white")}
-                      placeholder="If you're inviting a parent"
-                      value={family.athleteFirstName}
-                      onChange={(e) => updateFamily(index, "athleteFirstName", e.target.value)}
-                    />
-                  </label>
-                </div>
-              ))}
+            <>
+              <div className="flex flex-col gap-3">
+                {families.map((family, index) => (
+                  <div key={index} className="flex flex-col gap-[10px] [&+&]:border-t [&+&]:border-[#EAEADF] [&+&]:pt-3">
+                    {families.length > 1 ? (
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="text-[14px] font-medium">Family {index + 1}</span>
+                        <button
+                          type="button"
+                          aria-label={`Remove family ${index + 1}`}
+                          className="inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F4F4EB] hover:text-[#1A202C]"
+                          onClick={() => setFamilies((prev) => prev.filter((_, i) => i !== index))}
+                        >
+                          <X className="size-4" strokeWidth={1.5} />
+                        </button>
+                      </div>
+                    ) : null}
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <label className={field}>
+                        <span className={label}>Name</span>
+                        <input
+                          className={input}
+                          ref={index === 0 ? firstNameRef : undefined}
+                          autoFocus={index > 0 && index === families.length - 1}
+                          autoComplete="off"
+                          placeholder="Parent, or athlete if 18+"
+                          value={family.name}
+                          onChange={(e) => updateFamily(index, "name", e.target.value)}
+                        />
+                      </label>
+                      <label className={field}>
+                        <span className={label}>Email</span>
+                        <input
+                          className={cn(input, family.email.trim() && !EMAIL_RE.test(family.email.trim()) && "ring-[1.5px] ring-inset ring-[#C93939]")}
+                          type="email"
+                          inputMode="email"
+                          autoComplete="off"
+                          placeholder="name@email.com"
+                          value={family.email}
+                          onChange={(e) => updateFamily(index, "email", e.target.value)}
+                        />
+                      </label>
+                    </div>
+                    <label className={field}>
+                      <span className={label}>Athlete first name <span className="text-[#A3A6AB]">(optional)</span></span>
+                      <input
+                        className={input}
+                        autoComplete="off"
+                        placeholder="For example, Leo"
+                        value={family.athleteFirstName}
+                        onChange={(e) => updateFamily(index, "athleteFirstName", e.target.value)}
+                      />
+                    </label>
+                  </div>
+                ))}
+              </div>
               <button
                 type="button"
                 className={cn(textButton, "self-start")}
@@ -197,24 +213,27 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
               >
                 <Plus strokeWidth={1.5} aria-hidden="true" /> Add another family
               </button>
-            </div>
+            </>
           ) : null}
 
           {tab === "import" ? (
-            <div className="flex flex-col gap-3">
-              <label className="flex flex-col gap-1.5">
-                <span className={label}>One family per line: parent name, parent email, athlete first name</span>
+            <>
+              <label className={field}>
+                <span className={label}>Paste from a spreadsheet</span>
                 <textarea
-                  className={cn(input, "h-36 resize-y py-2 leading-[18px]")}
-                  placeholder={"Dana Lee, dana@email.com, Mia\nSam Ray, sam@email.com"}
+                  className={cn(input, "h-auto resize-none whitespace-pre py-[10px] leading-[18px]")}
+                  rows={5}
+                  placeholder="Maria Gomez, maria.gomez@email.com, Leo"
                   value={listText}
                   onChange={(e) => setListText(e.target.value)}
                 />
               </label>
-              <div className="flex flex-wrap items-center justify-between gap-2">
-                <button type="button" className={secondaryButton} onClick={() => fileRef.current?.click()}>
-                  <Upload strokeWidth={1.5} aria-hidden="true" /> Upload a CSV
+              <p className={cap}>
+                One family per row: parent name, parent email, athlete first name. Or{" "}
+                <button type="button" className="font-medium text-[#0054B4] hover:text-[#004390]" onClick={() => fileRef.current?.click()}>
+                  upload a CSV
                 </button>
+                .
                 <input
                   ref={fileRef}
                   type="file"
@@ -222,42 +241,59 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
                   className="hidden"
                   onChange={(e) => readFile(e.target.files?.[0])}
                 />
-                {listText.trim() ? (
-                  <span className={meta}>
-                    {plural(parsed.rows.length, "family", "families")} ready
-                    {parsed.skipped.length ? ` · ${parsed.skipped.length} skipped` : ""}
-                  </span>
-                ) : null}
-              </div>
-              {parsed.skipped.length ? (
-                <ul className="flex max-h-40 flex-col gap-1 overflow-y-auto rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-                  {parsed.skipped.map((row) => (
-                    <li key={row.line} className="flex justify-between gap-3 text-[12px] leading-[16px]">
-                      <span className="min-w-0 truncate text-[#484D56]">Line {row.line}: {row.text}</span>
-                      <span className="shrink-0 text-[#972B2B]">{row.reason}</span>
-                    </li>
+              </p>
+              {parsed.lines.length ? (
+                <div className="flex max-h-[260px] flex-col overflow-y-auto">
+                  {parsed.lines.map((row) => (
+                    <div key={row.line} className="flex items-center gap-3 py-3 text-[14px] [&+&]:border-t [&+&]:border-[#EAEADF]">
+                      {row.reason ? (
+                        <Info className="size-4 flex-none text-[#C93939]" strokeWidth={1.5} aria-label="Skipped" />
+                      ) : (
+                        <Check className="size-4 flex-none text-[#289A42]" strokeWidth={1.5} aria-label="Ready" />
+                      )}
+                      <span className="min-w-0 grow truncate">{row.name || "(no name)"}</span>
+                      <span className={cn(cap, "shrink-0", row.reason && "text-[#972B2B]")}>
+                        {row.reason ? `${row.reason}, skipped` : row.athleteFirstName}
+                      </span>
+                    </div>
                   ))}
-                </ul>
+                </div>
               ) : null}
-            </div>
+            </>
           ) : null}
 
           {tab === "link" ? (
-            <div className="flex flex-col gap-3">
-              <p className="text-[14px] leading-[18px] text-[#484D56]">
-                Share this link with families. Anyone who signs up through it shows up on My Clients for you to approve.
+            <>
+              <label className={field}>
+                <span className={label}>Your invite link</span>
+                <span className="flex gap-2">
+                  <input
+                    className={cn(input, "min-w-0 flex-1 bg-[#F4F4EB] text-[#767980]")}
+                    readOnly
+                    value={shareLink}
+                    onFocus={(e) => e.target.select()}
+                  />
+                  <button type="button" className={secondaryButton} onClick={copyLink} disabled={!shareLink}>
+                    <Copy strokeWidth={1.5} aria-hidden="true" /> Copy
+                  </button>
+                </span>
+              </label>
+              <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                Share it in your group chat, email signature or club newsletter. Parents who sign up through it appear in Invites for you to approve.
               </p>
-              <div className="flex gap-2">
-                <input className={cn(input, "min-w-0 flex-1")} readOnly value={shareLink} aria-label="Invite link" onFocus={(e) => e.target.select()} />
-                <button type="button" className={primaryButton} onClick={copyLink} disabled={!shareLink}>
-                  <Copy strokeWidth={1.5} aria-hidden="true" /> Copy
-                </button>
-              </div>
-            </div>
+            </>
           ) : null}
 
-          {tab !== "link" ? (
-            <div className="flex justify-end gap-2">
+          <p className={cap}>
+            Invites go to a parent or guardian, or to the athlete if they&apos;re 18 or older. They add their athlete after accepting.
+          </p>
+        </div>
+
+        <div className={cn("flex flex-wrap gap-[10px] border-t border-[#EAEADF] px-4 py-4 sm:px-[25px]", tab === "link" ? "justify-end" : "justify-between")}>
+          {tab === "link" ? (
+            <button type="button" className={primaryButton} onClick={close}>Done</button>
+          ) : (
+            <>
               <button type="button" className={secondaryButton} onClick={close}>Cancel</button>
               <button
                 type="button"
@@ -265,10 +301,14 @@ export const AddAthleteModal = ({ open, onClose, coachId }: AddAthleteModalProps
                 disabled={!ready.length || addClients.isPending}
                 onClick={send}
               >
-                {addClients.isPending ? "Sending…" : sendLabel(ready.length)}
+                {addClients.isPending
+                  ? "Sending…"
+                  : tab === "import"
+                    ? ready.length ? `Send ${plural(ready.length, "invite")}` : "Send invites"
+                    : sendLabel(ready.length)}
               </button>
-            </div>
-          ) : null}
+            </>
+          )}
         </div>
       </DialogContent>
     </Dialog>

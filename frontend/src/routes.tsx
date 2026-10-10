@@ -43,7 +43,8 @@ import CreateAthleteProfile from "./pages/CreateAthleteProfile";
 import Dashboard from "./pages/Dashboard";
 import AdminAccounts from "./pages/AdminAccounts";
 import { HomeSwitch } from "./layouts/HomeSwitch";
-import MyClients from "./pages/MyClients";
+import Invites from "./pages/Invites";
+import { MyClientsRedirect } from "./components/invites/MyClientsRedirect";
 import MyAthletes from "./pages/MyAthletes";
 import AthleteDetail from "./pages/AthleteDetail";
 import MyCoaches from "./pages/MyCoaches";
@@ -77,6 +78,7 @@ export const ROUTES = {
   COACH_SESSION: "/sessions/:id",
   MY_SESSIONS: "/my-sessions",
   MY_CLIENTS: "/my-clients",
+  INVITES: "/invites",
   ATHLETES: "/athletes",
   ATHLETE: "/athletes/:id",
   MY_COACHES: "/my-coaches",
@@ -153,7 +155,8 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.DASHBOARD, element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
   { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
-  { path: ROUTES.MY_CLIENTS, element: <ProtectedRoute><MyClients /></ProtectedRoute> },
+  { path: ROUTES.INVITES, element: <ProtectedRoute><Invites /></ProtectedRoute> },
+  { path: ROUTES.MY_CLIENTS, element: <MyClientsRedirect /> },
   { path: ROUTES.ATHLETES, element: <ProtectedRoute><MyAthletes /></ProtectedRoute> },
   { path: ROUTES.ATHLETE, element: <ProtectedRoute><AthleteDetail /></ProtectedRoute> },
   { path: ROUTES.MY_COACHES, element: <ProtectedRoute><MyCoaches /></ProtectedRoute> },

@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { RosterAthlete } from "@/api/roster";
-import { rosterSubtitle, sortRoster } from "@/utils/roster";
+import { packageLeft, rosterNextLabel, rosterSubtitle, sortRoster } from "@/utils/roster";
 
 const athlete = (overrides: Partial<RosterAthlete> & Pick<RosterAthlete, "id" | "name">): RosterAthlete => ({
   imageUrl: null,
@@ -46,5 +46,29 @@ describe("rosterSubtitle", () => {
     expect(rosterSubtitle(athlete({ id: "1", name: "Casey", age: 12, team: "Club", accountName: "Pat Lee" }))).toBe(
       "12 · Club · parent Pat Lee",
     );
+  });
+});
+
+describe("rosterNextLabel", () => {
+  const now = new Date("2026-09-28T13:00:00Z");
+
+  it("shows the weekday, date and time", () => {
+    expect(rosterNextLabel("2026-10-05", "16:00:00", "America/New_York", now)).toBe("Mon, Oct 5, 4:00 pm");
+  });
+
+  it("says Today for a session later today", () => {
+    expect(rosterNextLabel("2026-09-28", "10:30:00", "America/New_York", now)).toBe("Today, 10:30 am");
+  });
+
+  it("uses the viewer's time zone", () => {
+    expect(rosterNextLabel("2026-10-05", "16:00:00", "America/Los_Angeles", now)).toBe("Mon, Oct 5, 1:00 pm");
+  });
+});
+
+describe("packageLeft", () => {
+  it("counts sessions left and is null without a package", () => {
+    expect(packageLeft(athlete({ id: "1", name: "A", packageTotal: 8, packageUsed: 5 }))).toBe(3);
+    expect(packageLeft(athlete({ id: "2", name: "B", packageTotal: 8, packageUsed: 9 }))).toBe(0);
+    expect(packageLeft(athlete({ id: "3", name: "C" }))).toBeNull();
   });
 });

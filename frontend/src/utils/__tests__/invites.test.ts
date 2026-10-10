@@ -28,11 +28,20 @@ describe("parseInviteList", () => {
     const { rows, skipped } = parseInviteList(text, ["Known@example.com"]);
     expect(rows.map((r) => r.email)).toEqual(["di@example.com"]);
     expect(skipped.map((s) => [s.line, s.reason])).toEqual([
-      [1, "Missing name"],
-      [2, "Email doesn't look right"],
-      [3, "Missing email"],
+      [1, "Missing parent name"],
+      [2, "Email looks wrong"],
+      [3, "Missing parent email"],
       [4, "Already a client or invited"],
       [6, "Listed twice"],
+    ]);
+  });
+
+  it("lists every line in order, ready or skipped", () => {
+    const { lines } = parseInviteList("Parent name,Email\nDana Lee,dana@example.com,Mia\n,x@example.com\nSam,sam@", []);
+    expect(lines).toEqual([
+      { line: 2, name: "Dana Lee", athleteFirstName: "Mia", reason: null },
+      { line: 3, name: "", athleteFirstName: "", reason: "Missing parent name" },
+      { line: 4, name: "Sam", athleteFirstName: "", reason: "Email looks wrong" },
     ]);
   });
 });

@@ -17,6 +17,18 @@ export interface CoachClientReferral {
   expires_at: string | null;
 }
 
+/** A row on the Invites page: the referral plus what get_coach_invites adds. */
+export interface CoachInviteRow extends CoachClientReferral {
+  invited_via?: "email" | "import" | "link" | "admin" | null;
+  opened_at?: string | null;
+  email_bounced_at?: string | null;
+  resend_count?: number;
+  updated_at?: string | null;
+  athlete_name?: string | null;
+  athlete_age?: number | null;
+  marketplace_since?: string | null;
+}
+
 export interface ReferralInvite {
   coach_id: string;
   coach_name: string;
@@ -51,6 +63,15 @@ export const getCoachReferrals = async (coachId: string) =>
     data: CoachClientReferral[] | null;
     error: { message: string } | null;
   };
+
+/** The Invites page. Falls back to the plain table read until get_coach_invites is deployed. */
+export const getCoachInvites = async (coachId: string): Promise<CoachInviteRow[]> => {
+  const { data, error } = await supabase.rpc("get_coach_invites" as never);
+  if (!error) return ((data as unknown as CoachInviteRow[]) ?? []);
+  const fallback = await getCoachReferrals(coachId);
+  if (fallback.error) throw new Error(fallback.error.message);
+  return (fallback.data ?? []).filter((r) => !(r.initiated_by === "athlete" && r.status === "declined"));
+};
 
 export const getMyReferrals = async (athleteId: string) =>
   (await table()

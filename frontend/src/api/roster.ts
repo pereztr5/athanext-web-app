@@ -64,6 +64,18 @@ export interface OpenTime {
   suggested: boolean;
 }
 
+export type OpenInviteStatus = "approval" | "bounced" | "opened" | "sent";
+
+/** An invite the family hasn't finished, for the My Athletes invites tab. */
+export interface OpenInvite {
+  id: string;
+  parent: string;
+  email: string;
+  athlete: string | null;
+  age: number | null;
+  status: OpenInviteStatus;
+}
+
 const mapAthlete = (row: Row): RosterAthlete => ({
   id: row.id,
   name: row.name,
@@ -101,6 +113,12 @@ export const rosterAPI = {
     /** Set by the family on their Home (ATH-92). */
     goal: string | null;
     video: string | null;
+    /** How the account holder is related to the athlete ("Parent", "Guardian", …). */
+    relation: string | null;
+    /** When the main package expires (YYYY-MM-DD). */
+    packageExpires: string | null;
+    /** Open invoices for this athlete: the total and the first one to remind. */
+    due: { amount: number; invoiceId: string; reminders: number } | null;
     upcoming: AthleteSession[];
     past: AthleteSession[];
   }> {
@@ -112,6 +130,9 @@ export const rosterAPI = {
       note: raw.note ?? "",
       goal: raw.goal ?? null,
       video: raw.video ?? null,
+      relation: raw.relation ?? null,
+      packageExpires: raw.packageExpires ?? null,
+      due: raw.due?.invoiceId ? { amount: Number(raw.due.amount) || 0, invoiceId: raw.due.invoiceId, reminders: Number(raw.due.reminders) || 0 } : null,
       upcoming: (raw.upcoming as AthleteSession[]) ?? [],
       past: (raw.past as AthleteSession[]) ?? [],
     };
@@ -151,8 +172,40 @@ export const rosterAPI = {
     if (error) throw error;
   },
 
+  async openInvites(): Promise<OpenInvite[]> {
+    const { data, error } = await supabase.rpc("get_coach_open_invites" as never);
+    if (error) throw error;
+    return ((data as Row[] | null) ?? []).map((row) => ({
+      id: row.id,
+      parent: row.parent ?? row.email ?? "",
+      email: row.email ?? "",
+      athlete: row.athlete || null,
+      age: row.age ?? null,
+      status: row.status as OpenInviteStatus,
+    }));
+  },
+
+  /** Changes the address on an open invite; resend it afterwards. */
+  async fixInviteEmail(referralId: string, email: string): Promise<void> {
+    const { error } = await supabase.rpc("coach_fix_invite_email" as never, { p_referral_id: referralId, p_email: email } as never);
+    if (error) throw error;
+  },
+
+  /** The pillars the coach offers (their profile specialties). */
+  async coachPillars(coachId: string): Promise<string[]> {
+    const { data, error } = await supabase.from("coaches").select("specialties").eq("id", coachId).maybeSingle();
+    if (error) throw error;
+    return ((data?.specialties as string[] | null) ?? []).filter(Boolean);
+  },
+
   async saveNote(athleteId: string, note: string): Promise<void> {
     const { error } = await supabase.rpc("set_coach_athlete_note", { p_athlete_id: athleteId, p_note: note });
+    if (error) throw error;
+  },
+
+  /** The season goal; the family can also change it on their Home. */
+  async saveGoal(athleteId: string, goal: string): Promise<void> {
+    const { error } = await supabase.rpc("set_coach_athlete_goal" as never, { p_athlete_id: athleteId, p_goal: goal } as never);
     if (error) throw error;
   },
 };
