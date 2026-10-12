@@ -23,7 +23,7 @@ alter table public.coach_slot_bookings drop constraint if exists bookings_v3_pay
 alter table public.coach_slot_bookings
   add constraint bookings_v3_payment_status
   check (payment_status = any (array[
-    'unpaid', 'requires_action', 'paid', 'refunded', 'direct', 'pending_offline'
+    'unpaid', 'requires_action', 'paid', 'refunded', 'direct', 'pending_offline', 'credit'
   ]));
 
 -- True when offline is on and at least one method is usable (handle required for Zelle/Venmo).

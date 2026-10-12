@@ -67,7 +67,7 @@ as $$
       (select profile.athlete_id from public.user_profiles as profile where profile.id = auth.uid()),
       (select athlete.id from public.athlete_profiles as athlete where athlete.user_id = auth.uid() limit 1)
     ) as athlete_id,
-    (select c.id from public.coaches as c where c.user_id = auth.uid() limit 1) as coach_id
+    public.current_coach_id() as coach_id
   )
   select jsonb_build_object(
     'id', offer.id,
@@ -134,7 +134,10 @@ as $$
           order by b.created_at desc limit 1
         ),
         'my_paid_amount', (
-          select b.paid_amount from public.coach_slot_bookings as b, viewer
+          select (
+            select sum(p.total_amount) from public.payments as p where p.booking_id = b.id
+          )
+          from public.coach_slot_bookings as b, viewer
           where b.occurrence_id = occ.id and b.athlete_id = viewer.athlete_id
             and b.status in ('requested', 'pending_payment', 'booked', 'completed', 'canceled')
           order by b.created_at desc limit 1
