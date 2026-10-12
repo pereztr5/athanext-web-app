@@ -128,6 +128,15 @@ serve(async (req) => {
     if (!user) return json({ error: "Unauthorized" }, 401);
     const site = resolveSiteUrl(body.origin ?? req.headers.get("origin"));
 
+    if (body.action === "create" || body.action === "remind") {
+      // ATH-103: refuse invoice writes when the coach's free plan has ended unpaid.
+      const { data: access, error: accessError } = await userClient.rpc("coach_has_access", { p_coach_id: null });
+      // Missing RPC (migration not applied) must not block invoices.
+      if (!accessError && access === false) {
+        return json({ error: "Your free plan has ended. Subscribe at $29/month to keep using coach tools." }, 403);
+      }
+    }
+
     if (body.action === "create") {
       const { data: id, error } = await userClient.rpc("create_coach_invoice", {
         p_athlete_id: body.athlete_id,
@@ -153,10 +162,21 @@ serve(async (req) => {
       if (body.action === "verify") return json({ status: await settle(admin, invoiceId) });
       if (inv.status !== "open") return json({ error: "This invoice is already settled" }, 400);
 
-      const { data: fees } = await admin.from("configurations").select("value").eq("key", "stripe_fees").maybeSingle();
-      const stripeFee = Number.parseFloat(fees?.value ?? "0") || 0;
+      const { data: feeRows } = await admin
+        .from("configurations")
+        .select("key,value")
+        .in("key", ["stripe_fees", "stripe_fee_fixed"]);
+      let stripeFeePerc = 0;
+      let stripeFeeFixed = 0;
+      feeRows?.forEach((row) => {
+        const v = Number.parseFloat(row.value);
+        if (!Number.isFinite(v)) return;
+        if (row.key === "stripe_fees") stripeFeePerc = v;
+        if (row.key === "stripe_fee_fixed") stripeFeeFixed = v;
+      });
       const amount = Number(inv.amount);
-      const fee = Math.round(amount * stripeFee) / 100;
+      // Invoices are for a coach's own families: processing only, no marketplace fee.
+      const fee = Math.round((amount * stripeFeePerc / 100 + stripeFeeFixed) * 100) / 100;
       const session = await stripe().checkout.sessions.create({
         mode: "payment",
         customer_email: user.email ?? undefined,

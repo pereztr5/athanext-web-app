@@ -3,28 +3,29 @@
  * a list by day on phone) and Month (grid). Open slots are dashed blue, busy times striped,
  * groups teal, requests orange.
  */
-import { ChevronRight, Plus } from "lucide-react";
+import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import type { ScheduleSession } from "@/api/schedule";
 import {
+  addDaysISO,
   bookedAthletes,
   formatClock,
   formatDayISO,
   requestsFor,
   plural,
+  weekStartISO,
   type ScheduleDay,
   type ScheduleItem,
 } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
-import { dangerTextButton, dayTile, dayTileNumber, dayTileWeekday, primaryButton, secondaryButton, smallButton, textButton } from "./styles";
+import { dayTile, dayTileNumber, dayTileWeekday, primaryButton, secondaryButton, smallButton, textButton } from "./styles";
 import { FillBar, PayPill } from "./views/parts";
 import {
   chipBox,
   chipName,
   chipSub,
   chipTime,
-  clearDayText,
   initials,
   rowBox,
   rowGrid,
@@ -323,43 +324,98 @@ export const WeekColumns = ({
 
 export const WeekAgenda = ({
   days,
+  todayISO,
+  weekStart,
+  showEarlier,
+  onToggleEarlier,
+  nextWeekLabel,
+  onShowNextWeek,
   timeZone,
   now,
   handlers,
   onOpenDay,
 }: {
   days: ScheduleDay[];
+  todayISO: string;
+  weekStart: string;
+  showEarlier: boolean;
+  onToggleEarlier: () => void;
+  nextWeekLabel: string;
+  onShowNextWeek: () => void;
   timeZone: string;
   now: Date;
   handlers: ScheduleViewHandlers;
   onOpenDay: (date: string) => void;
-}) => (
-  <div className="flex flex-col gap-7">
-    {days.map((day) => (
-      <div key={day.date} className="flex flex-col gap-2">
+}) => {
+  const weekEnd = addDaysISO(weekStart, 6);
+  const past = days.filter((d) => d.date >= weekStart && d.date < todayISO && d.date <= weekEnd);
+  const pastSessions = past.reduce((n, d) => n + d.items.filter((i) => i.kind !== "busy").length, 0);
+  const visible = days.filter((d) => showEarlier || d.date >= todayISO || d.date > weekEnd);
+
+  return (
+    <div className="flex flex-col gap-4">
+      {past.length ? (
         <button
           type="button"
-          className="flex items-center gap-2 border-b border-[#EAEADF] py-1 text-left"
-          onClick={() => onOpenDay(day.date)}
+          className="flex w-full items-center gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 py-2.5 text-left text-[13px] font-medium text-[#484D56]"
+          aria-expanded={showEarlier}
+          onClick={onToggleEarlier}
         >
-          <b className="text-[15px] font-semibold leading-[18px] text-[#1A202C]">
-            {formatDayISO(day.date, { weekday: "long", month: "short", day: "numeric" })}
-          </b>
-          {day.dayOff ? <BrandPill tone="amber">Day off</BrandPill> : null}
+          <span className="grow">
+            {showEarlier ? "Hide earlier days" : `Earlier this week · ${plural(pastSessions, "session")}`}
+          </span>
+          {showEarlier ? (
+            <ChevronUp className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+          ) : (
+            <ChevronDown className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+          )}
         </button>
-        {day.items.length ? (
-          <div className="flex flex-col gap-2">
-            {day.items.map((item) => (
-              <ItemRow key={item.key} item={item} timeZone={timeZone} now={now} handlers={handlers} />
-            ))}
-          </div>
-        ) : (
-          <span className="text-[12px] leading-[14px] text-[#767980]">{day.dayOff ? "Day off" : "Nothing yet"}</span>
-        )}
+      ) : null}
+
+      <div className="flex flex-col gap-7">
+        {visible.map((day) => {
+          const isWeekStart = day.date > weekEnd && day.date === weekStartISO(day.date);
+          return (
+            <div key={day.date} className="flex flex-col gap-2">
+              {isWeekStart ? (
+                <p className="text-[12px] font-medium uppercase tracking-[-0.03em] text-[#767980]">
+                  Week of {formatDayISO(day.date, { month: "short", day: "numeric" })}
+                </p>
+              ) : null}
+              <button
+                type="button"
+                id={day.date === todayISO ? "sch-today" : undefined}
+                className="flex items-center gap-2 border-b border-[#EAEADF] py-1 text-left"
+                onClick={() => onOpenDay(day.date)}
+              >
+                <b className="text-[15px] font-semibold leading-[18px] text-[#1A202C]">
+                  {day.date === todayISO
+                    ? `Today · ${formatDayISO(day.date, { month: "short", day: "numeric" })}`
+                    : formatDayISO(day.date, { weekday: "long", month: "short", day: "numeric" })}
+                </b>
+                {day.dayOff ? <BrandPill tone="amber">Day off</BrandPill> : null}
+              </button>
+              {day.items.length ? (
+                <div className="flex flex-col gap-2">
+                  {day.items.map((item) => (
+                    <ItemRow key={item.key} item={item} timeZone={timeZone} now={now} handlers={handlers} />
+                  ))}
+                </div>
+              ) : (
+                <span className="text-[12px] leading-[14px] text-[#767980]">{day.dayOff ? "Day off" : "Nothing yet"}</span>
+              )}
+            </div>
+          );
+        })}
       </div>
-    ))}
-  </div>
-);
+
+      <button type="button" className={cn(secondaryButton, "h-[40px] w-full")} onClick={onShowNextWeek}>
+        <ChevronDown className="size-4" strokeWidth={1.5} aria-hidden="true" />
+        Show the week of {nextWeekLabel}
+      </button>
+    </div>
+  );
+};
 
 const dayDots = (day: ScheduleDay, on = false) => {
   const kinds = new Set(day.items.map((i) => i.kind));
@@ -381,7 +437,6 @@ export const DayView = ({
   handlers,
   onSelect,
   onAdd,
-  onClearDay,
   onRestoreDay,
 }: {
   days: ScheduleDay[];
@@ -392,7 +447,6 @@ export const DayView = ({
   handlers: ScheduleViewHandlers;
   onSelect: (date: string) => void;
   onAdd: (date: string) => void;
-  onClearDay: (date: string) => void;
   onRestoreDay: (date: string) => void;
 }) => {
   const day = days.find((d) => d.date === selected) ?? days[0];
@@ -441,11 +495,7 @@ export const DayView = ({
               <button type="button" className={cn(textButton, "px-2")} onClick={() => onRestoreDay(day.date)}>
                 Undo day off
               </button>
-            ) : (
-              <button type="button" className={cn(dangerTextButton, clearDayText, "px-2")} onClick={() => onClearDay(day.date)}>
-                Clear day
-              </button>
-            )}
+            ) : null}
           </span>
         ) : null}
       </div>

@@ -1,13 +1,11 @@
 /**
- * Coach Home (ATH-76, Working Copy): today and this week first, in one 760px column.
- * Money strip (earned, still owed, next payout), intro calls (when there are any), Today (every session with who's coming and
- * payment, the next one highlighted, feedback due on the card) and This week (7 day cards,
- * open slots, groups, requests, and the Sunday check-in sheet).
+ * Coach Home (ATH-76, Working Copy 4): today and this week first, in one 760px column.
+ * Money strip, intro calls, Today, This week, and a Plan next week card from Thursday to Sunday.
  */
 import { useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarCheck, Check, ChevronRight, CircleCheck, Inbox, MessageSquareText, Pencil, Plus, Rocket, TrendingDown, TrendingUp, User, Users } from "lucide-react";
+import { CalendarDays, Check, ChevronRight, CircleCheck, Inbox, MessageSquareText, Pencil, Plus, Rocket, TrendingDown, TrendingUp, User, Users } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { payoutsAPI } from "@/api/payouts";
@@ -18,12 +16,14 @@ import { rosterAPI } from "@/api/roster";
 import { card, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
 import { invoicesAPI } from "@/api/invoices";
 import { useToast } from "@/hooks/use-toast";
-import { WeekOffDialog } from "./WeekOffDialog";
 import { IntroCallsHomeCard } from "@/components/intro-calls";
+import { PaymentsToConfirm } from "@/components/home/PaymentsToConfirm";
 import { useAuth } from "@/contexts/AuthContext";
+import { useCoachBillingAccess } from "@/hooks/useCoachBillingAccess";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { getZonedISODate } from "@/utils/dateHelpers";
 import {
   addDaysISO,
   bookedAthletes,
@@ -53,15 +53,6 @@ const initials = (name: string) =>
     .slice(0, 2)
     .map((p) => p[0]!.toUpperCase())
     .join("");
-
-const CHECKIN_KEY = "athanext.home.checkin";
-const readCheckin = () => {
-  try {
-    return localStorage.getItem(CHECKIN_KEY);
-  } catch {
-    return null;
-  }
-};
 
 const Sparkline = ({ values }: { values: number[] }) => {
   const W = 120;
@@ -99,6 +90,7 @@ const dayCard = cn(card, "gap-4 px-4 py-[18px] md:px-6 md:py-[22px]");
 export const CoachHome = () => {
   const { userName, userProfile } = useAuth();
   const { toast } = useToast();
+  const billing = useCoachBillingAccess();
   const { coach: me } = useCoachDetails(userProfile?.coach_id ?? undefined);
   const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
   const payouts = useQuery({ queryKey: ["coach-payouts"], queryFn: () => payoutsAPI.summary(), enabled: Boolean(me) && !paysDirect, retry: false });
@@ -110,14 +102,10 @@ export const CoachHome = () => {
   const now = new Date();
   const todayISO = isoDateInZone(now, timeZone);
   const [range, setRange] = useState(7);
-  // The check-in asks about next week (Monday to Sunday).
   const nextMonday = weekStartISO(addDaysISO(todayISO, 7));
-  const [checkinDone, setCheckinDone] = useState(() => readCheckin() === nextMonday);
-  const [weekOffOpen, setWeekOffOpen] = useState(false);
   const [reminding, setReminding] = useState(false);
 
   const weekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(todayISO, i)), [todayISO]);
-  const nextWeekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(nextMonday, i)), [nextMonday]);
   const scheduleQuery = useQuery({
     queryKey: ["coach-schedule", "home", todayISO],
     queryFn: () => scheduleAPI.get(addDaysISO(todayISO, -1), addDaysISO(nextMonday, 7)),
@@ -138,8 +126,6 @@ export const CoachHome = () => {
   // `now` changes every render; the minute it was computed is enough here.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const days = useMemo(() => layout(weekDates), [weekDates, scheduleQuery.data, timeZone]);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const nextWeek = useMemo(() => layout(nextWeekDates), [nextWeekDates, scheduleQuery.data, timeZone]);
 
   const firstName = (userName || userProfile?.name || "").split(" ")[0] || "Coach";
   const hour = Number(new Intl.DateTimeFormat("en-US", { hour: "numeric", hourCycle: "h23", timeZone }).format(now));
@@ -160,15 +146,6 @@ export const CoachHome = () => {
   const totals = earningsQuery.data ? periodTotals(earningsQuery.data.days, range) : null;
   const sparkValues = earningsQuery.data ? earningsQuery.data.days.slice(range === 1 ? -7 : -range).map((d) => d.amount) : [];
   const rangeLabel = RANGES.find(([d]) => d === range)?.[2] ?? "";
-
-  const closeCheckin = () => {
-    try {
-      localStorage.setItem(CHECKIN_KEY, nextMonday);
-    } catch {
-      // The check-in just shows again next time.
-    }
-    setCheckinDone(true);
-  };
 
   // "N overdue · remind": one reminder to every overdue family (3 at most per invoice).
   const remindOverdue = async () => {
@@ -196,6 +173,32 @@ export const CoachHome = () => {
   const titleOf = (s: ScheduleSession) => (s.sessionType === "group" ? s.sessionName : bookedAthletes(s)[0]?.athleteName ?? "Open slot");
   const hasBio = Boolean((me as { bio?: string | null } | undefined)?.bio);
 
+  // Plan next week card: Thursday (4) through Sunday (0).
+  const weekday = new Date(`${todayISO}T12:00:00`).getDay();
+  const showPlanCard = [4, 5, 6, 0].includes(weekday);
+  const nextWeekEnd = addDaysISO(nextMonday, 6);
+  const nextWeekSessions = (scheduleQuery.data?.sessions ?? []).filter((s) => {
+    const d = getZonedISODate(sessionStart(s), timeZone);
+    return d >= nextMonday && d <= nextWeekEnd;
+  });
+  const nextDrafts = nextWeekSessions.filter((s) => s.isDraft);
+  const nextLive = nextWeekSessions.filter((s) => !s.isDraft);
+  const thisWeekGroups = (scheduleQuery.data?.sessions ?? []).filter((s) => {
+    if (s.isDraft || s.sessionType !== "group") return false;
+    const d = getZonedISODate(sessionStart(s), timeZone);
+    return d >= weekStartISO(todayISO) && d < nextMonday;
+  });
+  const gap = thisWeekGroups.filter((g) => {
+    const gDow = new Date(`${getZonedISODate(sessionStart(g), timeZone)}T12:00:00`).getDay();
+    return !nextWeekSessions.some((x) => {
+      const xDow = new Date(`${getZonedISODate(sessionStart(x), timeZone)}T12:00:00`).getDay();
+      return xDow === gDow && x.startTime === g.startTime;
+    });
+  }).length;
+  const nextSpots = nextWeekSessions.reduce((n, s) => n + s.capacity, 0);
+  const nextBooked = nextWeekSessions.reduce((n, s) => n + bookedAthletes(s).length, 0);
+  const nextPlanned = nextWeekSessions.length > 0 && !nextDrafts.length && !gap;
+
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
@@ -218,7 +221,73 @@ export const CoachHome = () => {
           </div>
         </header>
 
-        {isEmpty ? (
+        {billing.locked ? (
+          <section className={cn(card, "border-[#FDB5B5] bg-[#FEECEC]")}>
+            <div className="flex flex-col gap-3 px-1 py-1">
+              <div className="flex flex-col gap-1">
+                <span className={cn(h3, "text-[#972B2B]")}>Subscribe to keep coaching</span>
+                <p className="text-[14px] text-[#484D56]">
+                  Your free 30 days ended. Coach tools are locked until you subscribe at ${billing.priceMonthly}/month.
+                  Families can still see your profile and book you.
+                </p>
+              </div>
+              <Link to={`${ROUTES.SETTINGS}?tab=plan`} className={cn(primaryButton, "self-start")}>
+                Open plan · ${billing.priceMonthly}/mo
+              </Link>
+            </div>
+          </section>
+        ) : null}
+
+        {billing.trialActive && !billing.subscribed ? (
+          <section className={card} aria-label="Coach plan">
+            <div className="flex flex-col gap-[10px]">
+              <div className="flex flex-wrap items-start justify-between gap-3">
+                <div className="flex flex-col gap-1">
+                  <span className={eyebrow}>Coach plan</span>
+                  <span className={cn(h3, "text-[#1A202C]")}>
+                    {billing.daysLeft === 1 ? "1 day left free" : `${billing.daysLeft} days left free`}
+                  </span>
+                  <p className={cap}>
+                    Full tools until then, then ${billing.priceMonthly}/month. Public profile and booking stay up either way.
+                  </p>
+                </div>
+                <Link to={`${ROUTES.SETTINGS}?tab=plan`} className={cn(secondaryButton, "shrink-0")}>
+                  Plan details
+                </Link>
+              </div>
+              <div className="flex flex-col gap-[10px]">
+                {(
+                  [
+                    ["Complete your profile", `${ROUTES.PROFILE}?mode=edit`, hasBio],
+                    ["Set your weekly availability", ROUTES.SCHEDULE, Boolean(scheduleQuery.data?.sessions.length)],
+                    [
+                      billing.subscribed
+                        ? `Coach plan · $${billing.priceMonthly}/mo`
+                        : `Subscribe when ready · $${billing.priceMonthly}/mo`,
+                      `${ROUTES.SETTINGS}?tab=plan`,
+                      billing.subscribed,
+                    ],
+                  ] as [string, string, boolean][]
+                ).map(([text, to, done], i) => (
+                  <Link key={`${to}-${text}`} to={to} className="flex items-center gap-3 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px] text-[#1A202C] hover:bg-[#EAEADF]">
+                    <span
+                      className={cn(
+                        "flex size-5 flex-none items-center justify-center rounded-full text-[12px] font-semibold",
+                        done ? "bg-[#CBE7D1] text-[#1E7431]" : "border border-dashed border-[#C1C1B8]"
+                      )}
+                    >
+                      {done ? <Check className="size-3" strokeWidth={2.5} aria-hidden="true" /> : i + 1}
+                    </span>
+                    <span className="grow text-[14px] font-medium">{text}</span>
+                    <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                  </Link>
+                ))}
+              </div>
+            </div>
+          </section>
+        ) : null}
+
+        {isEmpty && !billing.trialActive ? (
           <section className={card}>
             <div className="flex flex-col items-center gap-[10px] px-4 py-7 text-center text-[#767980]">
               <Rocket className="size-7 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
@@ -229,7 +298,7 @@ export const CoachHome = () => {
                   [
                     ["Complete your profile", ROUTES.PROFILE, hasBio],
                     ["Set your weekly availability", ROUTES.SCHEDULE, Boolean(scheduleQuery.data?.sessions.length)],
-                    ["Invite the families you already coach", ROUTES.INVITES, false],
+                    ["Invite the families you already coach", `${ROUTES.ATHLETES}?tab=invites`, false],
                   ] as [string, string, boolean][]
                 ).map(([text, to, done], i) => (
                   <Link key={to} to={to} className="flex items-center gap-3 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px] text-[#1A202C] hover:bg-[#EAEADF]">
@@ -248,9 +317,12 @@ export const CoachHome = () => {
               </div>
             </div>
           </section>
-        ) : (
+        ) : null}
+
+        {!isEmpty || billing.trialActive || billing.locked ? (
           <>
-            {/* Booking only coaches are paid directly, so there is no money strip (ATH-86). */}
+            {!billing.locked ? <PaymentsToConfirm /> : null}
+            {/* Legacy booking-only coaches hid the money strip (ATH-86); WC4 keeps card on. */}
             {!paysDirect ? (
               <section aria-label="Money" className="flex flex-col gap-3 rounded-[12px] border border-[#EAEADF] bg-[#F7F7F0] px-[14px] pb-[14px] pt-3 md:px-5 md:pb-4">
                 <div className="flex items-center justify-between gap-3">
@@ -268,7 +340,7 @@ export const CoachHome = () => {
                     ))}
                   </div>
                   <Link to={ROUTES.PAYMENTS} className={cn(textButton, "text-[13px]")}>
-                    Business
+                    My Business
                     <ChevronRight strokeWidth={1.5} aria-hidden="true" />
                   </Link>
                 </div>
@@ -305,6 +377,54 @@ export const CoachHome = () => {
                     </div>
                   ) : null}
                 </div>
+              </section>
+            ) : null}
+
+            {showPlanCard ? (
+              <section className={cn(card, "flex-row items-center gap-4 max-md:flex-col max-md:items-stretch")}>
+                {nextPlanned ? (
+                  <>
+                    <span className="flex size-11 flex-none items-center justify-center rounded-full bg-[#CBE7D1] text-[#1E7431]">
+                      <Check className="size-5" strokeWidth={2} aria-hidden="true" />
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <span className={h3}>Next week is planned</span>
+                      <span className="text-[14px] text-[#767980]">
+                        {plural(nextWeekSessions.length, "session")} · {plural(nextSpots, "spot")} · {nextBooked} booked so far
+                      </span>
+                    </div>
+                    <Link to={ROUTES.SCHEDULE_PLAN} className={cn(secondaryButton, smallButton)}>
+                      Edit plan
+                    </Link>
+                  </>
+                ) : (
+                  <>
+                    <span className="flex size-11 flex-none items-center justify-center rounded-full bg-[#E5EDF7] text-[#0054B4]">
+                      <CalendarDays className="size-5" strokeWidth={1.5} aria-hidden="true" />
+                    </span>
+                    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className={h3}>Plan next week</span>
+                        <BrandPill tone="sunk">
+                          {formatDayISO(nextMonday, { month: "short", day: "numeric" })} to{" "}
+                          {formatDayISO(nextWeekEnd, { month: "short", day: "numeric" })}
+                        </BrandPill>
+                      </div>
+                      <span className="text-[14px] text-[#767980]">
+                        {nextDrafts.length
+                          ? `${plural(nextDrafts.length, "session")} planned but not shared yet.`
+                          : `${nextLive.length ? `${plural(nextLive.length, "session")} ${nextLive.length === 1 ? "is" : "are"} already live for next week. ` : ""}${
+                              gap
+                                ? `${gap} of this week's group sessions ${gap === 1 ? "isn't" : "aren't"} on it yet.`
+                                : "Add what else you want to run."
+                            }`}
+                      </span>
+                    </div>
+                    <Link to={ROUTES.SCHEDULE_PLAN} className={cn(primaryButton, smallButton)}>
+                      {nextDrafts.length ? "Finish planning" : "Plan next week"}
+                    </Link>
+                  </>
+                )}
               </section>
             ) : null}
 
@@ -478,28 +598,6 @@ export const CoachHome = () => {
                 </span>
               </div>
 
-              {!checkinDone ? (
-                <div className={cn(ctxbar, "bg-[#E5EDF7]")}>
-                  <CalendarCheck className="size-4 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="grow">
-                    <b>Sunday check-in:</b> any time off next week?
-                  </span>
-                  <button
-                    type="button"
-                    className={textButton}
-                    onClick={() => {
-                      closeCheckin();
-                      toast({ title: "All set. Your usual hours stay open next week" });
-                    }}
-                  >
-                    All good
-                  </button>
-                  <button type="button" className={textButton} onClick={() => setWeekOffOpen(true)}>
-                    Add days off
-                  </button>
-                </div>
-              ) : null}
-
               <div className="grid grid-cols-7 gap-1 md:gap-2">
                 {days.map((d) => {
                   const sessions = d.items.filter((i) => i.kind === "booked" || i.kind === "group");
@@ -554,18 +652,8 @@ export const CoachHome = () => {
               </div>
             </section>
           </>
-        )}
+        ) : null}
       </div>
-      <WeekOffDialog
-        open={weekOffOpen}
-        onOpenChange={setWeekOffOpen}
-        monday={nextMonday}
-        days={nextWeek}
-        onSaved={() => {
-          closeCheckin();
-          void scheduleQuery.refetch();
-        }}
-      />
     </div>
   );
 };

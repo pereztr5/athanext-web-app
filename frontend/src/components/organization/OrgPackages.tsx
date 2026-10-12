@@ -9,9 +9,11 @@ import { orgPackagesAPI, type OrgPackage } from "@/api/organizations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ToastAction } from "@/components/ui/toast";
 import { dialogContent, input, label, primaryButton, secondaryButton, smallButton } from "@/components/schedule/styles";
+import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useToast } from "@/hooks/use-toast";
 import { cn, getInitials } from "@/lib/utils";
 import { packageSaving, savingLine, type PackageSaving } from "@/utils/organizations";
+import { computeSessionPrice } from "@/utils/referralHelpers";
 
 export type PackageCoach = { id: string; name: string; price: number; photo?: string | null };
 
@@ -40,6 +42,8 @@ export const OrgPackageCard = ({
   onBuy: () => void;
   buying?: boolean;
 }) => {
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
+  const due = computeSessionPrice(pkg.price, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
   const k = packageSaving(pkg, coaches, groupPrices);
   const who = coaches.filter((c) => pkg.coachIds.includes(c.id));
   const line = savingLine(k);
@@ -53,7 +57,12 @@ export const OrgPackageCard = ({
             {pkg.kind === "group" ? " · group sessions" : ""}
           </span>
         </span>
-        <span className="flex-none text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{dollars(pkg.price)}</span>
+        <span className="flex min-w-0 flex-col items-end gap-0.5">
+          <span className="flex-none text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{dollars(due)}</span>
+          {due !== pkg.price ? (
+            <span className="text-[11px] leading-[13px] text-[#767980]">list {dollars(pkg.price)} + fees</span>
+          ) : null}
+        </span>
       </div>
       {pkg.kind === "group" ? (
         <span className="text-[12px] leading-[14px] text-[#767980]">

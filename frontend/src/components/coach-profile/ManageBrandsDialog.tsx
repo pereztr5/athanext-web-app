@@ -169,7 +169,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
       setSaving(true);
       await brandsAPI.setCoachBrands(coachId, draftIds);
       await queryClient.invalidateQueries({ queryKey: coachBrandsQueryKey(coachId) });
-      toast({ title: "Brands updated" });
+      toast({ title: "Organizations updated" });
       onOpenChange(false);
     } catch (error) {
       toast({
@@ -186,8 +186,8 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[520px]">
         <DialogHeader>
-          <DialogTitle>Manage brands</DialogTitle>
-          <DialogDescription>Brands you represent. Their logos show on your profile.</DialogDescription>
+          <DialogTitle>Manage organizations</DialogTitle>
+          <DialogDescription>Organizations and partners you represent. Their logos show near the top of your profile.</DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-2">

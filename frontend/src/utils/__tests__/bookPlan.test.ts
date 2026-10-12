@@ -25,9 +25,22 @@ describe("planBooking", () => {
   it("adds fees to paid times only, and skips the platform fee for waived coaches", () => {
     const fees = { platformPerc: 10, stripePerc: 3, waived: new Set<string>() };
     const p = planBooking(picked, coaches, true, fees);
-    expect([p.subtotal, p.fees, p.dueNow, p.ifAccepted]).toEqual([50, 6.5, 56.5, 79.1]);
+    expect([p.subtotal, p.fees, p.platformFees, p.processingFees, p.dueNow, p.ifAccepted]).toEqual([
+      50, 6.5, 5, 1.5, 56.5, 79.1,
+    ]);
     expect(p.feeOf(picked[1])).toBe(0);
     const w = planBooking(picked, coaches, false, { ...fees, waived: new Set(["a"]) });
-    expect([w.fees, w.dueNow]).toEqual([3, 103]);
+    expect([w.fees, w.platformFees, w.processingFees, w.dueNow]).toEqual([3, 0, 3, 103]);
+  });
+
+  it("adds the fixed processing fee once on dueNow and ifAccepted", () => {
+    const fees = { platformPerc: 10, stripePerc: 2.9, stripeFixed: 0.3, waived: new Set<string>() };
+    const p = planBooking(picked, coaches, true, fees);
+    // One paid $50: 10% + 2.9% = $6.45, plus $0.30 once → $56.75
+    expect([p.subtotal, p.fees, p.platformFees, p.processingFees, p.dueNow]).toEqual([50, 6.45, 5, 1.75, 56.75]);
+    // Request $70: $70 + $9.03 + $0.30
+    expect(p.ifAccepted).toBe(79.33);
+    const creditsOnly = planBooking([s("a1", "a", "2026-10-10")], coaches, true, fees);
+    expect(creditsOnly.dueNow).toBe(0);
   });
 });

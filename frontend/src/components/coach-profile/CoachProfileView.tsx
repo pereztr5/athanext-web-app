@@ -18,6 +18,8 @@ import { coachAcademy, organizationPath } from "@/utils/coachAcademy";
 import { CoachIntroCallCard } from "@/components/intro-calls";
 import { WhoCard } from "./family/WhoCard";
 import { AboutCard } from "./family/AboutCard";
+import { OrganizationsCard } from "./OrganizationsCard";
+import { organizationsForProfile } from "./organizationLogos";
 import { PricingCard, type SessionRow } from "./family/PricingCard";
 import { REVIEWS_ANCHOR, ReviewsCard } from "./family/ReviewsCard";
 import { MoreList } from "./family/MoreList";
@@ -167,10 +169,9 @@ export function CoachProfileView({
   const cancellation = cancellationLine(coach.cancel_notice_hours, coach.cancellation_policy);
 
   const coaches = coachesLine(coach);
-  const credentials = [
-    ...(coach.certifications ?? []).map((c) => c.certification_name?.trim() ?? "").filter(Boolean),
-    ...(coach.is_verified ? ["Background check"] : []),
-  ];
+  const credentials = (coach.certifications ?? [])
+    .map((c) => c.certification_name?.trim() ?? "")
+    .filter((name) => name && name.toLowerCase() !== "background check");
   const faqs = normalizeCoachFaqs(coach.profile_faqs).filter((faq) => faq.question?.trim() && faq.answer?.trim());
 
   const back = () => {
@@ -230,6 +231,8 @@ export function CoachProfileView({
           facts={facts}
           intro={<CoachIntroCallCard coachId={coach.id} mode="family" coachFirstName={first} />}
         />
+
+        <OrganizationsCard brands={organizationsForProfile(coach.id, brands)} />
 
         <AboutCard
           coaches={coaches}

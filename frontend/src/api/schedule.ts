@@ -450,18 +450,36 @@ export const calendarSyncAPI = {
   },
 };
 
+export interface GroupOfferChangeFrom {
+  date: string;
+  startTime: string;
+  place: string | null;
+  location: "online" | "in-person";
+}
+
 export interface GroupOfferSession {
   id: string;
   date: string;
   startTime: string;
   endTime: string;
+  durationMinutes: number;
   sessionName: string;
   price: number;
+  /** Previous listed price after the coach raised/lowered it (new picks only). */
+  priceFrom: number | null;
   capacity: number;
   location: "online" | "in-person";
   place: string | null;
   bookedCount: number;
+  pendingConfirmCount: number;
   myStatus: string | null;
+  myBookingId: string | null;
+  myPaidAmount: number | null;
+  myChangeAsk: "pending" | "keep" | "cancel" | null;
+  changeFrom: GroupOfferChangeFrom | null;
+  cancelled: boolean;
+  cancelRefund: string | null;
+  isNew: boolean;
   started: boolean;
 }
 
@@ -473,10 +491,68 @@ export interface GroupOffer {
   coachId: string;
   coachName: string;
   coachSlug: string | null;
+  coachPaysDirect: boolean;
+  coachPayNote: string | null;
+  locations: string[];
   sessions: GroupOfferSession[];
 }
 
-/** Pick-and-pay cards for published group weeks (ATH-72). */
+export interface GroupOfferSessionPatch {
+  id: string;
+  date?: string;
+  start?: string;
+  where?: string;
+  capacity?: number;
+  price?: number;
+}
+
+export interface GroupOfferAdd {
+  title: string;
+  date: string;
+  start: string;
+  durationMinutes: number;
+  where: string;
+  capacity: number;
+  price: number;
+  pillar?: string;
+}
+
+const mapOfferSession = (s: Row): GroupOfferSession => {
+  const from = (s.change_from ?? null) as Row | null;
+  return {
+    id: s.id,
+    date: s.date,
+    startTime: s.start_time,
+    endTime: s.end_time,
+    durationMinutes: Number(s.duration_minutes) || 60,
+    sessionName: s.session_name || "Group session",
+    price: Number(s.price) || 0,
+    priceFrom: s.price_from != null ? Number(s.price_from) : null,
+    capacity: Number(s.capacity) || 1,
+    location: s.location === "online" ? "online" : "in-person",
+    place: s.place ?? null,
+    bookedCount: Number(s.booked_count) || 0,
+    pendingConfirmCount: Number(s.pending_confirm_count) || 0,
+    myStatus: s.my_status ?? null,
+    myBookingId: s.my_booking_id ?? null,
+    myPaidAmount: s.my_paid_amount != null ? Number(s.my_paid_amount) : null,
+    myChangeAsk: s.my_change_ask === "pending" || s.my_change_ask === "keep" || s.my_change_ask === "cancel" ? s.my_change_ask : null,
+    changeFrom: from
+      ? {
+          date: String(from.date),
+          startTime: String(from.start_time ?? from.startTime ?? "00:00:00"),
+          place: from.place ?? null,
+          location: from.location === "online" ? "online" : "in-person",
+        }
+      : null,
+    cancelled: Boolean(s.cancelled),
+    cancelRefund: s.cancel_refund ?? null,
+    isNew: Boolean(s.is_new),
+    started: Boolean(s.started),
+  };
+};
+
+/** Pick-and-pay cards for published group weeks (ATH-72 / WC4 week post). */
 export const groupOffersAPI = {
   async get(offerId: string): Promise<GroupOffer | null> {
     const { data, error } = await supabase.rpc("get_group_offer", { p_offer_id: offerId });
@@ -491,20 +567,69 @@ export const groupOffersAPI = {
       coachId: raw.coach_id,
       coachName: raw.coach_name || "Coach",
       coachSlug: raw.coach_slug ?? null,
-      sessions: ((raw.sessions as Row[]) ?? []).map((s) => ({
-        id: s.id,
-        date: s.date,
-        startTime: s.start_time,
-        endTime: s.end_time,
-        sessionName: s.session_name || "Group session",
-        price: Number(s.price) || 0,
-        capacity: Number(s.capacity) || 1,
-        location: s.location === "online" ? "online" : "in-person",
-        place: s.place ?? null,
-        bookedCount: Number(s.booked_count) || 0,
-        myStatus: s.my_status ?? null,
-        started: Boolean(s.started),
-      })),
+      coachPaysDirect: raw.coach_pay_mode === "self",
+      coachPayNote: raw.coach_pay_note ?? null,
+      locations: Array.isArray(raw.locations) ? (raw.locations as string[]).filter(Boolean) : [],
+      sessions: ((raw.sessions as Row[]) ?? []).map(mapOfferSession),
     };
+  },
+
+  /** Coach edits the live week card: when/where/spots/price, add, cancel, close picks. */
+  async update(
+    offerId: string,
+    patch: {
+      closePicks?: boolean;
+      updates?: GroupOfferSessionPatch[];
+      cancelIds?: string[];
+      adds?: GroupOfferAdd[];
+    }
+  ): Promise<{ lines: string[]; posted: number }> {
+    const payload: Record<string, unknown> = {};
+    if (patch.closePicks) payload.close_picks = true;
+    if (patch.updates?.length) {
+      payload.updates = patch.updates.map((u) => ({
+        id: u.id,
+        ...(u.date ? { date: u.date } : {}),
+        ...(u.start ? { start: u.start } : {}),
+        ...(u.where !== undefined ? { where: u.where } : {}),
+        ...(u.capacity !== undefined ? { capacity: u.capacity } : {}),
+        ...(u.price !== undefined ? { price: u.price } : {}),
+      }));
+    }
+    if (patch.cancelIds?.length) payload.cancel_ids = patch.cancelIds;
+    if (patch.adds?.length) {
+      payload.adds = patch.adds.map((a) => ({
+        title: a.title,
+        session_name: a.title,
+        date: a.date,
+        start: a.start,
+        duration_minutes: a.durationMinutes,
+        where: a.where,
+        capacity: a.capacity,
+        price: a.price,
+        pillar: a.pillar ?? null,
+      }));
+    }
+    const { data, error } = await supabase.rpc("update_group_offer" as never, {
+      p_offer_id: offerId,
+      p_patch: payload as Json,
+    } as never);
+    if (error) throw error;
+    const raw = (data ?? {}) as Row;
+    return {
+      lines: Array.isArray(raw.lines) ? (raw.lines as string[]) : [],
+      posted: Number(raw.posted) || 0,
+    };
+  },
+
+  /** Family answers Still coming / Cancel after a time or place change (credit, not card refund). */
+  async answerChange(occurrenceId: string, keep: boolean): Promise<{ kept: boolean; credit: boolean }> {
+    const { data, error } = await supabase.rpc("answer_group_offer_change" as never, {
+      p_occurrence_id: occurrenceId,
+      p_keep: keep,
+    } as never);
+    if (error) throw error;
+    const raw = (data ?? {}) as Row;
+    return { kept: Boolean(raw.kept), credit: Boolean(raw.credit) };
   },
 };

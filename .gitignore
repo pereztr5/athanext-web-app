@@ -10,5 +10,8 @@ node_modules/
 # Supabase CLI scratch
 **/supabase/.temp/
 
+# Local Claude Code secrets (database password)
+.claude/settings.local.json
+
 # Vite dep-optimizer cache
 **/.vite/

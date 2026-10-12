@@ -84,6 +84,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const slotPrice = prefillSlot?.slot?.price ?? undefined;
   const [platformFeePerc, setPlatformFeePerc] = useState(0);
   const [stripeFeePerc, setStripeFeePerc] = useState(0);
+  const [stripeFeeFixed, setStripeFeeFixed] = useState(0);
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -191,13 +192,14 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
         const { data, error } = await supabase
           .from('configurations')
           .select('key,value')
-          .in('key', ['platform_fees', 'stripe_fees']);
+          .in('key', ['platform_fees', 'stripe_fees', 'stripe_fee_fixed']);
         if (error) return;
         (data as any[])?.forEach((row: any) => {
           const v = Number.parseFloat(row.value);
           if (Number.isFinite(v)) {
             if (row.key === 'platform_fees') setPlatformFeePerc(v);
             if (row.key === 'stripe_fees') setStripeFeePerc(v);
+            if (row.key === 'stripe_fee_fixed') setStripeFeeFixed(v);
           }
         });
       } catch {
@@ -441,7 +443,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     : typeof slotPrice === 'number'
       ? slotPrice
       : Math.round((hourlyRate / 60) * parseInt(duration));
-  const sessionPrice = computeSessionPrice(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived);
+  const sessionPrice = computeSessionPrice(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived, stripeFeeFixed);
   const totalWithFees = isFreeConsultation ? 0 : sessionPrice.total;
 
   const displayDateValue = selectedDate
@@ -492,7 +494,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const sportLabel = coach.sport?.trim();
   const priceBreakdown = isFreeConsultation
     ? "Free"
-    : formatPriceBreakdown(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived);
+    : formatPriceBreakdown(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived, stripeFeeFixed);
   const hideSelectionFields = Boolean(prefillSlot);
 
   const modalSurface =

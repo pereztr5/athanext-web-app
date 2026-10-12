@@ -102,7 +102,9 @@ const AthleteSessionPage = () => {
 
   const payLine = cancelled
     ? s.booking.cancellationReason || "Cancelled"
-    : s.booking.paymentStatus === "direct"
+    : s.booking.paymentStatus === "pending_offline"
+      ? `Pending until ${coachFirst} confirms receipt, ${money(s.price)}${s.coach.payNote ? `. ${s.coach.payNote}` : ""}`
+      : s.booking.paymentStatus === "direct"
       ? `Pay ${coachFirst} directly, ${money(s.price)}${s.coach.payNote ? `. ${s.coach.payNote}` : ""}`
       : status === "requested"
         ? s.coach.paysDirect

@@ -493,3 +493,47 @@ update public.conversations
 set last_message_text = 'Anything I should practice at home before Tuesday?',
     last_message_at = now() - interval '3 hours'
 where id = 'c5555555-5555-4555-8555-555555555555';
+
+-- ---------------------------------------------------------------------------
+-- Organizations / partners with logos on Riley's coach profile
+-- (served from frontend/public/org-logos/*)
+-- ---------------------------------------------------------------------------
+
+update public.brands
+set logo_url = v.logo_url, website = v.website, updated_at = now()
+from (values
+  ('SET GK', '/org-logos/set-gk.svg', 'https://www.setgk.com'),
+  ('Riverside FC', '/org-logos/riverside-fc.svg', null),
+  ('Keeper Union', '/org-logos/keeper-union.svg', null)
+) as v(name, logo_url, website)
+where lower(regexp_replace(btrim(public.brands.name), '\s+', ' ', 'g'))
+    = lower(regexp_replace(btrim(v.name), '\s+', ' ', 'g'));
+
+insert into public.brands (id, name, logo_url, website, created_by)
+select v.id, v.name, v.logo_url, v.website, 'b2222222-2222-4222-8222-222222222222'
+from (values
+  ('c0de000d-0000-4000-8000-000000000001'::uuid, 'SET GK', '/org-logos/set-gk.svg', 'https://www.setgk.com'),
+  ('c0de000d-0000-4000-8000-000000000002'::uuid, 'Riverside FC', '/org-logos/riverside-fc.svg', null),
+  ('c0de000d-0000-4000-8000-000000000003'::uuid, 'Keeper Union', '/org-logos/keeper-union.svg', null)
+) as v(id, name, logo_url, website)
+where not exists (
+  select 1 from public.brands b
+  where lower(regexp_replace(btrim(b.name), '\s+', ' ', 'g'))
+      = lower(regexp_replace(btrim(v.name), '\s+', ' ', 'g'))
+);
+
+insert into public.coach_brands (coach_id, brand_id, display_order)
+select
+  'a1111111-1111-4111-8111-111111111111',
+  b.id,
+  v.ord
+from (values
+  ('SET GK', 0),
+  ('Riverside FC', 1),
+  ('Keeper Union', 2)
+) as v(name, ord)
+join public.brands b
+  on lower(regexp_replace(btrim(b.name), '\s+', ' ', 'g'))
+   = lower(regexp_replace(btrim(v.name), '\s+', ' ', 'g'))
+on conflict (coach_id, brand_id) do update
+set display_order = excluded.display_order;

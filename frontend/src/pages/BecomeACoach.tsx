@@ -41,9 +41,9 @@ const BecomeACoach = () => {
   const requirements = [
     strings.coach.requirement1,
     strings.coach.requirement2,
-    // strings.coach.requirement3,
-    // strings.coach.requirement4,
-    strings.coach.requirement5
+    strings.coach.requirement3,
+    strings.coach.requirement4,
+    strings.coach.requirement5,
   ];
 
   const howItWorks = [

@@ -1,0 +1,6 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 40 40" fill="none">
+  <circle cx="20" cy="20" r="19" fill="#123E7A"/>
+  <path d="M20 6 L26 14 H14 Z" fill="#F2C14E"/>
+  <circle cx="20" cy="22" r="7" fill="#E8F1FF"/>
+  <text x="20" y="25" text-anchor="middle" fill="#123E7A" font-family="Arial, Helvetica, sans-serif" font-size="7" font-weight="700">KU</text>
+</svg>

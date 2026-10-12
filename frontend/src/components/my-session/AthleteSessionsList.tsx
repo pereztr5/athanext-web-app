@@ -1,11 +1,12 @@
 /**
- * Athlete My Sessions (Working Copy `a-sessions`): Upcoming / Requested / Past / Cancelled
- * tabs, search, type filter, and compact date-tile rows.
+ * Athlete My Sessions (Working Copy 4): Upcoming / Requested / Past / Cancelled tabs,
+ * search, type filter, and coach-style hybrid cards (no price; coach once; status pills).
  */
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Calendar, CalendarPlus, ChevronRight, Search, User, Users } from "lucide-react";
 import { BrandPill } from "@/components/brand";
+import { SessionDateTile } from "@/components/my-session/CoachSessionCard";
 import { card, input, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -27,61 +28,118 @@ const groupLabel = (iso: string, today: string, timeZone: string, upcoming: bool
   return formatDayISO(day, { month: "long" });
 };
 
+/** Card title: group name or pillar — coach is not in the title (WC4 #25). */
 export const sessionListTitle = (s: UISession) => {
-  const coach = (s.coachName || "your coach").trim();
-  const pillar = s.pillarSlot || (s.type === "group" ? s.title : "1-on-1");
-  return s.type === "group" && s.title ? s.title : `${pillar} with ${coach}`;
+  if (s.type === "group" && s.title) return s.title;
+  return s.pillarSlot || (s.type === "group" ? "Group session" : "1-on-1");
 };
 
-const Row = ({ session, timeZone, onOpen }: { session: UISession; timeZone: string; onOpen: (s: UISession) => void }) => {
+const coachInitials = (name: string | null | undefined) =>
+  (name || "?")
+    .split(/\s+/)
+    .filter(Boolean)
+    .slice(0, 2)
+    .map((p) => p[0]?.toUpperCase() ?? "")
+    .join("") || "?";
+
+const startsInLabel = (start: string, now: number) => {
+  const ms = new Date(start).getTime() - now;
+  if (ms <= 0) return "";
+  const h = Math.floor(ms / 36e5);
+  const d = Math.floor(h / 24);
+  const mn = Math.floor(ms / 6e4) % 60;
+  if (d >= 1) return d === 1 ? "Tomorrow" : `In ${d} days`;
+  if (h >= 3) return "Today";
+  return h ? `Starts in ${h}h ${mn}m` : `Starts in ${mn}m`;
+};
+
+const AthleteSessionCard = ({
+  session,
+  timeZone,
+  onOpen,
+}: {
+  session: UISession;
+  timeZone: string;
+  onOpen: (s: UISession) => void;
+}) => {
   const start = new Date(session.start);
   const end = new Date(session.end);
   const now = Date.now();
-  const happening = start.getTime() <= now && end.getTime() > now;
+  const dayISO = getZonedISODate(start, timeZone);
   const group = session.type === "group";
+  const pillar = session.pillarSlot;
+  const title = sessionListTitle(session);
   const place = session.location === "online" ? "Video call" : formatLocationSentence(session.location) || "In person";
-  const pill =
-    session.computedStatus === "canceled" || session.dbStatus === "canceled" ? (
-      <BrandPill tone="amber">Cancelled</BrandPill>
-    ) : session.dbStatus === "requested" ? (
-      <BrandPill tone="amber">Requested</BrandPill>
-    ) : happening ? (
-      <BrandPill tone="blue">Now</BrandPill>
-    ) : session.computedStatus === "past" || session.computedStatus === "completed" ? (
-      session.hasSlotFeedback ? null : <BrandPill tone="sunk">Notes coming</BrandPill>
-    ) : group ? (
-      <BrandPill tone="teal">
-        <Users className="size-3" strokeWidth={1.5} aria-hidden="true" />
-        Group
+  const canceled = session.computedStatus === "canceled" || session.dbStatus === "canceled";
+  const past = session.computedStatus === "past" || session.computedStatus === "completed";
+  const requested = session.dbStatus === "requested";
+  const offered = session.dbStatus === "pending_payment";
+  const needsPay = offered || (session.paymentStatus === "unpaid" && !past && !canceled && !requested);
+  const feedbackReady = past && Boolean(session.hasSlotFeedback);
+  const soon = !past && !canceled && !requested ? startsInLabel(session.start, now) : "";
+
+  const pills = (
+    <>
+      <BrandPill tone={group ? "teal" : "blue"}>
+        {group ? <Users className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <User className="size-3" strokeWidth={1.5} aria-hidden="true" />}
+        {group ? "Group" : "1-on-1"}
       </BrandPill>
+      {pillar && title !== pillar ? <BrandPill tone="teal">{pillar}</BrandPill> : null}
+      {canceled ? <BrandPill tone="amber">Cancelled</BrandPill> : null}
+      {requested ? <BrandPill tone="amber">Requested</BrandPill> : null}
+      {offered ? <BrandPill tone="amber">Offered</BrandPill> : null}
+      {!canceled && !requested && !offered && past ? (
+        feedbackReady ? <BrandPill tone="green">Feedback ready</BrandPill> : <BrandPill tone="amber">Notes coming</BrandPill>
+      ) : null}
+      {!canceled && !requested && !offered && !past && soon ? <BrandPill tone="amber">{soon}</BrandPill> : null}
+    </>
+  );
+
+  const action =
+    needsPay && offered ? (
+      <span className="text-[13px] font-medium text-[#0054B4]">Confirm and pay</span>
+    ) : needsPay ? (
+      <span className="text-[13px] font-medium text-[#0054B4]">
+        ${Math.round(session.rate)} due · Pay now
+      </span>
+    ) : feedbackReady ? (
+      <span className="text-[13px] font-medium text-[#0054B4]">View feedback</span>
     ) : (
-      <BrandPill tone="neutral">
-        <User className="size-3" strokeWidth={1.5} aria-hidden="true" />
-        1-on-1
-      </BrandPill>
+      <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
     );
 
   return (
     <button
       type="button"
       onClick={() => onOpen(session)}
-      className="flex w-full items-center gap-3.5 rounded-[10px] bg-[#F7F7F0] px-3.5 py-3 text-left hover:bg-[#F4F4EB]"
+      className={cn(
+        "flex w-full flex-col gap-2.5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-3.5 py-3 text-left hover:border-[#C1C1B8]",
+        canceled && "opacity-60"
+      )}
     >
-      <span className="flex size-[52px] shrink-0 flex-col items-center justify-center rounded-[8px] bg-[#F4F4EB]">
-        <small className="text-[10px] font-medium uppercase leading-[12px] text-[#767980]">
-          {formatDayISO(getZonedISODate(start, timeZone), { weekday: "short" })}
-        </small>
-        <b className="text-[20px] font-bold leading-[22px]">{formatDayISO(getZonedISODate(start, timeZone), { day: "numeric" })}</b>
-      </span>
-      <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="truncate text-[14px] font-medium leading-[18px]">{sessionListTitle(session)}</span>
-        <span className={cn(meta, "truncate")}>
-          {formatInstantSpan(start, end, timeZone)}, {place}
+      <span className="flex w-full items-start gap-3.5">
+        <SessionDateTile day={dayISO} />
+        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+          <span className="flex flex-wrap gap-1.5">{pills}</span>
+          <span className="truncate text-[15px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{title}</span>
+          <span className={cn(meta, "truncate")}>
+            {formatInstantSpan(start, end, timeZone)} · {place}
+          </span>
+          {session.coachName ? (
+            <span className="flex items-center gap-2 text-[12px] text-[#484D56]">
+              <span className="flex size-6 items-center justify-center rounded-full bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]">
+                {coachInitials(session.coachName)}
+              </span>
+              {session.coachName}
+            </span>
+          ) : null}
+          {past && !feedbackReady ? (
+            <span className="rounded-[8px] border-l-[3px] border-[#117A96] bg-[#E7F4F8] px-2.5 py-1.5 text-[12px] leading-[16px] text-[#117A96]">
+              Your coach is writing notes for this session.
+            </span>
+          ) : null}
         </span>
-      </span>
-      <span className="flex shrink-0 items-center gap-2">
-        {pill}
-        <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <span className="flex shrink-0 items-center self-center">{action}</span>
       </span>
     </button>
   );
@@ -215,9 +273,11 @@ export const AthleteSessionsList = ({
           {groups.map(([g, rows]) => (
             <div key={g} className="flex flex-col">
               <span className="px-1 pb-1.5 pt-3 text-[12px] font-medium text-[#767980] first:pt-0">{g}</span>
-              {rows.map((s) => (
-                <Row key={s.bookingId || s.id} session={s} timeZone={timeZone} onOpen={onOpen} />
-              ))}
+              <div className="flex flex-col gap-2">
+                {rows.map((s) => (
+                  <AthleteSessionCard key={s.bookingId || s.id} session={s} timeZone={timeZone} onOpen={onOpen} />
+                ))}
+              </div>
             </div>
           ))}
           {filtered.length > limit ? (

@@ -176,6 +176,25 @@ All colors MUST be HSL.
     @apply border-border;
   }
 
+  /* Force light form control colors so dark-mode OS / browsers do not paint
+     inputs and selects white-on-cream (or dark chrome) over the cream UI. */
+  :root {
+    color-scheme: light;
+  }
+
+  input,
+  select,
+  textarea {
+    color-scheme: light;
+    background-color: #f9f9f5;
+    color: #1a202c;
+  }
+
+  option {
+    background-color: #f9f9f5;
+    color: #1a202c;
+  }
+
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }

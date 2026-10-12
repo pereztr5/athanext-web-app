@@ -8,6 +8,7 @@ import { cn } from "@/lib/utils";
 import { bookableStart, money } from "@/utils/booking";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, plural } from "@/utils/schedule";
+import { FeeLines } from "./FeeLines";
 import { firstName, reviewLabel, type BookingPlan } from "./bookSummary";
 
 const between = "flex items-center justify-between gap-3";
@@ -128,12 +129,7 @@ export const BookingSummary = ({
                 <span className="text-[14px] tabular-nums text-[#A3A6AB]">{money(plan.ifAccepted)}</span>
               </div>
             ) : null}
-            {plan.fees ? (
-              <div className={between}>
-                <span className="text-[14px] text-[#767980]">Platform fee</span>
-                <span className="text-[14px] tabular-nums">{money(plan.fees)}</span>
-              </div>
-            ) : null}
+            <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
             <div className="h-px bg-[#EAEADF]" />
             <div className={cn(between, "items-baseline")}>
               <span className="text-[16px] font-medium">{plan.direct.length ? "Due now" : "Total"}</span>

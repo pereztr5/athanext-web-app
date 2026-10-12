@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Children, memo, useEffect, useMemo, useState } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -13,6 +13,7 @@ import {
   Info,
   MapPin,
   PlayCircle,
+  Plus,
   Search,
 } from "lucide-react";
 
@@ -39,8 +40,10 @@ import { useSportPillars } from "@/hooks/useSportPillars";
 import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
 import { AthleteSessionsList, sessionListTitle } from "@/components/my-session/AthleteSessionsList";
-import { CoachSessionCard, CoachSessionSection } from "@/components/my-session/CoachSessionCard";
+import { CoachSessionCard, CoachSessionList } from "@/components/my-session/CoachSessionCard";
 import { useOccurrenceInfo, type CoachCardKind } from "@/components/my-session/coachSessions";
+import { pageTitle, primaryButton, segButton, segGroup } from "@/components/schedule/styles";
+import { ROUTES } from "@/routes";
 import {
   upsertSlotFeedback,
   getExistingFeedback,
@@ -235,10 +238,11 @@ const calculatePlatformFee = (
   rate: number | null | undefined,
   platformFeePerc = 0,
   stripeFeePerc = 0,
-  waived = false
+  waived = false,
+  stripeFeeFixed = 0,
 ) => {
   // Same total create-booking-payment sends to Stripe (platform fee waived for existing clients).
-  const p = computeSessionPrice(Number(rate) || 0, platformFeePerc || 0, stripeFeePerc || 0, waived);
+  const p = computeSessionPrice(Number(rate) || 0, platformFeePerc || 0, stripeFeePerc || 0, waived, stripeFeeFixed || 0);
   return { baseRate: p.base, platformFee: p.platformFee + p.stripeFee, totalRate: p.total };
 };
 
@@ -247,11 +251,12 @@ const sessionPriceLabel = (
   role: UserRole,
   platformFeePerc: number,
   stripeFeePerc: number,
-  waived = false
+  waived = false,
+  stripeFeeFixed = 0,
 ) =>
   formatWholePrice(
     role === PROFILE_TYPE.athlete
-      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc, waived).totalRate
+      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc, waived, stripeFeeFixed).totalRate
       : session.rate,
     session.currency
   );
@@ -498,6 +503,7 @@ const MySessions = () => {
     pillar: "all",
   });
   const [now, setNow] = useState(() => new Date());
+  const [coachTab, setCoachTab] = useState<CoachCardKind>("up");
   const [selectedSession, setSelectedSession] = useState<UISession | null>(null);
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [rateSession, setRateSession] = useState<UISession | null>(null);
@@ -515,7 +521,7 @@ const MySessions = () => {
     edit_count: number | null;
   } | null>(null);
   const [isLoadingExistingFeedback, setIsLoadingExistingFeedback] = useState(false);
-  const { platformFeePerc, stripeFeePerc } = useFeeConfig();
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
 
   const { toast } = useToast();
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
@@ -1038,38 +1044,56 @@ const MySessions = () => {
       session={session}
       kind={kind}
       now={now}
-      date={formatWeekdayDate(session.start, now, timeZone)}
+      dayISO={getZonedISODate(new Date(session.start), timeZone)}
       time={formatTimeSpan(session.start, session.end, timeZone, true)}
       location={coachLocation(session)}
-      price={sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc)}
       info={session.occurrenceId ? occurrenceInfo[session.occurrenceId] : undefined}
       hasFeedback={hasSubmittedFeedback(session)}
       onViewDetails={() => openSession(session)}
     />
   );
 
+  const coachTabs: [CoachCardKind, string, UISession[], string][] = [
+    ["now", `In progress ${inProgressSessions.length}`, inProgressSessions, "No sessions in progress"],
+    ["up", `Upcoming ${upcomingSessions.length}`, upcomingSessions, "No upcoming sessions. Create one from My Schedule."],
+    ["past", `Previous ${pastCompletedSessions.length}`, pastCompletedSessions, "No previous sessions yet"],
+  ];
+  const activeCoach = coachTabs.find(([id]) => id === coachTab) ?? coachTabs[1];
+
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className={cn("mx-auto flex w-full flex-col gap-6", isCoach ? "max-w-[920px]" : "max-w-[1000px]")}>
         {isCoach ? (
           <>
-        <div className="flex flex-col gap-[10px]">
-          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">
-            My Sessions
-          </h1>
-            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-              Check in athletes and send feedback after each session.
-            </p>
-        </div>
-            <CoachSessionSection kind="now" title="In progress sessions" empty="No sessions in progress">
-              {inProgressSessions.map((session) => renderCoachCard(session, "now"))}
-            </CoachSessionSection>
-            <CoachSessionSection kind="up" title="Upcoming sessions" empty="No upcoming sessions. Create one from My Schedule.">
-              {upcomingSessions.map((session) => renderCoachCard(session, "up"))}
-            </CoachSessionSection>
-            <CoachSessionSection kind="past" title="Previous sessions" empty="No previous sessions yet">
-              {pastCompletedSessions.map((session) => renderCoachCard(session, "past"))}
-            </CoachSessionSection>
+            <header className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-2.5">
+                <h1 className={pageTitle}>My Sessions</h1>
+                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                  Review your sessions and add notes for families.
+                </p>
+              </div>
+              <Link to={ROUTES.SCHEDULE_CREATE} className={primaryButton}>
+                <Plus strokeWidth={1.5} aria-hidden="true" />
+                Create session
+              </Link>
+            </header>
+            <div className={cn(segGroup, "w-fit flex-wrap")} role="tablist" aria-label="Session lists">
+              {coachTabs.map(([id, label]) => (
+                <button
+                  key={id}
+                  type="button"
+                  role="tab"
+                  aria-selected={coachTab === id}
+                  className={cn(segButton(coachTab === id), "flex-none")}
+                  onClick={() => setCoachTab(id)}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+            <CoachSessionList empty={activeCoach[3]}>
+              {activeCoach[2].map((session) => renderCoachCard(session, activeCoach[0]))}
+            </CoachSessionList>
           </>
         ) : (
           <AthleteSessionsList
@@ -1101,7 +1125,8 @@ const MySessions = () => {
                   selectedSessionSafe.rate,
                   platformFeePerc,
                   stripeFeePerc,
-                  waivedCoachIds.has(selectedSessionSafe.coachId)
+                  waivedCoachIds.has(selectedSessionSafe.coachId),
+                  stripeFeeFixed,
                 ).totalRate
               : Number(selectedSessionSafe.rate) || 0;
             const athleteCount = Number(selectedSessionSafe.totalAthletes) || 0;

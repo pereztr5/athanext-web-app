@@ -1,7 +1,11 @@
 import { Navigate, useLocation } from "react-router-dom";
+import { ROUTES } from "@/routes";
 
-/** /my-clients moved to /invites; keeps the query (Auth sends ?onboarding=1). */
+/** `/invites` and `/my-clients` open the Invites tab on My Athletes. Keeps onboarding query. */
 export const MyClientsRedirect = () => {
   const { search } = useLocation();
-  return <Navigate to={`/invites${search}`} replace />;
+  const params = new URLSearchParams(search);
+  params.set("tab", "invites");
+  const q = params.toString();
+  return <Navigate to={`${ROUTES.ATHLETES}?${q}`} replace />;
 };

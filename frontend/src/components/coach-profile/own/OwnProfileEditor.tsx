@@ -24,6 +24,7 @@ import type { Brand } from "@/utils/brands";
 import { AGE_AND_UP } from "@/utils/coachAges";
 import { hasRichTextMarkup, stripRichTextToPlainText } from "@/utils/richText";
 import { BrandLogos } from "../BrandLogos";
+import { organizationsForProfile } from "../organizationLogos";
 import type { CoachProfileData, ProfileReview } from "../CoachProfileView";
 import type { CoachFaqItem } from "../FAQSection";
 import { GearAndDealsCard } from "../GearAndDealsCard";
@@ -425,7 +426,7 @@ export const OwnProfileEditor = ({
                 ["Individual sessions", from ? `From ${money(from)}` : "Not set"],
                 ["Locations", (coach.locations ?? []).join(", ") || locationLabel || "Not set"],
                 ["Usually replies", repliesLabel(coach.response_time_hours)],
-                ["Verified", coach.is_verified ? "Background check" : "Not yet"],
+                ["Verified", coach.is_verified ? "Yes" : "Not yet"],
               ].map(([l, v]) => (
                 <div key={l} className="flex min-w-0 flex-col gap-1">
                   <span className={label}>{l}</span>
@@ -523,18 +524,9 @@ export const OwnProfileEditor = ({
               Certifications and credentials
             </h2>
             <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              {coach.is_verified ? (
-                <div className="flex items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-4">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#CBE7D1] text-[#1E7431]">
-                    <Check className="size-4" strokeWidth={2} aria-hidden="true" />
-                  </span>
-                  <span className="flex min-w-0 flex-col gap-1">
-                    <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">Background check</span>
-                    <span className={caption}>Verified by AthaNext</span>
-                  </span>
-                </div>
-              ) : null}
-              {(coach.certifications ?? []).map((cert, i) => (
+              {(coach.certifications ?? [])
+                .filter((cert) => (cert.certification_name ?? "").trim().toLowerCase() !== "background check")
+                .map((cert, i) => (
                 <div key={cert.id ?? i} className="flex items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-4">
                   <span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#CBE7D1] text-[#1E7431]">
                     <Check className="size-4" strokeWidth={2} aria-hidden="true" />
@@ -686,15 +678,15 @@ export const OwnProfileEditor = ({
             onSaved={onCoachUpdated}
           />
 
-          <section className={card} aria-label="Brands you use">
+          <section className={card} aria-label="Organizations">
             <div className="flex items-center justify-between gap-3">
-              <h2 className={h2}>Brands you use</h2>
+              <h2 className={h2}>Organizations</h2>
               <button type="button" className={cn(secondaryButton, smallButton)} onClick={onManageBrands}>
                 Manage
               </button>
             </div>
-            <BrandLogos brands={brands} />
-            <span className={caption}>Gear from these brands shows first under Gear and deals.</span>
+            <BrandLogos brands={organizationsForProfile(coach.id, brands)} />
+            <span className={caption}>Logos show near the top of your profile. Matching gear shows first under Gear and deals.</span>
           </section>
         </div>
       </div>

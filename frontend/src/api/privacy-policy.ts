@@ -81,7 +81,7 @@ const DEMO_PRIVACY_POLICY: PrivacyPolicyContent = {
       </section>
     </div>
   `,
-  last_updated: 'March 16, 2025',
+  last_updated: '2025-03-16',
   is_published: true,
   created_at: new Date().toISOString(),
   updated_at: new Date().toISOString(),

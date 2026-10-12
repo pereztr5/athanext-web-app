@@ -7,7 +7,8 @@ import { supabase } from '@/integrations/supabase/client';
 import { cleanBrandName, findBrandByName, type Brand } from '@/utils/brands';
 
 const BRAND_COLUMNS = 'id, name, logo_url, website, created_by';
-const db = supabase;
+/** Brands live in public; this project’s PostgREST default schema is api. */
+const db = supabase.schema('public');
 
 export interface BrandInput {
   name: string;

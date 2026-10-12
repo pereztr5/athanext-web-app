@@ -79,12 +79,11 @@ export type StepName =
   | "Bio"
   | "Pillars and pricing"
   | "Availability"
-  | "Background check"
   | "Payout details"
   | "Coaching video"
   | "Certifications";
 
-/** The Working Copy's 8 completeness steps, from the data we have. */
+/** Completeness steps for the coach's own profile. */
 export const useCompleteness = (coach: CoachProfileData & { image_url?: string | null; profile_image_url?: string | null }, extras: CoachProfileExtras | undefined) => {
   const payout = useQuery({ queryKey: ["payout-account"], queryFn: () => payoutsAPI.status(), retry: false, staleTime: 5 * 60_000 });
   const needsAvailabilityFallback = extras?.hasAvailability == null;
@@ -97,7 +96,6 @@ export const useCompleteness = (coach: CoachProfileData & { image_url?: string |
     ["Bio", Boolean(coach.bio?.trim())],
     ["Pillars and pricing", Boolean(coach.specialties?.length) && priced],
     ["Availability", hasAvailability],
-    ["Background check", Boolean(coach.is_verified)],
     // Coaches who take payment themselves have nothing to connect.
     ["Payout details", coach.pay_mode === "self" || Boolean(payout.data?.connected && payout.data.transfersActive)],
     ["Coaching video", Boolean(extras?.coachingVideoUrl)],

@@ -10,12 +10,10 @@ import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { ArrowLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
-import CoachSchedulingModal from "@/components/coach/CoachSchedulingModal";
 import { BookSessionButton } from "@/components/coach/BookSessionFlow";
 import { ReviewModal } from "@/components/reviews/ReviewModal";
 import { FreeConsultationInfoDialog } from "@/components/coach/FreeConsultationInfoDialog";
 import { useReviews } from "@/hooks/useReviews";
-import { BookingType } from "@/types/common";
 import { CoachAvailabilitySlot } from "@/types/availability";
 import {
   CoachHeader,
@@ -39,7 +37,6 @@ import { coachPricingPath, coachProfilePath } from "@/utils/coachSlug";
 import { recordCoachShareEvent } from "@/api/coachShare";
 import { ROUTES } from "@/routes";
 import { supabase } from "@/integrations/supabase/client";
-import { toBookSlotPayload } from "@/utils/slotBooking";
 import type { SlotOccurrence } from "@/types/availabilityWithOccurrences";
 
 const CoachProfile = () => {
@@ -58,17 +55,8 @@ const CoachProfile = () => {
   const { coach, loading, error } = useCoachDetails(resolvedCoachKey);
   const { data: packages = [], isLoading: packagesLoading } = useCoachPackages(coach?.id);
   const { data: coachBrands = [] } = useCoachBrands(coach?.id);
-  const [serviceType, setServiceType] = useState<BookingType>(BookingType.SingleSession);
-  const [showSchedulingModal, setShowSchedulingModal] = useState(false);
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [showFreeConsultInfo, setShowFreeConsultInfo] = useState(false);
-  const [selectedSlotBooking, setSelectedSlotBooking] = useState<{
-    slot: CoachAvailabilitySlot;
-    date: string;
-    availabilityId: string;
-    weekStart: string;
-    occurrenceId: string;
-  } | null>(null);
   const { reviews = [], averageRating = 0, ratingDistribution = {}, totalReviews = 0, submitReview } = useReviews(coach?.id);
   const [startingChat, setStartingChat] = useState(false);
   const [showChatPanel, setShowChatPanel] = useState(false);
@@ -128,11 +116,10 @@ const CoachProfile = () => {
         scrollToSection(availabilitySectionRef);
         return;
       }
-      handleBookSlot(toBookSlotPayload(occ));
+      navigate(`${ROUTES.BOOK}?coach=${coach.id}`);
     })();
-    // handleBookSlot only sets state; leaving it out keeps this to one run per link.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [sharedSessionId, loading, coach?.id, user, canBookSlots]);
+  }, [sharedSessionId, loading, coach?.id, user, canBookSlots, navigate]);
 
   // Only feeds CoachHeader's required sportTheme prop; colours come from the brand kit now
   const getSportTheme = () => {
@@ -150,23 +137,35 @@ const CoachProfile = () => {
 
   const sportTheme = getSportTheme();
 
-  const handleBookSlot = (payload: {
+  const goToBook = useCallback(() => {
+    if (!coach?.id) return;
+    const bookPath = `${ROUTES.BOOK}?coach=${coach.id}`;
+    if (!user) {
+      navigate(`${ROUTES.AUTH}?mode=signin`, { state: { from: { pathname: ROUTES.BOOK, search: `?coach=${coach.id}` } } });
+      return;
+    }
+    navigate(bookPath);
+  }, [coach?.id, navigate, user]);
+
+  const handleBookSlot = (_payload: {
     slot: CoachAvailabilitySlot;
     date: string;
     availabilityId: string;
     weekStart: string;
     occurrenceId: string;
   }) => {
-    setSelectedSlotBooking(payload);
-    setServiceType(BookingType.SingleSession);
-    setShowSchedulingModal(true);
+    goToBook();
   };
 
   const handleGuestSignInRedirect = useCallback(() => {
+    if (!coach?.id) {
+      navigate(`${ROUTES.AUTH}?mode=signin`);
+      return;
+    }
     navigate(`${ROUTES.AUTH}?mode=signin`, {
-      state: { scrollTo: "availability" },
+      state: { from: { pathname: ROUTES.BOOK, search: `?coach=${coach.id}` } },
     });
-  }, [navigate]);
+  }, [coach?.id, navigate]);
 
   // Handle errors
   if (error) {
@@ -315,16 +314,6 @@ const CoachProfile = () => {
         />
         {coach ? (
           <>
-            <CoachSchedulingModal
-              isOpen={showSchedulingModal}
-              onClose={() => {
-                setShowSchedulingModal(false);
-                setSelectedSlotBooking(null);
-              }}
-              coach={coach}
-              serviceType={serviceType}
-              prefillSlot={selectedSlotBooking}
-            />
             <ReviewModal
               open={showReviewModal}
               onOpenChange={setShowReviewModal}
@@ -440,17 +429,6 @@ const CoachProfile = () => {
       {/* Modals */}
       {coach && (
         <>
-          <CoachSchedulingModal
-            isOpen={showSchedulingModal}
-            onClose={() => {
-              setShowSchedulingModal(false);
-              setSelectedSlotBooking(null);
-            }}
-            coach={coach}
-            serviceType={serviceType}
-            prefillSlot={selectedSlotBooking}
-          />
-
           <ReviewModal
             open={showReviewModal}
             onOpenChange={setShowReviewModal}
@@ -463,9 +441,7 @@ const CoachProfile = () => {
             onClose={() => setShowFreeConsultInfo(false)}
             onContinue={() => {
               setShowFreeConsultInfo(false);
-              setSelectedSlotBooking(null);
-              setServiceType(BookingType.FreeConsultation);
-              setShowSchedulingModal(true);
+              goToBook();
             }}
             coachId={coach.id}
             coachName={coach.name}

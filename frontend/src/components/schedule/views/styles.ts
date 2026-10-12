@@ -54,7 +54,7 @@ export const rowLink = "inline-flex flex-none items-center gap-0.5 text-[12px] f
 
 /** Week arrows (`.ibtn.box`). */
 export const navArrow =
-  "inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] transition-colors hover:bg-[#F4F4EB] [&>svg]:size-4";
+  "inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] transition-colors hover:bg-[#F4F4EB] disabled:cursor-not-allowed disabled:opacity-40 [&>svg]:size-4";
 
 /** The calendar card (`.sch-card`): no card chrome on phone. */
 export const calendarCard =

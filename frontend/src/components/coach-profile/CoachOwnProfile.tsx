@@ -136,7 +136,6 @@ export function CoachOwnProfile({
     else if (step === "Certifications") onEditCertifications();
     else if (step === "Payout details") navigate(`${ROUTES.SETTINGS}?tab=booking`);
     else if (step === "Availability") navigate(ROUTES.SCHEDULE);
-    else if (step === "Background check") toast({ title: "AthaNext runs your background check", description: "We'll email you when it's done." });
     else {
       if (!editing) onStartEdit();
       toast({ title: step === "Profile photo" ? "Use Add photo under your picture" : "Fill it in on your profile" });
@@ -189,6 +188,7 @@ export function CoachOwnProfile({
             locationLabel={locationLabel}
             organization={organization}
             faqs={shownFaqs}
+            brands={brands}
             brandNames={brands.map((brand) => brand.name)}
             cancellation={cancellation}
             completeness={completeness}

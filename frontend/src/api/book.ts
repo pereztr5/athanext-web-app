@@ -22,9 +22,14 @@ export interface BookingCoach {
   /** New family and the coach approves new families first. */
   needsRequest: boolean;
   credits: number;
-  /** Booking only (ATH-86): the family pays the coach directly, nothing is charged in AthaNext. */
+  /**
+   * Legacy booking-only (ATH-86): every booking is paid to the coach outside AthaNext.
+   * WC4 replaces this with card always on + optional offline for invited clients.
+   */
   paysDirect: boolean;
   payNote: string | null;
+  /** Coach accepts Cash/Zelle/Venmo from invited clients (WC4 offline pay). */
+  offlinePayAvailable: boolean;
   nextSession: { date: string; startTime: string } | null;
   nextOpen: { date: string; startTime: string } | null;
   nextGroup: { date: string; startTime: string; spotsLeft: number; capacity: number; name: string } | null;
@@ -70,6 +75,7 @@ const mapCoach = (row: Row): BookingCoach => ({
   credits: Number(row.credits) || 0,
   paysDirect: row.pay_mode === "self",
   payNote: row.pay_note ?? null,
+  offlinePayAvailable: Boolean(row.offline_pay_available),
   nextSession: row.next_session ? { date: row.next_session.date, startTime: row.next_session.start_time } : null,
   nextOpen: row.next_open ? { date: row.next_open.date, startTime: row.next_open.start_time } : null,
   nextGroup: row.next_group
@@ -149,10 +155,24 @@ export const bookAPI = {
   async checkout(
     occurrenceIds: string[],
     athleteId: string,
-    useCredits = true
-  ): Promise<{ url?: string; requested?: boolean; direct?: boolean; booked?: boolean; creditsUsed: number; bookingIds: string[] }> {
+    useCredits = true,
+    payOffline = false
+  ): Promise<{
+    url?: string;
+    requested?: boolean;
+    direct?: boolean;
+    offline?: boolean;
+    booked?: boolean;
+    creditsUsed: number;
+    bookingIds: string[];
+  }> {
     const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
-      body: { occurrence_ids: occurrenceIds, athlete_id: athleteId, use_credits: useCredits },
+      body: {
+        occurrence_ids: occurrenceIds,
+        athlete_id: athleteId,
+        use_credits: useCredits,
+        ...(payOffline ? { pay_offline: true } : {}),
+      },
     });
     if (error) {
       const context = (error as { context?: Response }).context;
@@ -164,6 +184,7 @@ export const bookAPI = {
       url: data?.url,
       requested: Boolean(data?.requested),
       direct: Boolean(data?.direct),
+      offline: Boolean(data?.offline),
       booked: Boolean(data?.booked),
       creditsUsed: Number(data?.credits_used) || 0,
       /** Credits-only and pay-direct calls return the bookings they made; Stripe ones don't. */

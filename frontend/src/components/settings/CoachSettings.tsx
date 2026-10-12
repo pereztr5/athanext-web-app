@@ -1,21 +1,22 @@
 /**
- * Coach Account Settings (ATH-87). Five tabs that edit in place: Account, Notifications,
- * Booking and calendar, Privacy and safety, Password and account. Account fields show a save
- * bar once something changes; switches save as soon as they flip. AthaNext stores no card or
- * bank details; payouts are set up on Stripe's pages.
+ * Coach Account Settings (ATH-87 + ATH-102/103 Plan tab). Tabs edit in place: Account,
+ * Notifications, Booking and calendar, Plan, Privacy and safety, Password and account.
+ * Account fields show a save bar once something changes; switches save as soon as they flip.
+ * AthaNext stores no card or bank details; payouts and the $29 plan are set up on Stripe's pages.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CalendarSync, Download, Lock, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
+import { Banknote, Bell, CalendarSync, CreditCard, Download, Eye, EyeOff, Lock, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
 import { coachesAPI, userProfilesAPI } from "@/api";
 import { scheduleAPI } from "@/api/schedule";
 import { BookingRulesSection, CalendarSyncSection } from "@/components/schedule/BookingSettings";
 import { card, dangerButton, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
 import { Switch } from "@/components/ui/switch";
+import { LegalCard } from "@/components/legal/LegalLinks";
+import { CoachPlanCard } from "@/components/settings/CoachPlanCard";
 import { PayoutsCard } from "@/components/settings/PayoutsCard";
-import { ToastAction } from "@/components/ui/toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { PASSWORD_RULE_MESSAGE, usePasswordValidation } from "@/hooks/usePasswordValidation";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -28,6 +29,13 @@ import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { downloadJson } from "@/utils/download";
 import {
+  activeOfflineMethods,
+  OFFLINE_METHODS,
+  parseOfflinePay,
+  type OfflineMethodKey,
+  type OfflinePay,
+} from "@/utils/offlinePay";
+import {
   COACH_NOTIFICATIONS,
   DEACTIVATE_WORD,
   joinName,
@@ -37,14 +45,16 @@ import {
   type NotificationChannel,
 } from "@/utils/settings";
 
-type Tab = "account" | "notifications" | "booking" | "privacy" | "security";
+type Tab = "account" | "notifications" | "booking" | "plan" | "privacy" | "security" | "legal";
 
 const TABS: [Tab, string][] = [
   ["account", "Account"],
   ["notifications", "Notifications"],
   ["booking", "Booking and calendar"],
+  ["plan", "Plan"],
   ["privacy", "Privacy and safety"],
   ["security", "Password and account"],
+  ["legal", "Legal"],
 ];
 
 const cardTitle = "flex items-center gap-2 text-[20px] font-medium leading-[22px] tracking-[-1px] text-[#1A202C]";
@@ -161,7 +171,7 @@ export const CoachSettings = () => {
 
   return (
     <SettingsShell<Tab>
-      subtitle="Account, notifications, booking and calendar."
+      subtitle="Account, notifications, booking, plan and calendar."
       tabs={TABS}
       defaultTab="account"
       dirty={accountDirty}
@@ -176,14 +186,15 @@ export const CoachSettings = () => {
           {tab === "booking" && coachId ? (
             <BookingTab
               coachId={coachId}
-              payMode={(coach as { pay_mode?: string } | undefined)?.pay_mode === "self" ? "self" : "app"}
-              payNote={(coach as { pay_note?: string | null } | undefined)?.pay_note ?? ""}
+              offlinePay={(coach as { offline_pay?: unknown } | undefined)?.offline_pay}
             />
           ) : null}
+          {tab === "plan" ? <CoachPlanCard /> : null}
           {tab === "privacy" && coachId ? <PrivacyTab coachId={coachId} listed={(coach as { listed?: boolean } | undefined)?.listed !== false} /> : null}
           {tab === "security" && coachId ? (
             <SecurityTab danger={!deactivated ? <DeactivateCard coachId={coachId} /> : null} />
           ) : null}
+          {tab === "legal" ? <LegalCard role="coach" /> : null}
         </>
       )}
     />
@@ -343,119 +354,166 @@ export const NotificationsTab = ({ kinds, caption }: { kinds: typeof COACH_NOTIF
 
 /* ---------- Booking and calendar ---------- */
 
-const PAY_MODES: { value: "app" | "self"; title: string; detail: string }[] = [
-  { value: "app", title: "Through AthaNext", detail: "Families pay by card when they book. Stripe pays you out." },
-  {
-    value: "self",
-    title: "Booking only",
-    detail: "Families book and schedule through AthaNext and pay you themselves, in cash, Venmo or however you like.",
-  },
-];
-
-/** How families pay (ATH-86): in the app, or booking only with a note on how to pay the coach. */
-const HowFamiliesPay = ({ coachId, payMode, payNote }: { coachId: string; payMode: "app" | "self"; payNote: string }) => {
+/** Card always on; optional offline pay for invited clients (WC4). */
+const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: unknown }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const [mode, setMode] = useState(payMode);
-  const [note, setNote] = useState(payNote);
-  useEffect(() => setMode(payMode), [payMode]);
-  useEffect(() => setNote(payNote), [payNote]);
+  const [pay, setPay] = useState<OfflinePay>(() => parseOfflinePay(offlinePay));
+  useEffect(() => setPay(parseOfflinePay(offlinePay)), [offlinePay]);
 
-  const save = async (patch: { pay_mode?: "app" | "self"; pay_note?: string | null }) => {
-    const { error } = await coachesAPI.updateCoach(coachId, patch);
+  const save = async (next: OfflinePay) => {
+    const { error } = await coachesAPI.updateCoach(coachId, {
+      offline_pay: next as unknown as Json,
+      pay_mode: "app",
+      pay_note: next.note.trim() || null,
+    });
     if (error) throw new Error(error.message);
     queryClient.invalidateQueries({ queryKey: ["coach-details"] });
     queryClient.invalidateQueries({ queryKey: ["coach-pay-mode"] });
   };
 
-  const choose = async (next: "app" | "self") => {
-    if (next === mode) return;
-    const previous = mode;
-    setMode(next);
+  const patch = async (next: OfflinePay, okTitle?: string) => {
+    const previous = pay;
+    setPay(next);
     try {
-      await save({ pay_mode: next });
-      toast({
-        title: next === "self" ? "Booking only is on" : "Families pay through AthaNext again",
-        description: "Only new bookings change. Sessions already paid in AthaNext stay as they are.",
-        duration: 10000,
-        action: (
-          <ToastAction
-            altText="Undo"
-            onClick={() => {
-              setMode(previous);
-              void save({ pay_mode: previous }).catch(() => undefined);
-            }}
-          >
-            Undo
-          </ToastAction>
-        ),
-      });
+      await save(next);
+      if (okTitle) toast({ title: okTitle });
     } catch (err) {
-      setMode(previous);
+      setPay(previous);
       toast({ title: "Couldn't save", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
     }
   };
 
+  const ready = activeOfflineMethods(pay).length > 0;
+  const row = (key: OfflineMethodKey) => {
+    const def = OFFLINE_METHODS.find((m) => m.key === key)!;
+    const m = pay.methods[key];
+    const missing = m.on && def.needsHandle && !m.handle.trim();
+    return (
+      <div key={key} className="flex flex-col gap-1.5">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="flex items-center gap-2 text-[14px] font-medium">
+            <input
+              type="checkbox"
+              className="size-4 rounded border-[#C1C1B8]"
+              checked={m.on}
+              onChange={(e) => {
+                const next = {
+                  ...pay,
+                  methods: { ...pay.methods, [key]: { ...m, on: e.target.checked } },
+                };
+                void patch(next);
+              }}
+            />
+            {def.label}
+          </label>
+          {def.needsHandle ? (
+            <input
+              className={cn(input, "min-w-0 flex-1", missing ? "border-[#E05A5A]" : "")}
+              value={m.handle}
+              disabled={!m.on}
+              placeholder={def.placeholder}
+              maxLength={80}
+              aria-label={`${def.label} ${def.placeholder}`}
+              onChange={(e) => setPay({ ...pay, methods: { ...pay.methods, [key]: { ...m, handle: e.target.value } } })}
+              onBlur={() => {
+                const saved = parseOfflinePay(offlinePay).methods[key].handle;
+                if (m.handle.trim() === saved.trim()) return;
+                void patch(pay);
+              }}
+            />
+          ) : (
+            <span className={cn(meta, "grow")}>Paid in person at the session</span>
+          )}
+        </div>
+        {missing ? (
+          <span className="text-[12px] text-[#972B2B]">
+            Add your {def.label} {key === "venmo" ? "username" : "email or phone number"} so families know where to send it
+          </span>
+        ) : null}
+      </div>
+    );
+  };
+
   return (
     <Card icon={<Wallet className="size-5 text-[#767980]" strokeWidth={1.5} />} title="How families pay">
-      <div className="flex flex-col gap-2" role="radiogroup" aria-label="How families pay">
-        {PAY_MODES.map((option) => {
-          const on = mode === option.value;
-          return (
-            <button
-              key={option.value}
-              type="button"
-              role="radio"
-              aria-checked={on}
-              onClick={() => void choose(option.value)}
-              className={cn(
-                "flex items-start gap-3 rounded-[8px] border px-4 py-3 text-left transition-colors",
-                on ? "border-[#CCDDF0] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F9F9F5] hover:bg-[#F4F4EB]"
-              )}
-            >
-              <span
-                className={cn("mt-[3px] size-3 shrink-0 rounded-full border bg-white", on ? "border-[3px] border-[#0054B4]" : "border-[#C1C1B8]")}
-                aria-hidden="true"
-              />
-              <span className="flex flex-col gap-1">
-                <b className="text-[14px] font-medium">{option.title}</b>
-                <span className={meta}>{option.detail}</span>
-              </span>
-            </button>
-          );
-        })}
+      <div className="flex items-start gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-4 py-3">
+        <CreditCard className="mt-0.5 size-5 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <span className="flex min-w-0 grow flex-col gap-1">
+          <b className="text-[14px] font-medium">Card and Apple Pay</b>
+          <span className={meta}>
+            Families pay when they book. A payment processing fee of 2.9% + $0.30 is added at checkout as its own line. Stripe pays you out.
+          </span>
+        </span>
+        <span className="shrink-0 rounded-full bg-[#EAEADF] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#484D56]">
+          Always on
+        </span>
       </div>
-      {mode === "self" ? (
-        <Field label="How families pay you (optional)" hint="Shown to families when they book. AthaNext doesn't charge or track these payments.">
-          <input
-            className={input}
-            value={note}
-            maxLength={200}
-            placeholder="For example, Venmo @your-name or cash at the session"
-            onChange={(e) => setNote(e.target.value)}
-            onBlur={() => {
-              if (note.trim() === payNote.trim()) return;
-              save({ pay_note: note.trim() || null })
-                .then(() => toast({ title: "Saved" }))
-                .catch(() => toast({ title: "Couldn't save the note", variant: "destructive" }));
-            }}
-          />
-        </Field>
-      ) : (
-        <p className={meta}>AthaNext never stores your card or bank details.</p>
-      )}
+      <div className="flex items-start gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-4 py-3">
+        <Banknote className="mt-0.5 size-5 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <span className="flex min-w-0 grow flex-col gap-1">
+          <b className="text-[14px] font-medium">Offline payment</b>
+          <span className={meta}>
+            Let your existing clients choose to pay you directly. They pay your price with no processing fee, and AthaNext doesn&apos;t handle the
+            money.
+          </span>
+        </span>
+        <Switch
+          checked={pay.on}
+          aria-label="Offline payment"
+          onCheckedChange={(on) => {
+            const next = { ...pay, on };
+            void patch(next, on ? "Families can now choose to pay you directly" : "Offline payment is off. Families pay by card");
+          }}
+        />
+      </div>
+      {pay.on ? (
+        <>
+          <div className="flex flex-col gap-3">
+            <span className={label}>Methods you accept</span>
+            {OFFLINE_METHODS.map((m) => row(m.key))}
+          </div>
+          <Field label="Note for families (optional)">
+            <input
+              className={input}
+              value={pay.note}
+              maxLength={200}
+              placeholder="For example, please pay before the session starts"
+              onChange={(e) => setPay({ ...pay, note: e.target.value })}
+              onBlur={() => {
+                if (pay.note.trim() === parseOfflinePay(offlinePay).note.trim()) return;
+                void patch(pay, "Saved");
+              }}
+            />
+          </Field>
+          {ready ? (
+            <>
+              <p className={cn(meta, "rounded-[8px] bg-[#F4F4EB] px-3 py-2")}>
+                Only families you invited see this option. Marketplace families always pay by card in AthaNext.
+              </p>
+              <p className={cn(meta, "rounded-[8px] bg-[#F4F4EB] px-3 py-2")}>
+                Offline payments show as pending until you confirm you received them. The session itself is booked right away.
+              </p>
+            </>
+          ) : (
+            <p className={cn(meta, "rounded-[8px] bg-[#F7F0E0] px-3 py-2 text-[#906A29]")}>
+              Turn on at least 1 method to offer offline payment. Until then, families only see card at checkout.
+            </p>
+          )}
+        </>
+      ) : null}
     </Card>
   );
 };
 
-const BookingTab = ({ coachId, payMode, payNote }: { coachId: string; payMode: "app" | "self"; payNote: string }) => {
+const BookingTab = ({ coachId, offlinePay }: { coachId: string; offlinePay: unknown }) => {
   const today = getZonedISODate(new Date(), "America/New_York");
   const schedule = useQuery({ queryKey: ["coach-schedule", today, today], queryFn: () => scheduleAPI.get(today, today) });
 
   return (
     <>
-      <HowFamiliesPay coachId={coachId} payMode={payMode} payNote={payNote} />
-      {payMode === "app" ? <PayoutsCard /> : null}
+      <HowFamiliesPay coachId={coachId} offlinePay={offlinePay} />
+      <PayoutsCard />
       <Card icon={<CalendarSync className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Booking and calendar">
         {schedule.isLoading ? <p className={meta}>Loading…</p> : null}
         <BookingRulesSection rules={schedule.data?.rules} />
@@ -552,6 +610,9 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
   const [current, setCurrent] = useState("");
   const [next, setNext] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [showCurrent, setShowCurrent] = useState(false);
+  const [showNext, setShowNext] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
   const strength = passwordStrength(next);
   // The same rules as sign-up: upper and lower case, a number and a symbol.
@@ -599,9 +660,34 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
     onError: () => toast({ title: "Couldn't sign out other devices", variant: "destructive" }),
   });
 
-  const passwordInput = (id: string, text: string, value: string, onChange: (v: string) => void, auto: string) => (
+  const passwordInput = (
+    id: string,
+    text: string,
+    value: string,
+    onChange: (v: string) => void,
+    auto: string,
+    show: boolean,
+    onToggle: () => void
+  ) => (
     <Field label={text}>
-      <input id={id} className={input} type="password" value={value} onChange={(e) => onChange(e.target.value)} autoComplete={auto} />
+      <div className="relative">
+        <input
+          id={id}
+          className={cn(input, "pr-10")}
+          type={show ? "text" : "password"}
+          value={value}
+          onChange={(e) => onChange(e.target.value)}
+          autoComplete={auto}
+        />
+        <button
+          type="button"
+          onClick={onToggle}
+          className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+          aria-label={show ? "Hide password" : "Show password"}
+        >
+          {show ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+        </button>
+      </div>
     </Field>
   );
 
@@ -612,10 +698,10 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
           <p className={sub}>You sign in with {provider === "google" ? "Google" : "a connected account"}, so there's no AthaNext password to change.</p>
         ) : pwOpen ? (
           <div className="flex flex-col gap-3">
-            {passwordInput("pw-current", "Current password", current, setCurrent, "current-password")}
+            {passwordInput("pw-current", "Current password", current, setCurrent, "current-password", showCurrent, () => setShowCurrent((v) => !v))}
             <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-              {passwordInput("pw-new", "New password", next, setNext, "new-password")}
-              {passwordInput("pw-confirm", "Confirm new password", confirm, setConfirm, "new-password")}
+              {passwordInput("pw-new", "New password", next, setNext, "new-password", showNext, () => setShowNext((v) => !v))}
+              {passwordInput("pw-confirm", "Confirm new password", confirm, setConfirm, "new-password", showConfirm, () => setShowConfirm((v) => !v))}
             </div>
             <div className="flex flex-col gap-1.5">
               <div className="h-1.5 overflow-hidden rounded-full bg-[#EAEADF]" aria-hidden="true">

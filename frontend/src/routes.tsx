@@ -15,6 +15,7 @@ import CoachProfile from "./pages/CoachProfile";
 import ChangePassword from "./pages/ChangePassword";
 import AccountSettings from "./pages/AccountSettings";
 import MySchedule from "./pages/MySchedule";
+import CreateSession from "./pages/CreateSession";
 import BookSession from "./pages/BookSession";
 import PlanGroups from "./pages/PlanGroups";
 import ScheduleSettings from "./pages/ScheduleSettings";
@@ -46,7 +47,6 @@ import CreateAthleteProfile from "./pages/CreateAthleteProfile";
 import Dashboard from "./pages/Dashboard";
 import AdminAccounts from "./pages/AdminAccounts";
 import { HomeSwitch } from "./layouts/HomeSwitch";
-import Invites from "./pages/Invites";
 import { MyClientsRedirect } from "./components/invites/MyClientsRedirect";
 import MyAthletes from "./pages/MyAthletes";
 import AthleteDetail from "./pages/AthleteDetail";
@@ -91,6 +91,7 @@ export const ROUTES = {
   CHANGE_PASSWORD: "/settings/password",
   BOOK: "/book",
   SCHEDULE: "/schedule",
+  SCHEDULE_CREATE: "/schedule/create",
   SCHEDULE_PLAN: "/schedule/plan",
   SCHEDULE_SETTINGS: "/schedule/settings",
   GROUP_OFFER: "/offers/:id",
@@ -161,7 +162,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.DASHBOARD, element: <ProtectedRoute><Dashboard /></ProtectedRoute> },
   { path: ROUTES.PROFILE, element: <ProtectedRoute><Profile /></ProtectedRoute> },
   { path: ROUTES.MY_SESSIONS, element: <ProtectedRoute><MySessions /></ProtectedRoute> },
-  { path: ROUTES.INVITES, element: <ProtectedRoute><Invites /></ProtectedRoute> },
+  { path: ROUTES.INVITES, element: <ProtectedRoute><MyClientsRedirect /></ProtectedRoute> },
   { path: ROUTES.MY_CLIENTS, element: <MyClientsRedirect /> },
   { path: ROUTES.ATHLETES, element: <ProtectedRoute><MyAthletes /></ProtectedRoute> },
   { path: ROUTES.ATHLETE, element: <ProtectedRoute><AthleteDetail /></ProtectedRoute> },
@@ -173,6 +174,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
   { path: ROUTES.BOOK, element: <ProtectedRoute><BookSession /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
+  { path: ROUTES.SCHEDULE_CREATE, element: <ProtectedRoute><CreateSession /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE_PLAN, element: <ProtectedRoute><PlanGroups /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE_SETTINGS, element: <ProtectedRoute><ScheduleSettings /></ProtectedRoute> },
   { path: ROUTES.AVAILABILITY, element: <Navigate to={ROUTES.SCHEDULE_SETTINGS} replace /> },

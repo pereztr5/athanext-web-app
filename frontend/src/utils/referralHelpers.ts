@@ -44,21 +44,27 @@ export type ReferralStatus =
 
 const round2 = (n: number) => Number(n.toFixed(2));
 
-// `total` mirrors the Stripe line item in create-booking-payment exactly:
-// unit_amount = Math.round(price * (1 + platform% + stripe%) * 100). The fee
-// breakdown is display-only; the Stripe fee absorbs any rounding cent so the
-// parts always add up to what the athlete is charged.
+/**
+ * What the family pays for one list price. Percent fees apply to the base;
+ * `stripeFeeFixed` is the once-per-Checkout amount (pass it for a single-item
+ * charge; leave 0 when the fixed fee is added on the Checkout total instead).
+ * The Stripe fee absorbs any rounding cent so the parts add up to `total`.
+ */
 export const computeSessionPrice = (
   base: number,
   platformFeePerc: number,
   stripeFeePerc: number,
   platformFeeWaived = false,
+  stripeFeeFixed = 0,
 ) => {
   const effectivePlatformPerc = platformFeeWaived ? 0 : platformFeePerc;
-  const total = Math.round(base * (1 + effectivePlatformPerc / 100 + stripeFeePerc / 100) * 100) / 100;
+  const fixed = round2(Math.max(0, stripeFeeFixed));
+  const total = round2(
+    Math.round(base * (1 + effectivePlatformPerc / 100 + stripeFeePerc / 100) * 100) / 100 + fixed,
+  );
   const platformFee = round2((base * effectivePlatformPerc) / 100);
   const stripeFee = round2(total - base - platformFee);
-  return { base, platformFee, stripeFee, total };
+  return { base, platformFee, stripeFee, stripeFeeFixed: fixed, total };
 };
 
 /**
@@ -70,14 +76,17 @@ export const formatPriceBreakdown = (
   platformFeePerc: number,
   stripeFeePerc: number,
   platformFeeWaived = false,
+  stripeFeeFixed = 0,
 ) => {
   const money = (value: number) => `$${value.toFixed(2)}`;
   const roundCents = (value: number) => Math.round(value * 100) / 100;
-  const price = computeSessionPrice(base, platformFeePerc, stripeFeePerc, platformFeeWaived);
-  const hasProcessingFee = stripeFeePerc > 0;
+  const price = computeSessionPrice(base, platformFeePerc, stripeFeePerc, platformFeeWaived, stripeFeeFixed);
+  const hasProcessingFee = stripeFeePerc > 0 || stripeFeeFixed > 0;
   const platformFee = hasProcessingFee ? price.platformFee : roundCents(price.total - base);
   const platformPart = platformFeeWaived ? "no platform fee (existing client)" : `${money(platformFee)} platform fee`;
-  const processingPart = hasProcessingFee ? ` + ${money(roundCents(price.total - base - price.platformFee))} processing fee` : "";
+  const processingPart = hasProcessingFee
+    ? ` + ${money(roundCents(price.total - base - price.platformFee))} processing fee`
+    : "";
   return `${money(base)} session + ${platformPart}${processingPart}`;
 };
 

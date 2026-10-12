@@ -7,9 +7,11 @@ import { useQuery } from "@tanstack/react-query";
 import { orgPackagesAPI, type OrgPackage } from "@/api/organizations";
 import { smallButton, secondaryButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
+import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { packageSaving, savingLine } from "@/utils/organizations";
+import { computeSessionPrice } from "@/utils/referralHelpers";
 
 const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
@@ -26,6 +28,7 @@ const saving = (p: OrgPackage) =>
 export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; canBuy: boolean }) => {
   const { toast } = useToast();
   const { user } = useAuth();
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
   const [buying, setBuying] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["coach-org-packages", coachId], queryFn: () => orgPackagesAPI.forCoach(coachId), enabled: Boolean(coachId) });
   const packages = query.data ?? [];
@@ -56,15 +59,22 @@ export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; can
               .filter((p) => (p.orgName ?? "Academy") === org)
               .map((p) => {
                 const line = saving(p);
+                const due = computeSessionPrice(p.price, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
                 return (
                   <div key={p.id} className="flex flex-col gap-1.5 rounded-[10px] bg-[#F1F1E6] px-[14px] py-4">
                     <b className="text-[14px] font-medium">{p.name}</b>
                     <span className="text-[12px] leading-[14px] text-[#767980]">
-                      {dollars(p.price / Math.max(1, p.sessionCount))} a session · {p.renewsMonthly ? "Renews monthly" : `Valid ${p.validityDays} days`}
+                      {dollars(p.price / Math.max(1, p.sessionCount))} a session ·{" "}
+                      {p.renewsMonthly ? "Renews monthly" : `Valid ${p.validityDays} days`}
                     </span>
                     {line ? <span className="text-[12px] font-medium leading-[14px] text-[#1E7431]">{line}</span> : null}
                     <div className="mt-1 flex items-end justify-between gap-2">
-                      <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{dollars(p.price)}</span>
+                      <span className="flex flex-col">
+                        <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{dollars(due)}</span>
+                        {due !== p.price ? (
+                          <span className="text-[11px] leading-[13px] text-[#767980]">list {dollars(p.price)} + fees</span>
+                        ) : null}
+                      </span>
                       {canBuy ? (
                         <button type="button" className={cn(secondaryButton, smallButton)} disabled={buying !== null} onClick={() => void buy(p.id)}>
                           {buying === p.id ? "Opening…" : "Buy"}

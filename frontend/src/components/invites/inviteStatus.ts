@@ -17,17 +17,19 @@ export const INVITE_STATUS: Record<InviteStatus, [string, BrandPillTone]> = {
   declined: ["Declined", "neutral"],
 };
 
+/** WC4 work-list order: Needs approval, Waiting, Joined, All. */
 export const INVITE_FILTERS: [InviteFilter, string][] = [
-  ["all", "All"],
-  ["waiting", "Waiting"],
   ["approval", "Needs approval"],
+  ["waiting", "Waiting"],
   ["joined", "Joined"],
+  ["all", "All"],
 ];
 
 export const inviteStatus = (r: CoachInviteRow): InviteStatus => {
   if (r.initiated_by === "athlete" && r.status === "pending_confirmation") return "approval";
   if (r.status === "confirmed" && r.athlete_id) return "joined";
   // A family who first booked on the marketplace answers "platform" and keeps the standard fee.
+  // They belong on the roster only — excluded from the Invites work list.
   if (r.status === "declined") return r.relationship_source === "platform" ? "marketplace" : "declined";
   if (isOpenInvite(r)) {
     if (r.email_bounced_at) return "bounced";
@@ -37,18 +39,24 @@ export const inviteStatus = (r: CoachInviteRow): InviteStatus => {
   return "sent";
 };
 
+/** Marketplace clients are roster-only; they never appear on the Invites work list. */
+export const isInviteWorkStatus = (status: InviteStatus) => status !== "marketplace";
+
 export const matchesFilter = (status: InviteStatus, filter: InviteFilter) =>
   filter === "all" ||
   (filter === "waiting" && (status === "sent" || status === "opened" || status === "bounced" || status === "expired")) ||
   (filter === "approval" && status === "approval") ||
-  (filter === "joined" && (status === "joined" || status === "marketplace"));
+  (filter === "joined" && status === "joined");
 
-export const inviteCounts = (statuses: InviteStatus[]) => ({
-  total: statuses.length,
-  joined: statuses.filter((s) => s === "joined" || s === "marketplace").length,
-  waiting: statuses.filter((s) => s === "sent" || s === "opened").length,
-  approval: statuses.filter((s) => s === "approval").length,
-});
+export const inviteCounts = (statuses: InviteStatus[]) => {
+  const work = statuses.filter(isInviteWorkStatus);
+  return {
+    total: work.length,
+    joined: work.filter((s) => s === "joined").length,
+    waiting: work.filter((s) => s === "sent" || s === "opened").length,
+    approval: work.filter((s) => s === "approval").length,
+  };
+};
 
 export const viaLabel = (r: CoachInviteRow) => {
   const via = r.invited_via ?? (r.initiated_by === "athlete" ? "link" : r.initiated_by === "admin" ? "admin" : "email");

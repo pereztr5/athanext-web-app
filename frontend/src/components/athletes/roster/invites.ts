@@ -2,9 +2,8 @@ import type { OpenInvite, OpenInviteStatus } from "@/api/roster";
 import type { CoachClientReferral } from "@/api/referrals";
 import { isAwaitingCoachApproval, isInviteExpired, isOpenInvite } from "@/utils/referralHelpers";
 
-/** The full Invites page (route added with that page). */
-// Same as ROUTES.INVITES; importing routes here would be circular (routes imports the pages).
-export const INVITES_PATH = "/invites";
+/** Invites tab on My Athletes. Same as ROUTES.ATHLETES?tab=invites; avoid circular routes import. */
+export const INVITES_PATH = "/athletes?tab=invites";
 export const OPEN_INVITES_KEY = ["coach-open-invites"] as const;
 
 export const INVITE_STATUS: Record<OpenInviteStatus, { text: string; action: string; primary?: boolean }> = {

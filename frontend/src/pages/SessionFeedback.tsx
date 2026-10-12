@@ -15,6 +15,7 @@ import { feedbackAPI, type FeedbackAthlete } from "@/api/feedback";
 import { AthleteNotes } from "@/components/feedback/AthleteNotes";
 import { ScoreBox } from "@/components/feedback/ScoreBox";
 import { SessionHero } from "@/components/feedback/SessionHero";
+import { SessionPageHeader } from "@/components/session/SessionHeader";
 import { FeedbackAvatar, FeedbackBar, Question, StarterChips } from "@/components/feedback/parts";
 import {
   NO_SHOW_STARTERS,
@@ -176,18 +177,12 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
     return (
       <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
         <div className={wrap}>
-          <div className="mb-1 flex items-center gap-3">
-            <button type="button" className={roundButton} aria-label="Close" onClick={leave}>
-              <X strokeWidth={1.5} />
-            </button>
-            <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="text-[22px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C] md:text-[24px]">Notes for athletes</h1>
-              <span className="text-[14px] text-[#767980]">
-                {group ? screen.sessionName : "1-on-1"} · {formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} ·{" "}
-                {formatClock(start, timeZone)}
-              </span>
-            </div>
-          </div>
+          <SessionPageHeader
+            title="Notes for athletes"
+            subtitle={`${group ? screen.sessionName : "1-on-1"} · ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`}
+            onBack={leave}
+            backLabel="Back"
+          />
           <div className="flex flex-col gap-1">
             <h2 className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Add a note for anyone?</h2>
             <span className={caption}>Optional. Only that athlete's family sees it.</span>

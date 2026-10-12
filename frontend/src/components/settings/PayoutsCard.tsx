@@ -6,6 +6,7 @@ import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Landmark } from "lucide-react";
 import { payoutsAPI, type PayoutDay } from "@/api/payouts";
+import { LegalAnchor } from "@/components/legal/LegalLinks";
 import { meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { Card, sub } from "@/components/settings/CoachSettings";
@@ -99,6 +100,10 @@ export const PayoutsCard = () => {
         </>
       ) : null}
       <p className={meta}>AthaNext never sees or stores your bank details.</p>
+      <p className={meta}>
+        Payouts are handled by Stripe. By setting up payouts you agree to the{" "}
+        <LegalAnchor kind="stripe" /> and the <LegalAnchor kind="coach" />.
+      </p>
     </Card>
   );
 };

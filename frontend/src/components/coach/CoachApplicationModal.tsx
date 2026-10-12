@@ -94,10 +94,6 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
       newErrors.linkedin_url = "Please enter a valid LinkedIn URL";
     }
 
-    if (!formData.background_check_consent) {
-      newErrors.background_check_consent = "You must consent to background check";
-    }
-
     if (!formData.insurance_confirmation) {
       newErrors.insurance_confirmation = "You must confirm insurance";
     }
@@ -300,22 +296,6 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
 
           <div className="space-y-4">
             <h3 className="text-lg font-semibold">{strings.coach.requiredConfirmations}</h3>
-            
-            <div className="flex items-start space-x-3">
-              <Checkbox
-                id="background_check_consent"
-                checked={formData.background_check_consent}
-                onCheckedChange={(checked) => handleChange("background_check_consent", checked as boolean)}
-              />
-              <div className="space-y-1">
-                <Label htmlFor="background_check_consent" className="font-normal cursor-pointer">
-                  {strings.coach.consentToBackgroundCheck} *
-                </Label>
-                {errors.background_check_consent && (
-                  <p className="text-sm text-destructive">{errors.background_check_consent}</p>
-                )}
-              </div>
-            </div>
 
             <div className="flex items-start space-x-3">
               <Checkbox

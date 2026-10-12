@@ -11,11 +11,17 @@ import { BrandPill } from "@/components/brand";
 import { packagesAPI, type Package } from "@/api/packages";
 import { useCoachExtras } from "@/components/coach-profile/family/hooks";
 import { useAuth } from "@/contexts/AuthContext";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useFeeConfig } from "@/hooks/useFeeConfig";
+import { useMyReferrals } from "@/hooks/useReferrals";
 import { useStartCoachChat } from "@/hooks/useStartCoachChat";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { money } from "@/utils/booking";
+import { computeSessionPrice, formatPriceBreakdown } from "@/utils/referralHelpers";
 import { plural } from "@/utils/schedule";
+import { PROFILE_TYPE } from "@/utils/db";
+import { CheckoutTermsLine } from "@/components/legal/LegalLinks";
 import { label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { canApplePay } from "./applePay";
 import { ApplePayButton, InfoBox, PayMethodList, sheetBody, sheetContent, sheetFooter, sheetHeader, sheetTitle, wideContent, type PayMethod } from "./checkoutParts";
@@ -43,8 +49,13 @@ export const BuyPackagesDialog = ({
   onClose: () => void;
 }) => {
   const { user } = useAuth();
+  const { profile } = useProfile();
   const navigate = useNavigate();
   const chat = useStartCoachChat();
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
+  const athleteId =
+    profile?.type === PROFILE_TYPE.athlete && profile?.data ? ((profile.data as { id?: string }).id ?? undefined) : undefined;
+  const { data: referrals } = useMyReferrals(athleteId);
   const [held, setHeld] = useState(coach);
   useEffect(() => {
     if (coach) setHeld(coach);
@@ -82,6 +93,15 @@ export const BuyPackagesDialog = ({
   const bestId = list.some((pkg) => pkg.id === extras?.mostBookedPackageId) ? extras!.mostBookedPackageId : list[0]?.id;
   const chosen = pkgId ? list.find((pkg) => pkg.id === pkgId) ?? null : null;
   const first = shown?.name.split(" ")[0] || "the coach";
+  const waived = Boolean(
+    shown && (referrals ?? []).some((r) => r.coach_id === shown.id && r.status === "confirmed"),
+  );
+  const chosenCharge = chosen
+    ? computeSessionPrice(chosen.total_price / 100, platformFeePerc, stripeFeePerc, waived, stripeFeeFixed)
+    : null;
+  const chosenBreakdown = chosen
+    ? formatPriceBreakdown(chosen.total_price / 100, platformFeePerc, stripeFeePerc, waived, stripeFeeFixed)
+    : null;
 
   const pay = async () => {
     if (!coach || !chosen) return;
@@ -134,8 +154,11 @@ export const BuyPackagesDialog = ({
               {money(perSession(chosen))} per session{chosen.validity_days ? ` · valid ${chosen.validity_days} days` : ""}
             </span>
           </span>
-          <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] tabular-nums">{money(chosen.total_price / 100)}</span>
+          <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] tabular-nums">
+            {money(chosenCharge?.total ?? chosen.total_price / 100)}
+          </span>
         </div>
+        {chosenBreakdown ? <p className={meta}>{chosenBreakdown.replace(" session", " package")}</p> : null}
         <div className="flex flex-col gap-2">
           <span className={label}>Pay with</span>
           <PayMethodList name="package-pay" value={method} onChange={setMethod} applePay={applePay} />
@@ -155,13 +178,18 @@ export const BuyPackagesDialog = ({
           Back
         </button>
         {method === "apple" && !paying ? (
-          <ApplePayButton label={`Pay ${money(chosen.total_price / 100)} with`} className="flex-1 sm:flex-none" onClick={pay} />
+          <ApplePayButton
+            label={`Pay ${money(chosenCharge?.total ?? chosen.total_price / 100)} with`}
+            className="flex-1 sm:flex-none"
+            onClick={pay}
+          />
         ) : (
           <button type="button" className={cn(primaryButton, "h-[44px] flex-1 sm:flex-none")} disabled={paying} onClick={pay}>
-            {paying ? "Opening…" : `Pay ${money(chosen.total_price / 100)}`}
+            {paying ? "Opening…" : `Pay ${money(chosenCharge?.total ?? chosen.total_price / 100)}`}
           </button>
         )}
       </div>
+      <CheckoutTermsLine className="px-5 pb-4 sm:px-[25px]" />
     </DialogContent>
   ) : null;
 

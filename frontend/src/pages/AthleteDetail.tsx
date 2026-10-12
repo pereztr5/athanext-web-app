@@ -13,9 +13,11 @@ import { invoicesAPI } from "@/api/invoices";
 import { rosterAPI } from "@/api/roster";
 import { BookAthleteDialog } from "@/components/athletes/BookAthleteDialog";
 import { GoalDialog } from "@/components/athletes/detail/GoalDialog";
+import { PackageInProgressDialog } from "@/components/athletes/detail/PackageInProgressDialog";
 import { PackageOfferDialog } from "@/components/athletes/detail/PackageOfferDialog";
 import { dueText, linkButton, listLabel, sinceLabel, usualTime, zoned } from "@/components/athletes/detail/helpers";
 import { SessionRow } from "@/components/athletes/detail/parts";
+import { BrandPill } from "@/components/brand";
 import { cap, h3, spCard } from "@/components/coach-session/styles";
 import { input, meta, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
@@ -45,7 +47,7 @@ const AthleteDetailPage = () => {
   const [note, setNote] = useState("");
   const [booking, setBooking] = useState(false);
   const [showAll, setShowAll] = useState(false);
-  const [dialog, setDialog] = useState<"goal" | "offer" | null>(null);
+  const [dialog, setDialog] = useState<"goal" | "offer" | "pkg" | null>(null);
 
   useEffect(() => {
     if (detail.data) setNote(detail.data.note);
@@ -91,7 +93,7 @@ const AthleteDetailPage = () => {
     );
   }
 
-  const { athlete, upcoming, past, goal, relation, packageExpires, due } = detail.data;
+  const { athlete, upcoming, past, goal, relation, packageExpires, due, packageProgress } = detail.data;
   const first = athlete.name.split(" ")[0] || athlete.name;
   const minor = athlete.age != null && athlete.age < 18;
   const contactName = minor && athlete.accountName && athlete.accountName !== athlete.name ? athlete.accountName : athlete.name;
@@ -260,6 +262,70 @@ const AthleteDetailPage = () => {
 
           <div className="flex min-w-0 flex-col gap-4">
             <section className={spCard}>
+              <div className="flex items-center justify-between gap-3">
+                <span className={h3}>Package</span>
+                {packageProgress?.outside ? (
+                  <button type="button" className={textButton} onClick={() => setDialog("pkg")}>
+                    Edit
+                  </button>
+                ) : null}
+              </div>
+              {packageProgress ? (
+                <div className="flex flex-col gap-2.5">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <b className="text-[16px] font-semibold tracking-[-0.03em]">{packageProgress.name}</b>
+                    <span className="text-[14px] font-medium">
+                      {packageProgress.remaining} of {packageProgress.total} left
+                    </span>
+                  </div>
+                  <div className="h-1.5 overflow-hidden rounded-full bg-[#EAEADF]">
+                    <div
+                      className="h-full rounded-full bg-[#0054B4]"
+                      style={{
+                        width: `${Math.min(100, Math.round(((packageProgress.total - packageProgress.remaining) / Math.max(packageProgress.total, 1)) * 100))}%`,
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-wrap gap-1.5">
+                    <BrandPill tone="neutral">{money(packageProgress.price)}</BrandPill>
+                    {packageProgress.outside === "paid" ? <BrandPill tone="teal">Paid outside</BrandPill> : null}
+                    {packageProgress.outside === "owed" ? <BrandPill tone="amber">Still owed</BrandPill> : null}
+                    {!packageProgress.outside ? <BrandPill tone="blue">Bought on AthaNext</BrandPill> : null}
+                    {packageProgress.prior > 0 ? <BrandPill tone="sunk">From before AthaNext</BrandPill> : null}
+                  </div>
+                  {packageProgress.outside === "owed" && due ? (
+                    <button
+                      type="button"
+                      className={cn(secondaryButton, smallButton, "self-start")}
+                      disabled={remind.isPending}
+                      onClick={() => remind.mutate(due.invoiceId)}
+                    >
+                      Remind · {money(due.amount)} due
+                    </button>
+                  ) : null}
+                </div>
+              ) : (
+                <div className="flex flex-col gap-2">
+                  <p className={cap}>No package on file yet.</p>
+                  <div className="flex flex-wrap gap-2">
+                    <button type="button" className={cn(primaryButton, smallButton)} onClick={() => setDialog("pkg")}>
+                      <Plus className="size-3.5" strokeWidth={1.5} />
+                      Add a package in progress
+                    </button>
+                    <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setDialog("offer")}>
+                      Sell a package
+                    </button>
+                  </div>
+                </div>
+              )}
+              {packageProgress ? (
+                <button type="button" className={cn(textButton, "self-start")} onClick={() => setDialog("offer")}>
+                  Sell a package
+                </button>
+              ) : null}
+            </section>
+
+            <section className={spCard}>
               <span className={h3}>{minor ? "Family" : "Contact"}</span>
               <div className="flex items-center gap-2.5">
                 <span
@@ -338,6 +404,20 @@ const AthleteDetailPage = () => {
         onSent={() => {
           setDialog(null);
           toast({ title: "Package offer sent" });
+        }}
+        onError={fail}
+      />
+      <PackageInProgressDialog
+        open={dialog === "pkg"}
+        athleteId={athlete.id}
+        first={first}
+        isClient={athlete.isClient}
+        current={packageProgress?.outside ? packageProgress : null}
+        onClose={() => setDialog(null)}
+        onSaved={() => {
+          setDialog(null);
+          toast({ title: "Package saved" });
+          refresh();
         }}
         onError={fail}
       />

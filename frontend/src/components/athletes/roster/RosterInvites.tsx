@@ -37,7 +37,7 @@ export const RosterInvites = ({ invites }: { invites: OpenInvite[] }) => {
           onSuccess: () => {
             refresh();
             queryClient.invalidateQueries({ queryKey: ["coach-roster"] });
-            toast({ title: `${invite.parent} approved`, description: `${invite.athlete ?? "Their athlete"} is on your roster with no marketplace fee.` });
+            toast({ title: `${invite.parent} approved`, description: `${invite.athlete ?? "Their athlete"} joined your roster and can book you directly.` });
           },
           onError: fail("Couldn't approve"),
         },

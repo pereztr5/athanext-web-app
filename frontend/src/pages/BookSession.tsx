@@ -27,10 +27,12 @@ import { RequestTimeDialog, ReviewDialog } from "@/components/book/BookDialogs";
 import { BookingSummary } from "@/components/book/BookingSummary";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import { PackageSavings } from "@/components/book/PackageSavings";
+import { RenewingPackages } from "@/components/book/RenewingPackages";
 import { TimePicker } from "@/components/book/TimePicker";
 import { card, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useBookingFees } from "@/hooks/useBookingFees";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useRole } from "@/hooks/useRole";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
@@ -72,6 +74,7 @@ const whenText = (date: string, startTime: string, timeZone: string) => {
 const BookSessionPage = () => {
   const { isCoach, ready } = useRole();
   const { profile } = useProfile();
+  const isMobile = useIsMobile();
   const timeZone = useViewerTimeZone();
   const [searchParams] = useSearchParams();
   const todayISO = isoDateInZone(new Date(), timeZone);
@@ -316,8 +319,9 @@ const BookSessionPage = () => {
                 selectedCoach,
                 [selectedCoach.specialties.slice(0, 2).join(", "), "60 min", selectedCoach.locations[0]].filter(Boolean).join(" · ")
               )}
-              <PackageSavings coach={selectedCoach} onOpen={() => setPackagesCoach(selectedCoach)} />
-              {selectedCoach.nextSession ? (
+              {!isMobile ? <PackageSavings coach={selectedCoach} onOpen={() => setPackagesCoach(selectedCoach)} /> : null}
+              <RenewingPackages />
+              {!isMobile && selectedCoach.nextSession ? (
                 <p className="flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] text-[#767980]">
                   <CalendarCheck className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
                   Next session with {selectedCoach.name.split(" ")[0]}: {whenText(selectedCoach.nextSession.date, selectedCoach.nextSession.startTime, timeZone)}.

@@ -20,9 +20,10 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { ATHLETE_NOTIFICATIONS, DELETE_WORD, DELETION_GRACE_DAYS } from "@/utils/settings";
 import { downloadJson } from "@/utils/download";
+import { LegalCard } from "@/components/legal/LegalLinks";
 import { Card, ConfirmWordCard, Field, NotificationsTab, SecurityTab, SettingsShell, ToggleRow, sub } from "./CoachSettings";
 
-type Tab = "account" | "notifications" | "privacy" | "security";
+type Tab = "account" | "notifications" | "privacy" | "security" | "legal";
 const RELATIONSHIPS = ["Parent", "Guardian", "Other family member"] as const;
 
 type ProfileExtras = {
@@ -48,6 +49,7 @@ export const AthleteSettings = () => {
     ["notifications", "Notifications"],
     ["privacy", "Privacy and safety"],
     ["security", "Password and account"],
+    ["legal", "Legal"],
   ];
 
   return (
@@ -68,6 +70,7 @@ export const AthleteSettings = () => {
           {tab === "security" ? (
             <SecurityTab danger={extras.deletion_requested_at ? null : <DeleteCard isParent={isParent} athleteFirst={athleteFirst} />} />
           ) : null}
+          {tab === "legal" ? <LegalCard role="athlete" /> : null}
         </>
       )}
     />

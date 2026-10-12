@@ -47,10 +47,11 @@ const parsePercent = (value: unknown): number | null => {
 const fetchFeePercents = async (client: SupabaseClient) => {
   let platformFeePerc = 0;
   let stripeFeePerc = 0;
+  let stripeFeeFixed = 0;
   const { data: feeRows, error: feeErr } = await client
     .from("configurations" as any)
     .select("key,value")
-    .in("key", ["platform_fees", "stripe_fees"]);
+    .in("key", ["platform_fees", "stripe_fees", "stripe_fee_fixed"]);
 
   if (feeErr) throw feeErr;
 
@@ -59,10 +60,11 @@ const fetchFeePercents = async (client: SupabaseClient) => {
     if (Number.isFinite(v)) {
       if (row.key === "platform_fees") platformFeePerc = v;
       if (row.key === "stripe_fees") stripeFeePerc = v;
+      if (row.key === "stripe_fee_fixed") stripeFeeFixed = v;
     }
   });
 
-  return { platformFeePerc, stripeFeePerc };
+  return { platformFeePerc, stripeFeePerc, stripeFeeFixed };
 };
 
 const fetchDefaultGroupCapacity = async (client: SupabaseClient): Promise<number> => {
@@ -87,18 +89,20 @@ const waivedCoachesOf = (session: Stripe.Checkout.Session) =>
 const resolveFeePercents = async (
   session: Stripe.Checkout.Session,
   client: SupabaseClient,
-): Promise<{ platformFeePerc: number; stripeFeePerc: number }> => {
+): Promise<{ platformFeePerc: number; stripeFeePerc: number; stripeFeeFixed: number }> => {
   const metaPlatform = parsePercent((session.metadata as any)?.platform_fee_perc);
   const metaStripe = parsePercent((session.metadata as any)?.stripe_fee_perc);
+  const metaFixed = parsePercent((session.metadata as any)?.stripe_fee_fixed);
 
-  if (metaPlatform != null && metaStripe != null) {
-    return { platformFeePerc: metaPlatform, stripeFeePerc: metaStripe };
+  if (metaPlatform != null && metaStripe != null && metaFixed != null) {
+    return { platformFeePerc: metaPlatform, stripeFeePerc: metaStripe, stripeFeeFixed: metaFixed };
   }
 
   const fallback = await fetchFeePercents(client);
   return {
     platformFeePerc: metaPlatform ?? fallback.platformFeePerc,
     stripeFeePerc: metaStripe ?? fallback.stripeFeePerc,
+    stripeFeeFixed: metaFixed ?? fallback.stripeFeeFixed,
   };
 };
 
@@ -106,7 +110,7 @@ const ensurePaymentRowsForSession = async (
   session: Stripe.Checkout.Session,
   client: SupabaseClient,
 ) => {
-  const { platformFeePerc, stripeFeePerc } = await resolveFeePercents(session, client);
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = await resolveFeePercents(session, client);
   const paymentIntentId = extractPaymentIntentId(session);
 
   const { data: bookings, error: bookingFetchErr } = await client
@@ -128,6 +132,7 @@ const ensurePaymentRowsForSession = async (
 
   const occurrenceById = new Map((occurrences || []).map((occ) => [occ.id, occ]));
 
+  let fixedApplied = false;
   const paymentRows = bookings
     .map((booking) => {
       const occ = occurrenceById.get(booking.occurrence_id);
@@ -136,7 +141,11 @@ const ensurePaymentRowsForSession = async (
       // Coaches' own clients pay no platform fee (one checkout can cover several coaches).
       const platformPerc = waivedCoachesOf(session).has(booking.coach_id) ? 0 : platformFeePerc;
       const platformFeeAmount = Number((baseAmount * platformPerc / 100).toFixed(2));
-      const stripeFeeAmount = Number((baseAmount * stripeFeePerc / 100).toFixed(2));
+      // Percent processing on every line; the $0.30 once-per-Checkout sits on the first row.
+      const percentStripe = Number((baseAmount * stripeFeePerc / 100).toFixed(2));
+      const fixed = !fixedApplied && stripeFeeFixed > 0 ? Number(stripeFeeFixed.toFixed(2)) : 0;
+      if (fixed) fixedApplied = true;
+      const stripeFeeAmount = Number((percentStripe + fixed).toFixed(2));
       const totalAmount = Number((baseAmount + platformFeeAmount + stripeFeeAmount).toFixed(2));
       return {
         booking_id: booking.id,
@@ -831,16 +840,33 @@ serve(async (req) => {
       }
 
       // Group pass renewals (academy packages): each monthly payment adds a month of credits.
-      // The first month is handled with checkout.session.completed below.
+      // The first month (or a $0 trial checkout) is handled with checkout.session.completed below.
+      // $0 trial invoices (subscription_create) do not grant credits.
       if (event.type === "invoice.paid") {
         const invoice = event.data.object as Stripe.Invoice;
-        if (invoice.billing_reason === "subscription_cycle") {
+        if (invoice.billing_reason === "subscription_cycle" && (invoice.amount_paid ?? 0) > 0) {
           await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/reconcile-package-payment`, {
             method: "POST",
             headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
             body: JSON.stringify({ invoice_id: invoice.id }),
           }).catch((e) => console.error("Renewal reconcile call error:", e));
         }
+        return new Response(JSON.stringify({ received: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
+        });
+      }
+
+      // Monthly group pass ended (cancel at period end or Stripe cancelled it).
+      if (event.type === "customer.subscription.deleted") {
+        const sub = event.data.object as Stripe.Subscription;
+        const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+        const adminClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRole);
+        await adminClient
+          .from("package_purchases" as any)
+          .update({ status: "expired", updated_at: new Date().toISOString() })
+          .eq("stripe_subscription_id", sub.id)
+          .in("status", ["active", "trialing"]);
         return new Response(JSON.stringify({ received: true }), {
           headers: { ...corsHeaders, "Content-Type": "application/json" },
           status: 200,
@@ -1046,7 +1072,7 @@ serve(async (req) => {
       }
     }
 
-    const { platformFeePerc: basePlatformFeePerc, stripeFeePerc } = await fetchFeePercents(supabaseClient);
+    const { platformFeePerc: basePlatformFeePerc, stripeFeePerc, stripeFeeFixed } = await fetchFeePercents(supabaseClient);
 
     // Platform fee waiver: confirmed offline coach-client relationship for this exact
     // (coach, athlete) pair, and only when it is the caller's own athlete profile; otherwise
@@ -1067,14 +1093,28 @@ serve(async (req) => {
       (ownProfile as { athlete_id?: string | null } | null)?.athlete_id === athleteId ||
       Boolean(ownAthleteRows?.length);
     const useCredits = parsedBody.use_credits !== false;
+    const wantOffline = parsedBody.pay_offline === true;
+
+    const offlineReady = (raw: unknown) => {
+      if (!raw || typeof raw !== "object") return false;
+      const o = raw as Record<string, unknown>;
+      if (!o.on) return false;
+      const methods = (o.methods ?? {}) as Record<string, { on?: boolean; handle?: string }>;
+      const cash = methods.cash?.on;
+      const zelle = methods.zelle?.on && String(methods.zelle.handle ?? "").trim();
+      const venmo = methods.venmo?.on && String(methods.venmo.handle ?? "").trim();
+      return Boolean(cash || zelle || venmo);
+    };
 
     // One plan per coach (ATH-94: one payment can cover several coaches). Each coach's own
     // rules decide whether their sessions are paid now, requested (card held, ATH-85) or paid
-    // to the coach directly (booking only, ATH-86).
+    // to the coach directly (legacy booking only, or WC4 offline for invited clients).
     type Plan = {
       coachId: string;
       occs: typeof occurrences;
       mode: "instant" | "request" | "direct";
+      /** pending_offline until the coach confirms; legacy booking-only stays direct. */
+      offlinePending: boolean;
       directRequest: boolean;
       platformFeePerc: number;
       feeFactor: number;
@@ -1124,13 +1164,22 @@ serve(async (req) => {
       );
       const { data: coachSettings } = await supabaseClient
         .from("coaches" as any)
-        .select("new_family_booking, pay_mode")
+        .select("new_family_booking, pay_mode, offline_pay")
         .eq("id", cid)
         .maybeSingle();
-      const settings = coachSettings as { new_family_booking?: string; pay_mode?: string } | null;
+      const settings = coachSettings as {
+        new_family_booking?: string;
+        pay_mode?: string;
+        offline_pay?: unknown;
+      } | null;
       // New families request instead of booking when the coach asks for that (ATH-49, ATH-71).
       const needsRequest = !coversAllPending && !isClient && !offeredToMe && settings?.new_family_booking === "request";
-      const mode: Plan["mode"] = settings?.pay_mode === "self" ? "direct" : needsRequest ? "request" : "instant";
+      const legacyDirect = settings?.pay_mode === "self";
+      const offlineOk = wantOffline && isClient && offlineReady(settings?.offline_pay);
+      if (wantOffline && !offlineOk && !legacyDirect) {
+        throw new Error("Offline payment isn't available for this booking.");
+      }
+      const mode: Plan["mode"] = legacyDirect || offlineOk ? "direct" : needsRequest ? "request" : "instant";
 
       // Package and cancellation credits with this coach are used first (ATH-94), then academy
       // credits that include the coach: 1-on-1 packages for 1-on-1s, group passes for groups.
@@ -1148,7 +1197,8 @@ serve(async (req) => {
         coachId: cid,
         occs,
         mode,
-        directRequest: settings?.pay_mode === "self" && needsRequest,
+        offlinePending: offlineOk && !legacyDirect,
+        directRequest: legacyDirect && needsRequest,
         platformFeePerc,
         feeFactor: 1 + platformFeePerc / 100 + stripeFeePerc / 100,
         credits,
@@ -1164,17 +1214,24 @@ serve(async (req) => {
     const planFor = (cid: string) => plans.find((p) => p.coachId === cid)!;
     // Coaches whose fee is waived for this family (their own clients); payment rows use it.
     const waivedCoaches = plans.filter((p) => p.platformFeePerc === 0).map((p) => p.coachId).join(",");
-    const lineItem = (occ: (typeof occurrences)[number], note = "") => ({
-      price_data: {
-        currency: "usd",
-        unit_amount: Math.round(Number(occ.price || 0) * planFor(occ.coach_id).feeFactor * 100),
-        product_data: {
-          name: occ.session_name || "Coaching Session",
-          description: `${occ.session_type || "session"} on ${occ.occurrence_date}${note}`,
+    const fixedCents = Math.round(Math.max(0, stripeFeeFixed) * 100);
+    // Percent on every line; the fixed $0.30 is added once on the first paid line (index 0).
+    const lineItem = (occ: (typeof occurrences)[number], note = "", index = 0) => {
+      const unit =
+        Math.round(Number(occ.price || 0) * planFor(occ.coach_id).feeFactor * 100) +
+        (index === 0 ? fixedCents : 0);
+      return {
+        price_data: {
+          currency: "usd",
+          unit_amount: unit,
+          product_data: {
+            name: occ.session_name || "Coaching Session",
+            description: `${occ.session_type || "session"} on ${occ.occurrence_date}${note}`,
+          },
         },
-      },
-      quantity: 1,
-    });
+        quantity: 1,
+      };
+    };
     const origin = req.headers.get("origin");
     const json = (body: unknown) =>
       new Response(JSON.stringify(body), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
@@ -1190,17 +1247,21 @@ serve(async (req) => {
       created_by: user.id,
     });
 
-    // Booking only coaches (ATH-86): confirm now (or send the request) and let the family pay
-    // the coach directly. Nothing goes to Stripe. Unpaid bookings already waiting (an accepted
-    // request from before the coach switched) are confirmed the same way.
+    // Pay the coach directly: legacy booking-only (ATH-86) or WC4 offline for invited clients.
+    // Nothing goes to Stripe. Offline stays pending_offline until the coach confirms receipt.
     if (mode === "direct") {
+      const payStatusFor = (cid: string) => (planFor(cid).offlinePending ? "pending_offline" : "direct");
       if (coversAllPending) {
         const { error: confirmErr } = await supabaseClient
           .from("coach_slot_bookings" as any)
-          .update({ status: "booked", payment_status: "direct", updated_at: new Date().toISOString() })
+          .update({
+            status: "booked",
+            payment_status: payStatusFor(firstCoachId),
+            updated_at: new Date().toISOString(),
+          })
           .in("id", myPendingBookings.map((b) => b.id));
         if (confirmErr) throw confirmErr;
-        return json({ direct: true, booking_ids: myPendingBookings.map((b) => b.id) });
+        return json({ direct: true, offline: plans[0].offlinePending, booking_ids: myPendingBookings.map((b) => b.id) });
       }
       if (myPendingBookings.length) {
         throw new Error("You already have a pending booking for this session.");
@@ -1208,12 +1269,19 @@ serve(async (req) => {
       const { data: rows, error } = await supabaseClient
         .from("coach_slot_bookings" as any)
         .insert(occurrences.map((occ) =>
-          planFor(occ.coach_id).directRequest ? rowFor(occ, "requested", "unpaid") : rowFor(occ, "booked", "direct")
+          planFor(occ.coach_id).directRequest
+            ? rowFor(occ, "requested", "unpaid")
+            : rowFor(occ, "booked", payStatusFor(occ.coach_id))
         ))
         .select("id, status");
       if (error) throw error;
       const requested = ((rows || []) as any[]).some((r) => r.status === "requested");
-      return json({ direct: !requested, requested, booking_ids: ((rows || []) as any[]).map((r) => r.id) });
+      return json({
+        direct: !requested,
+        offline: !requested && plans.some((p) => p.offlinePending),
+        requested,
+        booking_ids: ((rows || []) as any[]).map((r) => r.id),
+      });
     }
 
     // In-app requests (ATH-85): the family's card is held on Stripe's page and charged only
@@ -1226,7 +1294,7 @@ serve(async (req) => {
         customer_email: user.email || undefined,
         payment_method_types: ["card"],
         mode: "payment",
-        line_items: occurrences.map((occ) => lineItem(occ, ". Charged only if the coach accepts.")),
+        line_items: occurrences.map((occ, i) => lineItem(occ, ". Charged only if the coach accepts.", i)),
         payment_intent_data: {
           capture_method: "manual",
           ...(user.email ? { receipt_email: user.email } : {}),
@@ -1243,6 +1311,7 @@ serve(async (req) => {
           notes: String(notes || "").slice(0, 450),
           platform_fee_perc: basePlatformFeePerc.toString(),
           stripe_fee_perc: stripeFeePerc.toString(),
+          stripe_fee_fixed: stripeFeeFixed.toString(),
           waived_coaches: waivedCoaches,
         },
       });
@@ -1302,7 +1371,7 @@ serve(async (req) => {
       bookingIds = (bookingRows || []).map((b: any) => b.id);
     }
 
-    const amountInCents = toPay.reduce((sum, occ) => sum + lineItem(occ).price_data.unit_amount, 0);
+    const amountInCents = toPay.reduce((sum, occ, i) => sum + lineItem(occ, "", i).price_data.unit_amount, 0);
     if (amountInCents <= 0) {
       throw new Error("Total amount must be greater than zero");
     }
@@ -1322,7 +1391,7 @@ serve(async (req) => {
         customer_email: customerId ? undefined : user.email || undefined,
         // Card covers Apple Pay and Google Pay where the device supports them.
         payment_method_types: ["card"],
-        line_items: toPay.map((occ) => lineItem(occ)),
+        line_items: toPay.map((occ, i) => lineItem(occ, "", i)),
         mode: "payment",
         // Stripe emails the receipt (ATH-91). The card is never saved for later.
         payment_intent_data: user.email ? { receipt_email: user.email } : undefined,
@@ -1337,6 +1406,7 @@ serve(async (req) => {
           athlete_id: athleteId,
           platform_fee_perc: basePlatformFeePerc.toString(),
           stripe_fee_perc: stripeFeePerc.toString(),
+          stripe_fee_fixed: stripeFeeFixed.toString(),
           waived_coaches: waivedCoaches,
           credit_booking_ids: creditIds.join(","),
         },

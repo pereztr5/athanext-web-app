@@ -3,117 +3,181 @@ import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
 const corsHeaders = {
-  'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+const json = (body: unknown, status = 200) =>
+  new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
+
+type FeeConfig = { platformFeePerc: number; stripeFeePerc: number; stripeFeeFixed: number };
+
+const fetchFees = async (admin: ReturnType<typeof createClient>): Promise<FeeConfig> => {
+  let platformFeePerc = 0;
+  let stripeFeePerc = 0;
+  let stripeFeeFixed = 0;
+  const { data } = await admin
+    .from("configurations")
+    .select("key,value")
+    .in("key", ["platform_fees", "stripe_fees", "stripe_fee_fixed"]);
+  data?.forEach((row) => {
+    const v = Number.parseFloat(row.value);
+    if (!Number.isFinite(v)) return;
+    if (row.key === "platform_fees") platformFeePerc = v;
+    if (row.key === "stripe_fees") stripeFeePerc = v;
+    if (row.key === "stripe_fee_fixed") stripeFeeFixed = v;
+  });
+  return { platformFeePerc, stripeFeePerc, stripeFeeFixed };
+};
+
+/** List price in dollars → Checkout unit_amount in cents (percent + $0.30 once). */
+const chargeCents = (listDollars: number, platformPerc: number, stripePerc: number, fixedDollars: number) =>
+  Math.round(listDollars * (1 + platformPerc / 100 + stripePerc / 100) * 100) + Math.round(Math.max(0, fixedDollars) * 100);
+
 serve(async (req) => {
-  if (req.method === 'OPTIONS') {
+  if (req.method === "OPTIONS") {
     return new Response(null, { headers: corsHeaders });
   }
 
   try {
     const supabaseClient = createClient(
-      Deno.env.get('SUPABASE_URL') ?? '',
-      Deno.env.get('SUPABASE_ANON_KEY') ?? '',
+      Deno.env.get("SUPABASE_URL") ?? "",
+      Deno.env.get("SUPABASE_ANON_KEY") ?? "",
       {
         global: {
-          headers: { Authorization: req.headers.get('Authorization')! },
+          headers: { Authorization: req.headers.get("Authorization")! },
         },
-      }
+      },
     );
 
-    const { data: { user }, error: authError } = await supabaseClient.auth.getUser();
-    
+    const {
+      data: { user },
+      error: authError,
+    } = await supabaseClient.auth.getUser();
+
     if (authError || !user) {
-      console.error('Authentication error:', authError);
-      return new Response(
-        JSON.stringify({ error: 'Unauthorized' }),
-        { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Authentication error:", authError);
+      return json({ error: "Unauthorized" }, 401);
     }
 
-    const { package_id, coach_id, org_package_id } = await req.json();
+    const body = await req.json().catch(() => ({}));
+    const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
+    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2023-10-16" });
+
+    // Cancel a monthly group pass at period end (family owns the purchase).
+    if (body.action === "cancel") {
+      const purchaseId = body.purchase_id as string | undefined;
+      if (!purchaseId) return json({ error: "purchase_id required" }, 400);
+      const { data: purchase } = await admin
+        .from("package_purchases")
+        .select("id, user_id, stripe_subscription_id, status")
+        .eq("id", purchaseId)
+        .maybeSingle();
+      if (!purchase || purchase.user_id !== user.id) return json({ error: "Not found" }, 404);
+      if (!purchase.stripe_subscription_id) return json({ error: "This package does not renew" }, 400);
+      await stripe.subscriptions.update(purchase.stripe_subscription_id as string, { cancel_at_period_end: true });
+      return json({ canceled: true, cancel_at_period_end: true });
+    }
+
+    const fees = await fetchFees(admin);
+    const { package_id, coach_id, org_package_id } = body as {
+      package_id?: string;
+      coach_id?: string;
+      org_package_id?: string;
+    };
 
     // Academy packages (Working Copy): credits with the listed coaches, paid per session used.
-    // Group passes renew monthly as a Stripe subscription.
+    // Group passes renew monthly as a Stripe subscription (no free trial).
     if (org_package_id) {
-      const admin = createClient(Deno.env.get('SUPABASE_URL') ?? '', Deno.env.get('SUPABASE_SERVICE_ROLE_KEY') ?? '');
       const { data: pkg } = await admin
-        .from('org_packages')
-        .select('id, organization_id, name, kind, session_count, price, validity_days, renews_monthly, is_active, organizations(name, slug)')
-        .eq('id', org_package_id)
+        .from("org_packages")
+        .select("id, organization_id, name, kind, session_count, price, validity_days, renews_monthly, is_active, organizations(name, slug)")
+        .eq("id", org_package_id)
         .maybeSingle();
       if (!pkg || !pkg.is_active) {
-        return new Response(JSON.stringify({ error: 'Package not found' }), { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+        return json({ error: "Package not found" }, 404);
       }
       const org = (pkg as any).organizations as { name: string; slug: string } | null;
-      const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', { apiVersion: '2023-10-16' });
       const found = await stripe.customers.list({ email: user.email, limit: 1 });
       const customer = found.data[0] ?? (await stripe.customers.create({ email: user.email, metadata: { supabase_user_id: user.id } }));
       const days = pkg.renews_monthly ? 31 : pkg.validity_days;
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + days);
+      const listPrice = Number(pkg.price);
+      // Academy packages always charge the marketplace fee (no referral waiver).
+      const unitAmount = chargeCents(listPrice, fees.platformFeePerc, fees.stripeFeePerc, fees.stripeFeeFixed);
       const metadata = {
-        type: 'package_purchase',
+        type: "package_purchase",
         org_package_id: pkg.id,
         organization_id: pkg.organization_id,
         user_id: user.id,
         sessions_total: String(pkg.session_count),
         validity_days: String(days),
         expiry_date: expiry.toISOString(),
+        list_price: String(listPrice),
+        platform_fee_perc: String(fees.platformFeePerc),
+        stripe_fee_perc: String(fees.stripeFeePerc),
+        stripe_fee_fixed: String(fees.stripeFeeFixed),
+        platform_waived: "0",
       };
       const priceData = {
-        currency: 'usd',
-        unit_amount: Math.round(Number(pkg.price) * 100),
+        currency: "usd",
+        unit_amount: unitAmount,
         product_data: {
-          name: `${pkg.name} - ${org?.name ?? 'Academy'}`,
-          description: `${pkg.session_count} ${pkg.kind === 'group' ? 'group sessions' : 'sessions'}${pkg.renews_monthly ? ' every month' : ` | Valid for ${pkg.validity_days} days`}`,
+          name: `${pkg.name} - ${org?.name ?? "Academy"}`,
+          description: `${pkg.session_count} ${pkg.kind === "group" ? "group sessions" : "sessions"}${
+            pkg.renews_monthly ? " every month" : ` | Valid for ${pkg.validity_days} days`
+          }`,
         },
       };
-      const origin = req.headers.get('origin');
+      const origin = req.headers.get("origin");
       const session = await stripe.checkout.sessions.create({
         customer: customer.id,
-        payment_method_types: ['card'],
-        line_items: [{ price_data: pkg.renews_monthly ? { ...priceData, recurring: { interval: 'month' } } : priceData, quantity: 1 }],
-        mode: pkg.renews_monthly ? 'subscription' : 'payment',
+        payment_method_types: ["card"],
+        line_items: [{ price_data: pkg.renews_monthly ? { ...priceData, recurring: { interval: "month" } } : priceData, quantity: 1 }],
+        mode: pkg.renews_monthly ? "subscription" : "payment",
         ...(pkg.renews_monthly ? { subscription_data: { metadata } } : {}),
         success_url: `${origin}/package-confirmation?session_id={CHECKOUT_SESSION_ID}&org_package_id=${pkg.id}`,
-        cancel_url: `${origin}/organizations/${org?.slug ?? ''}`,
+        cancel_url: `${origin}/organizations/${org?.slug ?? ""}`,
         metadata,
       });
-      return new Response(JSON.stringify({ url: session.url, session_id: session.id }), { headers: { ...corsHeaders, 'Content-Type': 'application/json' } });
+      return json({ url: session.url, session_id: session.id });
     }
 
     if (!package_id || !coach_id) {
-      return new Response(
-        JSON.stringify({ error: 'Missing required fields: package_id and coach_id' }),
-        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      return json({ error: "Missing required fields: package_id and coach_id" }, 400);
     }
 
-    console.log('Fetching package details for:', package_id);
-
     const { data: packageData, error: packageError } = await supabaseClient
-      .from('coach_packages')
-      .select('*, coaches!inner(name, email)')
-      .eq('id', package_id)
-      .eq('coach_id', coach_id)
+      .from("coach_packages")
+      .select("*, coaches!inner(name, email)")
+      .eq("id", package_id)
+      .eq("coach_id", coach_id)
       .single();
 
     if (packageError || !packageData) {
-      console.error('Package fetch error:', packageError);
-      return new Response(
-        JSON.stringify({ error: 'Package not found' }),
-        { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-      );
+      console.error("Package fetch error:", packageError);
+      return json({ error: "Package not found" }, 404);
     }
 
-    const stripe = new Stripe(Deno.env.get('STRIPE_SECRET_KEY') || '', {
-      apiVersion: '2023-10-16',
-    });
+    // Same referral waiver as booking: confirmed coach-client pair for an athlete the caller owns.
+    let platformPerc = fees.platformFeePerc;
+    const { data: athleteRows } = await supabaseClient.from("athlete_profiles").select("id").eq("user_id", user.id).limit(20);
+    const athleteIds = (athleteRows ?? []).map((a) => a.id as string);
+    if (athleteIds.length) {
+      const { data: waiverRows } = await supabaseClient
+        .from("coach_client_referrals")
+        .select("id")
+        .eq("coach_id", coach_id)
+        .in("athlete_id", athleteIds)
+        .eq("status", "confirmed")
+        .limit(1);
+      if (waiverRows?.length) platformPerc = 0;
+    }
 
-    console.log('Creating Stripe customer for user:', user.email);
+    // coach_packages.total_price is stored in cents.
+    const listPrice = Number(packageData.total_price) / 100;
+    const unitAmount = chargeCents(listPrice, platformPerc, fees.stripeFeePerc, fees.stripeFeeFixed);
 
     let customer;
     const existingCustomers = await stripe.customers.list({
@@ -132,19 +196,17 @@ serve(async (req) => {
       });
     }
 
-    console.log('Creating Stripe checkout session');
-
     const expiryDate = new Date();
     expiryDate.setDate(expiryDate.getDate() + packageData.validity_days);
 
     const session = await stripe.checkout.sessions.create({
       customer: customer.id,
-      payment_method_types: ['card'],
+      payment_method_types: ["card"],
       line_items: [
         {
           price_data: {
-            currency: 'usd',
-            unit_amount: packageData.total_price,
+            currency: "usd",
+            unit_amount: unitAmount,
             product_data: {
               name: `${packageData.package_name} - ${packageData.coaches.name}`,
               description: `${packageData.session_count} sessions × ${packageData.duration_minutes} min | Valid for ${packageData.validity_days} days`,
@@ -153,9 +215,9 @@ serve(async (req) => {
           quantity: 1,
         },
       ],
-      mode: 'payment',
-      success_url: `${req.headers.get('origin')}/package-confirmation?session_id={CHECKOUT_SESSION_ID}&package_id=${packageData.id}&coach_id=${packageData.coach_id}`,
-      cancel_url: `${req.headers.get('origin')}/`,
+      mode: "payment",
+      success_url: `${req.headers.get("origin")}/package-confirmation?session_id={CHECKOUT_SESSION_ID}&package_id=${packageData.id}&coach_id=${packageData.coach_id}`,
+      cancel_url: `${req.headers.get("origin")}/`,
       metadata: {
         package_id: packageData.id,
         coach_id: packageData.coach_id,
@@ -163,23 +225,19 @@ serve(async (req) => {
         sessions_total: packageData.session_count.toString(),
         sessions_remaining: packageData.session_count.toString(),
         expiry_date: expiryDate.toISOString(),
-        type: 'package_purchase',
+        type: "package_purchase",
+        list_price: String(listPrice),
+        platform_fee_perc: String(platformPerc),
+        stripe_fee_perc: String(fees.stripeFeePerc),
+        stripe_fee_fixed: String(fees.stripeFeeFixed),
+        platform_waived: platformPerc === 0 ? "1" : "0",
       },
     });
 
-    console.log('Checkout session created:', session.id);
-
-    return new Response(
-      JSON.stringify({ url: session.url, session_id: session.id }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
-
+    return json({ url: session.url, session_id: session.id });
   } catch (error: unknown) {
-    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-    console.error('Error in create-package-payment function:', error);
-    return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    const errorMessage = error instanceof Error ? error.message : "Unknown error";
+    console.error("Error in create-package-payment function:", error);
+    return json({ error: errorMessage }, 500);
   }
 });

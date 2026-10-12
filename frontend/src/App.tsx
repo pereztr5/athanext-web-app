@@ -11,6 +11,7 @@ import { PUBLIC_ROUTES, AUTH_FLOW_ROUTES, APP_ROUTES, DUAL_CHROME_ROUTES, NOT_FO
 import { MarketingLayout } from "@/layouts/MarketingLayout";
 import { AppLayout } from "@/layouts/AppLayout";
 import { ChromeSwitch } from "@/layouts/ChromeSwitch";
+import { LegalProvider } from "@/components/legal/LegalOverlay";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 
@@ -95,7 +96,9 @@ const App = () => (
       <BrowserRouter>
         <AuthProvider>
           <ProfileProvider>
-            <AppContent />
+            <LegalProvider>
+              <AppContent />
+            </LegalProvider>
           </ProfileProvider>
         </AuthProvider>
       </BrowserRouter>

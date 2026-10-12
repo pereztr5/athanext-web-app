@@ -22,6 +22,7 @@ interface AvailabilityTableRowProps {
   isStatusLoading?: boolean;
   platformFeePerc?: number;
   stripeFeePerc?: number;
+  stripeFeeFixed?: number;
   /** Confirmed coach-client pair: no platform fee (card processing still applies). */
   platformFeeWaived?: boolean;
   appearance: "athlete" | "coach";
@@ -37,6 +38,7 @@ export function AvailabilityTableRow({
   isStatusLoading = false,
   platformFeePerc = 0,
   stripeFeePerc = 0,
+  stripeFeeFixed = 0,
   platformFeeWaived = false,
   appearance,
   onDelete,
@@ -67,7 +69,7 @@ export function AvailabilityTableRow({
   const basePrice = Number(slot.price) || 0;
   // Athletes see what Stripe will charge; coaches managing slots see their base price.
   const displayPrice = onBookSlot
-    ? computeSessionPrice(basePrice, platformFeePerc || 0, stripeFeePerc || 0, platformFeeWaived).total
+    ? computeSessionPrice(basePrice, platformFeePerc || 0, stripeFeePerc || 0, platformFeeWaived, stripeFeeFixed || 0).total
     : basePrice;
 
   let disableBooking = isDisabled || isChecking;

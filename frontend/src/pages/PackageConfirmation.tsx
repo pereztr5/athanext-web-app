@@ -9,6 +9,7 @@ import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { ROUTES } from "@/routes";
 import { BrandPill } from "@/components/brand";
+import { computeSessionPrice } from "@/utils/referralHelpers";
 
 type VerificationStatus = "verifying" | "pending" | "success" | "error";
 
@@ -30,7 +31,7 @@ const PackageConfirmation = () => {
 
   const coachId = pkg?.coach_id || coachIdParam || "";
   const { coach } = useCoachDetails(coachId);
-  const { platformFeePerc, stripeFeePerc } = useFeeConfig();
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
 
   useEffect(() => {
     if (!sessionId) {
@@ -60,12 +61,14 @@ const PackageConfirmation = () => {
 
         const state = result.data?.state;
 
-        if (state === "reconciled") {
+        if (state === "reconciled" || state === "trialing") {
           setStatus("success");
           setStatusMessage(
-            academy
-              ? "Payment confirmed. Your credits are ready to use when you book with the coaches in this package."
-              : "Payment confirmed. Your package is ready."
+            state === "trialing"
+              ? "Your package is set up. Credits unlock when the first paid month begins. You can cancel renewal from Book a session."
+              : academy
+                ? "Payment confirmed. Your credits are ready to use when you book with the coaches in this package."
+                : "Payment confirmed. Your package is ready."
           );
           setError(null);
           return;
@@ -123,11 +126,9 @@ const PackageConfirmation = () => {
   const coachName = coach?.name || "Your coach";
   const priceLabel = useMemo(() => {
     if (!pkg) return "-";
-    // platformFeePerc/stripeFeePerc fetched via hook for consistency with other screens
-    void platformFeePerc;
-    void stripeFeePerc;
-    return `$${(pkg.total_price / 100).toFixed(2)}`;
-  }, [pkg, platformFeePerc, stripeFeePerc]);
+    const due = computeSessionPrice(pkg.total_price / 100, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
+    return `$${due.toFixed(2)}`;
+  }, [pkg, platformFeePerc, stripeFeePerc, stripeFeeFixed]);
 
   const coachEmail = useMemo(() => {
     if (coach && typeof (coach as any).email === "string") {

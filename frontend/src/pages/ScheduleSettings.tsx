@@ -1,7 +1,8 @@
 /**
- * Schedule settings (Working Copy c-availability): time off, booking rules and Google Calendar
- * sync. Replaces the Schedule settings dialog on My Schedule.
+ * Schedule settings (Working Copy 4): weekly hours, locations, time off, booking rules and
+ * Google Calendar sync.
  */
+import { useEffect } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft } from "lucide-react";
@@ -12,7 +13,9 @@ import { scheduleAPI } from "@/api/schedule";
 import { scheduleSettingsAPI } from "@/api/scheduleSettings";
 import { BookingRulesCard, type RulesView } from "@/components/schedule/settings/BookingRulesCard";
 import { CalendarSyncCard } from "@/components/schedule/settings/CalendarSyncCard";
+import { LocationsCard } from "@/components/schedule/settings/LocationsCard";
 import { TimeOffCard } from "@/components/schedule/settings/TimeOffCard";
+import { WeeklyHoursCard } from "@/components/schedule/settings/WeeklyHoursCard";
 import { pageTitle, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -26,6 +29,14 @@ const ScheduleSettingsPage = () => {
   const timeZone = useViewerTimeZone();
   const today = isoDateInZone(new Date(), timeZone);
   const to = addDaysISO(today, 62);
+
+  useEffect(() => {
+    if (window.location.hash !== "#weekly-hours") return;
+    const id = window.setTimeout(() => {
+      document.getElementById("weekly-hours")?.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+    return () => window.clearTimeout(id);
+  }, []);
 
   // Calendar status (and a fallback for rules and days off) come from My Schedule's read.
   const scheduleQuery = useQuery({
@@ -74,9 +85,25 @@ const ScheduleSettingsPage = () => {
         </Link>
         <header className="flex min-w-0 flex-col gap-[10px]">
           <h1 className={pageTitle}>Schedule settings</h1>
-          <p className="text-[14px] leading-[18px] text-[#767980]">Time off, booking rules and calendar sync.</p>
+          <p className="text-[14px] leading-[18px] text-[#767980]">Weekly hours, locations, time off, booking rules and calendar sync.</p>
         </header>
         <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+          <WeeklyHoursCard
+            series={schedule?.series ?? []}
+            today={today}
+            hourlyRate={schedule?.rules.hourlyRate ?? null}
+            locations={schedule?.rules.locations ?? []}
+            loading={scheduleQuery.isLoading}
+          />
+          {coachId ? (
+            <LocationsCard
+              coachId={coachId}
+              locations={schedule?.rules.locations ?? []}
+              sessions={schedule?.sessions ?? []}
+              today={today}
+              loading={scheduleQuery.isLoading}
+            />
+          ) : null}
           <TimeOffCard days={timeOff} today={today} loading={timeOffLoading} />
           <BookingRulesCard rules={rules} loading={rulesLoading} />
           <CalendarSyncCard calendar={schedule?.calendar ?? null} loading={scheduleQuery.isLoading} />

@@ -3,26 +3,32 @@ import {
   bookedOnlyCoaches, claimErrorMessage, computeSessionPrice, formatPriceBreakdown, referralStatusLabel,
 } from "../referralHelpers";
 
-// What create-booking-payment sends to Stripe for one session, in dollars.
-const stripeCharge = (price: number, platformPerc: number, stripePerc: number) =>
+// Percent markup only (fixed $0.30 is added once per Checkout, not per line).
+const percentCharge = (price: number, platformPerc: number, stripePerc: number) =>
   Math.round(price * (1 + platformPerc / 100 + stripePerc / 100) * 100) / 100;
 
 describe("computeSessionPrice", () => {
-  it("applies platform and stripe fees", () => {
+  it("applies platform and stripe percent fees", () => {
     const p = computeSessionPrice(100, 10, 2.9);
-    expect(p).toEqual({ base: 100, platformFee: 10, stripeFee: 2.9, total: 112.9 });
+    expect(p).toEqual({ base: 100, platformFee: 10, stripeFee: 2.9, stripeFeeFixed: 0, total: 112.9 });
+  });
+
+  it("adds the once-per-checkout fixed processing fee", () => {
+    const p = computeSessionPrice(100, 10, 2.9, false, 0.3);
+    expect(p).toEqual({ base: 100, platformFee: 10, stripeFee: 3.2, stripeFeeFixed: 0.3, total: 113.2 });
   });
 
   it("zeroes only the platform fee when waived", () => {
-    const p = computeSessionPrice(100, 10, 2.9, true);
-    expect(p).toEqual({ base: 100, platformFee: 0, stripeFee: 2.9, total: 102.9 });
+    const p = computeSessionPrice(100, 10, 2.9, true, 0.3);
+    expect(p).toEqual({ base: 100, platformFee: 0, stripeFee: 3.2, stripeFeeFixed: 0.3, total: 103.2 });
   });
 
   it("always shows exactly what Stripe charges", () => {
     for (const price of [33.33, 10.05, 45, 59.99, 0.5, 120.35, 7.77]) {
       for (const waived of [false, true]) {
-        const p = computeSessionPrice(price, 10, 2.9, waived);
-        expect(p.total).toBe(stripeCharge(price, waived ? 0 : 10, 2.9));
+        const fixed = 0.3;
+        const p = computeSessionPrice(price, 10, 2.9, waived, fixed);
+        expect(p.total).toBe(Number((percentCharge(price, waived ? 0 : 10, 2.9) + fixed).toFixed(2)));
         expect(Number((p.base + p.platformFee + p.stripeFee).toFixed(2))).toBe(p.total);
       }
     }
@@ -30,7 +36,7 @@ describe("computeSessionPrice", () => {
 
   it("handles zero percentages (config missing defaults to 0)", () => {
     expect(computeSessionPrice(50, 0, 0)).toEqual({
-      base: 50, platformFee: 0, stripeFee: 0, total: 50,
+      base: 50, platformFee: 0, stripeFee: 0, stripeFeeFixed: 0, total: 50,
     });
   });
 });
@@ -38,6 +44,12 @@ describe("computeSessionPrice", () => {
 describe("formatPriceBreakdown", () => {
   it("lists session, platform and processing fees", () => {
     expect(formatPriceBreakdown(50, 10, 3)).toBe("$50.00 session + $5.00 platform fee + $1.50 processing fee");
+  });
+
+  it("includes the fixed processing fee in the processing line", () => {
+    expect(formatPriceBreakdown(100, 10, 2.9, false, 0.3)).toBe(
+      "$100.00 session + $10.00 platform fee + $3.20 processing fee",
+    );
   });
 
   it("notes the waived platform fee for existing clients", () => {

@@ -1,4 +1,4 @@
-import { Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -15,6 +15,8 @@ type ResetState = "checking" | "ready" | "error";
 const ResetPassword = () => {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [showNew, setShowNew] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
   const [status, setStatus] = useState<ResetState>("checking");
   const [statusMessage, setStatusMessage] = useState("Checking your reset link…");
@@ -197,27 +199,49 @@ const ResetPassword = () => {
           <Label htmlFor="new-password" className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
             New password
           </Label>
-          <Input
-            id="new-password"
-            type="password"
-            placeholder="Enter a new password"
-            value={newPassword}
-            onChange={(event) => setNewPassword(event.target.value)}
-            disabled={isSubmitting}
-          />
+          <div className="relative">
+            <Input
+              id="new-password"
+              type={showNew ? "text" : "password"}
+              placeholder="Enter a new password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              disabled={isSubmitting}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowNew((v) => !v)}
+              className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+              aria-label={showNew ? "Hide password" : "Show password"}
+            >
+              {showNew ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+            </button>
+          </div>
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm-password" className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
             Confirm password
           </Label>
-          <Input
-            id="confirm-password"
-            type="password"
-            placeholder="Enter it again"
-            value={confirmPassword}
-            onChange={(event) => setConfirmPassword(event.target.value)}
-            disabled={isSubmitting}
-          />
+          <div className="relative">
+            <Input
+              id="confirm-password"
+              type={showConfirm ? "text" : "password"}
+              placeholder="Enter it again"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              disabled={isSubmitting}
+              className="pr-10"
+            />
+            <button
+              type="button"
+              onClick={() => setShowConfirm((v) => !v)}
+              className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+              aria-label={showConfirm ? "Hide password" : "Show password"}
+            >
+              {showConfirm ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+            </button>
+          </div>
         </div>
         {formError && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{formError}</p>}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>

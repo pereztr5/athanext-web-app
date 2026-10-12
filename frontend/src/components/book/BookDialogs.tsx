@@ -11,6 +11,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } f
 import { BrandPill } from "@/components/brand";
 import { bookAPI, type BookableSession, type BookingCoach } from "@/api/book";
 import { Switch } from "@/components/ui/switch";
+import { CheckoutTermsLine } from "@/components/legal/LegalLinks";
 import { useAuth } from "@/contexts/AuthContext";
 import { useBookingFees } from "@/hooks/useBookingFees";
 import { ROUTES } from "@/routes";
@@ -24,6 +25,7 @@ import { addDaysISO, formatDayISO, formatMinutes, plural, viewerToEastern } from
 import { formatInstantSpan } from "@/utils/viewerTime";
 import { input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { canApplePay } from "./applePay";
+import { FeeLines } from "./FeeLines";
 import {
   ApplePayButton,
   InfoBox,
@@ -76,24 +78,37 @@ export const ReviewDialog = ({
   const [applePay] = useState(canApplePay);
   const [method, setMethod] = useState<PayMethod>(applePay ? "apple" : "card");
   const [choosing, setChoosing] = useState(false);
+  const [offline, setOffline] = useState(false);
   const [error, setError] = useState<string | null>(null);
   useEffect(() => {
     setError(null);
     setChoosing(false);
+    setOffline(false);
     setMethod(applePay ? "apple" : "card");
   }, [open, applePay]);
 
-  const plan = planBooking(picked, coaches, useCredits, fees);
+  const planCoaches = useMemo(() => {
+    if (!offline) return coaches;
+    const next: Record<string, BookingCoach> = {};
+    for (const [id, c] of Object.entries(coaches)) {
+      next[id] = c.offlinePayAvailable ? { ...c, paysDirect: true } : c;
+    }
+    return next;
+  }, [coaches, offline]);
+
+  const plan = planBooking(picked, planCoaches, useCredits, fees);
   const firstName = (coachId: string) => coaches[coachId]?.name.split(" ")[0] ?? "the coach";
   const coachNames = (list: BookableSession[]) => [...new Set(list.map((s) => firstName(s.coachId)))];
   const email = user?.email ?? "your email";
+  const offlineAvail = picked.some((s) => coaches[s.coachId]?.offlinePayAvailable && !coaches[s.coachId]?.paysDirect);
+  const offlineName = firstName(picked.find((s) => coaches[s.coachId]?.offlinePayAvailable)?.coachId ?? picked[0]?.coachId ?? "");
 
   const book = useMutation({
     mutationFn: async () => {
       if (!athleteId) throw new Error("Sign in as an athlete or parent to book.");
       const result = { bookingIds: [] as string[], url: undefined as string | undefined };
       if (plan.direct.length) {
-        const r = await bookAPI.checkout(plan.direct.map((s) => s.id), athleteId);
+        const r = await bookAPI.checkout(plan.direct.map((s) => s.id), athleteId, true, offline);
         result.bookingIds.push(...r.bookingIds);
       }
       if (plan.instant.length) {
@@ -273,12 +288,7 @@ export const ReviewDialog = ({
                         <span className="text-[#767980]">{plan.direct.length ? "Paid in AthaNext" : plan.instant.length > 1 ? "Sessions" : "Session"}</span>
                         <span className="tabular-nums">{money(plan.subtotal)}</span>
                       </div>
-                      {plan.fees ? (
-                        <div className="flex justify-between gap-3">
-                          <span className="text-[#767980]">Platform fee</span>
-                          <span className="tabular-nums">{money(plan.fees)}</span>
-                        </div>
-                      ) : null}
+                      <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
                       <div className="h-px bg-[#EAEADF]" />
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="text-[16px] font-medium tracking-[-0.05em]">{requests.length || plan.direct.length ? "Due now" : "Total"}</span>
@@ -293,7 +303,12 @@ export const ReviewDialog = ({
                         <span className="text-[16px] font-medium tracking-[-0.05em]">Pay {directName} directly</span>
                         <span className={stat28}>{money(plan.payDirect)}</span>
                       </div>
-                      <span className={meta}>{directNote || `${directName} takes payment directly. Nothing is charged in AthaNext.`}</span>
+                      <span className={meta}>
+                        {directNote ||
+                          (offline
+                            ? `Nothing is charged in AthaNext. It shows as pending until ${directName} confirms receipt.`
+                            : `${directName} takes payment directly. Nothing is charged in AthaNext.`)}
+                      </span>
                     </>
                   ) : null}
                 </div>
@@ -307,7 +322,7 @@ export const ReviewDialog = ({
               {!athleteId ? <p className={meta}>Sign in as an athlete or parent to book.</p> : null}
             </div>
 
-            {choosing && charged ? (
+            {choosing && charged && !offline ? (
               <div className={cn(sheetFooter, "flex-col")}>
                 <span className={label}>Pay with</span>
                 <PayMethodList name="review-pay" value={method} onChange={setMethod} applePay={applePay} />
@@ -323,24 +338,44 @@ export const ReviewDialog = ({
                     </button>
                   )}
                 </div>
+                <CheckoutTermsLine />
               </div>
             ) : (
               <div className={cn(sheetFooter, "flex-col")}>
                 {mainButton}
+                {charged ? <CheckoutTermsLine /> : null}
                 {charged && requests.length ? (
                   <span className={cn(meta, "text-center")}>
                     {plural(requests.length, "request")} {requests.length > 1 ? "are" : "is"} sent at the same time.
                   </span>
                 ) : null}
-                {charged ? (
-                  <button type="button" className={cn(textButton, "self-center text-[#767980]")} onClick={() => setChoosing(true)}>
-                    Pay another way
-                  </button>
-                ) : null}
                 <span className={cn(meta, "text-center")}>
                   Free cancellation with {CANCEL_HOURS} hours notice.{" "}
                   {charged ? `Receipt goes to ${email}.` : now.length ? `Confirmation goes to ${email}.` : "You get a message when they reply."}
                 </span>
+                {charged || offlineAvail ? (
+                  <div className="flex w-full flex-wrap items-center justify-between gap-2">
+                    {charged && !offline ? (
+                      <button type="button" className={cn(textButton, "text-[#767980]")} onClick={() => setChoosing(true)}>
+                        Change payment method
+                      </button>
+                    ) : (
+                      <span />
+                    )}
+                    {offlineAvail ? (
+                      <span className="flex flex-col items-end gap-1">
+                        <button type="button" className={cn(textButton, "text-[#767980]")} onClick={() => setOffline((v) => !v)}>
+                          {offline ? "Pay by card instead" : `Pay ${offlineName} directly instead`}
+                        </button>
+                        {offline ? (
+                          <span className={cn(meta, "text-right")}>
+                            Card adds a payment processing fee of {fees.stripePerc}% + ${Number(fees.stripeFixed ?? 0).toFixed(2)}, Stripe&apos;s rate.
+                          </span>
+                        ) : null}
+                      </span>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             )}
           </>
@@ -417,9 +452,12 @@ export const RequestTimeDialog = ({
     <Dialog open={Boolean(coach)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={sheetContent}>
         <DialogHeader className={sheetHeader}>
-          <DialogTitle className={sheetTitle}>Request a time with {first}</DialogTitle>
+          <DialogTitle className={sheetTitle}>Request another time with {first}</DialogTitle>
           <DialogDescription className="text-[14px] leading-[18px] text-[#767980]">
-            {pillar ?? shown?.specialties[0] ?? "1-on-1"} · {minutes} min{price ? ` · ${money(price)}` : ""}
+            1-on-1 · {pillar ?? shown?.specialties[0] ?? "session"} · {minutes} min{price ? ` · ${money(price)}` : ""}
+            <span className="mt-1.5 block text-[12px] text-[#767980]">
+              Requests are for 1-on-1 sessions only. Group times are fixed on the schedule.
+            </span>
           </DialogDescription>
         </DialogHeader>
         <div className={sheetBody}>

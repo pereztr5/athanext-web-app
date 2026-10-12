@@ -157,6 +157,8 @@ export const layoutDays = ({
   };
 
   sessions.forEach((session) => {
+    // Planner drafts stay off My Schedule / Create session until published.
+    if (session.isDraft) return;
     const start = sessionStart(session);
     const end = sessionEnd(session);
     if (isNaN(start.getTime())) return;

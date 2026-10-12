@@ -11,7 +11,7 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do payouts and marketplace fees work?",
-          body: "Payouts go to your bank every week on your payout day. Sessions with families you invited carry no marketplace fee. Sessions from marketplace families carry the standard fee, shown on each payout.",
+          body: "Payouts go to your bank every week on your payout day. Families you invited join your roster and book you directly. Marketplace families carry the standard platform fee, shown on each payout.",
         },
         {
           title: "When does a family get charged?",
@@ -51,7 +51,7 @@ export const HELP_ARTICLES = {
         },
         {
           title: "How do I invite families I already coach?",
-          body: "In My Athletes, use Add athlete to invite by email, import a list or share your link. Invited families pay no marketplace fee.",
+          body: "In My Athletes, use Invite families to invite by email, import a list or share your link. Invited families join your roster and book you directly.",
         },
         {
           title: "Can athletes see each other?",

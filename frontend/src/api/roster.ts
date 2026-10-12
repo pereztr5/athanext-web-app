@@ -36,6 +36,20 @@ export interface RosterAthlete {
   gearTotal: number;
 }
 
+/** Package card on the athlete page (WC4 #24). */
+export interface PackageProgress {
+  id: string;
+  name: string;
+  packageId: string | null;
+  total: number;
+  remaining: number;
+  prior: number;
+  price: number;
+  outside: "paid" | "owed" | null;
+  boughtAt: string | null;
+  invoiceId: string | null;
+}
+
 export interface AthleteSession {
   id: string;
   date: string;
@@ -117,6 +131,8 @@ export const rosterAPI = {
     relation: string | null;
     /** When the main package expires (YYYY-MM-DD). */
     packageExpires: string | null;
+    /** Active package card (WC4 #24), including outside packages in progress. */
+    packageProgress: PackageProgress | null;
     /** Open invoices for this athlete: the total and the first one to remind. */
     due: { amount: number; invoiceId: string; reminders: number } | null;
     upcoming: AthleteSession[];
@@ -125,6 +141,7 @@ export const rosterAPI = {
     const { data, error } = await supabase.rpc("get_coach_athlete", { p_athlete_id: id });
     if (error) throw error;
     const raw = (data ?? {}) as Row;
+    const prog = raw.packageProgress as Row | null | undefined;
     return {
       athlete: mapAthlete(raw.athlete ?? {}),
       note: raw.note ?? "",
@@ -132,10 +149,49 @@ export const rosterAPI = {
       video: raw.video ?? null,
       relation: raw.relation ?? null,
       packageExpires: raw.packageExpires ?? null,
+      packageProgress: prog?.id
+        ? {
+            id: prog.id,
+            name: prog.name ?? "Package",
+            packageId: prog.packageId ?? null,
+            total: Number(prog.total) || 0,
+            remaining: Number(prog.remaining) || 0,
+            prior: Number(prog.prior) || 0,
+            price: Number(prog.price) || 0,
+            outside: prog.outside === "paid" || prog.outside === "owed" ? prog.outside : null,
+            boughtAt: prog.boughtAt ?? null,
+            invoiceId: prog.invoiceId ?? null,
+          }
+        : null,
       due: raw.due?.invoiceId ? { amount: Number(raw.due.amount) || 0, invoiceId: raw.due.invoiceId, reminders: Number(raw.due.reminders) || 0 } : null,
       upcoming: (raw.upcoming as AthleteSession[]) ?? [],
       past: (raw.past as AthleteSession[]) ?? [],
     };
+  },
+
+  async upsertPackageInProgress(input: {
+    athleteId: string;
+    packageId: string | null;
+    customName: string | null;
+    sessionsTotal: number;
+    priorUsed: number;
+    price: number;
+    outside: "paid" | "owed";
+  }): Promise<string> {
+    const { data, error } = await supabase.rpc(
+      "upsert_package_in_progress" as never,
+      {
+        p_athlete_id: input.athleteId,
+        p_package_id: input.packageId,
+        p_custom_name: input.customName,
+        p_sessions_total: input.sessionsTotal,
+        p_prior_used: input.priorUsed,
+        p_price: input.price,
+        p_outside: input.outside,
+      } as never
+    );
+    if (error) throw error;
+    return String(data);
   },
 
   async openTimes(athleteId: string, limit = 8): Promise<OpenTime[]> {

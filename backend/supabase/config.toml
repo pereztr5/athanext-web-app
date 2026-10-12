@@ -44,3 +44,8 @@ verify_jwt = true
 
 [functions.coach-invoices]
 verify_jwt = true
+
+# ATH-102: coach $29/mo plan. Receives Stripe subscription webhooks, so the function
+# checks the caller token and the Stripe signature itself.
+[functions.coach-billing]
+verify_jwt = false

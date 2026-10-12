@@ -181,7 +181,7 @@ export const CoachAvailabilitySection = ({
   const [dateRangeStart, setDateRangeStart] = useState<Date | null>(null);
   const [dateRangeEnd, setDateRangeEnd] = useState<Date | null>(null);
   const [hasManualWeekSelection, setHasManualWeekSelection] = useState(false);
-  const { platformFeePerc, stripeFeePerc } = useFeeConfig();
+  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
   const { data: availabilities, isLoading, error, refetch } = useCoachAvailabilityWithOccurrences(coachId);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -899,6 +899,7 @@ export const CoachAvailabilitySection = ({
                   slotStatusLoading={slotStatusLoading && !slotStatusError}
                   platformFeePerc={platformFeePerc}
                   stripeFeePerc={stripeFeePerc}
+                  stripeFeeFixed={stripeFeeFixed}
                   platformFeeWaived={referralWaived}
                   appearance="coach"
                 />
@@ -943,6 +944,7 @@ export const CoachAvailabilitySection = ({
                   slotStatusLoading={slotStatusLoading && !slotStatusError}
                   platformFeePerc={platformFeePerc}
                   stripeFeePerc={stripeFeePerc}
+                  stripeFeeFixed={stripeFeeFixed}
                   platformFeeWaived={referralWaived}
                   appearance="athlete"
                 />

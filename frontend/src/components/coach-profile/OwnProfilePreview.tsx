@@ -3,7 +3,7 @@
  * who (completeness strip, hero, Edit and Share, facts), About, Sessions and pricing, Reviews and More.
  */
 import { Link } from "react-router-dom";
-import { BadgeCheck, Check, Eye, Pencil, Plus, Share2, ShieldCheck } from "lucide-react";
+import { BadgeCheck, Check, Eye, Pencil, Plus, Share2 } from "lucide-react";
 import type { CoachProfileExtras, ProfileService } from "@/api/coachProfile";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { BrandPill } from "@/components/brand";
@@ -15,6 +15,8 @@ import { formatRichTextForRender } from "@/utils/richText";
 import "@/styles/richText.css";
 import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
 import type { CoachFaqItem } from "./FAQSection";
+import { OrganizationsCard } from "./OrganizationsCard";
+import { organizationsForProfile } from "./organizationLogos";
 import { CompletenessNudge } from "./own/Completeness";
 import { MoreList } from "./own/MoreList";
 import { OwnReviews } from "./own/OwnReviews";
@@ -38,6 +40,7 @@ export const OwnProfilePreview = ({
   locationLabel,
   organization,
   faqs,
+  brands,
   brandNames,
   cancellation,
   completeness,
@@ -58,6 +61,7 @@ export const OwnProfilePreview = ({
   locationLabel: string;
   organization: { name: string; to: string } | null;
   faqs: CoachFaqItem[];
+  brands: { id: string; name: string; logo_url: string | null }[];
   brandNames: string[];
   cancellation: string;
   completeness: { steps: [StepName, boolean][]; done: number; next: StepName | null };
@@ -165,6 +169,8 @@ export const OwnProfilePreview = ({
         ) : null}
       </section>
 
+      <OrganizationsCard brands={organizationsForProfile(coach.id, brands)} />
+
       <section aria-label="About" className={cn(card, sp2Card)}>
         <h2 className={sectionTitle}>About</h2>
         <div className="flex flex-col gap-[10px]">
@@ -213,20 +219,16 @@ export const OwnProfilePreview = ({
             Add a short bio
           </button>
         )}
-        {creds.length || coach.is_verified ? (
+        {creds.length ? (
           <div className="flex flex-wrap gap-x-[18px] gap-y-2">
-            {creds.map((name, i) => (
+            {creds
+              .filter((name) => name.trim().toLowerCase() !== "background check")
+              .map((name, i) => (
               <span key={`${name}-${i}`} className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#484D56]">
                 <Check className="size-4 text-[#1E7431]" strokeWidth={2} aria-hidden="true" />
                 {name}
               </span>
             ))}
-            {coach.is_verified ? (
-              <span className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#484D56]">
-                <ShieldCheck className="size-4 text-[#1E7431]" strokeWidth={2} aria-hidden="true" />
-                Background check
-              </span>
-            ) : null}
           </div>
         ) : null}
       </section>

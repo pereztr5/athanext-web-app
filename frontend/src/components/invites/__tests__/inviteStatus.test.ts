@@ -1,6 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { CoachInviteRow } from "@/api/referrals";
-import { inviteCounts, inviteStatus, inviteSubline, matchesFilter, relativeDay } from "../inviteStatus";
+import {
+  INVITE_FILTERS,
+  inviteCounts,
+  inviteStatus,
+  inviteSubline,
+  isInviteWorkStatus,
+  matchesFilter,
+  relativeDay,
+} from "../inviteStatus";
 
 const row = (over: Partial<CoachInviteRow>): CoachInviteRow => ({
   id: "r1",
@@ -31,12 +39,19 @@ describe("inviteStatus", () => {
     expect(inviteStatus(row({ status: "declined" }))).toBe("declined");
   });
 
-  it("filters and counts like the Working Copy", () => {
+  it("orders filters Needs approval, Waiting, Joined, All", () => {
+    expect(INVITE_FILTERS.map(([k]) => k)).toEqual(["approval", "waiting", "joined", "all"]);
+  });
+
+  it("filters and counts like WC4 (marketplace stays off the work list)", () => {
+    expect(isInviteWorkStatus("marketplace")).toBe(false);
+    expect(isInviteWorkStatus("joined")).toBe(true);
     expect(matchesFilter("bounced", "waiting")).toBe(true);
-    expect(matchesFilter("marketplace", "joined")).toBe(true);
+    expect(matchesFilter("marketplace", "joined")).toBe(false);
+    expect(matchesFilter("joined", "joined")).toBe(true);
     expect(matchesFilter("approval", "waiting")).toBe(false);
     expect(inviteCounts(["sent", "opened", "approval", "joined", "marketplace", "bounced"])).toEqual({
-      total: 6, joined: 2, waiting: 2, approval: 1,
+      total: 5, joined: 1, waiting: 2, approval: 1,
     });
   });
 

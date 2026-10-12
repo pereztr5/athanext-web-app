@@ -1,6 +1,6 @@
-/** The Invites table: Parent | Invited via | Status | Updated | one action per row. Scrolls sideways on phone. */
+/** The Invites work list: Parent | Invited via | Status | Updated | one action per row. Scrolls sideways on phone. */
 import type { ReactNode } from "react";
-import { Info, Pencil, RefreshCw, Trash2 } from "lucide-react";
+import { Pencil, RefreshCw, Trash2 } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import type { CoachInviteRow } from "@/api/referrals";
 import { secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
@@ -9,7 +9,7 @@ import {
   INVITE_STATUS, inviteSubline, parentName, relativeDay, updatedAt, viaLabel, type InviteStatus,
 } from "./inviteStatus";
 
-export type InviteAction = "approve" | "decline" | "resend" | "fix" | "why" | "remove";
+export type InviteAction = "approve" | "decline" | "resend" | "fix" | "remove";
 
 const iconBtn =
   "inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] transition-colors hover:bg-[#F4F4EB] hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] disabled:opacity-40 [&>svg]:size-4";
@@ -76,10 +76,6 @@ export const InvitesTable = ({
                 ) : status === "bounced" ? (
                   <IconAction label="Fix email" disabled={busy} onClick={() => onAction("fix", invite)}>
                     <Pencil strokeWidth={1.5} aria-hidden="true" />
-                  </IconAction>
-                ) : status === "marketplace" ? (
-                  <IconAction label="Why the standard fee applies" onClick={() => onAction("why", invite)}>
-                    <Info strokeWidth={1.5} aria-hidden="true" />
                   </IconAction>
                 ) : status === "declined" ? (
                   <IconAction label="Remove from invites" disabled={busy} onClick={() => onAction("remove", invite)}>

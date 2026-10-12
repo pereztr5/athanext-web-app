@@ -1585,6 +1585,7 @@ export type Database = {
           name: string
           new_family_booking: string
           pathway_tags: string[]
+          offline_pay: Json
           pay_mode: string
           pay_note: string | null
           position: string | null
@@ -1598,7 +1599,11 @@ export type Database = {
           slug: string
           specialties: string[]
           status: string | null
+          stripe_customer_id: string | null
+          stripe_subscription_id: string | null
+          subscription_status: string | null
           total_reviews: number | null
+          trial_ends_at: string | null
           updated_at: string
           years_experience: number | null
         }
@@ -1627,6 +1632,7 @@ export type Database = {
           locations?: string[]
           name: string
           new_family_booking?: string
+          offline_pay?: Json
           pathway_tags?: string[]
           pay_mode?: string
           pay_note?: string | null
@@ -1637,6 +1643,10 @@ export type Database = {
           rating?: number | null
           requires_booking_confirmation?: boolean
           response_time_hours?: number | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
+          trial_ends_at?: string | null
           session_types?: string[] | null
           slug: string
           specialties?: string[]
@@ -1670,6 +1680,7 @@ export type Database = {
           locations?: string[]
           name?: string
           new_family_booking?: string
+          offline_pay?: Json
           pathway_tags?: string[]
           pay_mode?: string
           pay_note?: string | null
@@ -1684,7 +1695,11 @@ export type Database = {
           slug?: string
           specialties?: string[]
           status?: string | null
+          stripe_customer_id?: string | null
+          stripe_subscription_id?: string | null
+          subscription_status?: string | null
           total_reviews?: number | null
+          trial_ends_at?: string | null
           updated_at?: string
           years_experience?: number | null
         }
@@ -3644,6 +3659,7 @@ export type Database = {
       get_feedback_due: { Args: never; Returns: Json }
       get_feedback_screen: { Args: { p_slot_id: string }; Returns: Json }
       get_group_offer: { Args: { p_offer_id: string }; Returns: Json }
+      coach_has_access: { Args: { p_coach_id?: string | null }; Returns: boolean }
       get_my_coaches: { Args: never; Returns: Json }
       get_my_notifications: { Args: never; Returns: Json }
       get_my_organization: { Args: never; Returns: Json }

@@ -9,7 +9,7 @@ export const COACH_NAV: NavItem[] = [
   { title: "My Sessions", short: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "My Athletes", short: "Athletes", url: ROUTES.ATHLETES, icon: Users },
   { title: "My Schedule", short: "Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
-  { title: "Business", short: "Business", url: ROUTES.PAYMENTS, icon: Briefcase, also: [ROUTES.BUSINESS] },
+  { title: "My Business", short: "Business", url: ROUTES.PAYMENTS, icon: Briefcase, also: [ROUTES.BUSINESS] },
 ];
 
 // Phone tab bar: the 5th tab opens the Business page with Payments and My Organization.

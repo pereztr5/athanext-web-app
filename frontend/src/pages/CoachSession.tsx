@@ -11,17 +11,19 @@ import AthleteSessionPage from "./AthleteSession";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, CalendarSync, ChevronLeft, ChevronRight, Eye, FileText, Lock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
+import { CalendarSync, ChevronLeft, ChevronRight, Eye, FileText, Lock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { chatAPI } from "@/api/chat";
 import { coachSessionAPI, type CoachSessionBooking } from "@/api/coachSession";
+import { offlinePayAPI } from "@/api/offlinePay";
 import { meta, primaryButton, secondaryButton, textButton, dangerTextButton } from "@/components/schedule/styles";
 import { AddToGroupDialog } from "@/components/coach-session/AddToGroupDialog";
 import { CancelDialog } from "@/components/coach-session/CancelDialog";
 import { DeclineDialog } from "@/components/coach-session/DeclineDialog";
 import { RescheduleDialog } from "@/components/coach-session/RescheduleDialog";
 import { Avatar, InfoBox } from "@/components/coach-session/parts";
+import { SessionHeader } from "@/components/session/SessionHeader";
 import { cap, h3, spCard } from "@/components/coach-session/styles";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
@@ -31,7 +33,7 @@ import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { scoreWord } from "@/utils/feedback";
 import { formatDayISO, formatMinutes, minutesInZone, plural, sessionEnd, sessionStart } from "@/utils/schedule";
-import { formatInstantSpan, isoDateInZone } from "@/utils/viewerTime";
+import { isoDateInZone } from "@/utils/viewerTime";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const money2 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -44,6 +46,8 @@ const NOT_FAMILY = /^(Declined|Cancelled by coach|Request expired|Coach suggeste
 const payPill = (b: CoachSessionBooking) =>
   b.status === "requested" ? (
     <BrandPill tone="amber">Request</BrandPill>
+  ) : b.paymentStatus === "pending_offline" ? (
+    <BrandPill tone="amber">Pending</BrandPill>
   ) : b.paymentStatus === "direct" ? null : b.paymentStatus === "refunded" ? (
     <BrandPill tone="sunk">Refunded</BrandPill>
   ) : b.paymentStatus === "credit" ? (
@@ -111,6 +115,14 @@ const CoachSessionPage = () => {
       ),
     onError: fail,
   });
+  const confirmOffline = useMutation({
+    mutationFn: (bookingId: string) => offlinePayAPI.confirm(bookingId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["pending-offline-payments"] });
+      done("Marked paid", "The family sees it as paid.");
+    },
+    onError: fail,
+  });
 
   if (!ready) return null;
   // Athletes and parents get their own page for the same link (ATH-97).
@@ -146,7 +158,7 @@ const CoachSessionPage = () => {
   const shortDay = (iso: string) => formatDayISO(iso, { month: "short", day: "numeric" });
   const startLabel = formatMinutes(minutesInZone(start, timeZone));
 
-  const status = cancelled ? (
+  const statusPill = cancelled ? (
     <BrandPill tone="amber">Cancelled</BrandPill>
   ) : declined ? (
     <BrandPill tone="sunk">Declined</BrandPill>
@@ -158,22 +170,17 @@ const CoachSessionPage = () => {
     <BrandPill tone="amber">No-show</BrandPill>
   ) : s.ended ? (
     <BrandPill tone="sunk">Completed</BrandPill>
-  ) : group ? (
-    <BrandPill tone="teal">Group</BrandPill>
-  ) : !first ? (
+  ) : !group && !first ? (
     <BrandPill tone="neutral">Open</BrandPill>
-  ) : (
+  ) : !group ? (
     <BrandPill tone="green">Confirmed</BrandPill>
-  );
-  const sub = group
-    ? `${s.pillar ? `${s.pillar} · ` : ""}${live.length} of ${s.capacity} spots · ${money(s.price)} per athlete`
-    : `${s.pillar ? `${s.pillar} · ` : ""}${s.durationMinutes} min`;
-
+  ) : null;
   // Two lines: how it was paid, and the amount or credits left.
   const payLine = (): [string, string] => {
     if (!first) return paysDirect ? ["Family pays you directly", money(s.price)] : ["Not charged", ""];
     const p = first.paymentStatus;
     if (first.status === "requested") return paysDirect ? ["Family pays you directly", money(s.price)] : ["Charged when you accept", ""];
+    if (p === "pending_offline") return ["Paid to you directly, pending", money(s.price)];
     if (p === "direct") return ["Family pays you directly", money(s.price)];
     if (p === "refunded") return ["Refunded", ""];
     if (p === "credit") return ["Paid with a credit", s.ended || first.status === "canceled" ? "" : `${plural(first.creditsLeft, "credit")} left`];
@@ -209,7 +216,7 @@ const CoachSessionPage = () => {
     return `${parts.join(". ")}.`;
   })();
 
-  const fact = (Icon: typeof Calendar, a: string, b?: string | null, right?: JSX.Element | null) => (
+  const fact = (Icon: typeof MapPin, a: string, b?: string | null, right?: JSX.Element | null) => (
     <div className="flex items-start gap-3">
       <Icon className="mt-[2px] size-[17px] flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
@@ -271,25 +278,34 @@ const CoachSessionPage = () => {
   return (
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
-        <button type="button" className={cn(textButton, "-mb-1.5 self-start text-[#767980]")} onClick={() => navigate(-1)}>
-          <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
-          Back
-        </button>
-        <header className="flex items-center gap-4">
-          <div className="flex min-w-0 grow flex-col gap-1">
-            <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-[24px] font-bold leading-[1.15] tracking-[-0.05em] text-[#1A202C] md:text-[32px] md:leading-[1.1]">{title}</h1>
-              {status}
-            </div>
-            <span className="text-[14px] leading-[18px] text-[#767980]">{sub}</span>
-          </div>
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => navigate(-1)}>
+            <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
+            Back
+          </button>
           {actions ? <div className="hidden flex-wrap items-center gap-2 md:flex">{actions}</div> : null}
-        </header>
+        </div>
+
+        <SessionHeader
+          timeZone={timeZone}
+          session={{
+            title,
+            sessionType: s.sessionType,
+            pillar: s.pillar,
+            date: s.date,
+            startTime: s.startTime,
+            endTime: s.endTime,
+            location: s.location,
+            place: s.place,
+            statusPills: statusPill,
+            people: live.map((b) => ({ name: b.name, imageUrl: b.imageUrl, line: whoLine(b) })),
+            peopleLabel: group ? `${live.length} of ${s.capacity} spots · ${money(s.price)} per athlete` : undefined,
+          }}
+        />
 
         {cancelLine ? <InfoBox>{cancelLine}</InfoBox> : null}
 
         <section className={spCard}>
-          {fact(Calendar, dayLabel, formatInstantSpan(start, end, timeZone))}
           {s.location === "online"
             ? fact(Video, "Video call", "Link sent 15 minutes before")
             : fact(
@@ -307,7 +323,23 @@ const CoachSessionPage = () => {
                   </a>
                 ) : null
               )}
-          {!group ? fact(Ticket, pay1, pay2) : null}
+          {!group
+            ? fact(
+                Ticket,
+                pay1,
+                pay2,
+                first?.paymentStatus === "pending_offline" ? (
+                  <button
+                    type="button"
+                    className={cn(secondaryButton, "h-8 shrink-0 px-3 text-[13px]")}
+                    disabled={confirmOffline.isPending}
+                    onClick={() => confirmOffline.mutate(first.id)}
+                  >
+                    Confirm received
+                  </button>
+                ) : null
+              )
+            : null}
           {!group && first ? (
             <>
               <div className="h-px bg-[#EAEADF]" />

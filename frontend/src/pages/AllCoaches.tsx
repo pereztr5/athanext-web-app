@@ -63,6 +63,11 @@ type Coach = Omit<
   | "deactivated_at"
   | "pay_mode"
   | "pay_note"
+  | "offline_pay"
+  | "stripe_customer_id"
+  | "stripe_subscription_id"
+  | "subscription_status"
+  | "trial_ends_at"
 > & {
   is_verified?: boolean;
   favourite_positions?: string[];

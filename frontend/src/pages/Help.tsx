@@ -5,6 +5,7 @@
 import { useMemo, useState } from "react";
 import { BookOpen, ChevronDown, MessageCircle, Search } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { LegalCard } from "@/components/legal/LegalLinks";
 import { card, dialogContent, input, label, meta, pageTitle, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -126,21 +127,24 @@ const Help = () => {
             )}
           </section>
 
-          <section className={card}>
-            <h2 className="flex items-center gap-2 text-[16px] font-medium leading-[18px] tracking-[-0.05em]">
-              <MessageCircle className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-              Contact support
-            </h2>
-            <p className="text-[14px] leading-[18px] text-[#484D56]">
-              Questions about your account, a payment or {isCoach ? "a family" : "a coach"}. We usually reply within a day.
-            </p>
-            <button type="button" className={cn(secondaryButton, "self-start")} onClick={() => setSupportOpen(true)}>
-              Message support
-            </button>
-            <a className={meta} href="mailto:support@athanext.com">
-              support@athanext.com
-            </a>
-          </section>
+          <div className="flex flex-col gap-5">
+            <section className={card}>
+              <h2 className="flex items-center gap-2 text-[16px] font-medium leading-[18px] tracking-[-0.05em]">
+                <MessageCircle className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                Contact support
+              </h2>
+              <p className="text-[14px] leading-[18px] text-[#484D56]">
+                Questions about your account, a payment or {isCoach ? "a family" : "a coach"}. We usually reply within a day.
+              </p>
+              <button type="button" className={cn(secondaryButton, "self-start")} onClick={() => setSupportOpen(true)}>
+                Message support
+              </button>
+              <a className={meta} href="mailto:support@athanext.com">
+                support@athanext.com
+              </a>
+            </section>
+            <LegalCard role={role} compact />
+          </div>
         </div>
       </div>
 

@@ -27,11 +27,13 @@ export interface Package {
 
 export interface PackagePurchase {
   id: string;
-  package_id: string;
+  package_id: string | null;
   sessions_remaining: number;
   sessions_total: number;
   expiry_date: string;
-  status: 'active' | 'expired' | 'completed';
+  status: 'active' | 'expired' | 'completed' | 'trialing';
+  stripe_subscription_id?: string | null;
+  org_package_id?: string | null;
 }
 
 export interface PurchasePackageInput {
@@ -237,6 +239,15 @@ export const packagesAPI = {
       'create-package-payment',
       input as any,
       `Create package payment for package ${input.package_id}`
+    );
+  },
+
+  /** Stop renewing a monthly group pass at the end of the current period. */
+  async cancelSubscription(purchaseId: string): Promise<ApiResponse<{ canceled?: boolean }>> {
+    return apiClient.invoke(
+      'create-package-payment',
+      { action: 'cancel', purchase_id: purchaseId } as any,
+      `Cancel package subscription: ${purchaseId}`,
     );
   },
 

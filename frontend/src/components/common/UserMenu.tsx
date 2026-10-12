@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Building2, CircleHelp, LogOut, Settings, Store, User } from "lucide-react";
+import { openLegalDoc } from "@/components/legal/LegalOverlay";
 import { useRole } from "@/hooks/useRole";
 import { useMyOrganization } from "@/hooks/useOrganizations";
 import { AvatarFallback } from "@radix-ui/react-avatar";
@@ -460,6 +461,17 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <LogOut strokeWidth={1.5} />
           <span>Sign out</span>
         </DropdownMenuItem>
+        <div className="px-2 pb-2 pt-1">
+          <p className="px-2 text-[11px] leading-[14px] text-[#A3A6AB]">
+            <button type="button" className="hover:text-[#767980] hover:underline" onClick={() => openLegalDoc("terms")}>
+              Terms of Service
+            </button>
+            {" · "}
+            <button type="button" className="hover:text-[#767980] hover:underline" onClick={() => openLegalDoc("privacy")}>
+              Privacy Policy
+            </button>
+          </p>
+        </div>
       </DropdownMenuContent>
     </DropdownMenu>
   );
