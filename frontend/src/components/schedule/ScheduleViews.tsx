@@ -1,40 +1,22 @@
 /**
- * My Schedule views (ATH-71, Working Copy): Day (day strip + list), Week (seven columns on web,
- * a list by day on phone) and Month (grid). Open slots are dashed blue, busy times striped,
- * groups teal, requests orange.
+ * My Schedule views (ATH-71, Working Copy 4): Day (date-tile strip + chips), Week (Create-session
+ * grid on web and phone), Month (grid). Open slots are dashed blue, busy times striped.
+ * Booking requests open the session dialog (Accept lives there and on Requests).
  */
-import { ChevronDown, ChevronRight, ChevronUp, Plus } from "lucide-react";
-import { BrandPill } from "@/components/brand";
+import { ChevronDown, ChevronUp, Plus } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { ScheduleSession } from "@/api/schedule";
 import {
   addDaysISO,
-  bookedAthletes,
-  formatClock,
   formatDayISO,
-  requestsFor,
   plural,
   weekStartISO,
   type ScheduleDay,
-  type ScheduleItem,
 } from "@/utils/schedule";
-import { formatInstantSpan } from "@/utils/viewerTime";
-import { dayTile, dayTileNumber, dayTileWeekday, primaryButton, secondaryButton, smallButton, textButton } from "./styles";
-import { FillBar, PayPill } from "./views/parts";
-import {
-  chipBox,
-  chipName,
-  chipSub,
-  chipTime,
-  initials,
-  rowBox,
-  rowGrid,
-  rowLink,
-  rowName,
-  rowSub,
-  rowTime,
-  striped,
-} from "./views/styles";
+import { dateTile, dateTileMonth, dateTileNumber, dateTileWeekday } from "./plan/parts";
+import { secondaryButton, smallButton, textButton } from "./styles";
+import { WeekChip, WeekDayColumn, WeekDayGrid } from "./WeekDayGrid";
+import { striped } from "./views/styles";
+import type { ScheduleSession } from "@/api/schedule";
 
 export interface ScheduleViewHandlers {
   onOpenSession: (session: ScheduleSession) => void;
@@ -42,284 +24,29 @@ export interface ScheduleViewHandlers {
   respondingId: string | null;
 }
 
-const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-
-const expiresIn = (expiresAt: string | null, now: Date) => {
-  if (!expiresAt) return null;
-  const minutes = Math.round((Date.parse(expiresAt) - now.getTime()) / 60000);
-  if (minutes <= 0) return "Expiring";
-  if (minutes < 60) return `Expires in ${minutes} min`;
-  return `Expires in ${Math.floor(minutes / 60)}h`;
-};
-
-const placeText = (session: ScheduleSession) =>
-  session.location === "online" ? "Video call" : session.place || "In person";
-
-const acceptButton = cn(primaryButton, smallButton, "flex-none");
-
-/** One row in the Day view and the phone Week list (Working Copy `.sch-it`). */
-export const ItemRow = ({
-  item,
-  timeZone,
-  now,
-  handlers,
-}: {
-  item: ScheduleItem;
-  timeZone: string;
-  now: Date;
-  handlers: ScheduleViewHandlers;
-}) => {
-  const time = <span className={rowTime}>{formatClock(item.start, timeZone)}</span>;
-  const kind = item.kind;
-  const text = (name: string, sub: string) => (
-    <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <b className={rowName(kind)}>{name}</b>
-      <small className={rowSub(kind)}>{sub}</small>
-    </span>
-  );
-
-  if (kind === "busy") {
-    return (
-      <div className={rowGrid}>
-        {time}
-        <div className={rowBox(kind)}>{text("Busy", `From Google Calendar · ${formatInstantSpan(item.start, item.end, timeZone)}`)}</div>
-      </div>
-    );
-  }
-
-  const session = item.session!;
-  const open = () => handlers.onOpenSession(session);
-
-  if (kind === "open") {
-    return (
-      <div className={rowGrid}>
-        {time}
-        <button type="button" className={cn(rowBox(kind), "hover:bg-[#F4F8FC]")} onClick={open}>
-          {text(
-            "Open slot",
-            session.visibility === "clients"
-              ? "Your families can book this"
-              : `Families can book this${session.offeredNames.length ? ` · offered to ${session.offeredNames.join(", ")}` : ""}`
-          )}
-          <Plus strokeWidth={1.5} aria-hidden="true" />
-        </button>
-      </div>
-    );
-  }
-
-  if (kind === "offered") {
-    return (
-      <div className={rowGrid}>
-        {time}
-        <button type="button" className={cn(rowBox(kind), "hover:bg-[#F4F8FC]")} onClick={open}>
-          {text(
-            "Offered · 1-on-1",
-            `${session.offeredNames.length ? `Sent to ${session.offeredNames.join(", ")}` : "Shared by link"} · waiting for someone to book`
-          )}
-          <span className={rowLink}>
-            Share
-            <ChevronRight strokeWidth={1.5} aria-hidden="true" />
-          </span>
-        </button>
-      </div>
-    );
-  }
-
-  if (kind === "request") {
-    const request = requestsFor(session)[0];
-    return (
-      <div className={rowGrid}>
-        {time}
-        <div className={rowBox(kind)}>
-          <button type="button" className="flex min-w-0 flex-1 flex-col gap-0.5 text-left" onClick={open}>
-            <b className={rowName(kind)}>{request.athleteName} · request</b>
-            <small className={rowSub(kind)}>
-              {[expiresIn(request.expiresAt, now), "1-on-1", money(session.price)].filter(Boolean).join(" · ")}
-            </small>
-          </button>
-          <button
-            type="button"
-            className={acceptButton}
-            disabled={handlers.respondingId !== null}
-            onClick={() => handlers.onRespond(request.id, true)}
-          >
-            Accept
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  if (kind === "group") {
-    const booked = bookedAthletes(session);
-    const requests = requestsFor(session);
-    const left = session.capacity - booked.length;
-    return (
-      <>
-        <div className={rowGrid}>
-          {time}
-          <button
-            type="button"
-            className={cn(rowBox(kind, session.isDraft), "flex-col items-stretch gap-1.5 hover:brightness-[0.98]")}
-            onClick={open}
-          >
-            <span className="flex items-start justify-between gap-3">
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <b className={rowName(kind)}>{session.sessionName}</b>
-                <small className={rowSub(kind)}>
-                  {formatInstantSpan(item.start, item.end, timeZone)} · {placeText(session)}
-                </small>
-              </span>
-              {session.isDraft ? (
-                <BrandPill tone="amber">Draft</BrandPill>
-              ) : (
-                <span className="text-[13px] font-semibold text-[#117A96]">
-                  {booked.length}/{session.capacity}
-                </span>
-              )}
-            </span>
-            <FillBar booked={booked.length} capacity={session.capacity} />
-            <span className="flex items-center justify-between gap-3">
-              {booked.length ? (
-                <span className="flex flex-none" aria-hidden="true">
-                  {booked.slice(0, 6).map((b) => (
-                    <i
-                      key={b.id}
-                      className="-mr-[5px] flex size-[22px] items-center justify-center rounded-full border border-[#A9D4E0] bg-white text-[9px] font-semibold not-italic text-[#117A96]"
-                    >
-                      {initials(b.athleteName)}
-                    </i>
-                  ))}
-                </span>
-              ) : null}
-              <small className={cn(rowSub(kind), "grow", booked.length && "ml-3")}>
-                {left > 0 ? `${plural(left, "spot")} open` : "Full"}
-                {requests.length ? ` · ${plural(requests.length, "request")}` : ""}
-              </small>
-              <span className={rowLink}>
-                Athletes
-                <ChevronRight strokeWidth={1.5} aria-hidden="true" />
-              </span>
-            </span>
-          </button>
-        </div>
-        {requests.map((request) => (
-          <div key={request.id} className={cn(rowGrid, "-mt-1")}>
-            <span />
-            <div className={cn(rowBox("request"), "ml-[14px] w-[calc(100%-14px)]")}>
-              <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                <b className={rowName("request")}>{request.athleteName} wants to join</b>
-                <small className={rowSub("request")}>
-                  {[expiresIn(request.expiresAt, now), money(session.price)].filter(Boolean).join(" · ")}
-                </small>
-              </span>
-              <button
-                type="button"
-                className={acceptButton}
-                disabled={handlers.respondingId !== null}
-                onClick={() => handlers.onRespond(request.id, true)}
-              >
-                Accept
-              </button>
-            </div>
-          </div>
-        ))}
-      </>
-    );
-  }
-
-  const athlete = bookedAthletes(session)[0];
-  return (
-    <div className={rowGrid}>
-      {time}
-      <button type="button" className={cn(rowBox(kind), "hover:bg-[#F4F4EB]")} onClick={open}>
-        {text(
-          athlete?.athleteName ?? "Athlete",
-          `1-on-1${session.pillar ? ` ${session.pillar.toLowerCase()}` : ""} · ${session.durationMinutes} min`
-        )}
-        <PayPill booking={athlete} />
-      </button>
-    </div>
-  );
-};
-
-/** Small chip in the web Week columns (Working Copy `.sch-chip`). */
-const Chip = ({ item, timeZone, handlers }: { item: ScheduleItem; timeZone: string; handlers: ScheduleViewHandlers }) => {
-  const session = item.session;
-  const kind = item.kind;
-  const label =
-    kind === "busy"
-      ? "Busy"
-      : kind === "open"
-        ? "Open"
-        : kind === "offered"
-          ? "Offered"
-          : kind === "group"
-            ? session!.sessionName
-            : kind === "request"
-              ? requestsFor(session!)[0]?.athleteName
-              : bookedAthletes(session!)[0]?.athleteName ?? "Athlete";
-  const requests = session ? requestsFor(session).length : 0;
-  const sub =
-    kind === "group"
-      ? `${bookedAthletes(session!).length} of ${session!.capacity}${requests ? ` · ${plural(requests, "request")}` : ""}`
-      : kind === "request"
-        ? "Request"
-        : kind === "booked" || kind === "offered"
-          ? "1-on-1"
-          : null;
-  const className = chipBox(kind, session?.isDraft);
-  const content = (
-    <>
-      <small className={chipTime}>{formatClock(item.start, timeZone)}</small>
-      <b className={chipName(kind)}>{label}</b>
-      {sub ? <small className={chipSub(kind)}>{sub}</small> : null}
-    </>
-  );
-  if (!session) return <div className={className}>{content}</div>;
-  return (
-    <button type="button" className={className} onClick={() => handlers.onOpenSession(session)}>
-      {content}
-    </button>
-  );
-};
-
 export const WeekColumns = ({
   days,
   todayISO,
   timeZone,
   handlers,
   onOpenDay,
+  onAdd,
 }: {
   days: ScheduleDay[];
   todayISO: string;
   timeZone: string;
   handlers: ScheduleViewHandlers;
   onOpenDay: (date: string) => void;
+  onAdd?: (date: string) => void;
 }) => (
-  <div className="grid grid-cols-7 gap-2">
-    {days.map((day) => (
-      <div key={day.date} className={cn("flex min-w-0 flex-col gap-1.5", day.date < todayISO && "opacity-60")}>
-        {/* "Mon 28" on one line over a 1px line; today's number in blue. */}
-        <button
-          type="button"
-          onClick={() => onOpenDay(day.date)}
-          className="flex w-full items-baseline gap-1.5 border-b border-[#EAEADF] pb-1.5 text-left"
-          aria-label={`Open ${formatDayISO(day.date, { weekday: "long", month: "long", day: "numeric" })}`}
-        >
-          <small className="text-[12px] leading-[14px] text-[#767980]">{formatDayISO(day.date, { weekday: "short" })}</small>
-          <b className={cn("text-[17px] font-semibold leading-[20px]", day.date === todayISO ? "text-[#0054B4]" : "text-[#1A202C]")}>
-            {formatDayISO(day.date, { day: "numeric" })}
-          </b>
-        </button>
-        {day.dayOff ? <span className="py-1.5 text-[12px] font-medium text-[#906A29]">Day off</span> : null}
-        {day.items.map((item) => (
-          <Chip key={item.key} item={item} timeZone={timeZone} handlers={handlers} />
-        ))}
-        {!day.items.length && !day.dayOff ? <span className="py-1.5 text-[12px] text-[#A3A6AB]">Nothing yet</span> : null}
-      </div>
-    ))}
-  </div>
+  <WeekDayGrid
+    days={days}
+    todayISO={todayISO}
+    timeZone={timeZone}
+    onOpen={handlers.onOpenSession}
+    onOpenDay={onOpenDay}
+    onAdd={onAdd}
+  />
 );
 
 export const WeekAgenda = ({
@@ -331,9 +58,9 @@ export const WeekAgenda = ({
   nextWeekLabel,
   onShowNextWeek,
   timeZone,
-  now,
   handlers,
   onOpenDay,
+  onAdd,
 }: {
   days: ScheduleDay[];
   todayISO: string;
@@ -343,9 +70,9 @@ export const WeekAgenda = ({
   nextWeekLabel: string;
   onShowNextWeek: () => void;
   timeZone: string;
-  now: Date;
   handlers: ScheduleViewHandlers;
-  onOpenDay: (date: string) => void;
+  onOpenDay?: (date: string) => void;
+  onAdd?: (date: string) => void;
 }) => {
   const weekEnd = addDaysISO(weekStart, 6);
   const past = days.filter((d) => d.date >= weekStart && d.date < todayISO && d.date <= weekEnd);
@@ -353,11 +80,11 @@ export const WeekAgenda = ({
   const visible = days.filter((d) => showEarlier || d.date >= todayISO || d.date > weekEnd);
 
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-2.5">
       {past.length ? (
         <button
           type="button"
-          className="flex w-full items-center gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 py-2.5 text-left text-[13px] font-medium text-[#484D56]"
+          className="flex w-full items-center gap-2 rounded-[10px] border border-dashed border-[#C1C1B8] bg-transparent px-3.5 py-3 text-left text-[14px] text-[#767980]"
           aria-expanded={showEarlier}
           onClick={onToggleEarlier}
         >
@@ -372,38 +99,25 @@ export const WeekAgenda = ({
         </button>
       ) : null}
 
-      <div className="flex flex-col gap-7">
+      <div className="flex flex-col gap-2.5">
         {visible.map((day) => {
           const isWeekStart = day.date > weekEnd && day.date === weekStartISO(day.date);
           return (
             <div key={day.date} className="flex flex-col gap-2">
               {isWeekStart ? (
-                <p className="text-[12px] font-medium uppercase tracking-[-0.03em] text-[#767980]">
+                <p className="px-0.5 pt-2 text-[12px] font-medium tracking-[-0.03em] text-[#767980]">
                   Week of {formatDayISO(day.date, { month: "short", day: "numeric" })}
                 </p>
               ) : null}
-              <button
-                type="button"
-                id={day.date === todayISO ? "sch-today" : undefined}
-                className="flex items-center gap-2 border-b border-[#EAEADF] py-1 text-left"
-                onClick={() => onOpenDay(day.date)}
-              >
-                <b className="text-[15px] font-semibold leading-[18px] text-[#1A202C]">
-                  {day.date === todayISO
-                    ? `Today · ${formatDayISO(day.date, { month: "short", day: "numeric" })}`
-                    : formatDayISO(day.date, { weekday: "long", month: "short", day: "numeric" })}
-                </b>
-                {day.dayOff ? <BrandPill tone="amber">Day off</BrandPill> : null}
-              </button>
-              {day.items.length ? (
-                <div className="flex flex-col gap-2">
-                  {day.items.map((item) => (
-                    <ItemRow key={item.key} item={item} timeZone={timeZone} now={now} handlers={handlers} />
-                  ))}
-                </div>
-              ) : (
-                <span className="text-[12px] leading-[14px] text-[#767980]">{day.dayOff ? "Day off" : "Nothing yet"}</span>
-              )}
+              <WeekDayColumn
+                day={day}
+                todayISO={todayISO}
+                timeZone={timeZone}
+                phone
+                onOpen={handlers.onOpenSession}
+                onOpenDay={onOpenDay}
+                onAdd={onAdd}
+              />
             </div>
           );
         })}
@@ -417,23 +131,11 @@ export const WeekAgenda = ({
   );
 };
 
-const dayDots = (day: ScheduleDay, on = false) => {
-  const kinds = new Set(day.items.map((i) => i.kind));
-  return (
-    <span className="flex h-[5px] items-center gap-[3px]" aria-hidden="true">
-      {kinds.has("group") ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#9FD9EA]" : "bg-[#117A96]")} /> : null}
-      {kinds.has("booked") ? <i className={cn("size-[5px] rounded-full", on ? "bg-white" : "bg-[#0054B4]")} /> : null}
-      {kinds.has("open") || kinds.has("offered") ? <i className={cn("size-[5px] rounded-full border border-dashed", on ? "border-white" : "border-[#0054B4]")} /> : null}
-    </span>
-  );
-};
-
 export const DayView = ({
   days,
   selected,
   todayISO,
   timeZone,
-  now,
   handlers,
   onSelect,
   onAdd,
@@ -443,21 +145,18 @@ export const DayView = ({
   selected: string;
   todayISO: string;
   timeZone: string;
-  now: Date;
   handlers: ScheduleViewHandlers;
   onSelect: (date: string) => void;
   onAdd: (date: string) => void;
   onRestoreDay: (date: string) => void;
 }) => {
   const day = days.find((d) => d.date === selected) ?? days[0];
-  const requestCount = (d: ScheduleDay) =>
-    d.items.reduce((n, item) => n + (item.session ? requestsFor(item.session).length : 0), 0);
   return (
     <div className="flex flex-col gap-[14px]">
-      <div className="grid grid-cols-7 gap-1.5 md:gap-2" role="group" aria-label="Days">
+      <div className="flex flex-wrap justify-center gap-2 md:gap-3" role="group" aria-label="Days">
         {days.map((d) => {
-          const requests = requestCount(d);
           const on = d.date === day.date;
+          const past = d.date < todayISO;
           return (
             <button
               key={d.date}
@@ -465,17 +164,19 @@ export const DayView = ({
               aria-pressed={on}
               aria-label={formatDayISO(d.date, { weekday: "long", month: "long", day: "numeric" })}
               onClick={() => onSelect(d.date)}
-              className={cn(dayTile(on), "min-h-[78px]", !on && "bg-[#F7F7F0]")}
+              className={cn("rounded-[8px]", past && "opacity-55")}
             >
-              <small className={dayTileWeekday(on)}>{formatDayISO(d.date, { weekday: "short" })}</small>
-              <b className={dayTileNumber}>{formatDayISO(d.date, { day: "numeric" })}</b>
-              {requests ? (
-                <em className={cn("min-w-4 rounded-[8px] px-1 text-center text-[10px] font-bold not-italic leading-[14px]", on ? "bg-white text-[#C26E12]" : "bg-[#C26E12] text-white")}>
-                  {requests}
-                </em>
-              ) : (
-                dayDots(d, on)
-              )}
+              <span
+                className={cn(
+                  dateTile,
+                  on && "border-[#0054B4] shadow-[inset_0_0_0_1px_#0054B4]",
+                  d.date === todayISO && !on && "border-[#6698D2]",
+                )}
+              >
+                <small className={dateTileMonth}>{formatDayISO(d.date, { month: "short" })}</small>
+                <b className={dateTileNumber}>{formatDayISO(d.date, { day: "numeric" })}</b>
+                <em className={dateTileWeekday}>{formatDayISO(d.date, { weekday: "short" })}</em>
+              </span>
             </button>
           );
         })}
@@ -489,7 +190,7 @@ export const DayView = ({
           <span className="flex items-center gap-1.5">
             <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => onAdd(day.date)}>
               <Plus strokeWidth={1.5} aria-hidden="true" />
-              Add
+              Add session
             </button>
             {day.dayOff ? (
               <button type="button" className={cn(textButton, "px-2")} onClick={() => onRestoreDay(day.date)}>
@@ -507,12 +208,12 @@ export const DayView = ({
       ) : day.items.length ? (
         <div className="flex flex-col gap-2">
           {day.items.map((item) => (
-            <ItemRow key={item.key} item={item} timeZone={timeZone} now={now} handlers={handlers} />
+            <WeekChip key={item.key} item={item} timeZone={timeZone} onOpen={handlers.onOpenSession} />
           ))}
         </div>
       ) : (
         <p className="text-[14px] leading-[18px] text-[#767980]">
-          Nothing on this day yet. Tap Add to create a session or open times.
+          Nothing on this day yet. Tap Add session to create one.
         </p>
       )}
     </div>

@@ -266,7 +266,26 @@ serve(async (req) => {
     if (!coach) return json({ error: "Only coaches have a plan" }, 403);
 
     if (action === "status") {
-      return json(publicStatus(coach));
+      // Soft reconcile so return-from-Checkout works before a webhook secret is configured:
+      // if Stripe already has an active/trialing sub for this customer, mirror it onto coaches.
+      let current = coach;
+      if (current.stripe_customer_id && !(current.subscription_status && PAID.has(current.subscription_status))) {
+        try {
+          const listed = await stripe().subscriptions.list({
+            customer: current.stripe_customer_id,
+            status: "all",
+            limit: 5,
+          });
+          const live = listed.data.find((s) => PAID.has(s.status));
+          if (live) {
+            await syncSubscription(admin, current.id, live);
+            current = (await coachForUser(admin, user.id)) ?? current;
+          }
+        } catch (err) {
+          console.error("coach-billing status reconcile:", err);
+        }
+      }
+      return json(publicStatus(current));
     }
 
     if (action === "checkout") {
@@ -280,7 +299,7 @@ serve(async (req) => {
         customer: customerId,
         mode: "subscription",
         line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${site}/settings?tab=plan&billing=success`,
+        success_url: `${site}/settings?tab=plan&billing=success&session_id={CHECKOUT_SESSION_ID}`,
         cancel_url: `${site}/settings?tab=plan&billing=cancel`,
         client_reference_id: coach.id,
         subscription_data: {

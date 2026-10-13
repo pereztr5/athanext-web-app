@@ -300,14 +300,13 @@ const MySchedulePage = () => {
             <button
               type="button"
               className="inline-flex max-w-full items-center gap-1.5 self-start text-left text-[13px] text-[#767980] hover:text-[#1A202C]"
-              aria-label={`Your weekly hours: ${hoursLine}. Open Schedule settings`}
+              aria-label={`Your weekly hours: ${hoursLine}`}
               onClick={() => navigate(`${ROUTES.SCHEDULE_SETTINGS}#weekly-hours`)}
             >
               <Clock className="size-3.5 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span className="underline decoration-[#C1C1B8] underline-offset-2">
                 <span className="hidden md:inline">Hours: </span>
                 {hoursLine}
-                <span className="hidden md:inline"> · Schedule settings</span>
               </span>
               <ChevronRight className="size-3.5 shrink-0 md:hidden" strokeWidth={1.5} aria-hidden="true" />
             </button>
@@ -318,14 +317,6 @@ const MySchedulePage = () => {
             ) : null}
           </div>
           <div className="hidden items-center gap-2 md:flex">
-            <button
-              type="button"
-              className={cn(secondaryButton, smallButton)}
-              onClick={() => navigate(ROUTES.SCHEDULE_SETTINGS)}
-            >
-              <Settings className="size-4" strokeWidth={1.5} aria-hidden="true" />
-              Schedule settings
-            </button>
             {planButton("")}
             {createButton("")}
           </div>
@@ -349,14 +340,6 @@ const MySchedulePage = () => {
         <div className="flex flex-col gap-2 md:hidden">
           {planButton("h-[46px] w-full")}
           {createButton("h-[46px] w-full")}
-          <button
-            type="button"
-            className={cn(secondaryButton, "h-[40px] w-full")}
-            onClick={() => navigate(ROUTES.SCHEDULE_SETTINGS)}
-          >
-            <Settings className="size-4" strokeWidth={1.5} aria-hidden="true" />
-            Schedule settings
-          </button>
         </div>
 
         <section className={calendarCard}>
@@ -400,7 +383,6 @@ const MySchedulePage = () => {
               selected={anchor}
               todayISO={todayISO}
               timeZone={timeZone}
-              now={now}
               handlers={handlers}
               onSelect={setAnchor}
               onAdd={openCreate}
@@ -409,7 +391,14 @@ const MySchedulePage = () => {
           ) : currentView === "week" ? (
             <>
               <div className="hidden md:block">
-                <WeekColumns days={weekDays} todayISO={todayISO} timeZone={timeZone} handlers={handlers} onOpenDay={openDay} />
+                <WeekColumns
+                  days={weekDays}
+                  todayISO={todayISO}
+                  timeZone={timeZone}
+                  handlers={handlers}
+                  onOpenDay={openDay}
+                  onAdd={openCreate}
+                />
               </div>
               <div className="md:hidden">
                 <WeekAgenda
@@ -421,9 +410,9 @@ const MySchedulePage = () => {
                   nextWeekLabel={formatDayISO(nextAppendStart, { month: "short", day: "numeric" })}
                   onShowNextWeek={() => setExtraWeeks((n) => n + 1)}
                   timeZone={timeZone}
-                  now={now}
                   handlers={handlers}
                   onOpenDay={openDay}
+                  onAdd={openCreate}
                 />
               </div>
             </>

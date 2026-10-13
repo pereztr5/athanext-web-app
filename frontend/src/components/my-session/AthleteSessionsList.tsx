@@ -4,7 +4,7 @@
  */
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, CalendarPlus, ChevronRight, Search, User, Users } from "lucide-react";
+import { Calendar, CalendarPlus, ChevronRight, Clock, MapPin, Search, User, Users, Video } from "lucide-react";
 import { BrandPill } from "@/components/brand";
 import { SessionDateTile } from "@/components/my-session/CoachSessionCard";
 import { card, input, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
@@ -14,7 +14,7 @@ import type { UISession } from "@/types/my-sessions";
 import { formatLocationSentence } from "@/utils/sessionFormatting";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { addDaysISO, formatDayISO } from "@/utils/schedule";
-import { formatInstantSpan } from "@/utils/viewerTime";
+import { formatInstantSpan, timeZoneAbbreviation } from "@/utils/viewerTime";
 
 type Tab = "up" | "req" | "past" | "cancel";
 type Kind = "all" | "individual" | "group";
@@ -69,7 +69,8 @@ const AthleteSessionCard = ({
   const group = session.type === "group";
   const pillar = session.pillarSlot;
   const title = sessionListTitle(session);
-  const place = session.location === "online" ? "Video call" : formatLocationSentence(session.location) || "In person";
+  const online = session.location === "online";
+  const place = online ? "Video call" : formatLocationSentence(session.location) || "In person";
   const canceled = session.computedStatus === "canceled" || session.dbStatus === "canceled";
   const past = session.computedStatus === "past" || session.computedStatus === "completed";
   const requested = session.dbStatus === "requested";
@@ -77,69 +78,67 @@ const AthleteSessionCard = ({
   const needsPay = offered || (session.paymentStatus === "unpaid" && !past && !canceled && !requested);
   const feedbackReady = past && Boolean(session.hasSlotFeedback);
   const soon = !past && !canceled && !requested ? startsInLabel(session.start, now) : "";
+  const tz = timeZoneAbbreviation(timeZone, start);
+  const dateLine = `${formatDayISO(dayISO, { weekday: "short", month: "short", day: "numeric" })} · ${formatInstantSpan(start, end, timeZone)}${tz ? ` ${tz}` : ""}`;
 
-  const pills = (
-    <>
-      <BrandPill tone={group ? "teal" : "blue"}>
-        {group ? <Users className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <User className="size-3" strokeWidth={1.5} aria-hidden="true" />}
-        {group ? "Group" : "1-on-1"}
-      </BrandPill>
-      {pillar && title !== pillar ? <BrandPill tone="teal">{pillar}</BrandPill> : null}
-      {canceled ? <BrandPill tone="amber">Cancelled</BrandPill> : null}
-      {requested ? <BrandPill tone="amber">Requested</BrandPill> : null}
-      {offered ? <BrandPill tone="amber">Offered</BrandPill> : null}
-      {!canceled && !requested && !offered && past ? (
-        feedbackReady ? <BrandPill tone="green">Feedback ready</BrandPill> : <BrandPill tone="amber">Notes coming</BrandPill>
-      ) : null}
-      {!canceled && !requested && !offered && !past && soon ? <BrandPill tone="amber">{soon}</BrandPill> : null}
-    </>
-  );
-
-  const action =
-    needsPay && offered ? (
-      <span className="text-[13px] font-medium text-[#0054B4]">Confirm and pay</span>
-    ) : needsPay ? (
-      <span className="text-[13px] font-medium text-[#0054B4]">
-        ${Math.round(session.rate)} due · Pay now
-      </span>
-    ) : feedbackReady ? (
-      <span className="text-[13px] font-medium text-[#0054B4]">View feedback</span>
-    ) : (
-      <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-    );
+  const actionLabel =
+    needsPay && offered ? "Confirm and pay" : needsPay ? "Pay now" : feedbackReady ? "View feedback" : null;
 
   return (
     <button
       type="button"
       onClick={() => onOpen(session)}
       className={cn(
-        "flex w-full flex-col gap-2.5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-3.5 py-3 text-left hover:border-[#C1C1B8]",
-        canceled && "opacity-60"
+        "flex w-full flex-wrap items-stretch gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-3.5 text-left hover:border-[#C1C1B8] md:flex-nowrap md:gap-3.5",
+        canceled && "opacity-60",
       )}
     >
-      <span className="flex w-full items-start gap-3.5">
-        <SessionDateTile day={dayISO} />
-        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="flex flex-wrap gap-1.5">{pills}</span>
-          <span className="truncate text-[15px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{title}</span>
-          <span className={cn(meta, "truncate")}>
-            {formatInstantSpan(start, end, timeZone)} · {place}
-          </span>
-          {session.coachName ? (
-            <span className="flex items-center gap-2 text-[12px] text-[#484D56]">
-              <span className="flex size-6 items-center justify-center rounded-full bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]">
-                {coachInitials(session.coachName)}
-              </span>
-              {session.coachName}
-            </span>
+      <SessionDateTile day={dayISO} />
+      <span className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <span className="flex flex-wrap gap-1.5">
+          <BrandPill tone={group ? "teal" : "blue"}>
+            {group ? <Users className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <User className="size-3" strokeWidth={1.5} aria-hidden="true" />}
+            {group ? "Group" : "1-on-1"}
+          </BrandPill>
+          {pillar && title !== pillar ? <BrandPill tone="neutral">{pillar}</BrandPill> : null}
+          {canceled ? <BrandPill tone="amber">Cancelled</BrandPill> : null}
+          {requested ? <BrandPill tone="amber">Requested</BrandPill> : null}
+          {offered ? <BrandPill tone="amber">Offered</BrandPill> : null}
+          {!canceled && !requested && !offered && past ? (
+            feedbackReady ? <BrandPill tone="green">Feedback ready</BrandPill> : <BrandPill tone="amber">Notes coming</BrandPill>
           ) : null}
-          {past && !feedbackReady ? (
-            <span className="rounded-[8px] border-l-[3px] border-[#117A96] bg-[#E7F4F8] px-2.5 py-1.5 text-[12px] leading-[16px] text-[#117A96]">
-              Your coach is writing notes for this session.
-            </span>
-          ) : null}
+          {!canceled && !requested && !offered && !past && soon ? <BrandPill tone="amber">{soon}</BrandPill> : null}
         </span>
-        <span className="flex shrink-0 items-center self-center">{action}</span>
+        <span className="truncate text-[16px] font-semibold leading-5 tracking-[-0.05em] text-[#1A202C]">{title}</span>
+        <span className="flex flex-col gap-1 text-[12px] leading-4 tracking-[-0.03em] text-[#767980]">
+          <span className="inline-flex items-center gap-1">
+            <Clock className="size-3 flex-none" strokeWidth={1.5} aria-hidden="true" />
+            {dateLine}
+          </span>
+          <span className="inline-flex items-center gap-1">
+            {online ? (
+              <Video className="size-3 flex-none" strokeWidth={1.5} aria-hidden="true" />
+            ) : (
+              <MapPin className="size-3 flex-none" strokeWidth={1.5} aria-hidden="true" />
+            )}
+            {place}
+          </span>
+        </span>
+        {session.coachName ? (
+          <span className="flex items-center gap-2 pt-0.5 text-[12px] text-[#484D56]">
+            <span className="flex size-6 items-center justify-center rounded-full bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]">
+              {coachInitials(session.coachName)}
+            </span>
+            {session.coachName}
+          </span>
+        ) : null}
+      </span>
+      <span className="flex w-full shrink-0 items-center justify-end gap-2 self-center md:w-auto">
+        {actionLabel ? (
+          <span className={cn(secondaryButton, "pointer-events-none h-9 px-3 text-[13px]")}>{actionLabel}</span>
+        ) : (
+          <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        )}
       </span>
     </button>
   );

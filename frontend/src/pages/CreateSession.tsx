@@ -1,17 +1,17 @@
 /**
- * Create session week (Working Copy 4): today plus 6 days by default, week arrows to
- * move forward, seven columns on desktop, day cards on phone, + Add per day.
+ * Create session week (Working Copy 4 createweek.js): today plus 6 days, week arrows,
+ * shared date-tile grid with Add per day (desktop columns, phone cards).
  */
 import { useEffect, useMemo, useState } from "react";
-import { Link, Navigate, useNavigate, useSearchParams } from "react-router-dom";
+import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
 import { SessionDialog } from "@/components/schedule/SessionDialog";
 import { AddSessionSheet } from "@/components/schedule/createweek/AddSessionSheet";
-import { pageTitle, primaryButton } from "@/components/schedule/styles";
-import { calendarCard, chipBox, chipName, chipSub, chipTime, navArrow } from "@/components/schedule/views/styles";
-import { warmInfo } from "@/components/schedule/create/classes";
+import { WeekDayGrid } from "@/components/schedule/WeekDayGrid";
+import { pageTitle } from "@/components/schedule/styles";
+import { calendarCard, navArrow } from "@/components/schedule/views/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -19,14 +19,10 @@ import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import {
   addDaysISO,
-  bookedAthletes,
-  formatClock,
   formatDayISO,
   layoutDays,
   plural,
-  requestsFor,
   timeZonePillLabel,
-  type ScheduleItem,
 } from "@/utils/schedule";
 import { isoDateInZone } from "@/utils/viewerTime";
 
@@ -36,53 +32,6 @@ const windowStartForDay = (day: string, today: string): string => {
   let start = today;
   while (addDaysISO(start, 6) < day) start = addDaysISO(start, 7);
   return start;
-};
-
-const Chip = ({
-  item,
-  timeZone,
-  onOpen,
-}: {
-  item: ScheduleItem;
-  timeZone: string;
-  onOpen: (s: ScheduleSession) => void;
-}) => {
-  const session = item.session;
-  const kind = item.kind;
-  const label =
-    kind === "busy"
-      ? "Busy"
-      : kind === "open"
-        ? "Open"
-        : kind === "offered"
-          ? "Offered"
-          : kind === "group"
-            ? session!.sessionName
-            : kind === "request"
-              ? requestsFor(session!)[0]?.athleteName
-              : bookedAthletes(session!)[0]?.athleteName ?? "Athlete";
-  const requests = session ? requestsFor(session).length : 0;
-  const sub =
-    kind === "group"
-      ? `${bookedAthletes(session!).length} of ${session!.capacity}${requests ? ` · ${plural(requests, "request")}` : ""}`
-      : kind === "request"
-        ? "Request"
-        : kind === "booked" || kind === "offered"
-          ? "1-on-1"
-          : null;
-  const content = (
-    <>
-      <small className={chipTime}>{formatClock(item.start, timeZone)}</small>
-      <b className={chipName(kind)}>{label}</b>
-      {sub ? <small className={chipSub(kind)}>{sub}</small> : null}
-    </>
-  );
-  if (!session) return <div className={chipBox(kind)}>{content}</div>;
-  return (
-    <button type="button" className={chipBox(kind)} onClick={() => onOpen(session)}>
-      {content}
-    </button>
-  );
 };
 
 export default function CreateSession() {
@@ -155,136 +104,88 @@ export default function CreateSession() {
 
   const rules = schedule.data?.rules;
   const pill = timeZone !== "America/New_York" ? timeZonePillLabel(timeZone) : "";
+  const allSessions = days.flatMap((d) => d.items.filter((x) => x.kind !== "busy"));
+  const daysWith = new Set(allSessions.map((x) => x.session!.date)).size;
+  const rangeLabel =
+    weekStart === todayISO
+      ? "Today and the next 6 days"
+      : `${formatDayISO(dates[0], { month: "short", day: "numeric" })} to ${formatDayISO(dates[6], { month: "short", day: "numeric" })}`;
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5">
+        <button
+          type="button"
+          className="inline-flex items-center gap-1 self-start p-0 text-[14px] font-medium text-[#767980] hover:text-[#1A202C]"
+          onClick={() => navigate(ROUTES.SCHEDULE)}
+        >
+          <ChevronLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
+          My Schedule
+        </button>
+
         <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-2">
-            <button type="button" className={navArrow} aria-label="Back to My Schedule" onClick={() => navigate(ROUTES.SCHEDULE)}>
+          <div className="flex min-w-0 flex-col gap-1.5">
+            <h1 className={pageTitle}>Create session</h1>
+            <p className="text-[14px] leading-[18px] text-[#767980]">
+              {rangeLabel}
+              {pill ? ` · ${pill}` : ""} · {plural(allSessions.length, "session")} on {plural(daysWith, "day")}. Pick a
+              day to add to it.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              className={navArrow}
+              aria-label="Previous 7 days"
+              disabled={!canPrev}
+              onClick={() =>
+                setWeekStart((cur) => {
+                  const next = addDaysISO(cur, -7);
+                  return next < todayISO ? todayISO : next;
+                })
+              }
+            >
               <ChevronLeft strokeWidth={1.5} />
             </button>
-            <div className="flex min-w-0 flex-col gap-[6px]">
-              <h1 className={pageTitle}>Create session</h1>
-              <div className="flex flex-wrap items-center gap-2">
-                <button
-                  type="button"
-                  className={navArrow}
-                  aria-label="Previous 7 days"
-                  disabled={!canPrev}
-                  onClick={() => setWeekStart((cur) => {
-                    const next = addDaysISO(cur, -7);
-                    return next < todayISO ? todayISO : next;
-                  })}
-                >
-                  <ChevronLeft strokeWidth={1.5} />
-                </button>
-                <p className="text-[13px] text-[#767980]">
-                  {formatDayISO(dates[0], { month: "short", day: "numeric" })} to{" "}
-                  {formatDayISO(dates[6], { month: "short", day: "numeric" })}
-                  {pill ? ` · ${pill}` : ""}
-                </p>
-                <button
-                  type="button"
-                  className={navArrow}
-                  aria-label="Next 7 days"
-                  onClick={() => setWeekStart((cur) => addDaysISO(cur, 7))}
-                >
-                  <ChevronRight strokeWidth={1.5} />
-                </button>
-              </div>
-            </div>
+            <span className="whitespace-nowrap text-[14px] font-medium text-[#1A202C]">
+              {formatDayISO(dates[0], { month: "short", day: "numeric" })} to{" "}
+              {formatDayISO(dates[6], { month: "short", day: "numeric" })}
+            </span>
+            <button
+              type="button"
+              className={navArrow}
+              aria-label="Next 7 days"
+              onClick={() => setWeekStart((cur) => addDaysISO(cur, 7))}
+            >
+              <ChevronRight strokeWidth={1.5} />
+            </button>
           </div>
-          <Link to={ROUTES.SCHEDULE_SETTINGS} className="text-[13px] font-medium text-[#0054B4] hover:underline">
-            Schedule settings
-          </Link>
         </header>
 
-        <div className={cn(warmInfo, "text-[13px] leading-[18px]")}>
-          Add groups and 1-on-1s for the next week. Open slots show on your calendar for families to book.
-        </div>
-
         {schedule.isLoading || !rules ? (
-          <div className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-4 py-10 text-center text-[14px] text-[#767980]">Loading…</div>
+          <div className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-4 py-10 text-center text-[14px] text-[#767980]">
+            Loading…
+          </div>
         ) : (
           <>
-            <div className={cn(calendarCard, "hidden md:block")}>
-              <div className="grid grid-cols-7 gap-2">
-                {days.map((day) => {
-                  const isToday = day.date === todayISO;
-                  return (
-                    <div key={day.date} className="flex min-w-0 flex-col gap-2">
-                      <div className="flex flex-col gap-0.5 border-b border-[#EAEADF] pb-1.5">
-                        <small className="text-[12px] text-[#767980]">{formatDayISO(day.date, { weekday: "short" })}</small>
-                        <b className={cn("text-[17px] font-semibold", isToday ? "text-[#0054B4]" : "text-[#1A202C]")}>
-                          {formatDayISO(day.date, { day: "numeric" })}
-                        </b>
-                      </div>
-                      <div className="flex min-h-[160px] flex-col gap-1.5">
-                        {day.dayOff ? <span className="py-1 text-[12px] font-medium text-[#906A29]">Day off</span> : null}
-                        {day.items.map((item) => (
-                          <Chip key={item.key} item={item} timeZone={timeZone} onOpen={setOpenSession} />
-                        ))}
-                        {!day.dayOff && day.date >= todayISO ? (
-                          <button
-                            type="button"
-                            className="mt-auto flex items-center justify-center gap-1 rounded-[8px] border border-dashed border-[#C1C1B8] py-2 text-[12px] font-medium text-[#0054B4] hover:bg-[#F1F1E6]"
-                            onClick={() => setAddDate(day.date)}
-                          >
-                            <Plus className="size-3.5" strokeWidth={2} />
-                            Add
-                          </button>
-                        ) : null}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="flex flex-col gap-3 md:hidden">
-              {days.map((day) => {
-                const isToday = day.date === todayISO;
-                return (
-                  <section key={day.date} className="rounded-[12px] border border-[#EAEADF] bg-[#F7F7F0] p-3">
-                    <div className="mb-2 flex items-center justify-between gap-2">
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={cn(
-                            "flex size-8 items-center justify-center rounded-full text-[14px] font-semibold",
-                            isToday ? "bg-[#0054B4] text-white" : "bg-[#F1F1E6] text-[#1A202C]",
-                          )}
-                        >
-                          {formatDayISO(day.date, { day: "numeric" })}
-                        </span>
-                        <div className="flex flex-col">
-                          <span className="text-[14px] font-semibold text-[#1A202C]">
-                            {isToday ? "Today" : formatDayISO(day.date, { weekday: "long" })}
-                          </span>
-                          <span className="text-[12px] text-[#767980]">{formatDayISO(day.date, { month: "short", day: "numeric" })}</span>
-                        </div>
-                      </div>
-                      {!day.dayOff && day.date >= todayISO ? (
-                        <button type="button" className={cn(primaryButton, "h-8 px-3 text-[12px]")} onClick={() => setAddDate(day.date)}>
-                          <Plus className="size-3.5" strokeWidth={2} />
-                          Add
-                        </button>
-                      ) : null}
-                    </div>
-                    {day.dayOff ? (
-                      <p className="text-[13px] text-[#767980]">Day off</p>
-                    ) : day.items.length === 0 ? (
-                      <p className="text-[13px] text-[#767980]">Nothing yet</p>
-                    ) : (
-                      <div className="flex flex-col gap-1.5">
-                        {day.items.map((item) => (
-                          <Chip key={item.key} item={item} timeZone={timeZone} onOpen={setOpenSession} />
-                        ))}
-                      </div>
-                    )}
-                  </section>
-                );
-              })}
+            <section className={cn(calendarCard, "hidden md:block")}>
+              <WeekDayGrid
+                days={days}
+                todayISO={todayISO}
+                timeZone={timeZone}
+                onOpen={setOpenSession}
+                onAdd={setAddDate}
+              />
+            </section>
+            <div className="md:hidden">
+              <WeekDayGrid
+                days={days}
+                todayISO={todayISO}
+                timeZone={timeZone}
+                phone
+                onOpen={setOpenSession}
+                onAdd={setAddDate}
+              />
             </div>
           </>
         )}

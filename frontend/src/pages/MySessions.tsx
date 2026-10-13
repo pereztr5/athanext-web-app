@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Children, memo, useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useSearchParams } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import {
@@ -13,7 +13,6 @@ import {
   Info,
   MapPin,
   PlayCircle,
-  Plus,
   Search,
 } from "lucide-react";
 
@@ -42,8 +41,7 @@ import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
 import { AthleteSessionsList, sessionListTitle } from "@/components/my-session/AthleteSessionsList";
 import { CoachSessionCard, CoachSessionList } from "@/components/my-session/CoachSessionCard";
 import { useOccurrenceInfo, type CoachCardKind } from "@/components/my-session/coachSessions";
-import { pageTitle, primaryButton, segButton, segGroup } from "@/components/schedule/styles";
-import { ROUTES } from "@/routes";
+import { pageTitle, segButton, segGroup } from "@/components/schedule/styles";
 import {
   upsertSlotFeedback,
   getExistingFeedback,
@@ -67,7 +65,7 @@ import { PROFILE_TYPE } from "@/utils/db";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
-import { formatDateInZone } from "@/utils/viewerTime";
+import { formatDateInZone, timeZoneAbbreviation } from "@/utils/viewerTime";
 import { sportFromText } from "@/utils/coachSport";
 
 type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
@@ -503,7 +501,7 @@ const MySessions = () => {
     pillar: "all",
   });
   const [now, setNow] = useState(() => new Date());
-  const [coachTab, setCoachTab] = useState<CoachCardKind>("up");
+  const [coachTab, setCoachTab] = useState<CoachCardKind | null>(null);
   const [selectedSession, setSelectedSession] = useState<UISession | null>(null);
   const [rateDialogOpen, setRateDialogOpen] = useState(false);
   const [rateSession, setRateSession] = useState<UISession | null>(null);
@@ -1038,6 +1036,14 @@ const MySessions = () => {
     return place || formatLocationSentence(session.location) || "-";
   };
 
+  const feedbackDueCount = pastCompletedSessions.filter(
+    (s) => !hasSubmittedFeedback(s) && (s.totalAthletes ?? s.athletes?.length ?? 0) > 0,
+  ).length;
+  const resolvedCoachTab: CoachCardKind = coachTab ?? (inProgressSessions.length ? "now" : "up");
+  const tzAbbr = timeZoneAbbreviation(timeZone, now);
+
+  const feedbackSlotId = (session: UISession) => session.slotId || session.occurrenceId || session.id;
+
   const renderCoachCard = (session: UISession, kind: CoachCardKind) => (
     <CoachSessionCard
       key={session.id}
@@ -1049,50 +1055,55 @@ const MySessions = () => {
       location={coachLocation(session)}
       info={session.occurrenceId ? occurrenceInfo[session.occurrenceId] : undefined}
       hasFeedback={hasSubmittedFeedback(session)}
+      timeZone={timeZone}
+      timeZoneAbbr={tzAbbr}
       onViewDetails={() => openSession(session)}
+      onCheckIn={() => handleFeedbackNavigate(feedbackSlotId(session), session)}
+      onFeedback={() => handleFeedbackNavigate(feedbackSlotId(session), session)}
     />
   );
 
-  const coachTabs: [CoachCardKind, string, UISession[], string][] = [
-    ["now", `In progress ${inProgressSessions.length}`, inProgressSessions, "No sessions in progress"],
-    ["up", `Upcoming ${upcomingSessions.length}`, upcomingSessions, "No upcoming sessions. Create one from My Schedule."],
-    ["past", `Previous ${pastCompletedSessions.length}`, pastCompletedSessions, "No previous sessions yet"],
+  const coachTabs: [CoachCardKind, string, number, UISession[], string][] = [
+    ["now", "In progress", inProgressSessions.length, inProgressSessions, "No sessions in progress. Live sessions show here with Check in."],
+    ["up", "Upcoming", upcomingSessions.length, upcomingSessions, "No upcoming sessions. Create one from My Schedule."],
+    ["past", "Previous", pastCompletedSessions.length, pastCompletedSessions, "No previous sessions yet"],
   ];
-  const activeCoach = coachTabs.find(([id]) => id === coachTab) ?? coachTabs[1];
+  const activeCoach = coachTabs.find(([id]) => id === resolvedCoachTab) ?? coachTabs[1];
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className={cn("mx-auto flex w-full flex-col gap-6", isCoach ? "max-w-[920px]" : "max-w-[1000px]")}>
         {isCoach ? (
           <>
-            <header className="flex flex-wrap items-start justify-between gap-3">
-              <div className="flex flex-col gap-2.5">
-                <h1 className={pageTitle}>My Sessions</h1>
-                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-                  Review your sessions and add notes for families.
-                </p>
-              </div>
-              <Link to={ROUTES.SCHEDULE_CREATE} className={primaryButton}>
-                <Plus strokeWidth={1.5} aria-hidden="true" />
-                Create session
-              </Link>
+            <header className="flex flex-col gap-2.5">
+              <h1 className={pageTitle}>My Sessions</h1>
+              <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                Check in athletes and send feedback after each session.
+              </p>
             </header>
-            <div className={cn(segGroup, "w-fit flex-wrap")} role="tablist" aria-label="Session lists">
-              {coachTabs.map(([id, label]) => (
+            <div className={cn(segGroup, "w-fit max-w-full flex-wrap")} role="tablist" aria-label="Session lists">
+              {coachTabs.map(([id, label, count]) => (
                 <button
                   key={id}
                   type="button"
                   role="tab"
-                  aria-selected={coachTab === id}
-                  className={cn(segButton(coachTab === id), "flex-none")}
+                  aria-selected={resolvedCoachTab === id}
+                  className={cn(segButton(resolvedCoachTab === id), "flex-none gap-2")}
                   onClick={() => setCoachTab(id)}
                 >
-                  {label}
+                  <span>{label}</span>
+                  <span className="text-[#A3A6AB]">{count}</span>
+                  {id === "past" && feedbackDueCount > 0 ? (
+                    <BrandPill tone="amber">
+                      <span className="hidden sm:inline">{feedbackDueCount} feedback due</span>
+                      <span className="sm:hidden">{feedbackDueCount} due</span>
+                    </BrandPill>
+                  ) : null}
                 </button>
               ))}
             </div>
-            <CoachSessionList empty={activeCoach[3]}>
-              {activeCoach[2].map((session) => renderCoachCard(session, activeCoach[0]))}
+            <CoachSessionList empty={activeCoach[4]}>
+              {activeCoach[3].map((session) => renderCoachCard(session, activeCoach[0]))}
             </CoachSessionList>
           </>
         ) : (
