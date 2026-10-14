@@ -14,8 +14,8 @@ export interface RulesView extends BookingRulesInput {
 
 const cancellationText = (r: Pick<RulesView, "cancelNoticeHours" | "cancellationPolicy">) =>
   r.cancelNoticeHours
-    ? `${plural(r.cancelNoticeHours, "hour")} notice for a full refund`
-    : r.cancellationPolicy || "24 hours notice for a full refund";
+    ? `${plural(r.cancelNoticeHours, "hour")} notice for a session credit`
+    : r.cancellationPolicy || "24 hours notice for a session credit";
 
 export const BookingRulesCard = ({ rules, loading }: { rules: RulesView; loading: boolean }) => {
   const [editing, setEditing] = useState(false);

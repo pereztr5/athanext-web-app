@@ -510,7 +510,7 @@ export const OwnProfileEditor = ({
             <div className="flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] px-[14px] py-3 text-[12px] leading-[14px] text-[#767980]">
               <ShieldCheck className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span>
-                {cancelHours} hours notice for a full refund. Booking up to {windowWeeks} weeks ahead.{" "}
+                {cancelHours} hours notice for a session credit. Booking up to {windowWeeks} weeks ahead.{" "}
                 <Link to={ROUTES.SCHEDULE_SETTINGS} className="font-medium text-[#0054B4] hover:underline">
                   Edit booking rules
                 </Link>

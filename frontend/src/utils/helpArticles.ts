@@ -11,7 +11,7 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do payouts and marketplace fees work?",
-          body: "Payouts go to your bank every week on your payout day. Families you invited join your roster and book you directly. Marketplace families carry the standard platform fee, shown on each payout.",
+          body: "Families pay when they book. Your share is held until the session is done (or a late cancel), then Stripe pays it to your bank on your weekly payout day. Families you invited join your roster and book with no platform fee. Marketplace families pay the standard platform fee on top of your price.",
         },
         {
           title: "When does a family get charged?",
@@ -19,7 +19,7 @@ export const HELP_ARTICLES = {
         },
         {
           title: "How do refunds work?",
-          body: "If a family cancels with enough notice, or you cancel, they get a session credit or their package credit back automatically.",
+          body: "If a family cancels with enough notice (your setting, usually 24 hours), or you cancel, they get a session credit or their package credit back. The card charge stays; you are not paid for that cancelled session. Late cancels keep the payment and you are still paid after the session time.",
         },
       ],
     },
@@ -75,7 +75,7 @@ export const HELP_ARTICLES = {
         },
         {
           title: "What is the cancellation policy?",
-          body: "Cancel with enough notice (usually 24 hours) and the session comes back as a credit. Later cancellations are not refunded.",
+          body: "Cancel with enough notice (the coach's setting, usually 24 hours) and the session comes back as a credit with that coach. Later cancellations keep the charge.",
         },
       ],
     },

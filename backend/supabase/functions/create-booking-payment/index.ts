@@ -237,6 +237,63 @@ const callPayoutTransfersForBookings = async (bookingIds: string[]) => {
   }
 };
 
+/** After a cancel / refund / dispute voids held shares, reverse any that were already sent. */
+const callReverseTransfersForBookings = async (bookingIds: string[]) => {
+  const ids = Array.from(new Set(bookingIds));
+  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
+  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
+  if (!ids.length || !supabaseUrl || !serviceRole) return;
+  try {
+    await fetch(`${supabaseUrl}/functions/v1/stripe-payouts`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRole}` },
+      body: JSON.stringify({ action: "reverse_bookings", booking_ids: ids }),
+    });
+  } catch (e) {
+    console.error("Payout reverse call error:", e);
+  }
+};
+
+const bookingIdsForCharge = async (client: SupabaseClient, chargeId: string, paymentIntentId: string | null) => {
+  const ids = new Set<string>();
+  const { data: byCharge } = await client.from("payments" as any).select("booking_id").eq("stripe_charge_id", chargeId);
+  for (const row of (byCharge ?? []) as { booking_id?: string }[]) {
+    if (row.booking_id) ids.add(row.booking_id);
+  }
+  if (paymentIntentId) {
+    const { data: byIntent } = await client
+      .from("coach_slot_bookings" as any)
+      .select("id")
+      .eq("stripe_payment_intent", paymentIntentId);
+    for (const row of (byIntent ?? []) as { id?: string }[]) {
+      if (row.id) ids.add(row.id);
+    }
+    const { data: payIntent } = await client
+      .from("payments" as any)
+      .select("booking_id")
+      .eq("stripe_payment_intent", paymentIntentId);
+    for (const row of (payIntent ?? []) as { booking_id?: string }[]) {
+      if (row.booking_id) ids.add(row.booking_id);
+    }
+  }
+  const { data: transferRows } = await client.from("payout_transfers" as any).select("booking_id").eq("stripe_charge_id", chargeId);
+  for (const row of (transferRows ?? []) as { booking_id?: string }[]) {
+    if (row.booking_id) ids.add(row.booking_id);
+  }
+  return [...ids];
+};
+
+const markBookingsChargeReversed = async (client: SupabaseClient, bookingIds: string[], status: "refunded" | "disputed") => {
+  for (const id of bookingIds) {
+    const { error } = await client.rpc("mark_booking_charge_reversed" as any, {
+      p_booking_id: id,
+      p_status: status,
+    });
+    if (error) console.error("mark_booking_charge_reversed failed", id, error);
+  }
+  await callReverseTransfersForBookings(bookingIds);
+};
+
 /* ---------- Requests from new families (ATH-85): hold the card, charge only on accept ---------- */
 
 /** Once the family finishes Stripe's page, the request is created with the card held. */
@@ -836,6 +893,37 @@ serve(async (req) => {
         return new Response(JSON.stringify({ error: "Invalid signature" }), {
           status: 400,
           headers: { ...corsHeaders, "Content-Type": "application/json" },
+        });
+      }
+
+      // Card refunded or disputed: booking is no longer paid; void held shares / reverse sent ones.
+      if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
+        const charge = event.data.object as Stripe.Charge | Stripe.Dispute;
+        const chargeId =
+          event.type === "charge.refunded"
+            ? (charge as Stripe.Charge).id
+            : typeof (charge as Stripe.Dispute).charge === "string"
+              ? (charge as Stripe.Dispute).charge
+              : (charge as Stripe.Dispute).charge?.id;
+        const intentId =
+          event.type === "charge.refunded"
+            ? typeof (charge as Stripe.Charge).payment_intent === "string"
+              ? ((charge as Stripe.Charge).payment_intent as string)
+              : (charge as Stripe.Charge).payment_intent?.id ?? null
+            : typeof (charge as Stripe.Dispute).payment_intent === "string"
+              ? ((charge as Stripe.Dispute).payment_intent as string)
+              : (charge as Stripe.Dispute).payment_intent?.id ?? null;
+        if (chargeId) {
+          const ids = await bookingIdsForCharge(supabaseClient, chargeId, intentId);
+          await markBookingsChargeReversed(
+            supabaseClient,
+            ids,
+            event.type === "charge.refunded" ? "refunded" : "disputed",
+          );
+        }
+        return new Response(JSON.stringify({ received: true }), {
+          headers: { ...corsHeaders, "Content-Type": "application/json" },
+          status: 200,
         });
       }
 

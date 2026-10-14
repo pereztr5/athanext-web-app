@@ -1,14 +1,16 @@
 // Coach payouts with Stripe Connect Express.
+// Booking shares are planned as held until the session sticks; invoices/packages still send on pay.
 // Coach (signed in):
 //   { action: "onboard", origin }   -> { url }     create the Express account if needed, open Stripe's setup
 //   { action: "status" }            -> { account } refresh setup status, then send any waiting transfers
 //   { action: "dashboard" }         -> { url }     Stripe Express dashboard login link
 //   { action: "payout_day", day }   -> { account } weekly payout day
 //   { action: "payouts" }           -> { balance, payouts } for the Payments page (sends waiting shares first)
-// Service role (from checkout):
-//   { action: "transfer_bookings", booking_ids } -> { sent, waiting, failed }
-//   { action: "transfer_invoices", invoice_ids } -> { sent, waiting, failed }  (invoices paid by card)
-//   { action: "transfer_packages", purchase_ids } -> { sent, waiting, failed }  (packages, paid at purchase)
+// Service role (from checkout) or family/coach on cancel:
+//   { action: "transfer_bookings", booking_ids } -> { sent, waiting, failed, held }
+//   { action: "transfer_invoices", invoice_ids } -> { sent, waiting, failed }
+//   { action: "transfer_packages", purchase_ids } -> { sent, waiting, failed }
+//   { action: "reverse_bookings", booking_ids? } -> { reversed, failed }
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -110,7 +112,8 @@ const chargeIdFor = async (admin: SupabaseClient, bookingId: string): Promise<st
 const sendTransfers = async (admin: SupabaseClient, rows: Record<string, any>[]) => {
   const result = { sent: 0, waiting: 0, failed: 0 };
   for (const row of rows) {
-    if (row.status === "sent") continue;
+    // held = session not done yet; void / reversing = cancel or Stripe clawback.
+    if (row.status === "sent" || row.status === "held" || row.status === "void" || row.status === "reversing") continue;
     const { data: account } = await admin
       .from("coach_payout_accounts")
       .select("stripe_account_id, transfers_active")
@@ -164,13 +167,71 @@ serve(async (req) => {
     const body = (await req.json().catch(() => ({}))) as Record<string, unknown>;
     const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
 
+    // Reverse Connect transfers marked reversing (cancel after a share was already sent,
+    // or a Stripe refund / dispute). Service role, or the family/coach on those bookings.
+    if (body.action === "reverse_pending" || body.action === "reverse_bookings") {
+      const isService = Boolean(bearer && bearer === Deno.env.get("SUPABASE_SERVICE_ROLE_KEY"));
+      const bookingIds = Array.isArray(body.booking_ids) ? (body.booking_ids as string[]).slice(0, 50) : [];
+      let rows: Record<string, any>[] = [];
+      if (!isService) {
+        const { data: { user }, error: authError } = await admin.auth.getUser(bearer);
+        if (authError || !user) return json({ error: "Unauthorized" }, 401);
+        if (!bookingIds.length) return json({ error: "booking_ids required" }, 400);
+        const { data: profile } = await admin.from("user_profiles").select("coach_id, athlete_id").eq("id", user.id).maybeSingle();
+        const { data: bookings } = await admin
+          .from("coach_slot_bookings")
+          .select("id, coach_id, athlete_id, created_by")
+          .in("id", bookingIds);
+        const allowed = new Set(
+          ((bookings ?? []) as { id: string; coach_id: string; athlete_id: string; created_by: string | null }[])
+            .filter(
+              (b) =>
+                b.coach_id === profile?.coach_id ||
+                b.athlete_id === profile?.athlete_id ||
+                b.created_by === user.id,
+            )
+            .map((b) => b.id),
+        );
+        if (!allowed.size) return json({ error: "Unauthorized" }, 403);
+        const { data } = await admin
+          .from("payout_transfers")
+          .select("*")
+          .in("booking_id", [...allowed])
+          .eq("status", "reversing");
+        rows = (data as Record<string, any>[]) ?? [];
+      } else if (bookingIds.length) {
+        const { data } = await admin.from("payout_transfers").select("*").in("booking_id", bookingIds).eq("status", "reversing");
+        rows = (data as Record<string, any>[]) ?? [];
+      } else {
+        const { data } = await admin.rpc("list_reversing_transfers", { p_limit: 50 });
+        rows = (data as Record<string, any>[]) ?? [];
+      }
+      const total = { reversed: 0, failed: 0 };
+      for (const row of rows) {
+        if (!row.stripe_transfer_id) continue;
+        try {
+          await stripe().transfers.createReversal(row.stripe_transfer_id, {}, { idempotencyKey: `payout-reverse-${row.id}` });
+          await admin.from("payout_transfers").update({ status: "void", error: null }).eq("id", row.id);
+          total.reversed++;
+        } catch (e) {
+          console.error("reverse failed", row.id, e);
+          await admin
+            .from("payout_transfers")
+            .update({ status: "failed", error: e instanceof Error ? e.message : String(e) })
+            .eq("id", row.id);
+          total.failed++;
+        }
+      }
+      return json(total);
+    }
+
     if (body.action === "transfer_bookings" || body.action === "transfer_invoices" || body.action === "transfer_packages") {
       if (!bearer || bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return json({ error: "Unauthorized" }, 401);
       const invoices = body.action === "transfer_invoices";
       const packages = body.action === "transfer_packages";
       const list = invoices ? body.invoice_ids : packages ? body.purchase_ids : body.booking_ids;
       const ids = Array.isArray(list) ? (list as string[]).slice(0, 50) : [];
-      const total = { sent: 0, waiting: 0, failed: 0 };
+      const total = { sent: 0, waiting: 0, failed: 0, held: 0 };
       for (const id of ids) {
         const { data: rows, error } = invoices
           ? await admin.rpc("plan_invoice_transfers", { p_invoice_id: id })
@@ -182,7 +243,11 @@ serve(async (req) => {
           total.failed++;
           continue;
         }
-        const r = await sendTransfers(admin, (rows as Record<string, any>[]) ?? []);
+        const planned = (rows as Record<string, any>[]) ?? [];
+        total.held += planned.filter((row) => row.status === "held").length;
+        // Booking shares stay held until the session sticks; invoices/packages still send now.
+        const toSend = invoices || packages ? planned : planned.filter((row) => row.status === "waiting" || row.status === "failed");
+        const r = await sendTransfers(admin, toSend);
         total.sent += r.sent;
         total.waiting += r.waiting;
         total.failed += r.failed;
@@ -245,6 +310,20 @@ serve(async (req) => {
       if (row?.transfers_active) {
         const { data: waiting } = await admin.from("payout_transfers").select("*").eq("coach_id", coachId).in("status", ["waiting", "failed"]).limit(50);
         await sendTransfers(admin, waiting ?? []);
+        // Finish any Stripe reversals (cancel / refund after a share was already sent).
+        const { data: reversing } = await admin.from("payout_transfers").select("*").eq("coach_id", coachId).eq("status", "reversing").limit(50);
+        for (const rowRev of reversing ?? []) {
+          if (!rowRev.stripe_transfer_id) continue;
+          try {
+            await stripe().transfers.createReversal(rowRev.stripe_transfer_id as string, {}, { idempotencyKey: `payout-reverse-${rowRev.id}` });
+            await admin.from("payout_transfers").update({ status: "void", error: null }).eq("id", rowRev.id);
+          } catch (e) {
+            await admin
+              .from("payout_transfers")
+              .update({ status: "failed", error: e instanceof Error ? e.message : String(e) })
+              .eq("id", rowRev.id);
+          }
+        }
       }
       return json({ account: publicAccount(row) });
     }

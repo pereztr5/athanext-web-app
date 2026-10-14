@@ -47,7 +47,9 @@ export const sessionTypesFromWhere = (where: string) =>
 
 /** Cancellation line under Sessions and pricing: notice hours, else the coach's policy text, else 24 hours. */
 export const cancellationLine = (hours?: number | null, policy?: string | null) =>
-  hours ? `Free cancellation up to ${hours} hours before` : policy?.trim() || "Free cancellation up to 24 hours before";
+  hours
+    ? `Cancel up to ${hours} hours before for a session credit`
+    : policy?.trim() || "Cancel up to 24 hours before for a session credit";
 
 /** "Within an hour", "Within a day", "Within 12 hours". */
 export const repliesLabel = (hours?: number | null) => {

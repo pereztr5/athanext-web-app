@@ -1,6 +1,6 @@
 /**
  * Payouts (Stripe Connect Express): set up, finish setup, weekly payout day and the Stripe
- * dashboard. Paid sessions are sent to the coach as soon as the family pays.
+ * dashboard. Session shares are held until the session sticks, then sent to the coach.
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -79,8 +79,8 @@ export const PayoutsCard = () => {
       {a && ready ? (
         <>
           <p className={sub}>
-            Payouts are on{a.bankLast4 ? ` to the account ending ${a.bankLast4}` : ""}. Each paid session is sent to you as soon as the family
-            pays, and Stripe pays out every week.
+            Payouts are on{a.bankLast4 ? ` to the account ending ${a.bankLast4}` : ""}. Your share for each paid session is sent after the
+            session (or a late cancel), and Stripe pays out every week.
           </p>
           <label className="flex flex-wrap items-center gap-3">
             <span className="text-[14px] font-medium">Payout day</span>

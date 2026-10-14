@@ -36,10 +36,14 @@ export interface AthleteSession {
 }
 
 export const athleteSessionAPI = {
-  /** Cancels the family's booking. With 24 hours' notice a paid session comes back as a credit (ATH-94). */
+  /** Cancels the family's booking. With the coach's notice hours a paid session comes back as a credit. */
   async cancel(bookingId: string): Promise<{ credit: boolean }> {
     const { data, error } = await supabase.rpc("cancel_my_booking", { p_booking_id: bookingId });
     if (error) throw error;
+    // If a share was already sent before the hold model, finish the Stripe reversal.
+    void supabase.functions.invoke("stripe-payouts", {
+      body: { action: "reverse_bookings", booking_ids: [bookingId] },
+    });
     return { credit: Boolean((data as { credit?: boolean } | null)?.credit) };
   },
 

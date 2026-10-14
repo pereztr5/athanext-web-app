@@ -49,3 +49,7 @@ verify_jwt = true
 # checks the caller token and the Stripe signature itself.
 [functions.coach-billing]
 verify_jwt = false
+
+# Paid booking emails. create-booking-payment calls this with the service role.
+[functions.send-booking-notifications]
+verify_jwt = true

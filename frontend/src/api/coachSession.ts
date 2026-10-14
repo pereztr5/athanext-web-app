@@ -115,9 +115,17 @@ export const coachSessionAPI = {
 
   /** Cancels with a reason. Paid bookings come back as session credits; credit bookings get theirs back. */
   async cancel(occurrenceId: string, reason: string, message = ""): Promise<{ sent: number; credits: number }> {
+    const before = await this.get(occurrenceId).catch(() => null);
+    const bookingIds = (before?.bookings ?? []).map((b) => b.id).filter(Boolean);
     const { data, error } = await rpc("coach_cancel_session", { p_occurrence_id: occurrenceId, p_reason: reason, p_message: message });
     if (error) throw error;
     const row = (data ?? {}) as Row;
+    // Finish Stripe reversals for any share that was already sent before the hold model.
+    if (bookingIds.length) {
+      void supabase.functions.invoke("stripe-payouts", {
+        body: { action: "reverse_bookings", booking_ids: bookingIds },
+      });
+    }
     return { sent: Number(row.sent) || 0, credits: Number(row.credits) || 0 };
   },
 
