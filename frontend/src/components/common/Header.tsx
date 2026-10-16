@@ -133,7 +133,7 @@ export const Header = ({ onSportClick }: HeaderProps) => {
     location.pathname === ROUTES.AUTH &&
     new URLSearchParams(location.search).get("mode") === "complete-profile";
   const completeProfileLogoUrl =
-    "https://nnhmiokeizmfmkvdqrvi.supabase.co/storage/v1/object/public/athalink-images/assets/AthaNext-Logo.svg";
+    "https://znrdabzydvulagmlepxr.supabase.co/storage/v1/object/public/athalink-images/assets/AthaNext-Logo.svg";
   const logoSrc = isOnCompleteProfile ? completeProfileLogoUrl : logo;
 
   // For coaches, profile.data might be null if coach record doesn't exist yet
