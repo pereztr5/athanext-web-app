@@ -24,6 +24,9 @@ verify_jwt = true
 [functions.admin-accounts]
 verify_jwt = true
 
+[functions.send-conversation-email]
+verify_jwt = true
+
 [functions.google-calendar]
 verify_jwt = false
 
