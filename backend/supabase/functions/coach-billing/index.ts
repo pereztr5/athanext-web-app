@@ -188,7 +188,7 @@ serve(async (req) => {
       const webhookSecret =
         Deno.env.get("STRIPE_COACH_BILLING_WEBHOOK_SECRET") ?? Deno.env.get("STRIPE_CHECKOUT_WEBHOOK_SECRET");
       if (!webhookSecret) return json({ error: "Webhook secret not configured" }, 500);
-      const event = stripe().webhooks.constructEvent(rawBody, stripeSignature, webhookSecret);
+      const event = await stripe().webhooks.constructEventAsync(rawBody, stripeSignature, webhookSecret);
       const admin = adminClient();
 
       if (event.type === "checkout.session.completed") {
