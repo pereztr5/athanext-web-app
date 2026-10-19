@@ -11,6 +11,22 @@ export const PATHWAY_TAGS = [
 
 export type PathwayTag = (typeof PATHWAY_TAGS)[number];
 
+/**
+ * The four levels people pick in sign-up, and the only ones coaches choose from on their profile
+ * (Michael's change log, 2026-10-19). Each maps onto the stored pathway tag.
+ */
+export const LEVEL_OPTIONS = [
+  { label: "Recreational", tag: "Adult/Recreation" },
+  { label: "Youth development", tag: "Youth Development" },
+  { label: "Elite pathway", tag: "Elite Pathway" },
+  { label: "College or pro", tag: "College" },
+] as const satisfies readonly { label: string; tag: PathwayTag }[];
+
+export type LevelTag = (typeof LEVEL_OPTIONS)[number]["tag"];
+export const LEVEL_TAGS: readonly LevelTag[] = LEVEL_OPTIONS.map((o) => o.tag);
+/** Label for a stored tag: the sign-up wording for the four levels, the tag itself otherwise. */
+export const levelLabel = (tag: string) => LEVEL_OPTIONS.find((o) => o.tag === tag)?.label ?? tag;
+
 export const MAX_PATHWAY_TAGS = 5;
 
 export function isPathwayTag(value: string): value is PathwayTag {

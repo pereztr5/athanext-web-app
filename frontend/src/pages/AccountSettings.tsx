@@ -2,7 +2,7 @@ import { AthleteSettings } from "@/components/settings/AthleteSettings";
 import { CoachSettings } from "@/components/settings/CoachSettings";
 import { useRole } from "@/hooks/useRole";
 
-/** Account Settings: coaches (ATH-87) and everyone else, athletes and parents first (ATH-91). */
+/** Account settings: coaches (ATH-87) and everyone else, athletes and parents first (ATH-91). */
 const AccountSettings = () => {
   const { isCoach } = useRole();
   return isCoach ? <CoachSettings /> : <AthleteSettings />;

@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@/components/icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { scheduleAPI, type BusyBlock, type ScheduleRules, type ScheduleSession, type SessionPosition } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
@@ -22,12 +22,13 @@ import {
   viewerToEastern,
 } from "@/utils/schedule";
 import { sheetBody, sheetContent, sheetFooter, sheetHeader, sheetTitle } from "./create/classes";
+import { SessionTagField, sessionTagOf } from "./plan/SessionTag";
 import { dialogContent, iconButton, input, label, meta, primaryButton, secondaryButton, textButton } from "./styles";
 
 const LENGTHS = [45, 60, 75, 90, 120];
 const LEVELS = ["All levels", "Beginners welcome", "Club and up"];
 const VIDEO = "Video call";
-const stepButton = cn(iconButton, "size-[30px] bg-[#F7F7F0]");
+const stepButton = cn(iconButton, "size-[30px] bg-light-300");
 const field = "flex min-w-0 flex-col gap-1.5";
 /** `.fg2`: two columns, one on phone. */
 const pair = "grid grid-cols-1 gap-4 md:grid-cols-2";
@@ -62,6 +63,7 @@ export const PlanSessionDialog = ({
   const places = useMemo(() => [...(rules.locations.length ? rules.locations : ["In person"]), VIDEO], [rules.locations]);
 
   const [title, setTitle] = useState("");
+  const [tag, setTag] = useState("");
   const [day, setDay] = useState(defaultDay);
   const [start, setStart] = useState(17 * 60);
   const [length, setLength] = useState(60);
@@ -83,6 +85,7 @@ export const PlanSessionDialog = ({
     if (session) {
       const startAt = sessionStart(session);
       setTitle(session.sessionName);
+      setTag(sessionTagOf(session.details));
       setDay(getZonedISODate(startAt, timeZone));
       setStart(minutesInZone(startAt, timeZone));
       setLength(session.durationMinutes);
@@ -98,6 +101,7 @@ export const PlanSessionDialog = ({
       setMore(Boolean(session.pillar || session.details.about?.length || session.details.ages));
     } else {
       setTitle("");
+      setTag("");
       setDay(defaultDay);
       setStart(17 * 60);
       setLength(60);
@@ -117,7 +121,7 @@ export const PlanSessionDialog = ({
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
   const details = () => ({
     level,
-    ...(ages.trim() ? { ages: ages.trim() } : {}),
+    ...(tag.trim() ? { tag: tag.trim(), ages: tag.trim() } : ages.trim() ? { ages: ages.trim() } : {}),
     ...(about.trim() ? { about: about.split("\n").map((x) => x.trim()).filter(Boolean) } : {}),
     ...(bring.trim() ? { bring: bring.trim() } : {}),
   });
@@ -194,6 +198,7 @@ export const PlanSessionDialog = ({
   const submit = () => {
     setError(null);
     if (!title.trim()) return setError("Give it a title.");
+    if (!tag.trim()) return setError("Add a tag.");
     if (price.trim() === "" || !(Number(price) >= 0)) return setError("Add a price.");
     save.mutate();
   };
@@ -212,11 +217,15 @@ export const PlanSessionDialog = ({
             <span className={label}>Title</span>
             <input className={input} value={title} onChange={(e) => setTitle(e.target.value)} placeholder="For example, Finishing clinic" />
           </label>
+          <div className={field}>
+            <span className={label}>Tag</span>
+            <SessionTagField value={tag} onChange={setTag} />
+          </div>
           <div className={pair}>
             {dayMode ? (
               <div className={field}>
                 <span className={label}>Day</span>
-                <span className={cn(input, "flex items-center text-[#484D56]")}>
+                <span className={cn(input, "flex items-center text-dark-400")}>
                   {formatDayISO(day, { weekday: "short", month: "short", day: "numeric" })}
                 </span>
               </div>
@@ -268,10 +277,10 @@ export const PlanSessionDialog = ({
           <div className={pair}>
             <label className={field}>
               <span className={label}>Price per athlete</span>
-              <span className="flex h-[38px] items-center rounded-[8px] bg-[#F1F1E6] focus-within:ring-2 focus-within:ring-[#6698D2]">
-                <span className="pl-3 text-[14px] text-[#767980]" aria-hidden="true">$</span>
+              <span className="flex h-[38px] items-center rounded-control border border-dark-250 bg-light focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary">
+                <span className="pl-3 text-body-m text-dark-300" aria-hidden="true">$</span>
                 <input
-                  className="h-full w-full min-w-0 bg-transparent pl-1 pr-3 text-[14px] text-[#1A202C] focus:outline-none"
+                  className="h-full w-full min-w-0 bg-transparent pl-1 pr-3 text-body-m text-dark focus:outline-none"
                   type="number"
                   min={0}
                   inputMode="decimal"
@@ -286,7 +295,7 @@ export const PlanSessionDialog = ({
                 <button type="button" className={stepButton} aria-label="Fewer spots" onClick={() => setSpots((s) => Math.max(2, s - 1))}>
                   <Minus strokeWidth={1.5} />
                 </button>
-                <b className="min-w-5 text-center text-[16px]">{spots}</b>
+                <b className="min-w-5 text-center text-subtitle tabular-nums">{spots}</b>
                 <button type="button" className={stepButton} aria-label="More spots" onClick={() => setSpots((s) => Math.min(30, s + 1))}>
                   <Plus strokeWidth={1.5} />
                 </button>
@@ -333,7 +342,7 @@ export const PlanSessionDialog = ({
               </div>
               <label className={field}>
                 <span className={label}>What you'll work on (optional)</span>
-                <textarea className={cn(input, "h-auto py-2.5 leading-[18px]")} rows={3} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="One per line" />
+                <textarea className={cn(input, "h-auto py-2.5 text-paragraph")} rows={3} value={about} onChange={(e) => setAbout(e.target.value)} placeholder="One per line" />
                 <span className={meta}>Families see this before they book</span>
               </label>
               <label className={field}>
@@ -349,7 +358,7 @@ export const PlanSessionDialog = ({
           )}
 
           {error ? (
-            <p role="alert" className="rounded-[8px] bg-[#FCEFDA] px-3.5 py-3 text-[12px] leading-[14px] text-[#906A29]">
+            <p role="alert" className="rounded-control border border-info-300 bg-info-50 px-3.5 py-3 text-paragraph-sm text-info-700">
               {error}
             </p>
           ) : null}

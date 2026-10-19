@@ -7,7 +7,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Calendar } from "@/components/ui/calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { CalendarIcon, Clock, MapPin, Lock, AlertCircle } from "lucide-react";
+import { CalendarIcon, Clock, MapPin, Lock, AlertCircle } from "@/components/icons";
 import { format } from "date-fns";
 import { supabase } from "@/integrations/supabase/client";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -67,12 +67,12 @@ const BASE_TIME_SLOTS = [
 
 const bookingSchema = z.object({
   selectedDate: z.date({
-    message: "Please select a date for your session"
+    message: "Pick a date for your session"
   }),
-  selectedTime: z.string().min(1, "Please select a time slot"),
-  selectedLocation: z.string().min(1, "Please select a location"),
+  selectedTime: z.string().min(1, "Pick a time"),
+  selectedLocation: z.string().min(1, "Pick a location"),
   duration: z.string().refine((val) => ["15", "30", "45", "60", "90", "120", "180"].includes(val), {
-    message: "Please select a valid duration"
+    message: "Pick a duration"
   }),
   notes: z.string().max(500, "Notes must be less than 500 characters").optional(),
 });
@@ -244,8 +244,8 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     if (notes && !SecurityAudit.validateInput(notes, 'text')) {
       SecurityAudit.logSecurityEvent('BOOKING_INVALID_NOTES', { notesLength: notes.length });
       toast({
-        title: "Invalid input detected",
-        description: "Please check your booking notes for invalid characters.",
+        title: "Notes have characters we can't accept",
+        description: "Remove them and try again.",
         variant: "destructive",
       });
       return;
@@ -262,7 +262,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     if (!validation.success) {
       const firstError = validation.error.issues[0];
       toast({
-        title: "Please check your booking details",
+        title: "Check your booking details",
         description: firstError.message,
         variant: "destructive",
       });
@@ -280,7 +280,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       if (!athleteProfileId) {
         toast({
           title: "Profile required",
-          description: "Please complete your athlete profile before booking.",
+          description: "Complete your athlete profile before you book.",
           variant: "destructive",
         });
         setIsBooking(false);
@@ -399,7 +399,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       if (paymentData?.requested) {
         toast({
           title: "Request sent",
-          description: "The coach will accept or decline it. You'll pay once it's accepted, from My Sessions.",
+          description: "The coach will accept or decline it. You'll pay once it's accepted, from My sessions.",
         });
         queryClient.invalidateQueries({ queryKey: ["sessions"] });
         onClose();
@@ -498,18 +498,18 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const hideSelectionFields = Boolean(prefillSlot);
 
   const modalSurface =
-    "bg-[#F7F7F0] border border-[#EAEADF] rounded-[10px] sm:rounded-[10px] shadow-[0_0_15px_rgba(0,0,0,0.05)] font-sans text-[#1A202C] tracking-[-0.03em]";
+    "bg-light-300 border border-light-525 rounded-card sm:rounded-card shadow-overlay font-sans text-dark";
   const closeButtonOverride =
-    "[&>button]:text-[#767980] [&>button]:opacity-100 [&>button:hover]:text-[#1A202C] [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]";
+    "[&>button]:text-dark-300 [&>button]:opacity-100 [&>button:hover]:text-dark [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]";
   const primaryButton =
-    "h-[34px] px-4 rounded-[8px] border border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] text-[16px] font-medium tracking-[-0.03em] hover:bg-[#004390]";
+    "h-[34px] px-4 rounded-control border border-primary-300 bg-primary text-light text-label-sm hover:bg-primary-600 disabled:bg-light-400 disabled:border-light-525 disabled:text-dark-200";
   const secondaryButton =
-    "h-[34px] px-4 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] text-[16px] font-medium tracking-[-0.03em] hover:bg-[#EAEADF] hover:text-[#1A202C]";
-  const fieldLabel = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+    "h-[34px] px-4 rounded-control border border-light-525 bg-light-400 text-dark text-label-sm hover:bg-light-525 hover:text-dark disabled:bg-light-400 disabled:border-light-525 disabled:text-dark-200";
+  const fieldLabel = "text-label-xsm text-dark-300";
   const fieldInput =
-    "h-[34px] w-full rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-3 text-[14px] font-normal tracking-[-0.03em] text-[#1A202C] hover:bg-[#F1F1E6] hover:text-[#1A202C]";
-  const menuSurface = "rounded-[8px] border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]";
-  const menuIcon = "mr-2 h-4 w-4 text-[#767980]";
+    "h-[34px] w-full rounded-control border border-dark-250 bg-light px-3 text-body-m text-dark hover:bg-light hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary";
+  const menuSurface = "rounded-card border-light-525 bg-light-300 text-dark";
+  const menuIcon = "mr-2 h-4 w-4 text-dark-300";
 
   return (
     <>
@@ -517,17 +517,17 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
         <AlertDialogContent className={cn(modalSurface, "gap-0 p-0")}>
           <AlertDialogHeader className="space-y-2.5 px-[25px] pb-5 pt-[30px] text-left">
             <div className="flex items-center gap-2">
-              <AlertCircle strokeWidth={1.5} className="h-5 w-5 flex-none text-[#906A29]" />
-              <AlertDialogTitle className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+              <AlertCircle strokeWidth={1.5} className="h-5 w-5 flex-none text-info-700" />
+              <AlertDialogTitle className="text-card-title text-dark">
                 {limitAlertConfig.title}
               </AlertDialogTitle>
             </div>
-            <AlertDialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
+            <AlertDialogDescription className="text-body-m text-dark-400">
               {limitAlertConfig.description}
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <div className="h-px bg-[#EAEADF]" />
-          <AlertDialogFooter className="gap-[10px] px-[25px] py-5 sm:space-x-0">
+          <div className="h-px bg-light-525" />
+          <AlertDialogFooter className="gap-2.5 px-[25px] py-5 sm:space-x-0">
             <AlertDialogCancel
               className={cn(secondaryButton, "mt-0")}
               onClick={() => {
@@ -553,17 +553,17 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       <Dialog open={isOpen} onOpenChange={onClose}>
         <DialogContent className={cn("max-w-2xl max-h-[90vh] overflow-y-auto gap-0 p-0", modalSurface, closeButtonOverride)}>
           <DialogHeader className="px-[25px] py-5 pr-14 text-left">
-            <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+            <DialogTitle className="text-section text-dark">
               Confirm your booking
             </DialogTitle>
           </DialogHeader>
-          <div className="h-px bg-[#EAEADF]" />
+          <div className="h-px bg-light-525" />
 
           <div className="flex flex-col gap-5 px-[25px] py-5">
             {/* Session summary */}
             <div className="flex items-start justify-between gap-5">
               <div className="flex min-w-0 flex-col gap-2.5">
-                <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                <p className="text-card-title text-dark">
                   {sessionTitle} with {coach.name}
                 </p>
                 <div className="flex flex-wrap gap-1.5">
@@ -572,10 +572,10 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                 </div>
               </div>
               <div className="flex flex-none flex-col items-end gap-1.5 text-right">
-                <p className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
+                <p className="text-stat text-dark">
                   {isFreeConsultation ? "Free" : formatCurrency(totalWithFees)}
                 </p>
-                <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                <p className="text-caption text-dark-300">
                   {isFreeConsultation ? "Total" : "Total, fees included"}
                 </p>
                 {!isFreeConsultation && platformFeeWaived ? (
@@ -585,7 +585,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
             </div>
 
             {/* Details */}
-            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-[8px] bg-[#F4F4EB] px-5 py-4 sm:grid-cols-2">
+            <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-control border border-light-525 bg-light-400 px-5 py-4 sm:grid-cols-2">
               {[
                 { label: "Date", value: displayDate },
                 { label: "Time", value: displayTime },
@@ -594,7 +594,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
               ].map((item) => (
                 <div key={item.label} className="flex flex-col gap-1.5">
                   <dt className={fieldLabel}>{item.label}</dt>
-                  <dd className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C]">{item.value}</dd>
+                  <dd className="text-body-m text-dark">{item.value}</dd>
                 </div>
               ))}
             </dl>
@@ -614,11 +614,11 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                         className={cn(fieldInput, "justify-start text-left")}
                         disabled={isPrefilled}
                       >
-                        <CalendarIcon strokeWidth={1.5} className="mr-2 h-4 w-4 text-[#767980]" />
+                        <CalendarIcon strokeWidth={1.5} className="mr-2 h-4 w-4 text-dark-300" />
                         {selectedDate ? (
                           format(selectedDate, "EEEE, MMM d")
                         ) : (
-                          <span className="text-[#A3A6AB]">Pick a date</span>
+                          <span className="text-dark-200">Pick a date</span>
                         )}
                       </Button>
                     </PopoverTrigger>
@@ -704,7 +704,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
 
             {/* Notes */}
             {/* <div className="space-y-2">
-              <Label htmlFor="notes" className="text-sm font-semibold text-slate-800">
+              <Label htmlFor="notes" className="text-label-sm text-dark">
                 Additional Notes (Optional)
               </Label>
               <Textarea
@@ -712,14 +712,14 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                 placeholder={strings.appointments.anySpecificGoals}
                 value={notes}
                 onChange={(e) => setNotes(e.target.value)}
-                className="min-h-[90px] rounded-[8px] border-0 bg-[#F1F1E6] p-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:ring-[#6698D2]"
+                className="min-h-[90px] rounded-control border border-dark-250 bg-light p-3 text-body-m text-dark placeholder:text-dark-200 focus-visible:ring-primary"
               />
             </div> */}
           </div>
 
           {/* Action buttons */}
-          <div className="h-px bg-[#EAEADF]" />
-          <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
+          <div className="h-px bg-light-525" />
+          <div className="flex flex-col-reverse gap-2.5 px-[25px] py-5 sm:flex-row sm:justify-end">
             <Button variant="outline" onClick={onClose} className={secondaryButton} disabled={isBooking}>
               {strings.buttons.cancel}
             </Button>

@@ -1,11 +1,11 @@
 /**
- * Tapping a group in My Schedule (Working Copy group sheet): who's booked and how they paid,
+ * Tapping a group in My schedule (Working Copy group sheet): who's booked and how they paid,
  * money collected, requests to join, then Message group, Add athlete and Session details.
  */
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, MessageCircle, Pencil, Plus } from "lucide-react";
+import { ChevronRight, MessageCircle, Pencil, Plus } from "@/components/icons";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { chatAPI } from "@/api/chat";
 import type { ScheduleSession } from "@/api/schedule";
@@ -69,7 +69,7 @@ export const GroupSheet = ({
           <ModalHeader title={session.sessionName || "Group session"} sub={`${day} · ${formatInstantSpan(start, end, timeZone)} · ${where}`} />
           <ModalBody>
             {session.isDraft ? (
-              <div className="flex items-start gap-2.5 rounded-[8px] bg-[#FCEFDA] px-3.5 py-3 text-[12px] leading-[14px] text-[#906A29]">
+              <div className="flex items-start gap-2.5 rounded-control border border-info-300 bg-info-50 px-3.5 py-3 text-paragraph-sm text-info-700">
                 <Pencil className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
                 <span>
                   Draft. Families can't see this yet.{" "}
@@ -83,7 +83,7 @@ export const GroupSheet = ({
 
             <div className="flex flex-col gap-2">
               <div className="flex items-center justify-between gap-3">
-                <b className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#117A96]">
+                <b className="text-subtitle text-secondary-700">
                   {booked.length} of {session.capacity} booked
                 </b>
                 <span className={meta}>{money(collected)} collected</span>
@@ -94,28 +94,28 @@ export const GroupSheet = ({
             {booked.length ? (
               <div className="flex flex-col">
                 {booked.map((b) => (
-                  <div key={b.id} className="flex items-center justify-between gap-3 border-b border-[#EAEADF] py-2">
+                  <div key={b.id} className="flex items-center justify-between gap-3 border-b border-light-525 py-2">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={b.athleteName} size={32} />
-                      <span className="truncate text-[14px] font-medium">{b.athleteName}</span>
+                      <span className="truncate text-label-sm">{b.athleteName}</span>
                     </span>
                     <GroupPayPill booking={b} />
                   </div>
                 ))}
               </div>
             ) : (
-              <p className="text-[14px] text-[#767980]">Nobody has joined yet.</p>
+              <p className="text-body-m text-dark-300">Nobody has joined yet.</p>
             )}
 
             {requests.length ? (
               <div className="flex flex-col">
                 <span className={label}>Asking to join</span>
                 {requests.map((r) => (
-                  <div key={r.id} className="flex items-center justify-between gap-3 border-b border-[#EAEADF] py-2">
+                  <div key={r.id} className="flex items-center justify-between gap-3 border-b border-light-525 py-2">
                     <span className="flex min-w-0 items-center gap-2.5">
                       <Avatar name={r.athleteName} size={32} />
                       <span className="flex min-w-0 flex-col gap-0.5">
-                        <span className="truncate text-[14px] font-medium">{r.athleteName}</span>
+                        <span className="truncate text-label-sm">{r.athleteName}</span>
                         <span className={meta}>{[expiresIn(r.expiresAt), money(session.price)].filter(Boolean).join(" · ")}</span>
                       </span>
                     </span>
@@ -132,7 +132,7 @@ export const GroupSheet = ({
               </div>
             ) : null}
           </ModalBody>
-          <div className="flex flex-col items-end gap-3 border-t border-[#EAEADF] px-4 py-4 sm:px-[25px]">
+          <div className="flex flex-col items-end gap-3 border-t border-light-525 px-4 py-4 sm:px-[25px]">
             <div className="grid w-full grid-cols-2 gap-2">
               <button type="button" className={cn(secondaryButton, "min-w-0 px-2")} disabled={message.isPending} onClick={() => message.mutate()}>
                 <MessageCircle strokeWidth={1.5} aria-hidden="true" />
@@ -170,7 +170,7 @@ export const GroupSheet = ({
             onClose();
           }}
           onError={(error) =>
-            toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" })
+            toast({ title: "That didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" })
           }
         />
       ) : null}

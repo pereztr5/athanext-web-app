@@ -7,7 +7,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { MessageCircle } from "lucide-react";
+import { MessageCircle } from "@/components/icons";
 import { OrgLogo } from "@/components/organization/OrgPageEditor";
 import { OrgPackageCard, type PackageCoach } from "@/components/organization/OrgPackages";
 import { card, pageTitle, secondaryButton, smallButton } from "@/components/schedule/styles";
@@ -38,8 +38,8 @@ export type OrgPageCoach = {
 const sessionLabel = (types: string[] | null | undefined) =>
   types?.some((t) => /video|online|virtual/i.test(t)) && !types.some((t) => /person/i.test(t)) ? "Video call" : "In person";
 const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
-const h3 = "text-[20px] font-medium leading-[18px] tracking-[-0.05em]";
-const cap = "text-[12px] leading-[14px] text-[#767980]";
+const h3 = "text-card-title";
+const cap = "text-caption text-dark-300";
 const minutesOf = (t: string) => {
   const [h, m] = t.split(":").map(Number);
   return h * 60 + (m || 0);
@@ -49,12 +49,15 @@ export const OrgFamilyPage = ({
   org,
   coaches,
   preview = false,
+  messageCoachId,
 }: {
   org: PublicOrganization;
   /** Coaches shown on the page, in the owner's order. */
   coaches: OrgPageCoach[];
   /** The owner looking at their own page. */
   preview?: boolean;
+  /** Coach to message when this page is built from coach profiles and has no org owner. */
+  messageCoachId?: string;
 }) => {
   const { toast } = useToast();
   const { user } = useAuth();
@@ -89,26 +92,29 @@ export const OrgFamilyPage = ({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[760px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
       <header className="flex items-center gap-4">
         <OrgLogo name={org.name} url={org.logoUrl} />
         <div className="flex min-w-0 grow flex-col gap-1.5">
-          <h1 className={cn(pageTitle, "max-md:text-[24px]")}>{org.name}</h1>
-          {org.line ? <p className="text-[14px] text-[#767980]">{org.line}</p> : null}
+          <h1 className={pageTitle}>{org.name}</h1>
+          {org.line ? <p className="text-body-m text-dark-300">{org.line}</p> : null}
         </div>
-        {!preview && extras.data?.ownerId ? (
+        {!preview && (extras.data?.ownerId || messageCoachId) ? (
           <button
             type="button"
             className={cn(secondaryButton, "hidden md:inline-flex")}
             disabled={chat.starting}
-            onClick={() => void chat.start(extras.data!.ownerId!, org.name)}
+            onClick={() => {
+              const coachId = extras.data?.ownerId || messageCoachId;
+              if (coachId) void chat.start(coachId, org.name);
+            }}
           >
             <MessageCircle strokeWidth={1.5} aria-hidden="true" />
             Message
           </button>
         ) : null}
       </header>
-      {org.about ? <p className="-mt-2 max-w-[64ch] text-[14px] leading-[1.45] text-[#484D56]">{org.about}</p> : null}
+      {org.about ? <p className="-mt-2 max-w-[64ch] text-paragraph text-dark-400">{org.about}</p> : null}
 
       <section className={cn(card, "gap-4")}>
         <div className="flex items-center justify-between gap-3">
@@ -123,21 +129,21 @@ export const OrgFamilyPage = ({
               const role = coach.coach_position || coach.positions?.[0] || "Coach";
               const price = extras.data?.coachPrices[coach.id] ?? Number(coach.hourly_rate ?? 0);
               return (
-                <div key={coach.id} className="flex items-center gap-3 border-t border-[#EAEADF] py-[14px] first:border-t-0">
+                <div key={coach.id} className="flex items-center gap-3 border-t border-light-525 py-3.5 first:border-t-0">
                   {photo ? (
-                    <img src={photo} alt="" className="size-10 shrink-0 rounded-full bg-[#C1C1B8] object-cover" />
+                    <img src={photo} alt="" className="size-10 shrink-0 rounded-full bg-light-600 object-cover" />
                   ) : (
-                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-[#F1F1E6] text-[14px] font-medium text-[#484D56]">
+                    <span className="flex size-10 shrink-0 items-center justify-center rounded-full bg-light text-label-sm text-dark-400">
                       {initials(coach.name || "Coach")}
                     </span>
                   )}
                   <div className="flex min-w-0 flex-1 flex-col gap-1">
-                    <span className="truncate text-[14px] font-medium">{coach.name}</span>
+                    <span className="truncate text-label-sm">{coach.name}</span>
                     <span className={cap}>{[role, ages || "", sessionLabel(coach.session_types)].filter(Boolean).join(" · ")}</span>
                   </div>
                   {price ? (
                     <span className={cn(cap, "whitespace-nowrap")}>
-                      1-on-1 from <b className="font-medium text-[#1A202C]">{dollars(price)}</b>
+                      1-on-1 from <b className="font-medium text-dark">{dollars(price)}</b>
                     </span>
                   ) : null}
                   {preview ? (
@@ -154,14 +160,14 @@ export const OrgFamilyPage = ({
             })}
           </div>
         ) : (
-          <p className="text-[14px] text-[#767980]">No coaches listed yet.</p>
+          <p className="text-body-m text-dark-300">No coaches listed yet.</p>
         )}
       </section>
 
       {packages.length ? (
         <section className={cn(card, "gap-4")}>
           <h2 className={h3}>Academy packages</h2>
-          <div className="flex flex-col gap-[10px]">
+          <div className="flex flex-col gap-2.5">
             {packages.map((p) => (
               <OrgPackageCard
                 key={p.id}
@@ -184,19 +190,19 @@ export const OrgFamilyPage = ({
               const left = g.capacity - g.booked;
               const day = new Date(`${g.date}T12:00:00`);
               return (
-                <div key={g.id} className="flex items-center gap-3 border-t border-[#EAEADF] py-[14px] first:border-t-0">
-                  <span className="grid size-11 flex-none place-content-center rounded-[8px] bg-[#F4F4EB] text-center">
-                    <small className="text-[10px] font-medium uppercase leading-3 tracking-[0.05em]">{day.toLocaleDateString("en-US", { weekday: "short" })}</small>
-                    <b className="text-[16px] font-bold leading-[18px] tracking-[-0.03em]">{day.getDate()}</b>
+                <div key={g.id} className="flex items-center gap-3 border-t border-light-525 py-3.5 first:border-t-0">
+                  <span className="grid size-11 flex-none place-content-center rounded-control border border-light-525 bg-light-400 text-center">
+                    <small className="text-label-xsm">{day.toLocaleDateString("en-US", { weekday: "short" })}</small>
+                    <b className="text-subtitle">{day.getDate()}</b>
                   </span>
                   <div className="flex min-w-0 grow flex-col gap-1">
-                    <span className="truncate text-[14px] font-medium">{g.title}</span>
+                    <span className="truncate text-label-sm">{g.title}</span>
                     <span className={cap}>
                       {formatMinutes(minutesOf(g.startTime))} · {g.coachName}
                     </span>
                   </div>
                   <span className="flex flex-col items-end gap-0.5">
-                    <b className="text-[14px] font-medium">{dollars(g.price)}</b>
+                    <b className="text-label-sm">{dollars(g.price)}</b>
                     <span className={cn(cap, "whitespace-nowrap")}>{left <= 0 ? "Fully booked" : `${left} ${left === 1 ? "spot" : "spots"} left`}</span>
                   </span>
                 </div>

@@ -79,7 +79,7 @@ export const OwnReviews = ({
         {showRating ? (
           <span className="flex items-center gap-1.5">
             <Stars value={averageRating} />
-            <b className="text-[14px] font-medium">{averageRating.toFixed(1)}</b>
+            <b className="text-label-sm text-dark">{averageRating.toFixed(1)}</b>
             <span className={caption}>· {plural(count, "review")}</span>
           </span>
         ) : null}
@@ -87,12 +87,12 @@ export const OwnReviews = ({
       {shown.length ? (
         <div>
           {shown.map((r) => (
-            <div key={r.id} className="flex flex-col gap-[10px] py-[14px] [&+&]:border-t [&+&]:border-[#EAEADF]">
+            <div key={r.id} className="flex flex-col gap-[10px] py-[14px] [&+&]:border-t [&+&]:border-light-525">
               <div className="flex items-start justify-between gap-3">
                 <span className="flex min-w-0 items-center gap-[10px]">
                   <Avatar name={shortName(r.reviewer_name)} size={32} />
                   <span className="flex min-w-0 flex-col gap-1">
-                    <span className="flex items-center gap-1.5 text-[14px] font-medium leading-[18px] text-[#1A202C]">
+                    <span className="flex items-center gap-1.5 text-label-sm text-dark">
                       {shortName(r.reviewer_name)}
                       {isNew(r) ? <BrandPill tone="solid">New</BrandPill> : null}
                     </span>
@@ -101,16 +101,16 @@ export const OwnReviews = ({
                 </span>
                 <Stars value={r.rating} size={12} />
               </div>
-              {r.review_text ? <p className="text-[14px] leading-[20px] tracking-[-0.03em] text-[#484D56]">{r.review_text}</p> : null}
+              {r.review_text ? <p className="text-paragraph text-dark-400">{r.review_text}</p> : null}
               {r.coach_reply ? (
-                <div className="flex flex-col gap-1.5 rounded-[8px] bg-[#F4F4EB] px-3 py-[10px]">
-                  <span className="text-[12px] font-medium leading-[13px] text-[#767980]">Your reply</span>
-                  <span className="text-[14px] leading-[18px] text-[#1A202C]">{r.coach_reply}</span>
+                <div className="flex flex-col gap-1.5 rounded-control bg-light-400 px-3 py-[10px]">
+                  <span className="text-label-xsm text-dark-300">Your reply</span>
+                  <span className="text-paragraph text-dark">{r.coach_reply}</span>
                 </div>
               ) : replying === r.id ? (
                 <div className="flex flex-col gap-2">
                   <textarea
-                    className={cn(input, "h-auto py-2 leading-[18px]", bad && "ring-2 ring-[#972B2B]")}
+                    className={cn(input, "h-auto py-2 text-paragraph", bad && "border-error-600")}
                     rows={2}
                     maxLength={1000}
                     autoFocus

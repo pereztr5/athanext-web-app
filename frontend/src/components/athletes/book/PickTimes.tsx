@@ -1,7 +1,7 @@
 /** Step 2 of Book {athlete}: a week of days, then times (open 1-on-1s, groups with space, taken times). */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Globe, User, Users, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Globe, User, Users, X } from "@/components/icons";
 import {
   dayTile, dayTileNumber, dayTileWeekday, meta, primaryButton, timeTile, timeTileNote,
 } from "@/components/schedule/styles";
@@ -12,7 +12,7 @@ import { fetchBookWeek } from "./bookWeek";
 import { byStart, clock, viewerDay, type BookTime } from "./bookHelpers";
 
 const boxButton =
-  "inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] disabled:opacity-40 [&>svg]:size-4";
+  "inline-flex size-[30px] flex-none items-center justify-center rounded-control border border-light-525 bg-light-300 text-dark disabled:bg-light-400 disabled:border-light-525 disabled:text-dark-200 [&>svg]:size-4";
 
 export const PickTimes = ({
   athleteId,
@@ -67,7 +67,7 @@ export const PickTimes = ({
     <>
       <div className="flex flex-col gap-4 px-5 pb-4 sm:px-[25px]">
         <div className="flex items-center justify-between gap-3">
-          <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">Pick days and times</span>
+          <span className="text-subtitle">Pick days and times</span>
           <div className="flex items-center gap-2.5">
             <button type="button" className={boxButton} aria-label="Previous week" disabled={start <= today} onClick={() => move(-7)}>
               <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
@@ -97,13 +97,13 @@ export const PickTimes = ({
                 <small className={dayTileWeekday(on)}>{formatDayISO(d.date, { weekday: "short" })}</small>
                 <b className={dayTileNumber}>{formatDayISO(d.date, { day: "numeric" })}</b>
                 {d.picked ? (
-                  <em className={cn("min-w-4 rounded-[8px] px-1 text-center text-[10px] font-bold not-italic leading-[14px]", on ? "bg-[#F1F1E6] text-[#0054B4]" : "bg-[#0054B4] text-[#F1F1E6]")}>
+                  <em className={cn("min-w-4 rounded-pill px-1 text-center text-label-xsm not-italic", on ? "bg-light text-primary" : "bg-primary text-light")}>
                     {d.picked}
                   </em>
                 ) : (
                   <span className="flex h-[5px] gap-[3px]">
-                    {d.group ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#9FD9EA]" : "bg-[#117A96]")} /> : null}
-                    {d.single ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#F1F1E6]" : "bg-[#0054B4]")} /> : null}
+                    {d.group ? <i className={cn("size-[5px] rounded-full", on ? "bg-secondary-200" : "bg-secondary-600")} /> : null}
+                    {d.single ? <i className={cn("size-[5px] rounded-full", on ? "bg-light" : "bg-primary")} /> : null}
                   </span>
                 )}
               </button>
@@ -116,7 +116,7 @@ export const PickTimes = ({
         ) : current ? (
           <>
             <div className="flex flex-wrap items-center justify-between gap-2">
-              <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">
+              <span className="text-subtitle">
                 {formatDayISO(current.date, { weekday: "long", month: "long", day: "numeric" })}
               </span>
               <span className={cn(meta, "inline-flex items-center gap-1")}>
@@ -156,16 +156,16 @@ export const PickTimes = ({
             </div>
           </>
         ) : (
-          <p className="text-[14px] leading-[18px] text-[#767980]">No open times or groups these 7 days. Try the next week.</p>
+          <p className="text-body-m text-dark-300">No open times or groups these 7 days. Try the next week.</p>
         )}
 
-        <span className="inline-flex gap-3.5 text-[12px] text-[#767980]">
-          <span className="inline-flex items-center gap-1.5"><i className="size-2 rounded-full bg-[#117A96]" />Group</span>
-          <span className="inline-flex items-center gap-1.5"><i className="size-2 rounded-full bg-[#0054B4]" />1-on-1</span>
+        <span className="inline-flex gap-3.5 text-caption text-dark-300">
+          <span className="inline-flex items-center gap-1.5"><i className="size-2 rounded-full bg-secondary-600" />Group</span>
+          <span className="inline-flex items-center gap-1.5"><i className="size-2 rounded-full bg-primary" />1-on-1</span>
         </span>
       </div>
 
-      <div className="sticky bottom-0 flex flex-col gap-2.5 border-t border-[#EAEADF] bg-[#F7F7F0] px-5 py-4 sm:px-[25px]">
+      <div className="sticky bottom-0 flex flex-col gap-2.5 border-t border-light-525 bg-light-300 px-5 py-4 sm:px-[25px]">
         {picked.length ? (
           <div className="flex gap-1.5 overflow-x-auto [scrollbar-width:none]">
             {[...picked].sort(byStart).map((t) => (
@@ -173,7 +173,7 @@ export const PickTimes = ({
                 key={t.id}
                 type="button"
                 aria-label={`Remove ${formatDayISO(viewerDay(t, timeZone), { weekday: "short", day: "numeric" })} at ${clock(t, timeZone)}`}
-                className="inline-flex h-[30px] flex-none items-center gap-1.5 rounded-[15px] bg-[#E5EDF7] px-2.5 text-[13px] font-medium text-[#0054B4]"
+                className="inline-flex h-[30px] flex-none items-center gap-1.5 rounded-control border border-primary-300 bg-primary-50 px-2.5 text-label-sm text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onClick={() => onToggle(t)}
               >
                 {formatDayISO(viewerDay(t, timeZone), { weekday: "short", day: "numeric" })} · {clock(t, timeZone).replace(":00", "")}

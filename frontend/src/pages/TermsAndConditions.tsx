@@ -1,6 +1,7 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { AlertCircle } from 'lucide-react';
+import { PageHeader } from '@/components/ui/page-header';
+import { AlertCircle } from "@/components/icons";
 import { useTermsAndConditions } from '@/hooks/useTermsAndConditions';
 import { sanitizeHTML } from '@/utils/sanitize';
 import { formatDateToUSA } from '@/utils/helperFunctions';
@@ -23,25 +24,25 @@ const TermsAndConditions = () => {
   if (error || !termsAndConditions) {
     return (
       <div className={pageClass}>
-        <div className="max-w-8xl mx-auto">
-          <Card className="border border-red-500/20 bg-red-500/5 backdrop-blur-sm">
+        <div className="mx-auto w-full max-w-wrapper">
+          <Card className="border-error-300 bg-error-50">
             <CardContent className="p-6">
               <div className="flex items-start gap-4">
-                <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
-                <div className="flex-1">
-                  <h3 className="font-semibold text-red-700 dark:text-red-400 mb-2">
-                    Unable to Load Terms & Conditions
+                <AlertCircle className="mt-0.5 size-5 flex-shrink-0 text-error-600" strokeWidth={1.5} />
+                <div className="flex flex-1 flex-col gap-2">
+                  <h3 className="text-subtitle text-error-700">
+                    Couldn't load the terms and conditions
                   </h3>
-                  <p className="text-sm text-red-600 dark:text-red-300 mb-4">
-                    {error || 'An unexpected error occurred. Please try again.'}
+                  <p className="text-body-m text-error-700">
+                    {error || 'Something went wrong. Try again.'}
                   </p>
                   <Button
-                    variant="outline"
+                    variant="secondary"
                     size="sm"
                     onClick={refetch}
-                    className="border-red-500/30 hover:bg-red-500/10"
+                    className="self-start"
                   >
-                    Try Again
+                    Try again
                   </Button>
                 </div>
               </div>
@@ -54,14 +55,10 @@ const TermsAndConditions = () => {
 
   return (
     <div className={pageClass}>
-      <div className="max-w-5xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-slate-800 dark:text-slate-200">
-            {termsAndConditions.title}
-          </h1>
-        </div>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
+        <PageHeader title={termsAndConditions.title} />
 
-        <Card className="border border-primary/20 bg-card/50 backdrop-blur-sm">
+        <Card>
           <CardContent className="p-6 sm:p-8">
             <div
               className="content-wrapper prose prose-sm sm:prose-base dark:prose-invert max-w-none"
@@ -70,8 +67,8 @@ const TermsAndConditions = () => {
               }}
             />
 
-            <div className="mt-8 pt-8 border-t border-primary/10">
-              <p className="text-sm text-muted-foreground">
+            <div className="mt-8 border-t border-light-525 pt-8">
+              <p className="text-caption text-dark-300">
                 Last updated: {formatDateToUSA(termsAndConditions.last_updated)}
               </p>
             </div>

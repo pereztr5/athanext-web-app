@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { BadgeCheck, Building2, MapPin } from "lucide-react";
+import { BadgeCheck, Building2, MapPin } from "@/components/icons";
 import { BrandPill, BrandStar } from "@/components/brand";
 import { FreeIntroPill } from "@/components/intro-calls";
 import { primaryButton, smallButton } from "@/components/schedule/styles";
@@ -61,30 +61,30 @@ export const BrowseCoachCard = ({
         onOpen();
       }
     }}
-    className="flex min-w-0 cursor-pointer flex-col gap-[14px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-[22px] transition-colors hover:border-[#99BBE1] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+    className="flex min-w-0 cursor-pointer flex-col gap-[14px] rounded-card border border-light-525 bg-light-300 p-[22px] transition-colors hover:border-primary-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
   >
     <div className="flex min-w-0 items-start gap-3">
       <span
         className={cn(
-          "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full text-[14px] font-medium tracking-[-0.03em]",
-          academy ? "bg-[#E7F4F8] text-[#1599BC]" : "bg-[#E5EDF7] text-[#0054B4]"
+          "relative flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full border border-light-550 text-label-sm",
+          academy ? "bg-secondary-50 text-secondary" : "bg-primary-50 text-primary"
         )}
       >
         {photoUrl ? <img src={photoUrl} alt="" className="absolute inset-0 size-full object-cover" /> : initialsOf(name)}
       </span>
       <div className="flex min-w-0 flex-col gap-1">
-        <h2 className="flex min-w-0 items-center gap-1.5 text-[18px] font-semibold leading-[22px] tracking-[-0.03em] text-[#1A202C]">
+        <h2 className="flex min-w-0 items-center gap-1.5 text-card-title text-dark">
           <span className="truncate">{name}</span>
-          {verified ? <BadgeCheck className="size-4 shrink-0 text-[#0054B4]" strokeWidth={1.75} aria-label="Verified" /> : null}
+          {verified ? <BadgeCheck className="size-4 shrink-0 text-primary" strokeWidth={1.75} aria-label="Verified" /> : null}
         </h2>
-        <span className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{role}</span>
-        <span className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+        <span className="truncate text-caption text-dark-300">{role}</span>
+        <span className="flex min-w-0 flex-wrap items-center gap-x-1 gap-y-0.5 text-caption text-dark-300">
           {rating ? (
             <>
               <BrandStar size={13} />
-              <b className="font-semibold text-[#1A202C]">{rating}</b>
+              <b className="font-medium text-dark">{rating}</b>
               <span>({reviewCount})</span>
-              {area ? <span className="mx-1 size-[3px] shrink-0 rounded-full bg-[#A3A6AB]" aria-hidden="true" /> : null}
+              {area ? <span className="mx-1 size-[3px] shrink-0 rounded-full bg-dark-200" aria-hidden="true" /> : null}
             </>
           ) : null}
           {area ? (
@@ -109,11 +109,11 @@ export const BrowseCoachCard = ({
       </div>
     ) : null}
 
-    <div className="mt-auto flex flex-col gap-3 border-t border-[#EAEADF] pt-3">
-      <div className="flex min-w-0 flex-col gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+    <div className="mt-auto flex flex-col gap-3 border-t border-light-525 pt-3">
+      <div className="flex min-w-0 flex-col gap-1 text-caption text-dark-300">
         {price ? (
           <span className="whitespace-nowrap">
-            From <b className="text-[14px] font-medium text-[#1A202C]">${Math.round(price).toLocaleString("en-US")}</b>
+            From <b className="text-label-sm text-dark">${Math.round(price).toLocaleString("en-US")}</b>
           </span>
         ) : null}
         <span className="min-w-0 overflow-hidden">
@@ -121,7 +121,7 @@ export const BrowseCoachCard = ({
             <Link
               to={organizationPath(academy)}
               onClick={(event) => event.stopPropagation()}
-              className="inline-flex max-w-full items-center gap-1 font-medium text-[#0054B4] hover:text-[#004390] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+              className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:text-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <Building2 className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span className="truncate">{academy}</span>

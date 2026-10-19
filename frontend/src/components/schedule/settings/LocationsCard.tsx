@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Pencil, Plus, Trash2 } from "lucide-react";
+import { MapPin, Pencil, Plus, Trash2 } from "@/components/icons";
 import { coachesAPI } from "@/api";
 import type { ScheduleSession } from "@/api/schedule";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
@@ -119,15 +119,15 @@ export const LocationsCard = ({
         Places families can book. Removing one does not move sessions already booked there.
       </p>
       {loading ? (
-        <div className="h-[34px] animate-pulse rounded-[8px] bg-[#F1F1E6]" />
+        <div className="h-[34px] animate-pulse rounded-control bg-light" />
       ) : (
         <div className="flex flex-col gap-3">
-          {places.length === 0 ? <p className="text-[14px] text-[#767980]">No in-person locations yet.</p> : null}
+          {places.length === 0 ? <p className="text-body-m text-dark-300">No in-person locations yet.</p> : null}
           {places.map((place) => {
             const n = upcomingAt(place);
             const isEdit = editing === place;
             return (
-              <div key={place} className="flex flex-col gap-2 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] px-3 py-3">
+              <div key={place} className="flex flex-col gap-2 rounded-card border border-light-525 bg-light-400 px-3 py-3">
                 {isEdit ? (
                   <div className="flex flex-col gap-2">
                     <input className={input} value={editName} onChange={(e) => setEditName(e.target.value)} aria-label="Location name" />
@@ -143,13 +143,13 @@ export const LocationsCard = ({
                 ) : (
                   <div className="flex items-start justify-between gap-3">
                     <div className="flex min-w-0 flex-col gap-0.5">
-                      <span className="text-[14px] font-medium text-[#1A202C]">{place}</span>
+                      <span className="text-label-sm text-dark">{place}</span>
                       <span className={caption}>{n ? `${plural(n, "upcoming session")}` : "No upcoming sessions"}</span>
                     </div>
                     <div className="flex gap-1">
                       <button
                         type="button"
-                        className="inline-flex size-[30px] items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#EAEADF]"
+                        className="inline-flex size-[30px] items-center justify-center rounded-control text-dark-300 hover:bg-light-525"
                         aria-label={`Edit ${place}`}
                         onClick={() => {
                           setEditing(place);
@@ -160,7 +160,7 @@ export const LocationsCard = ({
                       </button>
                       <button
                         type="button"
-                        className="inline-flex size-[30px] items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#FDF1F1] hover:text-[#B42318]"
+                        className="inline-flex size-[30px] items-center justify-center rounded-control text-dark-300 hover:bg-error-50 hover:text-error-700"
                         aria-label={`Remove ${place}`}
                         disabled={save.isPending}
                         onClick={() => requestRemove(place)}
@@ -173,12 +173,12 @@ export const LocationsCard = ({
               </div>
             );
           })}
-          <div className="flex items-center gap-2 text-[13px] text-[#767980]">
+          <div className="flex items-center gap-2 text-body-m text-dark-300">
             <MapPin className="size-3.5" strokeWidth={1.5} />
             Video call is always available
           </div>
           {adding ? (
-            <div className="flex flex-col gap-2 rounded-[10px] border border-dashed border-[#C1C1B8] p-3">
+            <div className="flex flex-col gap-2 rounded-card border border-dashed border-light-600 p-3">
               <input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="For example, Mueller Park, field 3" />
               <div className="flex gap-2">
                 <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setAdding(false)}>

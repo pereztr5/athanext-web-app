@@ -53,7 +53,7 @@ export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; can
     <>
       {orgs.map((org) => (
         <div key={org} className="flex flex-col gap-2">
-          <span className="text-[12px] font-medium leading-[13px] text-[#767980]">With {org}</span>
+          <span className="text-label-xsm text-dark-300">With {org}</span>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
             {packages
               .filter((p) => (p.orgName ?? "Academy") === org)
@@ -61,18 +61,18 @@ export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; can
                 const line = saving(p);
                 const due = computeSessionPrice(p.price, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
                 return (
-                  <div key={p.id} className="flex flex-col gap-1.5 rounded-[10px] bg-[#F1F1E6] px-[14px] py-4">
-                    <b className="text-[14px] font-medium">{p.name}</b>
-                    <span className="text-[12px] leading-[14px] text-[#767980]">
+                  <div key={p.id} className="flex flex-col gap-1.5 rounded-card border border-light-525 bg-light px-3.5 py-4">
+                    <b className="text-label-sm">{p.name}</b>
+                    <span className="text-caption text-dark-300">
                       {dollars(p.price / Math.max(1, p.sessionCount))} a session ·{" "}
                       {p.renewsMonthly ? "Renews monthly" : `Valid ${p.validityDays} days`}
                     </span>
-                    {line ? <span className="text-[12px] font-medium leading-[14px] text-[#1E7431]">{line}</span> : null}
+                    {line ? <span className="text-label-xsm text-success-700">{line}</span> : null}
                     <div className="mt-1 flex items-end justify-between gap-2">
                       <span className="flex flex-col">
-                        <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{dollars(due)}</span>
+                        <span className="text-highlight">{dollars(due)}</span>
                         {due !== p.price ? (
-                          <span className="text-[11px] leading-[13px] text-[#767980]">list {dollars(p.price)} + fees</span>
+                          <span className="text-caption text-dark-300">list {dollars(p.price)} + fees</span>
                         ) : null}
                       </span>
                       {canBuy ? (

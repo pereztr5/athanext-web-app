@@ -1,9 +1,9 @@
 import { Skeleton } from "@/components/ui/skeleton";
 
-const block = "rounded-[4px] bg-[#EAEADF]";
+const block = "rounded-pill bg-light-525";
 
 const SessionCardSkeleton = () => (
-  <div className="grid grid-cols-1 gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] md:grid-cols-[1fr_auto] md:gap-x-6">
+  <div className="grid grid-cols-1 gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] md:grid-cols-[1fr_auto] md:gap-x-6">
     <div className="flex flex-col gap-5">
       <div className="flex flex-wrap items-center gap-2">
         <Skeleton className={`h-[18px] w-48 ${block}`} />
@@ -30,15 +30,15 @@ const SessionCardSkeleton = () => (
         <Skeleton className={`h-[30px] w-16 ${block}`} />
         <Skeleton className={`h-[14px] w-16 ${block}`} />
       </div>
-      <Skeleton className="h-[30px] w-28 rounded-[8px] bg-[#EAEADF]" />
+      <Skeleton className="h-[30px] w-28 rounded-control bg-light-525" />
     </div>
   </div>
 );
 
 const SectionSkeleton = ({ cards }: { cards: number }) => (
-  <div className="flex flex-col gap-[14px]">
-    <div className="flex items-center gap-[10px]">
-      <Skeleton className="size-8 rounded-[8px] bg-[#EAEADF]" />
+  <div className="flex flex-col gap-3">
+    <div className="flex items-center gap-2.5">
+      <Skeleton className="size-8 rounded-control bg-light-525" />
       <Skeleton className={`h-6 w-48 ${block}`} />
       <Skeleton className={`h-[18px] w-6 ${block}`} />
     </div>
@@ -54,25 +54,25 @@ const SectionSkeleton = ({ cards }: { cards: number }) => (
  */
 export const SessionsSkeleton = () => (
   <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" aria-busy="true" aria-label="Loading sessions">
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+    <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
       {/* Header */}
-      <div className="flex flex-col gap-[10px]">
+      <div className="flex flex-col gap-2.5">
         <Skeleton className={`h-7 w-48 ${block}`} />
         <Skeleton className={`h-[18px] w-72 ${block}`} />
       </div>
 
       {/* Filter card */}
-      <div className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]">
+      <div className="flex flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]">
         <div className="flex items-center gap-[5px]">
           <Skeleton className={`size-4 ${block}`} />
           <Skeleton className={`h-[18px] w-16 ${block}`} />
         </div>
-        <Skeleton className="h-[38px] w-full rounded-[8px] bg-[#F1F1E6]" />
-        <div className="grid grid-cols-1 gap-[10px] sm:grid-cols-2 lg:grid-cols-5">
+        <Skeleton className="h-[38px] w-full rounded-control bg-light" />
+        <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2 lg:grid-cols-5">
           {Array.from({ length: 5 }).map((_, i) => (
             <div key={i} className="flex flex-col gap-[5px]">
               <Skeleton className={`h-[14px] w-12 ${block}`} />
-              <Skeleton className="h-[38px] w-full rounded-[8px] bg-[#F1F1E6]" />
+              <Skeleton className="h-[38px] w-full rounded-control bg-light" />
             </div>
           ))}
         </div>

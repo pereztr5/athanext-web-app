@@ -1,5 +1,5 @@
 /**
- * Coach Account Settings (ATH-87 + ATH-102/103 Plan tab). Tabs edit in place: Account,
+ * Coach Account settings (ATH-87 + ATH-102/103 Plan tab). Tabs edit in place: Account,
  * Notifications, Booking and calendar, Plan, Privacy and safety, Password and account.
  * Account fields show a save bar once something changes; switches save as soon as they flip.
  * AthaNext stores no card or bank details; payouts and the $29 plan are set up on Stripe's pages.
@@ -7,17 +7,20 @@
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banknote, Bell, CalendarSync, CreditCard, Download, Eye, EyeOff, Lock, LogOut, ShieldCheck, User, Wallet } from "lucide-react";
-import { coachesAPI, userProfilesAPI } from "@/api";
+import { Banknote, Bell, CalendarSync, CreditCard, Download, Eye, EyeOff, Lock, LogOut, ShieldCheck, User, Wallet } from "@/components/icons";
+import { authAPI, coachesAPI, userProfilesAPI } from "@/api";
 import { scheduleAPI } from "@/api/schedule";
 import { BookingRulesSection, CalendarSyncSection } from "@/components/schedule/BookingSettings";
 import { card, dangerButton, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
 import { Switch } from "@/components/ui/switch";
+import { PageHeader } from "@/components/ui/page-header";
+import { BrandPill } from "@/components/brand";
 import { LegalCard } from "@/components/legal/LegalLinks";
 import { CoachPlanCard } from "@/components/settings/CoachPlanCard";
 import { PayoutsCard } from "@/components/settings/PayoutsCard";
 import { useAuth } from "@/contexts/AuthContext";
+import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { PASSWORD_RULE_MESSAGE, usePasswordValidation } from "@/hooks/usePasswordValidation";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
@@ -40,9 +43,9 @@ import {
   DEACTIVATE_WORD,
   joinName,
   notificationOn,
-  passwordStrength,
   splitName,
   type NotificationChannel,
+  type NotificationItem,
 } from "@/utils/settings";
 
 type Tab = "account" | "notifications" | "booking" | "plan" | "privacy" | "security" | "legal";
@@ -57,8 +60,8 @@ const TABS: [Tab, string][] = [
   ["legal", "Legal"],
 ];
 
-const cardTitle = "flex items-center gap-2 text-[20px] font-medium leading-[22px] tracking-[-1px] text-[#1A202C]";
-export const sub = "text-[14px] leading-[18px] tracking-[-0.42px] text-[#484D56]";
+const cardTitle = "flex items-center gap-2 text-card-title text-dark";
+export const sub = "text-body-m text-dark-300";
 
 export const Card = ({ icon, title, children, className }: { icon?: ReactNode; title: string; children: ReactNode; className?: string }) => (
   <section className={cn(card, className)}>
@@ -74,7 +77,7 @@ export const Field = ({ label: text, children, hint, error }: { label: string; c
   <label className="flex flex-col gap-1.5">
     <span className={label}>{text}</span>
     {children}
-    {error ? <span className="text-[12px] text-[#972B2B]">{error}</span> : hint ? <span className={meta}>{hint}</span> : null}
+    {error ? <span className="text-caption text-error-700">{error}</span> : hint ? <span className={meta}>{hint}</span> : null}
   </label>
 );
 
@@ -88,7 +91,7 @@ export const ToggleRow = ({ title, detail, checked, onChange, ariaLabel, disable
 }) => (
   <div className="flex items-center justify-between gap-4">
     <div className="flex flex-col gap-1">
-      <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{title}</span>
+      <span className="text-label-sm text-dark">{title}</span>
       <span className={meta}>{detail}</span>
     </div>
     <Switch checked={checked} onCheckedChange={onChange} aria-label={ariaLabel} disabled={disabled} />
@@ -126,11 +129,8 @@ export const SettingsShell = <T extends string>({
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
-        <header className="flex flex-col gap-[10px]">
-          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Account Settings</h1>
-          <p className="text-[16px] leading-[18px] text-[#767980]">{subtitle}</p>
-        </header>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
+        <PageHeader title="Account settings" subtitle={subtitle} />
 
         {banner}
 
@@ -145,8 +145,8 @@ export const SettingsShell = <T extends string>({
                   aria-current={tab === key ? "page" : undefined}
                   onClick={() => openTab(key)}
                   className={cn(
-                    "shrink-0 whitespace-nowrap rounded-[8px] px-3 py-2 text-left text-[14px] font-medium leading-[18px] tracking-[-0.42px] transition-colors",
-                    tab === key ? "bg-[#F4F4EB] text-[#1A202C]" : "text-[#767980] hover:bg-[#F1F1E6] hover:text-[#1A202C]"
+                    "flex h-control shrink-0 items-center whitespace-nowrap rounded-control px-3 text-left text-label-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                    tab === key ? "bg-light-400 text-dark" : "text-dark-300 hover:bg-light-400 hover:text-dark"
                   )}
                 >
                   {text}
@@ -181,7 +181,7 @@ export const CoachSettings = () => {
         <>
           {tab === "account" ? <AccountTab coach={coach} onDirtyChange={setAccountDirty} /> : null}
           {tab === "notifications" ? (
-            <NotificationsTab kinds={COACH_NOTIFICATIONS} caption="Messages from a parent about an athlete under 18 always notify you in the app." />
+            <NotificationsTab kinds={COACH_NOTIFICATIONS} caption="Email is sent for bookings and messages. The app column is your notifications list." />
           ) : null}
           {tab === "booking" && coachId ? (
             <BookingTab
@@ -257,7 +257,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
   };
 
   return (
-    <Card icon={<User className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Account">
+    <Card icon={<User className="size-5 text-dark-300" strokeWidth={1.5} />} title="Account">
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <Field label="First name" error={errors.first}>
           <input className={input} value={draft.first} onChange={set("first")} autoComplete="given-name" />
@@ -266,7 +266,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
           <input className={input} value={draft.last} onChange={set("last")} autoComplete="family-name" />
         </Field>
         <Field label="Email" hint="Your sign-in email. Contact support to change it.">
-          <input className={cn(input, "text-[#767980]")} value={userProfile?.email || user?.email || ""} readOnly />
+          <input className={cn(input, "text-dark-300")} value={userProfile?.email || user?.email || ""} readOnly />
         </Field>
         <Field label="Phone" error={errors.phone}>
           <input className={input} type="tel" value={draft.phone} onChange={set("phone")} autoComplete="tel" />
@@ -276,12 +276,12 @@ const AccountTab = ({ coach, onDirtyChange }: {
         </Field>
         <div className="flex flex-col gap-1.5">
           <span className={label}>Time zone</span>
-          <TimeZoneSelect className="h-[38px] w-full rounded-[8px] border-[#EAEADF] bg-[#F9F9F5]" />
-          <span className={meta}>Saves straight away. My Schedule creates sessions in this zone.</span>
+          <TimeZoneSelect className="h-input w-full rounded-control border-dark-250 bg-light" />
+          <span className={meta}>Saves straight away. My schedule creates sessions in this zone.</span>
         </div>
       </div>
       {dirty ? (
-        <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-[#CCDDF0] bg-[#E5EDF7] px-4 py-3 md:bottom-4">
+        <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-control border border-primary-300 bg-primary-50 px-4 py-3 md:bottom-4">
           <span className={sub}>You have unsaved changes</span>
           <div className="flex gap-2">
             <button type="button" className={secondaryButton} onClick={() => { setDraft(saved); setErrors({}); }} disabled={save.isPending}>
@@ -299,7 +299,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
 
 /* ---------- Notifications ---------- */
 
-export const NotificationsTab = ({ kinds, caption }: { kinds: typeof COACH_NOTIFICATIONS; caption: string }) => {
+export const NotificationsTab = ({ kinds, caption }: { kinds: readonly NotificationItem[]; caption: string }) => {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
@@ -311,39 +311,52 @@ export const NotificationsTab = ({ kinds, caption }: { kinds: typeof COACH_NOTIF
 
   const toggle = async (kind: string, channel: NotificationChannel, on: boolean) => {
     if (!user?.id) return;
+    const stored = (userProfile as { notification_prefs?: unknown } | null)?.notification_prefs;
+    const base = stored && typeof stored === "object" && !Array.isArray(stored) ? { ...(stored as Record<string, boolean>) } : {};
     const previous = prefs;
-    const next = { ...prefs, [`${kind}_${channel}`]: on };
+    const next = { ...base, ...prefs, [`${kind}_${channel}`]: on };
     setPrefs(next);
     const { error } = await userProfilesAPI.updateUserProfile(user.id, { notification_prefs: next as unknown as Json });
     if (error) {
       setPrefs(previous);
-      toast({ title: "Couldn't save", description: "Please try again.", variant: "destructive" });
+      toast({ title: "Couldn't save", description: "Try again.", variant: "destructive" });
       return;
     }
     void refreshUserProfile();
   };
 
   return (
-    <Card icon={<Bell className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Notifications">
-      <div className="grid grid-cols-[minmax(0,1fr)_56px_56px] items-center gap-x-2 gap-y-4">
+    <Card icon={<Bell className="size-5 text-dark-300" strokeWidth={1.5} />} title="Notifications">
+      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-4">
         <span className={label}>Notify me about</span>
         <span className={cn(label, "text-center")}>Email</span>
         <span className={cn(label, "text-center")}>App</span>
-        {kinds.map(([kind, title, detail]) => (
-          <div key={kind} className="contents">
+        {kinds.map((item) => (
+          <div key={item.kind} className="contents">
             <div className="flex flex-col gap-1">
-              <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{title}</span>
-              <span className={meta}>{detail}</span>
+              <span className="text-label-sm text-dark">{item.title}</span>
+              <span className={meta}>{item.detail}</span>
             </div>
-            {(["email", "app"] as NotificationChannel[]).map((channel) => (
-              <div key={channel} className="flex justify-center">
+            <div className="flex min-w-14 justify-center">
+              {item.channels.includes("email") ? (
                 <Switch
-                  checked={notificationOn(prefs, kind, channel)}
-                  onCheckedChange={(on) => toggle(kind, channel, on)}
-                  aria-label={`${title} by ${channel}`}
+                  checked={notificationOn(prefs, item.kind, "email")}
+                  onCheckedChange={(on) => toggle(item.kind, "email", on)}
+                  aria-label={`${item.title} by email`}
                 />
-              </div>
-            ))}
+              ) : (
+                <span className="text-caption text-dark-300">App only</span>
+              )}
+            </div>
+            <div className="flex min-w-14 justify-center">
+              {item.channels.includes("app") ? (
+                <Switch
+                  checked={notificationOn(prefs, item.kind, "app")}
+                  onCheckedChange={(on) => toggle(item.kind, "app", on)}
+                  aria-label={`${item.title} by app`}
+                />
+              ) : null}
+            </div>
           </div>
         ))}
       </div>
@@ -392,10 +405,10 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
     return (
       <div key={key} className="flex flex-col gap-1.5">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="flex items-center gap-2 text-[14px] font-medium">
+          <label className="flex items-center gap-2 text-label-sm">
             <input
               type="checkbox"
-              className="size-4 rounded border-[#C1C1B8]"
+              className="size-4 rounded-pill border-light-600"
               checked={m.on}
               onChange={(e) => {
                 const next = {
@@ -409,7 +422,7 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
           </label>
           {def.needsHandle ? (
             <input
-              className={cn(input, "min-w-0 flex-1", missing ? "border-[#E05A5A]" : "")}
+              className={cn(input, "min-w-0 flex-1", missing ? "border-error-600" : "")}
               value={m.handle}
               disabled={!m.on}
               placeholder={def.placeholder}
@@ -427,7 +440,7 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
           )}
         </div>
         {missing ? (
-          <span className="text-[12px] text-[#972B2B]">
+          <span className="text-caption text-error-700">
             Add your {def.label} {key === "venmo" ? "username" : "email or phone number"} so families know where to send it
           </span>
         ) : null}
@@ -436,23 +449,21 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
   };
 
   return (
-    <Card icon={<Wallet className="size-5 text-[#767980]" strokeWidth={1.5} />} title="How families pay">
-      <div className="flex items-start gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-4 py-3">
-        <CreditCard className="mt-0.5 size-5 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+    <Card icon={<Wallet className="size-5 text-dark-300" strokeWidth={1.5} />} title="How families pay">
+      <div className="flex items-start gap-3 rounded-control border border-light-525 bg-light-400 px-4 py-3">
+        <CreditCard className="mt-0.5 size-5 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <span className="flex min-w-0 grow flex-col gap-1">
-          <b className="text-[14px] font-medium">Card and Apple Pay</b>
+          <b className="text-label-sm">Card and Apple Pay</b>
           <span className={meta}>
             Families pay when they book. A payment processing fee of 2.9% + $0.30 is added at checkout as its own line. Stripe pays you out.
           </span>
         </span>
-        <span className="shrink-0 rounded-full bg-[#EAEADF] px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.04em] text-[#484D56]">
-          Always on
-        </span>
+        <BrandPill tone="neutral" className="shrink-0">Always on</BrandPill>
       </div>
-      <div className="flex items-start gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-4 py-3">
-        <Banknote className="mt-0.5 size-5 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+      <div className="flex items-start gap-3 rounded-control border border-light-525 bg-light-400 px-4 py-3">
+        <Banknote className="mt-0.5 size-5 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <span className="flex min-w-0 grow flex-col gap-1">
-          <b className="text-[14px] font-medium">Offline payment</b>
+          <b className="text-label-sm">Offline payment</b>
           <span className={meta}>
             Let your existing clients choose to pay you directly. They pay your price with no processing fee, and AthaNext doesn&apos;t handle the
             money.
@@ -488,15 +499,15 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
           </Field>
           {ready ? (
             <>
-              <p className={cn(meta, "rounded-[8px] bg-[#F4F4EB] px-3 py-2")}>
+              <p className={cn(meta, "rounded-control border border-light-525 bg-light-400 px-3 py-2")}>
                 Only families you invited see this option. Marketplace families always pay by card in AthaNext.
               </p>
-              <p className={cn(meta, "rounded-[8px] bg-[#F4F4EB] px-3 py-2")}>
+              <p className={cn(meta, "rounded-control border border-light-525 bg-light-400 px-3 py-2")}>
                 Offline payments show as pending until you confirm you received them. The session itself is booked right away.
               </p>
             </>
           ) : (
-            <p className={cn(meta, "rounded-[8px] bg-[#F7F0E0] px-3 py-2 text-[#906A29]")}>
+            <p className={cn(meta, "rounded-control border border-info-300 bg-info-50 px-3 py-2 text-info-700")}>
               Turn on at least 1 method to offer offline payment. Until then, families only see card at checkout.
             </p>
           )}
@@ -514,10 +525,10 @@ const BookingTab = ({ coachId, offlinePay }: { coachId: string; offlinePay: unkn
     <>
       <HowFamiliesPay coachId={coachId} offlinePay={offlinePay} />
       <PayoutsCard />
-      <Card icon={<CalendarSync className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Booking and calendar">
+      <Card icon={<CalendarSync className="size-5 text-dark-300" strokeWidth={1.5} />} title="Booking and calendar">
         {schedule.isLoading ? <p className={meta}>Loading…</p> : null}
         <BookingRulesSection rules={schedule.data?.rules} />
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
         <CalendarSyncSection calendar={schedule.data?.calendar ?? null} />
       </Card>
     </>
@@ -571,13 +582,13 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
       );
     },
     onSuccess: () => toast({ title: "Your data is downloading" }),
-    onError: () => toast({ title: "Couldn't download your data", description: "Please try again.", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't download your data", description: "Try again.", variant: "destructive" }),
   });
 
   return (
-    <Card icon={<ShieldCheck className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Privacy and safety">
-      <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-        <Lock className="mt-[1px] size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+    <Card icon={<ShieldCheck className="size-5 text-dark-300" strokeWidth={1.5} />} title="Privacy and safety">
+      <div className="flex items-start gap-2 rounded-control border border-light-525 bg-light-400 px-3 py-2.5">
+        <Lock className="mt-[1px] size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <span className={sub}>
           Athlete profiles are visible only to you and the account holder. Never upload photos of minors without parent consent.
         </span>
@@ -600,9 +611,10 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
 /* ---------- Password and account ---------- */
 
 export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
-  const { user, changePassword, signOut } = useAuth();
+  const { user, changePassword } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const provider = (user?.app_metadata as { provider?: string } | undefined)?.provider || user?.identities?.[0]?.provider;
   const canChangePassword = provider === "email" || provider === "password";
 
@@ -614,9 +626,10 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
   const [showNext, setShowNext] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
   const [pwError, setPwError] = useState<string | null>(null);
-  const strength = passwordStrength(next);
-  // The same rules as sign-up: upper and lower case, a number and a symbol.
-  const { allValid: meetsRules } = usePasswordValidation(next);
+  // The same rules as sign-up: upper, lower, number, symbol, 8+.
+  const { items: passwordRules, allValid: meetsRules } = usePasswordValidation(next);
+  const rulesMet = passwordRules.filter((item) => item.isValid).length;
+  const meterClass = meetsRules ? "bg-success-600" : rulesMet >= 3 ? "bg-info-600" : "bg-error-600";
 
 
   const resetPw = () => {
@@ -630,17 +643,24 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
   const updatePassword = useMutation({
     mutationFn: async () => {
       const { error } = await changePassword(current, next);
-      if (error) throw new Error(error.message);
+      if (error) {
+        const message = error instanceof Error ? error.message : "";
+        throw new Error(message === "That password isn't right" ? message : "Couldn't update your password. Try again.");
+      }
     },
     onSuccess: () => {
       resetPw();
       toast({ title: "Password updated", description: "You'll be signed out so you can sign in with it." });
       setTimeout(async () => {
-        await signOut();
+        await authAPI.signOut();
+        queryClient.clear();
         navigate(ROUTES.AUTH);
       }, 2500);
     },
-    onError: (err) => setPwError(err instanceof Error ? err.message : "Couldn't update your password"),
+    onError: (err) => {
+      const message = err instanceof Error ? err.message : "";
+      setPwError(message === "That password isn't right" ? message : "Couldn't update your password. Try again.");
+    },
   });
 
   const submitPassword = () => {
@@ -676,13 +696,16 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
           className={cn(input, "pr-10")}
           type={show ? "text" : "password"}
           value={value}
-          onChange={(e) => onChange(e.target.value)}
+          onChange={(e) => {
+            onChange(e.target.value);
+            setPwError(null);
+          }}
           autoComplete={auto}
         />
         <button
           type="button"
           onClick={onToggle}
-          className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+          className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           aria-label={show ? "Hide password" : "Show password"}
         >
           {show ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
@@ -693,7 +716,7 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
 
   return (
     <>
-      <Card icon={<Lock className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Password">
+      <Card icon={<Lock className="size-5 text-dark-300" strokeWidth={1.5} />} title="Password">
         {!canChangePassword ? (
           <p className={sub}>You sign in with {provider === "google" ? "Google" : "a connected account"}, so there's no AthaNext password to change.</p>
         ) : pwOpen ? (
@@ -704,15 +727,19 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
               {passwordInput("pw-confirm", "Confirm new password", confirm, setConfirm, "new-password", showConfirm, () => setShowConfirm((v) => !v))}
             </div>
             <div className="flex flex-col gap-1.5">
-              <div className="h-1.5 overflow-hidden rounded-full bg-[#EAEADF]" aria-hidden="true">
+              <div className="h-1.5 overflow-hidden rounded-full bg-light-525" aria-hidden="true">
                 <div
-                  className={cn("h-full rounded-full transition-all", strength.score < 2 ? "bg-[#E05A5A]" : strength.score < 3 ? "bg-[#E0A23A]" : "bg-[#1E7431]")}
-                  style={{ width: `${strength.score * 25}%` }}
+                  className={cn("h-full rounded-full transition-all", meterClass)}
+                  style={{ width: `${passwordRules.length ? (rulesMet / passwordRules.length) * 100 : 0}%` }}
                 />
               </div>
-              <span className={meta} aria-live="polite">{strength.hint}</span>
+              {meetsRules ? (
+                <span className={meta} aria-live="polite">Strong.</span>
+              ) : (
+                <PasswordRequirements items={passwordRules} />
+              )}
             </div>
-            {pwError ? <p role="alert" className="text-[14px] text-[#972B2B]">{pwError}</p> : null}
+            {pwError ? <p role="alert" className="text-body-m text-error-700">{pwError}</p> : null}
             <div className="flex gap-2">
               <button type="button" className={primaryButton} onClick={submitPassword} disabled={updatePassword.isPending}>
                 {updatePassword.isPending ? "Updating…" : "Update password"}
@@ -728,7 +755,7 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
         )}
       </Card>
 
-      <Card icon={<LogOut className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Sessions">
+      <Card icon={<LogOut className="size-5 text-dark-300" strokeWidth={1.5} />} title="Sessions">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <span className={sub}>Signed in somewhere you don't recognize?</span>
           <button type="button" className={secondaryButton} disabled={signOutOthers.isPending} onClick={() => signOutOthers.mutate()}>
@@ -761,7 +788,7 @@ export const ConfirmWordCard = ({
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   return (
-    <Card title={title} className="border-[#FDB5B5]">
+    <Card title={title} className="border-error-300">
       <p className={sub}>{body}</p>
       {open ? (
         <div className="flex flex-col gap-2">
@@ -834,8 +861,8 @@ const DeactivatedBanner = ({ coachId }: { coachId: string }) => {
   });
 
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#FDB5B5] bg-[#FEECEC] px-4 py-3">
-      <span className="text-[14px] leading-[18px] text-[#972B2B]">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-error-300 bg-error-50 px-4 py-3">
+      <span className="text-body-m text-error-700">
         <b className="font-medium">Your account is deactivated.</b> You're off the marketplace and families can't book you.
       </span>
       <button type="button" className={primaryButton} disabled={reactivate.isPending} onClick={() => reactivate.mutate()}>

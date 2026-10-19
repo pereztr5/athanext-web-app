@@ -2,7 +2,7 @@
  * Shared legal links (WC4 #22): Terms and Privacy open the in-app overlay.
  * Stripe Connect stays on stripe.com. Coach terms open the published coach URL.
  */
-import { ExternalLink, Scale } from "lucide-react";
+import { ExternalLink, Scale } from "@/components/icons";
 import { useQuery } from "@tanstack/react-query";
 import { getPrivacyPolicyContent } from "@/api/privacy-policy";
 import { getTermsAndConditionsContent } from "@/api/terms";
@@ -17,8 +17,8 @@ import { formatDayISO } from "@/utils/schedule";
 export type LegalKind = "terms" | "privacy" | "coach" | "stripe";
 
 const LABELS: Record<LegalKind, { label: string; detail: string }> = {
-  terms: { label: "Terms of Service", detail: "Using AthaNext, bookings and payments" },
-  privacy: { label: "Privacy Policy", detail: "What we collect and how we protect it" },
+  terms: { label: "Terms of service", detail: "Using AthaNext, bookings and payments" },
+  privacy: { label: "Privacy policy", detail: "What we collect and how we protect it" },
   coach: { label: "Coach terms", detail: "Coaching on AthaNext, fees, payouts and verification" },
   stripe: { label: "Stripe Connected Account Agreement", detail: "Payouts are handled by Stripe" },
 };
@@ -51,7 +51,7 @@ export const LegalAnchor = ({
         href={kind === "stripe" ? STRIPE_CONNECT_AGREEMENT : COACH_TERMS_URL}
         target="_blank"
         rel="noopener noreferrer"
-        className={cn("underline underline-offset-2 hover:text-[#0054B4]", className)}
+        className={cn("underline underline-offset-2 hover:text-primary", className)}
       >
         {text}
       </a>
@@ -60,7 +60,7 @@ export const LegalAnchor = ({
   return (
     <button
       type="button"
-      className={cn("underline underline-offset-2 hover:text-[#0054B4]", className)}
+      className={cn("underline underline-offset-2 hover:text-primary", className)}
       onClick={() => openKind(kind)}
     >
       {text}
@@ -70,10 +70,10 @@ export const LegalAnchor = ({
 
 /** Compact footer for sign-in / sign-up: "Terms of Service · Privacy Policy". */
 export const LegalAuthFooter = ({ className }: { className?: string }) => (
-  <p className={cn("text-center text-[12px] leading-[14px] text-[#767980]", className)}>
-    <LegalAnchor kind="terms" className="text-[#767980] no-underline hover:underline" />
+  <p className={cn("text-center text-caption text-dark-300", className)}>
+    <LegalAnchor kind="terms" className="text-dark-300 no-underline hover:underline" />
     {" · "}
-    <LegalAnchor kind="privacy" className="text-[#767980] no-underline hover:underline" />
+    <LegalAnchor kind="privacy" className="text-dark-300 no-underline hover:underline" />
   </p>
 );
 
@@ -114,7 +114,7 @@ export const LegalCard = ({ role, compact = false }: { role: "coach" | "athlete"
   };
 
   return (
-    <Card icon={<Scale className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Legal">
+    <Card icon={<Scale className="size-5 text-dark-300" strokeWidth={1.5} />} title="Legal">
       {compact ? null : <p className={sub}>The agreements that cover your AthaNext account.</p>}
       <div className="flex flex-col gap-1">
         {kinds.map((kind) => {
@@ -123,14 +123,14 @@ export const LegalCard = ({ role, compact = false }: { role: "coach" | "athlete"
             <button
               key={kind}
               type="button"
-              className="flex w-full items-center gap-3 rounded-[8px] px-3 py-3 text-left hover:bg-[#F4F4EB]"
+              className="flex w-full items-center gap-3 rounded-control px-3 py-3 text-left hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               onClick={() => openKind(kind)}
             >
               <span className="flex min-w-0 grow flex-col gap-1">
-                <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{LABELS[kind].label}</span>
+                <span className="text-label-sm text-dark">{LABELS[kind].label}</span>
                 {compact ? null : <span className={meta}>{acceptance(kind) || LABELS[kind].detail}</span>}
               </span>
-              {external ? <ExternalLink className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" /> : null}
+              {external ? <ExternalLink className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" /> : null}
             </button>
           );
         })}

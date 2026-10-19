@@ -4,17 +4,19 @@ import { cva, type VariantProps } from "class-variance-authority"
 import { cn } from "@/lib/utils"
 
 const badgeVariants = cva(
-  "inline-flex items-center gap-1.5 rounded-[4px] border border-transparent px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+  "inline-flex items-center gap-1 whitespace-nowrap rounded-pill border px-[7px] py-[2px] text-label-xsm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&>svg]:size-3",
   {
     variants: {
       variant: {
-        default:
-          "bg-[#E5EDF7] text-[#0054B4]",
-        secondary:
-          "bg-[#F1F1E6] text-[#484D56]",
-        destructive:
-          "bg-destructive text-destructive-foreground",
-        outline: "border-[#EAEADF] text-[#484D56]",
+        // Same recipe as BrandPill: 100 fill, 300 border, darkest text.
+        default: "border-primary-300 bg-primary-100 text-primary",
+        secondary: "border-light-600 bg-light-525 text-dark-400",
+        teal: "border-secondary-300 bg-secondary-100 text-secondary-700",
+        success: "border-success-300 bg-success-100 text-success-800",
+        pending: "border-info-300 bg-info-100 text-info-800",
+        destructive: "border-error-300 bg-error-100 text-error-700",
+        notify: "border-primary bg-primary text-light",
+        outline: "border-light-600 bg-transparent text-dark-400",
       },
     },
     defaultVariants: {

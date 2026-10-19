@@ -56,3 +56,10 @@ verify_jwt = false
 # Paid booking emails. create-booking-payment calls this with the service role.
 [functions.send-booking-notifications]
 verify_jwt = true
+
+[functions.guardian-invite]
+verify_jwt = true
+
+# Owner asks support to remove an org coach. The function checks the caller, then emails support.
+[functions.org-coach-removal]
+verify_jwt = true

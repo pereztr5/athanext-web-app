@@ -7,7 +7,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Switch } from "@/components/ui/switch";
@@ -21,6 +21,8 @@ import {
 import { formatWholePrice } from "@/utils/sessionFormatting";
 import { isPublicCoachRatingVisible } from "@/utils/publicRating";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { segButton, segGroup } from "@/components/schedule/styles";
 import {
   PricingShareCard,
   buildPricingSharePackages,
@@ -203,26 +205,26 @@ export function SharePricingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[920px] overflow-y-auto border-[#EAEADF] bg-[#F7F7F0] p-0 sm:rounded-[12px] [&>button]:hidden">
-        <div className="flex items-start justify-between gap-4 border-b border-[#EAEADF] px-6 py-4">
+      <DialogContent className="max-h-[90vh] max-w-[920px] overflow-y-auto border-light-525 bg-light-300 p-0 sm:rounded-card [&>button]:hidden">
+        <div className="flex items-start justify-between gap-4 border-b border-light-525 px-6 py-4">
           <DialogHeader className="space-y-1 text-left">
-            <DialogTitle className="text-[24px] font-semibold tracking-[-0.05em] text-[#1A202C]">
+            <DialogTitle className="text-section text-dark">
               Share pricing
             </DialogTitle>
-            <DialogDescription className="text-[14px] tracking-[-0.03em] text-[#767980]">
+            <DialogDescription className="text-body-m text-dark-300">
               Pick a format, choose what to show, then download or copy your link.
             </DialogDescription>
           </DialogHeader>
-          <DialogClose className="shrink-0 rounded-[5px] p-2 text-[#767980] opacity-70 transition-opacity hover:opacity-100 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2">
+          <DialogClose className="shrink-0 rounded-control p-2 text-dark-300 transition-colors hover:bg-light-400 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
             <X className="h-5 w-5" strokeWidth={1.5} />
             <span className="sr-only">Close</span>
           </DialogClose>
         </div>
 
         <div className="grid gap-0 lg:grid-cols-[minmax(0,1fr)_320px]">
-          <div className="flex flex-col gap-5 border-b border-[#EAEADF] p-6 lg:border-b-0 lg:border-r">
+          <div className="flex flex-col gap-5 border-b border-light-525 p-6 lg:border-b-0 lg:border-r">
 
-            <div className="flex gap-2">
+            <div className={cn(segGroup, "w-fit")}>
               {(
                 [
                   ["post", "Post 4:5"],
@@ -233,12 +235,8 @@ export function SharePricingDialog({
                   key={value}
                   type="button"
                   onClick={() => setFormat(value)}
-                  className={cn(
-                    "h-9 rounded-[8px] border px-3 text-[14px] font-medium tracking-[-0.03em]",
-                    format === value
-                      ? "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6]"
-                      : "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C]"
-                  )}
+                  aria-pressed={format === value}
+                  className={cn(segButton(format === value), "flex-none px-3")}
                 >
                   {label}
                 </button>
@@ -269,7 +267,7 @@ export function SharePricingDialog({
               />
             </div>
 
-            <div className="flex justify-center overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#11151d] p-4">
+            <div className="flex justify-center overflow-hidden rounded-card border border-light-525 bg-dark-700 p-4">
               <div
                 className="origin-top"
                 style={{
@@ -296,35 +294,35 @@ export function SharePricingDialog({
               type="button"
               onClick={handleDownload}
               disabled={downloading}
-              className="flex h-10 items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium tracking-[-0.03em] text-[#F1F1E6] disabled:opacity-60"
+              className={buttonVariants({ variant: "default", size: "lg" })}
             >
               {downloading ? "Preparing…" : "Download PNG"}
             </button>
 
             <div className="space-y-2">
-              <Label className="text-[12px] text-[#767980]">Pricing link</Label>
+              <Label className="text-caption text-dark-300">Pricing link</Label>
               <div className="flex gap-2">
                 <Input
                   readOnly
                   value={pricingLabel}
-                  className="border-[#EAEADF] bg-[#F4F4EB] text-[13px]"
+                  className="border-dark-250 bg-light text-body-m"
                 />
                 <button
                   type="button"
                   onClick={copyPricingLink}
-                  className="h-10 shrink-0 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium"
+                  className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "shrink-0 px-3")}
                 >
                   Copy
                 </button>
               </div>
-              <p className="text-[12px] leading-[16px] text-[#767980]">
+              <p className="text-paragraph-sm text-dark-300">
                 Clicks and bookings from this link show up in Analytics.
               </p>
             </div>
 
             {canEditSlug ? (
               <div className="space-y-2">
-                <Label className="text-[12px] text-[#767980]">Profile link name</Label>
+                <Label className="text-caption text-dark-300">Profile link name</Label>
                 <div className="flex gap-2">
                   <Input
                     value={slugDraft}
@@ -336,19 +334,19 @@ export function SharePricingDialog({
                           .replace(/-+/g, "-")
                       )
                     }
-                    className="border-[#EAEADF] bg-[#F4F4EB] text-[13px]"
+                    className="border-dark-250 bg-light text-body-m"
                     maxLength={60}
                   />
                   <button
                     type="button"
                     onClick={handleSaveSlug}
                     disabled={savingSlug || slugDraft === slug || slugDraft.length < 3}
-                    className="h-10 shrink-0 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium disabled:opacity-50"
+                    className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "shrink-0 px-3")}
                   >
                     {savingSlug ? "Saving…" : "Save"}
                   </button>
                 </div>
-                <p className="text-[12px] text-[#767980]">
+                <p className="text-caption text-dark-300">
                   Changing this keeps the old link redirecting here.
                 </p>
               </div>
@@ -397,12 +395,12 @@ function ToggleRow({
   hint?: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 py-2">
+    <div className="flex items-center justify-between rounded-control border border-light-525 bg-light-400 px-3 py-2">
       <div>
-        <div className="text-[14px] font-medium tracking-[-0.03em] text-[#1A202C]">
+        <div className="text-label-sm text-dark">
           {label}
         </div>
-        {hint ? <div className="text-[11px] text-[#767980]">{hint}</div> : null}
+        {hint ? <div className="text-caption text-dark-300">{hint}</div> : null}
       </div>
       <Switch checked={checked} onCheckedChange={onCheckedChange} />
     </div>
@@ -420,7 +418,7 @@ function ShareAction({
     <button
       type="button"
       onClick={onClick}
-      className="flex h-10 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[13px] font-medium tracking-[-0.03em] text-[#1A202C]"
+      className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-full px-2")}
     >
       {label}
     </button>

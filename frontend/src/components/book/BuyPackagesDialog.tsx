@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ArrowLeft, Check, Ticket } from "lucide-react";
+import { ArrowLeft, Check, Ticket } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BrandPill } from "@/components/brand";
 import { packagesAPI, type Package } from "@/api/packages";
@@ -134,7 +134,7 @@ export const BuyPackagesDialog = ({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            className="-ml-1.5 inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F1F1E6] hover:text-[#1A202C] [&>svg]:size-4"
+            className="-ml-1.5 inline-flex size-[30px] flex-none items-center justify-center rounded-control text-dark-300 hover:bg-light hover:text-dark [&>svg]:size-4"
             aria-label="Back to packages"
             onClick={() => setPkgId(null)}
           >
@@ -147,14 +147,14 @@ export const BuyPackagesDialog = ({
       <div className={sheetBody}>
         <div className="flex items-center justify-between gap-3">
           <span className="flex min-w-0 flex-col gap-1">
-            <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">
+            <span className="text-subtitle">
               {chosen.package_name} with {shown?.name}
             </span>
             <span className={meta}>
               {money(perSession(chosen))} per session{chosen.validity_days ? ` · valid ${chosen.validity_days} days` : ""}
             </span>
           </span>
-          <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] tabular-nums">
+          <span className="text-stat tabular-nums">
             {money(chosenCharge?.total ?? chosen.total_price / 100)}
           </span>
         </div>
@@ -168,7 +168,7 @@ export const BuyPackagesDialog = ({
           book {first}.
         </InfoBox>
         {error ? (
-          <p role="alert" className="rounded-[8px] bg-[#FEDADA] px-3 py-2 text-[14px] text-[#972B2B]">
+          <p role="alert" className="rounded-control border border-error-300 bg-error-50 px-3 py-2 text-body-m text-error-700">
             {error}
           </p>
         ) : null}
@@ -201,13 +201,13 @@ export const BuyPackagesDialog = ({
       </DialogHeader>
       <div className={sheetBody}>
         {packages.isLoading ? (
-          <p className="py-8 text-center text-[14px] text-[#767980]">Loading packages…</p>
+          <p className="py-8 text-center text-body-m text-dark-300">Loading packages…</p>
         ) : packages.isError ? (
-          <p role="alert" className="rounded-[8px] bg-[#FEDADA] px-3 py-2 text-[14px] text-[#972B2B]">
+          <p role="alert" className="rounded-control border border-error-300 bg-error-50 px-3 py-2 text-body-m text-error-700">
             Couldn't load packages. Try again in a moment.
           </p>
         ) : !list.length ? (
-          <p className="py-8 text-center text-[14px] text-[#767980]">No packages available right now.</p>
+          <p className="py-8 text-center text-body-m text-dark-300">No packages available right now.</p>
         ) : (
           <div className="grid grid-cols-[repeat(auto-fit,minmax(220px,1fr))] gap-5">
             {list.map((pkg) => {
@@ -215,25 +215,25 @@ export const BuyPackagesDialog = ({
               return (
                 <div
                   key={pkg.id}
-                  className={cn("flex flex-col gap-4 rounded-[10px] border bg-[#F4F4EB] p-[22px]", best ? "border-[#99BBE1]" : "border-[#EAEADF]")}
+                  className={cn("flex flex-col gap-4 rounded-card border bg-light-400 p-[22px]", best ? "border-primary-200" : "border-light-525")}
                 >
                   <div className="flex flex-col gap-2">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-[20px] font-medium leading-[24px] tracking-[-0.05em]">{pkg.package_name}</span>
+                      <span className="text-card-title">{pkg.package_name}</span>
                       {best ? <BrandPill tone="blue">Most booked</BrandPill> : null}
                     </div>
-                    <span className="text-[14px] leading-[18px] text-[#767980]">
+                    <span className="text-body-m text-dark-300">
                       {pkg.validity_days ? `Valid ${pkg.validity_days} days after purchase` : plural(pkg.session_count, "session")}
                     </span>
                   </div>
                   <div className="flex flex-col gap-1">
-                    <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] tabular-nums">{money(pkg.total_price / 100)}</span>
+                    <span className="text-stat tabular-nums">{money(pkg.total_price / 100)}</span>
                     <span className={meta}>{money(perSession(pkg))} per session</span>
                   </div>
-                  <div className="flex flex-col gap-2 text-[14px] leading-[18px]">
+                  <div className="flex flex-col gap-2 text-body-m">
                     {["Session notes after every session", `Message ${first} anytime`, "Credits roll over until expiry"].map((text) => (
                       <span key={text} className="flex items-center gap-2">
-                        <Check className="size-4 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+                        <Check className="size-4 flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
                         {text}
                       </span>
                     ))}
@@ -269,7 +269,7 @@ export const BuyPackagesDialog = ({
           <DialogDescription className="sr-only">Loading the package.</DialogDescription>
         </DialogHeader>
         <div className={sheetBody}>
-          <p className="py-8 text-center text-[14px] text-[#767980]">Loading…</p>
+          <p className="py-8 text-center text-body-m text-dark-300">Loading…</p>
         </div>
       </DialogContent>
     ) : null;

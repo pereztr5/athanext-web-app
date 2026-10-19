@@ -26,7 +26,7 @@ const PASSWORD_REQUIREMENTS = [
   },
   {
     key: "special",
-    label: "At least one special character (!@#$, etc.)",
+    label: "At least one symbol (such as @, # or $)",
     test: (value: string) => /[^A-Za-z0-9]/.test(value),
   },
 ] as const;

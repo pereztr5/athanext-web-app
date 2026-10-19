@@ -1,4 +1,4 @@
-import { CheckCheck } from "lucide-react";
+import { CheckCheck } from "@/components/icons";
 
 import { cn } from "@/lib/utils";
 
@@ -15,11 +15,11 @@ type MessageBubbleProps = {
 };
 
 const ThreadAvatar = ({ initials, avatarUrl }: { initials: string; avatarUrl?: string | null }) => (
-  <div className="size-[25px] shrink-0 overflow-hidden rounded-[8px] bg-[#C1C1B8]">
+  <div className="size-[25px] shrink-0 overflow-hidden rounded-full border border-light-550 bg-light">
     {avatarUrl ? (
       <img src={avatarUrl} alt="" className="size-full object-cover" />
     ) : (
-      <span className="flex size-full items-center justify-center text-[10px] font-medium text-[#484D56]">
+      <span className="flex size-full items-center justify-center text-label-xsm text-dark-300">
         {initials.slice(0, 2)}
       </span>
     )}
@@ -42,23 +42,23 @@ const MessageBubble = ({
         <div className="flex w-fit max-w-[85%] items-center gap-[10px]">
           {!isUser ? <ThreadAvatar initials={initials} avatarUrl={avatarUrl} /> : null}
           {isUser && status ? (
-            <span className="shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{status}</span>
+            <span className="shrink-0 text-caption text-dark-300">{status}</span>
           ) : null}
           <div className="flex min-w-0 flex-col gap-[3px]">
             {senderName ? (
-              <span className="text-[12px] font-medium leading-[14px] tracking-[-0.36px] text-[#767980]">{senderName}</span>
+              <span className="text-label-xsm text-dark-300">{senderName}</span>
             ) : null}
             <div
               className={cn(
-                "min-w-0 break-words rounded-[8px] px-[10px] py-2 text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]",
-                isUser ? "bg-[#CCDDF0]" : "bg-[#F1F1E6]"
+                "min-w-0 whitespace-pre-wrap break-words rounded-card px-[14px] py-2.5 text-paragraph text-dark",
+                isUser ? "bg-primary-100" : "bg-light"
               )}
             >
               {text}
             </div>
           </div>
           {!isUser ? (
-            <span className="shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+            <span className="shrink-0 text-caption text-dark-300">
               {status ? `${status} ${time}` : time}
             </span>
           ) : null}
@@ -73,17 +73,17 @@ const MessageBubble = ({
     <div className={cn("flex w-full flex-col gap-1.5", isUser ? "items-end" : "items-start")}>
       <div
         className={cn(
-          "max-w-[80%] whitespace-pre-wrap break-words rounded-[8px] px-3 py-2.5 text-[14px] leading-[18px] tracking-[-0.03em] [text-wrap:pretty]",
+          "max-w-[80%] whitespace-pre-wrap break-words rounded-card px-3 py-2.5 text-paragraph [text-wrap:pretty]",
           isUser
-            ? "bg-[#0054B4] text-[#F1F1E6]"
-            : "border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]"
+            ? "border border-primary-300 bg-primary-100 text-dark"
+            : "border border-light-525 bg-light-300 text-dark"
         )}
       >
         {text}
       </div>
       <span
         className={cn(
-          "flex items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]",
+          "flex items-center gap-1 text-caption text-dark-300",
           isUser ? "pr-0.5" : "pl-0.5"
         )}
       >

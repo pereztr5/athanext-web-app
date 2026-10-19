@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Clock } from "lucide-react";
+import { Clock } from "@/components/icons";
 import type { BookingRulesInput } from "@/api/scheduleSettings";
 import { cn } from "@/lib/utils";
 import { plural } from "@/utils/schedule";
@@ -36,9 +36,9 @@ export const BookingRulesCard = ({ rules, loading }: { rules: RulesView; loading
           <div key={k} className="flex items-start justify-between gap-3">
             <span className={cn(caption, "flex-none pt-0.5")}>{k}</span>
             {loading ? (
-              <span className="h-[18px] w-40 animate-pulse rounded-[4px] bg-[#F1F1E6]" />
+              <span className="h-[18px] w-40 animate-pulse rounded-pill bg-light" />
             ) : (
-              <span className="min-w-0 text-right">{v}</span>
+              <span className="min-w-0 text-right text-body-m text-dark">{v}</span>
             )}
           </div>
         ))}

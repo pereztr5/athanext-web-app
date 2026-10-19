@@ -19,7 +19,7 @@ import {
   Users,
   Clock,
   Zap,
-} from "lucide-react";
+} from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { bookAPI, type BookableSession, type BookingCoach } from "@/api/book";
 import { MobilePayBar, PickBar, PickFoot } from "@/components/book/BookBars";
@@ -29,7 +29,8 @@ import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import { PackageSavings } from "@/components/book/PackageSavings";
 import { RenewingPackages } from "@/components/book/RenewingPackages";
 import { TimePicker } from "@/components/book/TimePicker";
-import { card, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
+import { card, meta, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useBookingFees } from "@/hooks/useBookingFees";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -58,8 +59,11 @@ const initials = (name: string) =>
 
 const Avatar = ({ coach, size = 48 }: { coach: Pick<BookingCoach, "name" | "imageUrl">; size?: number }) => (
   <span
-    className="flex flex-none items-center justify-center overflow-hidden rounded-full bg-[#D9D9CF] font-semibold text-[#484D56]"
-    style={{ width: size, height: size, fontSize: size >= 48 ? 16 : 13 }}
+    className={cn(
+      "flex flex-none items-center justify-center overflow-hidden rounded-full bg-light-550 text-dark-300",
+      size >= 48 ? "text-subtitle" : "text-label-sm"
+    )}
+    style={{ width: size, height: size }}
     aria-hidden="true"
   >
     {coach.imageUrl ? <img src={coach.imageUrl} alt="" className="size-full object-cover" /> : initials(coach.name)}
@@ -174,12 +178,12 @@ const BookSessionPage = () => {
     <div className="flex flex-wrap items-center gap-3">
       <Avatar coach={coach} />
       <div className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-[20px] font-medium tracking-[-0.04em] text-[#1A202C]">{coach.name}</span>
-        <span className="text-[14px] leading-[18px] text-[#767980]">{sub}</span>
+        <span className="text-card-title text-dark">{coach.name}</span>
+        <span className="text-body-m text-dark-300">{sub}</span>
         {coach.groupFrom || coach.hourlyRate ? (
-          <span className="flex flex-wrap gap-x-3 text-[13px] text-[#484D56]">
+          <span className="flex flex-wrap gap-x-3 text-body-m text-dark-300">
             {coach.groupFrom ? (
-              <span className="inline-flex items-center gap-1 text-[#117A96]">
+              <span className="inline-flex items-center gap-1 text-secondary-700">
                 <Users className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                 Group from {money(coach.groupFrom)}
               </span>
@@ -261,9 +265,9 @@ const BookSessionPage = () => {
     } else if (!myCoaches.length && !selectedCoach) {
       content = (
         <section className={cn(card, "items-center py-10 text-center")}>
-          <Search className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-          <b className="text-[18px] font-medium">Find your first coach</b>
-          <p className="max-w-[420px] text-[14px] text-[#767980]">
+          <Search className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+          <b className="text-card-title">Find your first coach</b>
+          <p className="max-w-[420px] text-body-m text-dark-300">
             Once you train with a coach, they show up here and you can book them in a few taps. Or book by pillar to see every coach with open times.
           </p>
           <span className="flex gap-2">
@@ -283,7 +287,7 @@ const BookSessionPage = () => {
         <>
           <section className={card}>
             <div className="flex items-center justify-between">
-              <span className="text-[12px] font-medium text-[#767980]">Your coaches</span>
+              <span className="text-label-xsm text-dark-300">Your coaches</span>
               <Link to={ROUTES.COACHES} className={textButton}>
                 Find a new coach
               </Link>
@@ -297,19 +301,19 @@ const BookSessionPage = () => {
                   onClick={() => setCoachId(c.id)}
                   className="flex w-24 flex-none flex-col items-center gap-2 text-center"
                 >
-                  <span className={cn("rounded-full border-2 p-[3px]", c.id === selectedCoachId ? "border-[#0054B4]" : "border-transparent")}>
+                  <span className={cn("rounded-full border-2 p-[3px]", c.id === selectedCoachId ? "border-primary" : "border-transparent")}>
                     <Avatar coach={c} size={60} />
                   </span>
-                  <b className="text-[14px] font-medium">{c.name.split(" ")[0]}</b>
-                  <small className="line-clamp-1 text-[12px] leading-[14px] text-[#767980]">{c.specialties[0] ?? (c.isClient ? "Your coach" : "Coach")}</small>
+                  <b className="text-label-sm">{c.name.split(" ")[0]}</b>
+                  <small className="line-clamp-1 text-caption text-dark-300">{c.specialties[0] ?? (c.isClient ? "Your coach" : "Coach")}</small>
                 </button>
               ))}
               <Link to={ROUTES.COACHES} className="flex w-24 flex-none flex-col items-center gap-2 text-center">
-                <span className="flex size-[60px] items-center justify-center rounded-full border border-dashed border-[#C1C1B8] text-[#767980]">
+                <span className="flex size-[60px] items-center justify-center rounded-full border border-dashed border-light-600 text-dark-300">
                   <Plus className="size-5" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <b className="text-[14px] font-medium">Add coach</b>
-                <small className="text-[12px] text-[#767980]">Browse</small>
+                <b className="text-label-sm">Add coach</b>
+                <small className="text-caption text-dark-300">Browse</small>
               </Link>
             </div>
           </section>
@@ -322,7 +326,7 @@ const BookSessionPage = () => {
               {!isMobile ? <PackageSavings coach={selectedCoach} onOpen={() => setPackagesCoach(selectedCoach)} /> : null}
               <RenewingPackages />
               {!isMobile && selectedCoach.nextSession ? (
-                <p className="flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] text-[#767980]">
+                <p className="flex items-start gap-2.5 rounded-control bg-light-400 px-3.5 py-3 text-caption text-dark-300">
                   <CalendarCheck className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
                   Next session with {selectedCoach.name.split(" ")[0]}: {whenText(selectedCoach.nextSession.date, selectedCoach.nextSession.startTime, timeZone)}.
                 </p>
@@ -336,7 +340,7 @@ const BookSessionPage = () => {
   } else if (pillar && pillarCoach) {
     content = twoCol(
       <div className="flex flex-col gap-4">
-        <button type="button" className={cn(textButton, "-mb-3 self-start text-[#767980]")} onClick={() => setPillarCoachId(null)}>
+        <button type="button" className={cn(textButton, "-mb-3 self-start text-dark-300")} onClick={() => setPillarCoachId(null)}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
           {pillar} coaches
         </button>
@@ -349,8 +353,8 @@ const BookSessionPage = () => {
       <>
         <section className={cn(card, !pillar && "min-h-0 flex-1")}>
           <div className="flex flex-col gap-1">
-            <h2 className="text-[20px] font-medium tracking-[-0.04em]">What do you want to work on?</h2>
-            <p className="text-[14px] leading-[18px] text-[#767980]">Pick a pillar to see coaches and their next open times.</p>
+            <h2 className="text-card-title">What do you want to work on?</h2>
+            <p className="text-body-m text-dark-300">Pick a pillar to see coaches and their next open times.</p>
           </div>
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
             {DEFAULT_PILLARS.soccer.map((p) => {
@@ -367,21 +371,21 @@ const BookSessionPage = () => {
                     setPillarCoachId(null);
                   }}
                   className={cn(
-                    "flex items-center gap-3 rounded-[12px] border px-3.5 py-3 text-left transition-colors max-md:flex-col max-md:items-start max-md:gap-2",
-                    on ? "border-[#0054B4] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB] hover:border-[#6698D2]"
+                    "flex items-center gap-3 rounded-control border px-3.5 py-3 text-left transition-colors max-md:flex-col max-md:items-start max-md:gap-2",
+                    on ? "border-primary bg-primary-50" : "border-light-525 bg-light-400 hover:border-primary-300"
                   )}
                 >
                   <span
                     className={cn(
                       "flex size-[34px] flex-none items-center justify-center rounded-full border",
-                      on ? "border-[#99BBE1] bg-[#F7F7F0] text-[#0054B4]" : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]"
+                      on ? "border-primary-200 bg-light-300 text-primary" : "border-light-525 bg-light-300 text-dark"
                     )}
                   >
                     <Icon className="size-[17px]" strokeWidth={1.5} aria-hidden="true" />
                   </span>
                   <span className="flex min-w-0 flex-col">
-                    <b className="text-[14px] font-semibold leading-[18px]">{p.title}</b>
-                    <small className="mt-0.5 text-[12px] text-[#A3A6AB]">{pillarCopy(p.title).blurb}</small>
+                    <b className="text-label-sm">{p.title}</b>
+                    <small className="mt-0.5 text-caption text-dark-300">{pillarCopy(p.title).blurb}</small>
                   </span>
                 </button>
               );
@@ -390,16 +394,16 @@ const BookSessionPage = () => {
         </section>
 
         {pillar ? (
-          <section className="flex items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-3.5 py-3 md:hidden">
-            <span className="flex size-9 flex-none items-center justify-center rounded-full border border-[#99BBE1] bg-[#F7F7F0] text-[#0054B4]">
+          <section className="flex items-center gap-3 rounded-card border border-light-525 bg-light-300 px-3.5 py-3 md:hidden">
+            <span className="flex size-9 flex-none items-center justify-center rounded-full border border-primary-200 bg-light-300 text-primary">
               {(() => {
                 const Icon = ICON_MAP[DEFAULT_PILLARS.soccer.find((p) => p.title === pillar)?.iconKey ?? "activity"];
                 return <Icon className="size-[18px]" strokeWidth={1.5} aria-hidden="true" />;
               })()}
             </span>
             <span className="flex min-w-0 flex-1 flex-col">
-              <b className="text-[15px] font-semibold">{pillar}</b>
-              <small className="text-[12px] leading-4 text-[#767980]">{pillarQuery.data ? plural(pillarCoaches.length, "coach", "coaches") : "Coaches"}</small>
+              <b className="text-label-sm">{pillar}</b>
+              <small className="text-caption text-dark-300">{pillarQuery.data ? plural(pillarCoaches.length, "coach", "coaches") : "Coaches"}</small>
             </span>
             <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => { setPillar(null); setPillarCoachId(null); }}>
               Change
@@ -411,8 +415,8 @@ const BookSessionPage = () => {
           <section className={card}>
             <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
               <div className="flex flex-col gap-1">
-                <h2 className="text-[20px] font-medium tracking-[-0.04em]">{pillar} coaches</h2>
-                <p className="text-[14px] leading-[18px] text-[#767980]">
+                <h2 className="text-card-title">{pillar} coaches</h2>
+                <p className="text-body-m text-dark-300">
                   {pillarCopy(pillar).blurb}
                   {pillarQuery.data ? ` · ${plural(pillarCoaches.length, "coach", "coaches")}` : ""}
                   {usesPosition ? ` for ${position === "Goalkeeper" ? "goalkeepers" : "field players"}` : ""}
@@ -447,7 +451,7 @@ const BookSessionPage = () => {
             {pillarQuery.isLoading ? (
               <p className={meta}>Finding coaches…</p>
             ) : pillarCoaches.length ? (
-              <div className="flex flex-col divide-y divide-[#EAEADF]">
+              <div className="flex flex-col divide-y divide-light-525">
                 {pillarCoaches.map((c) => {
                   const next = format === "group" ? null : c.nextOpen;
                   const group = format === "individual" ? null : c.nextGroup;
@@ -463,7 +467,7 @@ const BookSessionPage = () => {
                         <Avatar coach={c} />
                         <div className="flex min-w-0 flex-1 flex-col gap-1">
                           <span className="flex flex-wrap items-center gap-1.5">
-                            <b className="text-[16px] font-medium">{c.name}</b>
+                            <b className="text-subtitle">{c.name}</b>
                             {c.isClient ? (
                               <BrandPill tone="green">Your coach</BrandPill>
                             ) : c.needsRequest ? (
@@ -479,9 +483,9 @@ const BookSessionPage = () => {
                             )}
                             {c.credits ? <BrandPill tone="green">{plural(c.credits, "credit")} left</BrandPill> : null}
                           </span>
-                          <span className="flex flex-wrap gap-3 text-[13px] text-[#484D56]">
+                          <span className="flex flex-wrap gap-3 text-body-m text-dark-300">
                             {c.groupFrom != null ? (
-                              <span className="flex items-center gap-1 text-[#117A96]">
+                              <span className="flex items-center gap-1 text-secondary-700">
                                 <Users className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                                 Group from {money(c.groupFrom)}
                               </span>
@@ -498,15 +502,15 @@ const BookSessionPage = () => {
                           </span>
                         </div>
                         {c.totalReviews ? (
-                          <span className="flex flex-none items-center gap-1 text-[14px]">
-                            <Star className="size-4 fill-[#E7DF3E] text-[#B9B232]" strokeWidth={1.5} aria-hidden="true" />
+                          <span className="flex flex-none items-center gap-1 text-body-m">
+                            <Star className="size-4 fill-rating text-rating-600" strokeWidth={1.5} aria-hidden="true" />
                             {c.rating ? c.rating.toFixed(1) : "New"}
-                            <span className="text-[12px] text-[#767980]">{c.totalReviews}</span>
+                            <span className="text-caption text-dark-300">{c.totalReviews}</span>
                           </span>
                         ) : null}
                       </div>
-                      <p className="flex items-center gap-2 rounded-[8px] bg-[#F4F4EB] px-3 py-2 text-[13px] text-[#484D56]">
-                        <CalendarDays className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                      <p className="flex items-center gap-2 rounded-control bg-light-400 px-3 py-2 text-body-m text-dark-300">
+                        <CalendarDays className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                         {nextLine ? (
                           <span>
                             Next {nextLine.kind === "group" ? "group" : "open"} <b>{nextLine.when}</b>
@@ -537,8 +541,8 @@ const BookSessionPage = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 py-6 text-center">
-                <Search className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-                <b className="text-[16px] font-medium">
+                <Search className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+                <b className="text-subtitle">
                   No {usesPosition ? (position === "Goalkeeper" ? "goalkeeper " : "field player ") : ""}coaches for {pillar} yet
                 </b>
                 <p className={meta}>
@@ -562,14 +566,12 @@ const BookSessionPage = () => {
         sortedPicked.length > 0 && "max-[820px]:pb-[180px]"
       )}
     >
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-5">
-        <header className="flex flex-col gap-4">
-          <div className="flex flex-col gap-2.5">
-            <h1 className={pageTitle}>Book a session</h1>
-            <p className="text-[14px] leading-[18px] text-[#767980]">
-              {currentMode === "pillar" ? "Pick what to work on, then a coach and your times." : "Pick your coach, then the days and times that work."}
-            </p>
-          </div>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-5">
+        <div className="flex flex-col gap-4">
+          <PageHeader
+            title="Book a session"
+            subtitle={currentMode === "pillar" ? "Pick what to work on, then a coach and your times." : "Pick your coach, then the days and times that work."}
+          />
           <div className={cn(segGroup, "-mt-2 w-fit")} role="group" aria-label="How to book">
             <button type="button" className={cn(segButton(currentMode === "coach"), "flex-none")} aria-pressed={currentMode === "coach"} onClick={() => switchMode("coach")}>
               <User strokeWidth={1.5} aria-hidden="true" />
@@ -580,7 +582,7 @@ const BookSessionPage = () => {
               Book by pillar
             </button>
           </div>
-        </header>
+        </div>
         {content}
       </div>
       <PickBar picked={sortedPicked} coaches={pickedCoaches} plan={plan} timeZone={timeZone} onRemove={untoggle} onContinue={openReview} />

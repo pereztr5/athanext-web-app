@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { useNavigate } from "react-router-dom";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2 } from "@/components/icons";
 import { CoachApplicationModal } from "@/components/coach/CoachApplicationModal";
 import { strings } from "@/config/strings";
 import { useRole } from "@/hooks/useRole";

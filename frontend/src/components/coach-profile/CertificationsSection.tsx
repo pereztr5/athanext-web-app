@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { SquareCheck } from "lucide-react";
+import { SquareCheck } from "@/components/icons";
 import { CoachProfileCard, CoachProfileCardHeader } from "./CoachProfileCard";
 
 interface Certification {
@@ -27,23 +27,23 @@ export function CertificationsSection({ certifications, actions }: Certification
     <CoachProfileCard>
       <CoachProfileCardHeader title="Certifications & credentials" actions={actions} />
       {items.length === 0 ? (
-        <p className="text-[16px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">No certifications added yet.</p>
+        <p className="text-body-m text-dark-300">No certifications added yet.</p>
       ) : (
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
           {items.map((cert, idx) => (
             <div
               key={cert.id || idx}
-              className="flex items-start gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]"
+              className="flex items-start gap-[10px] rounded-card border border-light-525 bg-light-400 p-[15px]"
             >
-              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-[10px] bg-[#CBE7D1] text-[#1E7431]">
+              <span className="inline-flex size-8 shrink-0 items-center justify-center rounded-card border border-success-300 bg-success-100 text-success-700">
                 <SquareCheck className="size-4" strokeWidth={1.5} aria-hidden="true" />
               </span>
               <div className="min-w-0">
-                <p className="text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                <p className="text-subtitle text-dark">
                   {cert.certification_name || "Certification"}
                 </p>
                 {cert.issuing_organization ? (
-                  <p className="mt-1 truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+                  <p className="mt-1 truncate text-caption text-dark-300">
                     {cert.issuing_organization}
                   </p>
                 ) : null}

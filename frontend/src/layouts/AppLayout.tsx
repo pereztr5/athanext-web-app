@@ -13,9 +13,9 @@ export const AppLayout = () => {
   const { isCoach } = useRole();
   const overdue = useOverdueInvoices();
   return (
-    <SidebarProvider className="bg-[#F1F1E6]">
+    <SidebarProvider className="bg-light">
       <AppSidebar />
-      <SidebarInset className="min-w-0 overflow-x-clip bg-[#F1F1E6]">
+      <SidebarInset className="min-w-0 overflow-x-clip bg-light">
         <AppTopBar />
         <main className="min-w-0 flex-1 overflow-x-clip pb-16 md:pb-0">
           <CoachBillingGate>

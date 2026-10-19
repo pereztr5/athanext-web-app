@@ -9,10 +9,10 @@ import { ROUTES } from "@/routes";
 const GroupOfferPage = () => {
   const { id } = useParams();
   return (
-    <div className="flex min-h-[60vh] justify-center bg-[#F4F4EB] px-4 py-10 md:py-16">
+    <div className="flex min-h-[60vh] justify-center bg-light-400 px-4 py-10 md:py-16">
       <div className="flex w-full max-w-[460px] flex-col gap-4">
         {id ? <GroupOfferCard offerId={id} /> : null}
-        <Link to={ROUTES.COACHES} className="text-center text-[14px] font-medium text-[#0054B4] hover:underline">
+        <Link to={ROUTES.COACHES} className="text-center text-label-sm text-primary hover:underline">
           Browse coaches
         </Link>
       </div>

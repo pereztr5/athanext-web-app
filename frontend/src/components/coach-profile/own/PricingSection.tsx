@@ -7,6 +7,8 @@ import { useState } from "react";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import type { ProfileService } from "@/api/coachProfile";
 import { BrandPill } from "@/components/brand";
+import { CampCards } from "@/components/camps/CampCards";
+import { packageKind } from "@/components/camps/format";
 import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
 import { card, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
@@ -29,7 +31,7 @@ export const PricingSection = ({
   onEdit: () => void;
 }) => {
   const [all, setAll] = useState(false);
-  const sorted = packages.filter((p) => p.is_active).sort((a, b) => a.total_price - b.total_price);
+  const sorted = packages.filter((p) => p.is_active && packageKind(p) !== "camp").sort((a, b) => a.total_price - b.total_price);
   const shown = all ? services : services.slice(0, 3);
 
   return (
@@ -49,8 +51,8 @@ export const PricingSection = ({
               <div
                 key={p.id}
                 className={cn(
-                  "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-[10px] border px-[14px] pb-[14px] pt-4 md:flex md:flex-col md:items-stretch",
-                  best ? "border-[#99BBE1] bg-[#F7F7F0]" : "border-[#EAEADF] bg-[#F1F1E6]"
+                  "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-card border px-[14px] pb-[14px] pt-4 md:flex md:flex-col md:items-stretch",
+                  best ? "border-primary-200 bg-light-300" : "border-light-525 bg-light"
                 )}
               >
                 {best ? (
@@ -59,32 +61,34 @@ export const PricingSection = ({
                   </BrandPill>
                 ) : null}
                 <div className="flex min-w-0 flex-col gap-1.5">
-                  <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{p.package_name}</span>
+                  <span className="text-label-sm text-dark">{p.package_name}</span>
                   <span className={caption}>
                     {money(p.total_price / 100 / Math.max(1, p.session_count))} a session · Valid {p.validity_days} days
                   </span>
                 </div>
-                <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em] text-[#1A202C]">{money(p.total_price / 100)}</span>
+                <span className="text-highlight tabular-nums text-dark">{money(p.total_price / 100)}</span>
               </div>
             );
           })}
         </div>
       ) : null}
 
+      <CampCards coachId={coachId} />
+
       <CoachAcademyPackages coachId={coachId} canBuy={false} />
 
       {services.length ? (
         <div className="flex flex-col">
           {shown.map((s) => (
-            <div key={s.id} className="flex items-center gap-3 py-3 [&+&]:border-t [&+&]:border-[#EAEADF]">
+            <div key={s.id} className="flex items-center gap-3 py-3 [&+&]:border-t [&+&]:border-light-525">
               <span className="flex min-w-0 flex-1 flex-col gap-1">
-                <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{s.name}</span>
+                <span className="text-label-sm text-dark">{s.name}</span>
                 <span className={caption}>
                   {s.minutes} min · {s.where}
                 </span>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">
-                <b className="text-[16px] font-medium leading-[18px] text-[#1A202C]">{money(s.price)}</b>
+                <b className="text-subtitle text-dark">{money(s.price)}</b>
                 {s.format === "group" ? <span className={caption}>per athlete</span> : null}
               </span>
             </div>
@@ -96,7 +100,7 @@ export const PricingSection = ({
 
       <div className="flex flex-wrap items-center justify-between gap-2">
         {services.length > 3 ? (
-          <button type="button" className={cn(textButton, "text-[14px]")} onClick={() => setAll((v) => !v)}>
+          <button type="button" className={cn(textButton, "text-body-m")} onClick={() => setAll((v) => !v)}>
             {all ? "Show fewer" : `Show all ${services.length} session types`}
           </button>
         ) : (

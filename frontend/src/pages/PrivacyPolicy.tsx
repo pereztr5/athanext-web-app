@@ -1,11 +1,12 @@
 import { usePrivacyPolicy } from '@/hooks/usePrivacyPolicy';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle } from "@/components/icons";
 import ErrorBoundary from '@/components/common/ErrorBoundary';
 import ScrollToTop from '@/components/common/ScrollToTop';
 import { formatDateToUSA } from '@/utils/helperFunctions';
 import { sanitizeHTML } from '@/utils/sanitize';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
+import { PageHeader } from '@/components/ui/page-header';
 import '@/styles/privacyPolicy-termsCondition.css';
 import PolicyLoadingSkeleton from '@/components/common/PolicyLoadingSkeleton';
 import { usePolicyPageClass } from '@/hooks/usePolicyPageClass';
@@ -19,32 +20,32 @@ export default function PrivacyPolicy() {
     <div className={pageClass}>
       <ScrollToTop />
       <ErrorBoundary>
-        {/* Loading State */}
+        {/* Loading state */}
         {loading && (
           <PolicyLoadingSkeleton />
         )}
 
-        {/* Error State */}
+        {/* Error state */}
         {error && !loading && (
-          <div className="max-w-8xl mx-auto">
-            <Card className="border border-red-500/20 bg-red-500/5 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-wrapper">
+            <Card className="border-error-300 bg-error-50">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <AlertCircle className="w-6 h-6 text-red-500 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-red-700 dark:text-red-400 mb-2">
-                      Unable to Load Privacy Policy
+                  <AlertCircle className="mt-0.5 size-5 flex-shrink-0 text-error-600" strokeWidth={1.5} />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <h3 className="text-subtitle text-error-700">
+                      Couldn't load the privacy policy
                     </h3>
-                    <p className="text-sm text-red-600 dark:text-red-300 mb-4">
+                    <p className="text-body-m text-error-700">
                       {error}
                     </p>
                     <Button
-                      variant="outline"
+                      variant="secondary"
                       size="sm"
                       onClick={() => window.location.reload()}
-                      className="border-red-500/30 hover:bg-red-500/10"
+                      className="self-start"
                     >
-                      Try Again
+                      Try again
                     </Button>
                   </div>
                 </div>
@@ -53,19 +54,19 @@ export default function PrivacyPolicy() {
           </div>
         )}
 
-        {/* Empty State */}
+        {/* Empty state */}
         {!loading && !hasContent && !error && (
-          <div className="max-w-8xl mx-auto">
-            <Card className="border border-yellow-500/20 bg-yellow-500/5 backdrop-blur-sm">
+          <div className="mx-auto w-full max-w-wrapper">
+            <Card className="border-info-300 bg-info-50">
               <CardContent className="p-6">
                 <div className="flex items-start gap-4">
-                  <AlertCircle className="w-6 h-6 text-yellow-600 flex-shrink-0 mt-1" />
-                  <div className="flex-1">
-                    <h3 className="font-semibold text-yellow-900 mb-2">
-                      No Content Available
+                  <AlertCircle className="mt-0.5 size-5 flex-shrink-0 text-info-700" strokeWidth={1.5} />
+                  <div className="flex flex-1 flex-col gap-2">
+                    <h3 className="text-subtitle text-info-700">
+                      No content yet
                     </h3>
-                    <p className="text-sm text-yellow-800">
-                      The privacy policy content is not available at this time. Please check back later.
+                    <p className="text-body-m text-info-700">
+                      The privacy policy isn't available right now. Check back later.
                     </p>
                   </div>
                 </div>
@@ -76,23 +77,19 @@ export default function PrivacyPolicy() {
 
         {/* Content */}
         {!loading && hasContent && policy && (
-          <div className="max-w-5xl mx-auto">
-            <div className="mb-8">
-              <h1 className="text-4xl sm:text-5xl font-bold mb-4 text-slate-800 dark:text-slate-200">
-                {policy.title || 'Privacy Policy'}
-              </h1>
-            </div>
+          <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
+            <PageHeader title={policy.title || 'Privacy policy'} />
 
-            <Card className="border border-primary/20 bg-card/50 backdrop-blur-sm">
+            <Card>
               <CardContent className="p-6 sm:p-8">
                 <div
                   className="content-wrapper prose prose-sm sm:prose-base dark:prose-invert max-w-none"
                   dangerouslySetInnerHTML={{ __html: sanitizeHTML(policy.content) }}
                 />
 
-                <div className="mt-8 pt-8 border-t border-primary/10">
+                <div className="mt-8 border-t border-light-525 pt-8">
                   {policy.last_updated && (
-                    <p className="text-sm text-muted-foreground">
+                    <p className="text-caption text-dark-300">
                       Last updated: {formatDateToUSA(policy.last_updated)}
                     </p>
                   )}

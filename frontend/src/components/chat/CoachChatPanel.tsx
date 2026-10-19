@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Loader2, Send, X } from "lucide-react";
+import { Loader2, Send, X } from "@/components/icons";
 
 import type { Coach } from "@/types/coachProfile";
 import MessageBubble from "@/components/chat/MessageBubble";
@@ -8,6 +8,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import {
   buildId,
   getInitials,
@@ -340,13 +341,13 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
   return (
     <div
       className={cn(
-        "fixed bottom-6 right-6 z-[100] w-[380px] max-w-[92dvw] h-[700px] sm:h-[70dvh] bg-[#F7F7F0] text-[#1A202C] rounded-[10px] shadow-[0_0_15px_rgba(0,0,0,0.05)] border border-[#EAEADF] flex flex-col overflow-hidden transition-all duration-300 ease-out max-[430px]:left-0 max-[430px]:right-0 max-[430px]:top-[var(--vv-top,0px)] max-[430px]:w-screen max-[430px]:max-w-none max-[430px]:rounded-none max-[430px]:h-[var(--vvh,100svh)] max-[430px]:pt-[env(safe-area-inset-top)] max-[430px]:pb-[env(safe-area-inset-bottom)]",
+        "fixed bottom-6 right-6 z-[100] w-[380px] max-w-[92dvw] h-[700px] sm:h-[70dvh] bg-light-300 text-dark rounded-card shadow-overlay border border-light-525 flex flex-col overflow-hidden transition-all duration-300 ease-out max-[430px]:left-0 max-[430px]:right-0 max-[430px]:top-[var(--vv-top,0px)] max-[430px]:w-screen max-[430px]:max-w-none max-[430px]:rounded-none max-[430px]:h-[var(--vvh,100svh)] max-[430px]:pt-[env(safe-area-inset-top)] max-[430px]:pb-[env(safe-area-inset-bottom)]",
         isVisible && !isClosing ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       )}
       aria-label={`Chat with ${coach.name}${activeConversationId ? `, conversation ${activeConversationId}` : ""}`}
     >
-      <div className="flex items-center gap-2.5 border-b border-[#EAEADF] px-5 py-4">
-        <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[12px] font-medium text-[#0054B4]">
+      <div className="flex items-center gap-2.5 border-b border-light-525 px-5 py-4">
+        <span className="flex size-7 shrink-0 items-center justify-center overflow-hidden rounded-full border border-primary-300 bg-primary-50 text-label-xsm text-primary">
           {coachPhotoUrl ? (
             <img src={coachPhotoUrl} alt="" className="size-full object-cover" />
           ) : (
@@ -354,35 +355,35 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
           )}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <p className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{coach.name}</p>
+          <p className="truncate text-subtitle">{coach.name}</p>
           {coachSubline ? (
-            <p className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{coachSubline}</p>
+            <p className="truncate text-caption text-dark-300">{coachSubline}</p>
           ) : null}
         </div>
         <button
           type="button"
           onClick={handleClose}
-          className="-mr-1.5 inline-flex size-7 shrink-0 items-center justify-center rounded-[8px] text-[#767980] transition-colors hover:bg-[#F1F1E6] hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40"
+          className="-mr-1.5 inline-flex size-7 shrink-0 items-center justify-center rounded-control text-dark-300 transition-colors hover:bg-light-400 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
           aria-label="Close chat"
         >
           <X className="size-4" strokeWidth={1.5} />
         </button>
       </div>
 
-      <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-[#F1F1E6] p-4">
+      <div className="flex flex-1 flex-col gap-4 overflow-y-auto bg-light p-4">
         {loadingMessages ? (
-          <div className="m-auto flex items-center gap-2 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]" role="status">
+          <div className="m-auto flex items-center gap-2 text-body-m text-dark-300" role="status">
             <Loader2 className="size-4 animate-spin" strokeWidth={1.5} aria-hidden="true" />
             Loading messages
           </div>
         ) : messagesError ? (
-          <p className="m-auto max-w-[260px] text-center text-[14px] leading-[18px] tracking-[-0.03em] text-destructive" role="alert">
+          <p className="m-auto max-w-[260px] text-center text-body-m text-error-700" role="alert">
             {messagesError}
           </p>
         ) : messages.length === 0 ? (
           <div className="m-auto flex max-w-[260px] flex-col gap-1 text-center">
-            <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">No messages yet</p>
-            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+            <p className="text-label-sm text-dark">No messages yet</p>
+            <p className="text-paragraph-sm text-dark-300">
               Say hello to {coachFirstName} to start the conversation.
             </p>
           </div>
@@ -394,7 +395,7 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
             return (
               <Fragment key={message.id}>
                 {showDay ? (
-                  <span className="self-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+                  <span className="self-center text-caption text-dark-300">
                     {formatDayLabel(message.created_at)}
                   </span>
                 ) : null}
@@ -412,7 +413,7 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
         <div ref={listRef} />
       </div>
 
-      <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-[#EAEADF] px-4 py-3">
+      <form onSubmit={handleSend} className="flex items-end gap-2 border-t border-light-525 px-4 py-3">
         <label className="sr-only" htmlFor="coach-chat-input">
           Send a message to {coach.name}
         </label>
@@ -431,14 +432,14 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
             }
           }}
           placeholder={`Message ${coachFirstName}`}
-          className="block h-[38px] max-h-[92px] min-w-0 flex-1 resize-none rounded-[8px] border-0 bg-[#F1F1E6] px-3 py-[10px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40 disabled:opacity-60"
+          className="block h-[38px] max-h-[92px] min-w-0 flex-1 resize-none rounded-control border border-dark-250 bg-light px-3 py-[9px] text-body-m text-dark placeholder:text-dark-200 focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200"
           maxLength={1000}
           disabled={isSending || loadingMessages}
         />
         <button
           type="submit"
           aria-label={isSending ? "Sending message" : "Send message"}
-          className="inline-flex size-[38px] shrink-0 items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] transition-colors hover:bg-[#004390] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[#F7F7F0] disabled:cursor-not-allowed disabled:opacity-50"
+          className={cn(buttonVariants({ variant: "default", size: "icon" }), "size-[38px] shrink-0")}
           disabled={!input.trim() || isSending || loadingMessages}
         >
           {isSending ? (

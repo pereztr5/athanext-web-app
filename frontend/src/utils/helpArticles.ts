@@ -1,4 +1,4 @@
-import { Calendar, DollarSign, Shield, Users, type LucideIcon } from "lucide-react";
+import { Calendar, DollarSign, Shield, Users, type LucideIcon } from "@/components/icons";
 
 export type HelpArticle = { title: string; body: string };
 export type HelpCategory = { name: string; icon: LucideIcon; articles: HelpArticle[] };
@@ -19,7 +19,7 @@ export const HELP_ARTICLES = {
         },
         {
           title: "How do refunds work?",
-          body: "If a family cancels with enough notice (your setting, usually 24 hours), or you cancel, they get a session credit or their package credit back. The card charge stays; you are not paid for that cancelled session. Late cancels keep the payment and you are still paid after the session time.",
+          body: "If a family cancels with enough notice (your setting, usually 24 hours), or you cancel, they get a session credit or their package credit back. The card charge stays, and you are not paid for that cancelled session. Late cancels keep the payment and you are still paid after the session time.",
         },
       ],
     },
@@ -29,7 +29,7 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do I set my availability?",
-          body: "Go to My Schedule, tap Create session, pick 1-on-1 and Open to book, then tap the times you are free. They repeat every week. To take a day off, open the day and tap Clear day. Google Calendar busy time is always blocked.",
+          body: "Go to My schedule, tap Create session, pick 1-on-1 and Open to book, then tap the times you are free. They repeat every week. To take a day off, open the day and tap Clear day. Google Calendar busy time is always blocked.",
         },
         {
           title: "What is a booking request?",
@@ -51,7 +51,7 @@ export const HELP_ARTICLES = {
         },
         {
           title: "How do I invite families I already coach?",
-          body: "In My Athletes, use Invite families to invite by email, import a list or share your link. Invited families join your roster and book you directly.",
+          body: "In My athletes, use Invite families to invite by email, import a list or share your link. Invited families join your roster and book you directly.",
         },
         {
           title: "Can athletes see each other?",
@@ -67,11 +67,11 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do I book several sessions at once?",
-          body: "On Book a Session, tick every time that works, across days and coaches, then pay once.",
+          body: "On Book a session, tick every time that works, across days and coaches, then pay once.",
         },
         {
           title: "How do package credits work?",
-          body: "Credits from a package are used first when you book. You can see what is left on your Dashboard.",
+          body: "Credits from a package are used first when you book. You can see what is left on Home.",
         },
         {
           title: "What is the cancellation policy?",
@@ -85,11 +85,11 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do I find a new coach?",
-          body: "Use Browse Coaches to search coaches and organizations near you, then view a profile and request a session.",
+          body: "Use Browse coaches to search coaches and organizations near you, then view a profile and request a session.",
         },
         {
           title: "Where are session notes?",
-          body: "Open a past session in My Sessions. Your coach usually shares notes within a day.",
+          body: "Open a past session in My sessions. Your coach usually shares notes within a day.",
         },
         {
           title: "How do I rate a session?",
@@ -107,11 +107,11 @@ export const HELP_ARTICLES = {
         },
         {
           title: "Can another parent book for the athlete?",
-          body: "Yes. Invite a second guardian in Account Settings.",
+          body: "Yes. Invite a second guardian in Account settings.",
         },
         {
           title: "How do I delete the account?",
-          body: "Go to Account Settings, then Password and account.",
+          body: "Go to Account settings, then Password and account.",
         },
       ],
     },

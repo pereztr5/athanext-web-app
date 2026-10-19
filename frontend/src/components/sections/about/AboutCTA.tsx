@@ -1,5 +1,5 @@
 import { Button } from '@/components/ui/button';
-import { MapPin, Award, Clock } from 'lucide-react';
+import { MapPin, Award, Clock } from "@/components/icons";
 import { PRIMARY } from '@/config/colors';
 import { strings } from "@/config/strings";
 import { useNavigate } from "react-router-dom";

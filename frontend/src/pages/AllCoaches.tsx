@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Building2, Search, Users } from "lucide-react";
+import { Building2, Search, Users } from "@/components/icons";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import CoachCard from "@/components/coach/CoachCard";
@@ -19,7 +19,8 @@ import { useSlowLoading } from "@/hooks/useSlowLoading";
 import { stripRichTextToPlainText } from "@/utils/richText";
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { BrandPill } from "@/components/brand";
-import { pageTitle, secondaryButton, segButton, segGroup, smallButton } from "@/components/schedule/styles";
+import { secondaryButton, segButton, segGroup, smallButton } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
 import { athleteHomeAPI } from "@/api/athleteHome";
 import { AGE_GROUPS, agePillLabel, matchesAgeGroup } from "@/utils/coachAges";
 import {
@@ -107,7 +108,7 @@ const DIRECTORY_VIEWS: { value: DirectoryView; label: string; icon: typeof Users
   { value: "organizations", label: "Organizations", icon: Building2 },
 ];
 
-const textLink = "font-medium text-[#0054B4] hover:text-[#004390]";
+const textLink = "font-medium text-primary hover:text-primary-600";
 
 const matchesSearch = (coach: Coach, query: string) => {
   const has = (value: string | null | undefined) => Boolean(value && value.toLowerCase().includes(query));
@@ -301,7 +302,7 @@ const AllCoaches = () => {
   const handleSendMessage = async (coach: Coach) => {
     if (!coach?.id) return;
     if (personaType === "coach") {
-      toast({ title: "Coach to Coach messaging is not currently available." });
+      toast({ title: "Coach-to-coach messaging isn't available yet" });
       return;
     }
     if (!user) {
@@ -346,7 +347,7 @@ const AllCoaches = () => {
       setShowChatPanel(true);
     } catch (err) {
       console.error("Failed to start chat", err);
-      toast({ title: "Unable to open chat", description: "Please try again later.", variant: "destructive" });
+      toast({ title: "Chat didn't open", description: "Try again in a moment.", variant: "destructive" });
     } finally {
       setSendingMessageFor(null);
     }
@@ -376,12 +377,12 @@ const AllCoaches = () => {
 
   if (loading) {
     return (
-      <div className={isAuthenticated ? "flex min-h-[50vh] items-center justify-center px-4" : "flex min-h-screen items-center justify-center bg-[#F1F1E6] px-4"}>
+      <div className={isAuthenticated ? "flex min-h-[50vh] items-center justify-center px-4" : "flex min-h-screen items-center justify-center bg-light px-4"}>
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="size-10 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
-          <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Loading coaches</p>
+          <div className="size-10 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
+          <p className="text-label-sm text-dark">Loading coaches</p>
           {isLoadingSlow && (
-            <p className="max-w-[320px] text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
+            <p className="max-w-[320px] text-paragraph-sm text-dark-300">
               This is taking longer than usual. Hang on while we fetch the latest profiles.
             </p>
           )}
@@ -408,20 +409,20 @@ const AllCoaches = () => {
     : `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"}${where}`;
   const filtersOn = Boolean(query) || selectedAgeGroup !== ANY_AGE || sessionType !== "any";
 
-  const caption = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
-  const emptyCard = "flex flex-col items-center gap-[15px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center sm:col-span-2 lg:col-span-3";
+  const caption = "text-caption text-dark-300";
+  const emptyCard = "flex flex-col items-center gap-[15px] rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center sm:col-span-2 lg:col-span-3";
 
   return (
-    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-[#F1F1E6] font-sans"}>
+    <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-light font-sans"}>
       {!isAuthenticated ? (
-        <section className="mt-[3.8rem] border-b border-[#EAEADF] px-4 pb-12 pt-14 md:pb-16 md:pt-20">
-          <div className="mx-auto flex max-w-[1000px] flex-col items-center gap-[30px] text-center">
+        <section className="mt-[3.8rem] border-b border-light-525 px-4 pb-12 pt-14 md:pb-16 md:pt-20">
+          <div className="mx-auto flex max-w-wrapper flex-col items-center gap-[30px] text-center">
             <div className="flex flex-col items-center gap-[15px]">
               <BrandPill tone="blue">Coach directory</BrandPill>
-              <h1 className="max-w-[720px] text-[36px] font-bold leading-[38px] tracking-[-0.05em] text-[#1A202C] md:text-[48px] md:leading-[50px]">
+              <h1 className="max-w-[720px] text-highlight text-dark md:text-page-title">
                 Discover your coach in our growing directory
               </h1>
-              <p className="max-w-[640px] text-[16px] leading-[22px] tracking-[-0.03em] text-[#484D56]">
+              <p className="max-w-[640px] text-body-l text-dark-300">
                 Every AthaNext coach has a searchable profile. Explore their experience, compare
                 specialties, and find the right fit for your goals.
               </p>
@@ -430,10 +431,10 @@ const AllCoaches = () => {
               {heroStats.map((stat) => (
                 <div
                   key={stat.label}
-                  className="flex flex-col items-center gap-[6px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]"
+                  className="flex flex-col items-center gap-[6px] rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]"
                 >
-                  <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{stat.value}</span>
-                  <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{stat.label}</span>
+                  <span className="text-stat text-dark">{stat.value}</span>
+                  <span className="text-body-m text-dark-300">{stat.label}</span>
                 </div>
               ))}
             </div>
@@ -441,15 +442,15 @@ const AllCoaches = () => {
         </section>
       ) : null}
 
-      <div className={cn("mx-auto flex w-full max-w-[1000px] flex-col gap-4", !isAuthenticated && "px-4 pb-16 pt-10 md:px-0")}>
-        <div className="flex flex-col gap-2.5">
-          {isAuthenticated ? (
-            <h1 className={pageTitle}>Browse Coaches</h1>
-          ) : (
-            <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Browse Coaches</h2>
-          )}
-          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{subtitle}</p>
-        </div>
+      <div className={cn("mx-auto flex w-full max-w-wrapper flex-col gap-4", !isAuthenticated && "px-4 pb-16 pt-10 md:px-0")}>
+        {isAuthenticated ? (
+          <PageHeader title="Browse coaches" subtitle={subtitle} />
+        ) : (
+          <div className="flex flex-col gap-2.5">
+            <h2 className="text-section text-dark">Browse coaches</h2>
+            <p className="text-body-m text-dark-300">{subtitle}</p>
+          </div>
+        )}
 
         <div role="group" aria-label="Show" className={cn(segGroup, "inline-flex max-w-full self-start overflow-x-auto [scrollbar-width:none]")}>
           {DIRECTORY_VIEWS.map(({ value, label, icon: Icon }) => (
@@ -470,12 +471,12 @@ const AllCoaches = () => {
         <div className="flex flex-wrap items-center gap-2">
           <label className="relative min-w-0 flex-[1_1_260px]">
             <span className="sr-only">Search</span>
-            <Search className="pointer-events-none absolute left-3 top-[11px] size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-3 top-[11px] size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
             <input
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               placeholder={showOrganizations ? "Search organizations" : "Search coaches, pillars"}
-              className="h-[38px] w-full rounded-[8px] border-0 bg-[#F1F1E6] pl-9 pr-3 text-[14px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+              className="h-[38px] w-full rounded-control border border-dark-250 bg-light pl-9 pr-3 text-body-m text-dark placeholder:text-dark-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             />
           </label>
           {!isAuthenticated ? (
@@ -524,8 +525,8 @@ const AllCoaches = () => {
           {showOrganizations ? (
             organizations.length === 0 ? (
               <div className={emptyCard}>
-                <Search className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-                <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">No organizations match</p>
+                <Search className="size-5 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+                <p className="text-subtitle text-dark">No organizations match</p>
               </div>
             ) : (
               organizations.map((organization) => (
@@ -539,10 +540,10 @@ const AllCoaches = () => {
             )
           ) : filteredCoaches.length === 0 ? (
             <div className={emptyCard}>
-              <Search className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+              <Search className="size-5 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
               <div className="flex flex-col gap-[6px]">
-                <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">No coaches match</p>
-                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">Try a different search or clear the filters.</p>
+                <p className="text-subtitle text-dark">No coaches match</p>
+                <p className="text-body-m text-dark-300">Try a different search or clear the filters.</p>
               </div>
               <button
                 type="button"

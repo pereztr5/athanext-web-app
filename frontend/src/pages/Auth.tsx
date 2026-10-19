@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -17,7 +17,7 @@ import { PERSONA_TYPES, SPORTS_OPTIONS, ATHLETE_SPORTS_OPTIONS, PROFILE_TYPE } f
 import { authSchema, signupSchema, profileCompletionSchema } from "@/utils/validations";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
-import { Loader2, Eye, EyeOff, MapPin } from "lucide-react";
+import { Loader2, Eye, EyeOff, MapPin } from "@/components/icons";
 import { LegalAuthFooter } from "@/components/legal/LegalLinks";
 import { useQuery } from "@tanstack/react-query";
 import { usePasswordValidation, PASSWORD_RULE_MESSAGE } from "@/hooks/usePasswordValidation";
@@ -53,21 +53,21 @@ import FavoritePositionsField from "@/components/form/FavoritePositionsField";
 import { getTodayISODate } from "@/utils/dateHelpers";
 import logo from "@/assets/AthaNext-Logo.svg";
 
-const fieldLabel = "text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]";
-const fieldError = "text-[12px] leading-[14px] tracking-[-0.03em] text-destructive";
-const helperText = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
-const titleText = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
-const descriptionText = "text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
+const fieldLabel = "text-label-xsm text-dark-300";
+const fieldError = "text-caption text-error-700";
+const helperText = "text-caption text-dark-300";
+const titleText = "text-section text-dark";
+const descriptionText = "text-body-m text-dark-300";
 const pageShell = "min-h-screen bg-background pt-20";
 const pageCentre = "flex min-h-[calc(100vh-80px)] items-center justify-center px-4 py-10";
 
 /** Selectable tile (role choice, checkbox rows): blue tint when chosen, neutral otherwise. */
 const choiceTile = (selected: boolean) =>
   cn(
-    "rounded-[8px] border transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]",
+    "rounded-control border transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
     selected
-      ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]"
-      : "border-[#EAEADF] bg-[#F1F1E6] text-[#1A202C] hover:bg-[#F4F4EB]"
+      ? "border-primary bg-primary-50 text-primary"
+      : "border-light-525 bg-light-300 text-dark hover:bg-light-200"
   );
 
 const BrandLogo = () => <img src={logo} alt="AthaNext" className="h-7 w-auto" />;
@@ -599,24 +599,24 @@ const Auth = () => {
       const isSportValid = Boolean(selectedSportOption);
 
       if (!isSportValid) {
-        newErrors.sport = "Please select a sport";
+        newErrors.sport = "Select a sport";
       }
 
       if (persona === PROFILE_TYPE.coach) {
         if (coachSpecializations.length === 0) {
-          newErrors.position = "Please select at least one specialization";
+          newErrors.position = "Select at least one specialization";
         }
         if (coachFavoritePositions.length === 0) {
-          newErrors.favoritePositions = "Please select at least one favorite position";
+          newErrors.favoritePositions = "Select at least one favorite position";
         }
       } else {
         if (!position) {
-          newErrors.position = "Please select a position";
+          newErrors.position = "Select a position";
         } else if (
           availablePositions.length > 0 &&
           !availablePositions.some((option) => option.value === position)
         ) {
-          newErrors.position = "Please select a position";
+          newErrors.position = "Select a position";
         }
       }
 
@@ -695,7 +695,7 @@ const Auth = () => {
       console.error('Google signin error:', error);
       toast({
         title: "Something went wrong",
-        description: "Please try again later.",
+        description: "Try again later.",
         variant: "destructive",
       });
     } finally {
@@ -811,7 +811,7 @@ const Auth = () => {
           // Coach referral fee-waiver: invited athletes accept on the invite page
           // after this; otherwise record an athlete-initiated referral for the coach
           // whose share link they came through (athlete or parent), or the coach an
-          // athlete picked. The coach approves it on My Clients.
+          // athlete picked. The coach approves it on My athletes.
           const referralCoachId = joinCoachId ?? (persona === PROFILE_TYPE.athlete ? existingCoachId : null);
           if (!inviteToken && referralCoachId) {
             const { error: referralError } = await createAthleteInitiatedReferral(referralCoachId);
@@ -891,7 +891,7 @@ const Auth = () => {
       console.error("Complete profile error:", error);
       toast({
         title: "Could not save your profile",
-        description: "Please try again later.",
+        description: "Try again later.",
         variant: "destructive",
       });
     } finally {
@@ -928,7 +928,7 @@ const Auth = () => {
           <Card className="w-full max-w-[440px]">
             <CardContent className="flex flex-col items-center gap-4 px-[25px] py-10">
               <BrandLogo />
-              <Loader2 strokeWidth={1.5} className="h-6 w-6 animate-spin text-[#0054B4]" />
+              <Loader2 strokeWidth={1.5} className="h-6 w-6 animate-spin text-primary" />
               <p className={cn(descriptionText, "text-center")}>
                 Checking your account details…
               </p>
@@ -965,7 +965,7 @@ const Auth = () => {
                         className={cn(
                           choiceTile(persona === type),
                           "flex h-[38px] items-center justify-center px-2 text-center",
-                          personaSelectionDisabled && "hover:bg-inherit"
+                          personaSelectionDisabled && "cursor-not-allowed border-light-525 bg-light-400 text-dark-200 hover:bg-light-400"
                         )}
                         role="button"
                         aria-pressed={persona === type}
@@ -984,9 +984,9 @@ const Auth = () => {
                             clearFieldError("persona");
                           }
                         }}
-                        style={{ cursor: personaSelectionDisabled ? "not-allowed" : "pointer", opacity: personaSelectionDisabled ? 0.6 : 1 }}
+                        style={{ cursor: personaSelectionDisabled ? "not-allowed" : "pointer" }}
                       >
-                        <span className="block text-[14px] font-medium capitalize tracking-[-0.03em]">
+                        <span className="block text-label-sm capitalize">
                           {type}
                         </span>
                       </div>
@@ -1116,11 +1116,11 @@ const Auth = () => {
                               >
                                 <input
                                   type="checkbox"
-                                  className="h-4 w-4 accent-[#0054B4]"
+                                  className="h-4 w-4 accent-primary"
                                   checked={checked}
                                   onChange={() => toggleCoachSpecialization(option)}
                                 />
-                                <span className="text-[14px] tracking-[-0.03em] text-[#1A202C]">{option}</span>
+                                <span className="text-body-m text-dark">{option}</span>
                               </label>
                             );
                           })}
@@ -1193,16 +1193,16 @@ const Auth = () => {
                     <p className={helperText}>Finding location…</p>
                   )}
                   {!isLoadingLocation && hasAttemptedLocationFetch && zipCode && typeof zipCode === 'string' && zipCode.length >= 3 && locationInfo && typeof hasValidLocationData === 'function' && hasValidLocationData(locationInfo) && (
-                    <div className="flex items-center gap-2 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
-                      <MapPin strokeWidth={1.5} className="h-4 w-4 flex-none text-[#767980]" aria-hidden="true" />
-                      <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#484D56]">
+                    <div className="flex items-center gap-2 rounded-control border border-light-525 bg-light-400 px-3 py-2.5">
+                      <MapPin strokeWidth={1.5} className="h-4 w-4 flex-none text-dark-300" aria-hidden="true" />
+                      <p className="text-caption text-dark-400">
                         {typeof formatLocationDisplay === 'function' ? formatLocationDisplay(locationInfo) : 'Location found'}
                       </p>
                     </div>
                   )}
                   {!isLoadingLocation && hasAttemptedLocationFetch && zipCode && typeof zipCode === 'string' && zipCode.length >= 3 && (!locationInfo || (typeof hasValidLocationData === 'function' && !hasValidLocationData(locationInfo))) && (
-                    <div className="rounded-[8px] bg-[#FDF7EC] px-3 py-2.5">
-                      <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#906A29]">
+                    <div className="rounded-control border border-info-300 bg-info-50 px-3 py-2.5">
+                      <p className="text-paragraph-sm text-info-700">
                         We couldn't find a location for this zip code. Check it and try again.
                       </p>
                     </div>
@@ -1245,7 +1245,7 @@ const Auth = () => {
                         }
                       }}
                       disabled={isLoading || isCurrentlyStudying}
-                      className={isCurrentlyStudying ? "bg-muted text-muted-foreground" : ""}
+                      className={isCurrentlyStudying ? "bg-light-400 text-dark-200" : ""}
                     />
 
                     <div className="flex items-center space-x-2">
@@ -1257,7 +1257,7 @@ const Auth = () => {
                       />
                       <Label
                         htmlFor="currently-studying"
-                        className="cursor-pointer text-[14px] font-normal tracking-[-0.03em] text-[#1A202C]"
+                        className="cursor-pointer text-body-m text-dark"
                       >
                         Currently studying
                       </Label>
@@ -1292,7 +1292,7 @@ const Auth = () => {
                 )}
 
                 {joinCoachId && joinCoachName && (
-                  <p className="rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+                  <p className="rounded-control border border-primary-300 bg-primary-50 p-3 text-body-m text-dark">
                     You'll join <span className="font-medium">Coach {joinCoachName}</span>'s athletes once they approve.
                   </p>
                 )}
@@ -1306,7 +1306,7 @@ const Auth = () => {
                       disabled={isLoading || coachesLoading}
                     >
                       <SelectTrigger id="complete-existing-coach">
-                        <SelectValue placeholder={coachesLoading ? "Loading coaches..." : "Select your coach"} />
+                        <SelectValue placeholder={coachesLoading ? "Loading coaches…" : "Select your coach"} />
                       </SelectTrigger>
                       <SelectContent>
                         {coaches.map((coachOption) => (
@@ -1353,13 +1353,13 @@ const Auth = () => {
           ) : null}
           <CardContent className={activeTab === "signup" ? "pt-6" : undefined}>
             {joinCoachName && !inviteCoachName && (
-              <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="mb-4 rounded-control border border-primary-300 bg-primary-50 p-3 text-body-m text-dark">
                 <span className="font-medium">Coach {joinCoachName}</span> invited you to {strings.brand.name}.
                 Sign up as a parent or athlete, and they'll approve you as their client.
               </div>
             )}
             {inviteCoachName && (
-              <div className="mb-4 rounded-lg border border-primary/40 bg-primary/5 p-3 text-sm">
+              <div className="mb-4 rounded-control border border-primary-300 bg-primary-50 p-3 text-body-m text-dark">
                 <span className="font-medium">Coach {inviteCoachName}</span>{" "}
                 invited you to {strings.brand.name}. Use the email the invite was sent to
                 ({pendingInvite?.masked_email}) to book with them with no platform service fee.
@@ -1376,7 +1376,7 @@ const Auth = () => {
 
               <TabsContent value="signin" className="mt-5 space-y-4">
                 <div className="space-y-4">
-                  {/* Google Sign In Button */}
+                  {/* Google sign in button */}
                   <Button
                     type="button"
                     variant="outline"
@@ -1395,10 +1395,10 @@ const Auth = () => {
 
                   <div className="relative">
                     <div className="absolute inset-0 flex items-center">
-                      <span className="w-full border-t border-[#EAEADF]" />
+                      <span className="w-full border-t border-light-525" />
                     </div>
-                    <div className="relative flex justify-center text-[12px] leading-[14px] tracking-[-0.03em]">
-                      <span className="bg-card px-2 text-[#767980]">
+                    <div className="relative flex justify-center text-caption">
+                      <span className="bg-card px-2 text-dark-300">
                         or sign in with email
                       </span>
                     </div>
@@ -1447,7 +1447,7 @@ const Auth = () => {
                         <button
                           type="button"
                           onClick={() => setShowSigninPassword((prev) => !prev)}
-                          className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                          className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                           aria-label={showSigninPassword ? "Hide password" : "Show password"}
                         >
                           {showSigninPassword ? <EyeOff strokeWidth={1.5} className="h-4 w-4" /> : <Eye strokeWidth={1.5} className="h-4 w-4" />}
@@ -1460,7 +1460,7 @@ const Auth = () => {
                     <div className="flex justify-end">
                       <button
                         type="button"
-                        className="rounded-[4px] text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#0054B4] underline-offset-4 hover:underline focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                        className="rounded-control text-label-xsm text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         onClick={() => navigate("/forgot-password")}
                       >
                         Forgot password?
@@ -1470,6 +1470,21 @@ const Auth = () => {
                       {isLoading ? "Signing in…" : "Sign in"}
                     </Button>
                   </form>
+                  <p className="text-center text-caption text-dark-300">
+                    {invitePath ? (
+                      <>
+                        Got an invite from your coach?{" "}
+                        <Link
+                          to={invitePath}
+                          className="rounded-control font-medium text-primary underline-offset-4 hover:underline focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                        >
+                          Accept it here
+                        </Link>
+                      </>
+                    ) : (
+                      "Got an invite from your coach? Open the link in their email."
+                    )}
+                  </p>
                 </div>
               </TabsContent>
 

@@ -4,7 +4,7 @@
  */
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ExternalLink, Landmark } from "lucide-react";
+import { ExternalLink, Landmark } from "@/components/icons";
 import { payoutsAPI, type PayoutDay } from "@/api/payouts";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
 import { meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
@@ -50,9 +50,9 @@ export const PayoutsCard = () => {
   const ready = a?.connected && a.transfersActive && a.payoutsEnabled;
 
   return (
-    <Card icon={<Landmark className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Payouts">
+    <Card icon={<Landmark className="size-5 text-dark-300" strokeWidth={1.5} />} title="Payouts">
       {status.isLoading ? <p className={meta}>Loading…</p> : null}
-      {status.isError ? <p className="text-[14px] text-[#972B2B]">{(status.error as Error).message}</p> : null}
+      {status.isError ? <p className="text-body-m text-error-700">{(status.error as Error).message}</p> : null}
       {a && !a.connected ? (
         <>
           <p className={sub}>
@@ -83,9 +83,9 @@ export const PayoutsCard = () => {
             session (or a late cancel), and Stripe pays out every week.
           </p>
           <label className="flex flex-wrap items-center gap-3">
-            <span className="text-[14px] font-medium">Payout day</span>
+            <span className="text-label-sm">Payout day</span>
             <select
-              className="h-[34px] rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-3 text-[14px]"
+              className="h-control rounded-control border border-dark-250 bg-light px-3 text-body-m text-dark focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200"
               value={a.payoutDay}
               disabled={day.isPending}
               onChange={(e) => day.mutate(e.target.value as PayoutDay)}

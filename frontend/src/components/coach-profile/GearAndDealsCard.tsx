@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, ExternalLink, Plus, Tag, Trash2 } from "lucide-react";
+import { ChevronDown, ExternalLink, Plus, Tag, Trash2 } from "@/components/icons";
 import {
   Dialog,
   DialogContent,
@@ -35,7 +35,7 @@ type DraftLink = { brand: string; url: string; code: string };
 
 const emptyDraft = (): DraftLink => ({ brand: "", url: "", code: "" });
 
-const caption = "text-[12px] leading-[14px] tracking-[-0.36px] text-[#767980]";
+const caption = "text-caption text-dark-300";
 
 interface GearAndDealsCardProps {
   coachId: string;
@@ -87,8 +87,8 @@ export function GearAndDealsCard({
     return (
       <CoachProfileCard className="gap-0">
         <button type="button" className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={false} onClick={() => setOpen(true)}>
-          <span className="text-[20px] font-medium leading-[22px] tracking-[-1px] text-[#1A202C]">Gear {first} uses</span>
-          <span className="inline-flex items-center gap-1.5 text-[12px] text-[#767980]">
+          <span className="text-card-title text-dark">Gear {first} uses</span>
+          <span className="inline-flex items-center gap-1.5 text-caption text-dark-300">
             {[deals.length ? `${deals.length} ${deals.length === 1 ? "deal" : "deals"}` : "", gear.length ? `${gear.length} ${gear.length === 1 ? "product" : "products"}` : ""]
               .filter(Boolean)
               .join(" · ")}
@@ -114,7 +114,7 @@ export function GearAndDealsCard({
       {editing ? (
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C]">Brand deals</span>
+            <span className="text-label-sm text-dark">Brand deals</span>
             <span className={caption}>Affiliate links and discount codes</span>
           </div>
           <Switch
@@ -128,12 +128,12 @@ export function GearAndDealsCard({
       {deals.length ? (
         <div
           className={cn(
-            "flex flex-col gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[12px]",
+            "flex flex-col gap-[10px] rounded-card border border-light-525 bg-light-400 p-[12px]",
             editing && !dealsOn && "opacity-50"
           )}
         >
-          <p className="flex items-center gap-2 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C]">
-            <Tag className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+          <p className="flex items-center gap-2 text-label-sm text-dark">
+            <Tag className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
             Deals from brands {isOwner ? "I use" : `${first} uses`}
           </p>
           <ul className="flex flex-col gap-[8px]">
@@ -143,19 +143,19 @@ export function GearAndDealsCard({
                   href={link.url}
                   target="_blank"
                   rel="sponsored noopener noreferrer"
-                  className="flex items-center justify-between gap-3 rounded-[8px] border border-[#EAEADF] bg-[#FCFCFA] px-[12px] py-[10px] transition-colors hover:border-[#CCDDF0] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                  className="flex items-center justify-between gap-3 rounded-control border border-light-525 bg-light-300 px-[12px] py-[10px] transition-colors hover:border-primary-300 hover:bg-light-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 >
                   <span className="flex min-w-0 flex-col gap-[3px]">
-                    <span className="truncate text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C]">
+                    <span className="truncate text-label-sm text-dark">
                       {link.brand}
                     </span>
                     {link.code ? (
-                      <span className="w-fit rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-[2px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#0054B4]">
+                      <span className="w-fit rounded-pill border border-primary-300 bg-primary-100 px-2 py-[2px] text-label-xsm text-primary-700">
                         Code {link.code}
                       </span>
                     ) : null}
                   </span>
-                  <ExternalLink className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                  <ExternalLink className="size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                 </a>
               </li>
             ))}
@@ -168,7 +168,7 @@ export function GearAndDealsCard({
         <button
           type="button"
           onClick={() => setEditorOpen(true)}
-          className="inline-flex w-fit items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#0054B4] hover:underline"
+          className="inline-flex w-fit items-center gap-1 text-label-sm text-primary hover:underline"
         >
           <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
           {allDeals.length ? "Edit deals" : "Add a deal"}
@@ -176,12 +176,12 @@ export function GearAndDealsCard({
       ) : null}
 
       {gear.length ? (
-        <div className="flex flex-col gap-[10px] border-t border-[#EAEADF] pt-4">
+        <div className="flex flex-col gap-[10px] border-t border-light-525 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C]">Gear</span>
+            <span className="text-label-sm text-dark">Gear</span>
             <Link
               to={ROUTES.GEAR}
-              className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#0054B4] hover:underline"
+              className="text-label-sm text-primary hover:underline"
             >
               Shop all
             </Link>
@@ -195,7 +195,7 @@ export function GearAndDealsCard({
           </div>
         </div>
       ) : editing ? (
-        <p className={cn(caption, "border-t border-[#EAEADF] pt-4")}>
+        <p className={cn(caption, "border-t border-light-525 pt-4")}>
           Gear from the AthaNext store shows here, starting with your brands.
         </p>
       ) : null}
@@ -273,27 +273,27 @@ function DealsEditor({
 
   return (
     <Dialog open={open} onOpenChange={(next) => !next && close()}>
-      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             Brand deals
           </DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             Up to {MAX_AFFILIATE_LINKS} deals. A disclosure line always shows with them.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         <div className="flex max-h-[60vh] flex-col gap-5 overflow-y-auto px-[25px] py-5">
           {drafts.map((draft, index) => (
             <fieldset key={index} className="flex flex-col gap-3">
               <div className="flex items-center justify-between">
-                <legend className="text-[14px] font-medium text-[#1A202C]">Deal {index + 1}</legend>
+                <legend className="text-label-sm text-dark">Deal {index + 1}</legend>
                 <button
                   type="button"
                   onClick={() => setDrafts((current) => current.filter((_, i) => i !== index))}
-                  className="inline-flex size-7 items-center justify-center rounded-[6px] text-[#767980] hover:text-[#1A202C]"
+                  className="inline-flex size-7 items-center justify-center rounded-control text-dark-300 hover:bg-light-400 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   aria-label={`Remove deal ${index + 1}`}
                 >
                   <Trash2 className="size-4" strokeWidth={1.5} />
@@ -301,7 +301,7 @@ function DealsEditor({
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={`aff-brand-${index}`} className="text-[12px] font-medium text-[#767980]">
+                  <Label htmlFor={`aff-brand-${index}`} className="text-label-xsm text-dark-300">
                     Brand
                   </Label>
                   <Input
@@ -312,7 +312,7 @@ function DealsEditor({
                   />
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <Label htmlFor={`aff-code-${index}`} className="text-[12px] font-medium text-[#767980]">
+                  <Label htmlFor={`aff-code-${index}`} className="text-label-xsm text-dark-300">
                     Discount code (optional)
                   </Label>
                   <Input
@@ -324,7 +324,7 @@ function DealsEditor({
                 </div>
               </div>
               <div className="flex flex-col gap-1.5">
-                <Label htmlFor={`aff-url-${index}`} className="text-[12px] font-medium text-[#767980]">
+                <Label htmlFor={`aff-url-${index}`} className="text-label-xsm text-dark-300">
                   Affiliate link
                 </Label>
                 <Input
@@ -350,7 +350,7 @@ function DealsEditor({
           ) : null}
         </div>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         <DialogFooter className="px-[25px] py-4">
           <Button variant="outline" onClick={close} disabled={saving}>

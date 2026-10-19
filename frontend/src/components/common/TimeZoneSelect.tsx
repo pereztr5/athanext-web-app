@@ -24,7 +24,7 @@ export const TimeZoneSelect = ({ className }: { className?: string }) => {
     const { error } = await userProfilesAPI.updateUserProfile(user.id, { timezone: next });
     setSaving(false);
     if (error) {
-      toast({ title: "Couldn't save time zone", description: "Please try again.", variant: "destructive" });
+      toast({ title: "Couldn't save time zone", description: "Try again.", variant: "destructive" });
       return;
     }
     await refreshUserProfile();

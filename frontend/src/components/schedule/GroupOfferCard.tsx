@@ -1,14 +1,14 @@
 /**
  * Chat week post / shared-link pick-and-pay card (ATH-72, Working Copy 4 pickpost.js).
  * Families: date tiles, spots left (orange at 2 or fewer), Review and pay.
- * Coach: Live/Closed, fill bars, Edit, Copy link, View in My Schedule.
+ * Coach: Live/Closed, fill bars, Edit, Copy link, View in My schedule.
  * Time/place changes ask booked families Still coming or Cancel (session credit, not card refund).
  * Price changes apply to new picks only.
  */
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, Link2, Pencil } from "lucide-react";
+import { Check, Link2, Pencil } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { groupOffersAPI, type GroupOfferSession } from "@/api/schedule";
 import { OfferEditSheet } from "@/components/schedule/group-offer/OfferEditSheet";
@@ -69,14 +69,14 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
     onSuccess: (result, vars) => {
       queryClient.invalidateQueries({ queryKey: ["group-offer", offerId] });
       toast({
-        title: vars.keep ? "Thanks — still coming" : "You're out of this session",
+        title: vars.keep ? "Thanks, still coming" : "You're out of this session",
         description: vars.keep ? undefined : result.credit ? "It came back as a session credit with this coach." : "Nothing was charged.",
       });
     },
     onError: (err: unknown) =>
       toast({
         title: "Couldn't update",
-        description: err instanceof Error ? err.message : "Please try again.",
+        description: err instanceof Error ? err.message : "Try again.",
         variant: "destructive",
       }),
   });
@@ -88,11 +88,11 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
   }, [offer]);
 
   if (offerQuery.isLoading) {
-    return <div className={cn("h-[140px] animate-pulse rounded-[10px] bg-[#F1F1E6]", className)} />;
+    return <div className={cn("h-[140px] animate-pulse rounded-card bg-light", className)} />;
   }
   if (!offer) {
     return (
-      <div className={cn("rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4", meta, className)}>
+      <div className={cn("rounded-card border border-light-525 bg-light-300 p-4", meta, className)}>
         This schedule isn&apos;t available anymore.
       </div>
     );
@@ -134,7 +134,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
         <div className={cn(cardShell, className)}>
           <div className={cardHead}>
             <div className="flex items-center justify-between gap-3">
-              <b className="text-[16px] font-semibold leading-[20px] tracking-[-0.04em]">{title}</b>
+              <b className="text-subtitle">{title}</b>
               {offer.closed ? <BrandPill tone="neutral">Closed</BrandPill> : <BrandPill tone="green">Live</BrandPill>}
             </div>
             <span className={meta}>
@@ -142,7 +142,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               {` · ${shareLink.replace(/^https?:\/\//, "")}`}
             </span>
           </div>
-          <div className="flex flex-col divide-y divide-[#EAEADF]">
+          <div className="flex flex-col divide-y divide-light-525">
             {sessions.length ? (
               sessions.map((s) => {
                 const start = sessionStart({ date: s.date, startTime: s.startTime });
@@ -182,25 +182,25 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
           </div>
           <div className={cardFoot}>
             <div className="flex items-center justify-between gap-3">
-              <span className="text-[14px] font-medium">{booked ? `${plural(booked, "spot")} booked` : "No picks yet"}</span>
+              <span className="text-label-sm">{booked ? `${plural(booked, "spot")} booked` : "No picks yet"}</span>
               <span className={meta}>
                 {booked} of {capacity} spots
               </span>
             </div>
             <div className="flex flex-wrap gap-2">
+              <button type="button" className={cn(secondaryButton, smallButton)} onClick={copyLink}>
+                <Link2 className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                Copy link
+              </button>
+              <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => navigate(ROUTES.SCHEDULE)}>
+                View in My schedule
+              </button>
               {sessions.length ? (
                 <button type="button" className={cn(primaryButton, smallButton)} onClick={() => setEditOpen(true)}>
                   <Pencil className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                   Edit
                 </button>
               ) : null}
-              <button type="button" className={cn(secondaryButton, smallButton)} onClick={copyLink}>
-                <Link2 className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
-                Copy link
-              </button>
-              <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => navigate(ROUTES.SCHEDULE)}>
-                View in My Schedule
-              </button>
             </div>
           </div>
         </div>
@@ -213,14 +213,14 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
     <>
       <div className={cn(cardShell, className)}>
         <div className={cardHead}>
-          <b className="text-[16px] font-semibold leading-[20px] tracking-[-0.04em]">{title}</b>
+          <b className="text-subtitle">{title}</b>
           <span className={meta}>
             {mineN && !picked.length
-              ? `${athleteName.split(" ")[0] || "You're"} in ${plural(mineN, "session")}. Change anything from My Sessions.`
+              ? `${athleteName.split(" ")[0] || "You're"} in ${plural(mineN, "session")}. Change anything from My sessions.`
               : "Tick the ones you want and pay once."}
           </span>
         </div>
-        <div className="flex flex-col divide-y divide-[#EAEADF]">
+        <div className="flex flex-col divide-y divide-light-525">
           {sessions.length ? (
             sessions.map((s) => {
               const start = sessionStart({ date: s.date, startTime: s.startTime });
@@ -235,7 +235,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               const lead = s.cancelled ? (
                 <span className="size-[18px] flex-none" aria-hidden="true" />
               ) : mine ? (
-                <span className="flex size-5 flex-none items-center justify-center rounded-full bg-[#CBE7D1] text-[#1E7431]" aria-hidden="true">
+                <span className="flex size-5 flex-none items-center justify-center rounded-full border border-success-300 bg-success-100 text-success-700" aria-hidden="true">
                   <Check className="size-3" strokeWidth={2} />
                 </span>
               ) : full ? (
@@ -243,8 +243,8 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               ) : (
                 <span
                   className={cn(
-                    "flex size-[18px] flex-none items-center justify-center rounded-[4px] border-[1.5px]",
-                    on ? "border-[#0054B4] bg-[#0054B4] text-[#F1F1E6]" : "border-[#C1C1B8] bg-[#FDFDFC]"
+                    "flex size-[18px] flex-none items-center justify-center rounded-pill border-[1.5px]",
+                    on ? "border-primary bg-primary text-light" : "border-light-600 bg-light-50"
                   )}
                   aria-hidden="true"
                 >
@@ -253,11 +253,11 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               );
               const right = s.cancelled ? null : (
                 <span className="flex flex-none flex-col items-end gap-0.5 text-right">
-                  <b className="text-[14px] font-medium">{money(mine && s.myPaidAmount != null ? s.myPaidAmount : s.price)}</b>
+                  <b className="text-label-sm">{money(mine && s.myPaidAmount != null ? s.myPaidAmount : s.price)}</b>
                   <small
                     className={cn(
                       meta,
-                      mine ? "text-[#1E7431]" : !full && left <= 2 ? "font-medium text-[#C26E12]" : ""
+                      mine ? "text-success-700" : !full && left <= 2 ? "font-medium text-info-800" : ""
                     )}
                   >
                     {mine
@@ -272,8 +272,8 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               );
               const from = s.changeFrom;
               const askBox = ask ? (
-                <div className="flex w-full flex-col gap-2 rounded-[8px] bg-[#FCEFDA] px-3 py-2.5">
-                  <span className={cn(meta, "text-[#C26E12]")}>
+                <div className="flex w-full flex-col gap-2 rounded-control border border-info-300 bg-info-50 px-3 py-2.5">
+                  <span className={cn(meta, "text-info-700")}>
                     {from && from.date !== s.date
                       ? `Moved from ${formatDayISO(from.date, { weekday: "short", month: "short", day: "numeric" })}`
                       : from && from.startTime.slice(0, 5) !== s.startTime.slice(0, 5)
@@ -318,7 +318,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
                           : "Cancelled by the coach"
                         : `${formatInstantSpan(start, end, timeZone)} · ${sessionWhere(s)}`}
                     </span>
-                    {ans ? <span className={cn(meta, "text-[#1E7431]")}>You confirmed the change</span> : null}
+                    {ans ? <span className={cn(meta, "text-success-700")}>You confirmed the change</span> : null}
                   </span>
                   {right}
                   {askBox}

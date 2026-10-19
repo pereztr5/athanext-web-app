@@ -4,7 +4,7 @@
  * approves in Invites.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Check, Copy, FileUp, Info, Link as LinkIcon, Mail, Plus, X } from "lucide-react";
+import { Check, Copy, FileUp, Info, Link as LinkIcon, Mail, Plus, X } from "@/components/icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
   dialogContent, input, label, primaryButton, secondaryButton, segButton, segGroup, textButton,
@@ -21,7 +21,7 @@ import { plural } from "@/utils/schedule";
 type Tab = "email" | "import" | "link";
 
 const TABS: [Tab, string, typeof Mail][] = [["email", "Email", Mail], ["import", "Import a list", FileUp], ["link", "Share link", LinkIcon]];
-const cap = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
+const cap = "text-caption text-dark-300";
 const field = "flex min-w-0 flex-col gap-1.5";
 const MAX_ROWS = 50;
 
@@ -127,8 +127,8 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
           firstNameRef.current?.focus();
         }}
       >
-        <DialogHeader className="border-b border-[#EAEADF] px-4 py-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[20px] font-semibold leading-[24px] tracking-[-0.05em] sm:text-[24px] sm:leading-[30px]">Add athlete</DialogTitle>
+        <DialogHeader className="border-b border-light-525 px-4 py-5 pr-14 text-left sm:px-[25px]">
+          <DialogTitle className="text-card-title sm:text-section">Add athlete</DialogTitle>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 px-4 py-5 sm:px-[25px]">
@@ -152,14 +152,14 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
             <>
               <div className="flex flex-col gap-3">
                 {families.map((family, index) => (
-                  <div key={index} className="flex flex-col gap-[10px] [&+&]:border-t [&+&]:border-[#EAEADF] [&+&]:pt-3">
+                  <div key={index} className="flex flex-col gap-2.5 [&+&]:border-t [&+&]:border-light-525 [&+&]:pt-3">
                     {families.length > 1 ? (
                       <div className="flex items-center justify-between gap-3">
-                        <span className="text-[14px] font-medium">Family {index + 1}</span>
+                        <span className="text-label-sm">Family {index + 1}</span>
                         <button
                           type="button"
                           aria-label={`Remove family ${index + 1}`}
-                          className="inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F4F4EB] hover:text-[#1A202C]"
+                          className="inline-flex size-[30px] flex-none items-center justify-center rounded-control text-dark-300 hover:bg-light-400 hover:text-dark"
                           onClick={() => setFamilies((prev) => prev.filter((_, i) => i !== index))}
                         >
                           <X className="size-4" strokeWidth={1.5} />
@@ -182,7 +182,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
                       <label className={field}>
                         <span className={label}>Email</span>
                         <input
-                          className={cn(input, family.email.trim() && !EMAIL_RE.test(family.email.trim()) && "ring-[1.5px] ring-inset ring-[#C93939]")}
+                          className={cn(input, family.email.trim() && !EMAIL_RE.test(family.email.trim()) && "ring-[1.5px] ring-inset ring-error-600")}
                           type="email"
                           inputMode="email"
                           autoComplete="off"
@@ -193,7 +193,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
                       </label>
                     </div>
                     <label className={field}>
-                      <span className={label}>Athlete first name <span className="text-[#A3A6AB]">(optional)</span></span>
+                      <span className={label}>Athlete first name <span className="text-dark-200">(optional)</span></span>
                       <input
                         className={input}
                         autoComplete="off"
@@ -221,7 +221,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
               <label className={field}>
                 <span className={label}>Paste from a spreadsheet</span>
                 <textarea
-                  className={cn(input, "h-auto resize-none whitespace-pre py-[10px] leading-[18px]")}
+                  className={cn(input, "h-auto resize-none whitespace-pre py-2.5")}
                   rows={5}
                   placeholder="Maria Gomez, maria.gomez@email.com, Leo"
                   value={listText}
@@ -230,7 +230,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
               </label>
               <p className={cap}>
                 One family per row: parent name, parent email, athlete first name. Or{" "}
-                <button type="button" className="font-medium text-[#0054B4] hover:text-[#004390]" onClick={() => fileRef.current?.click()}>
+                <button type="button" className="font-medium text-primary hover:text-primary-600" onClick={() => fileRef.current?.click()}>
                   upload a CSV
                 </button>
                 .
@@ -245,14 +245,14 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
               {parsed.lines.length ? (
                 <div className="flex max-h-[260px] flex-col overflow-y-auto">
                   {parsed.lines.map((row) => (
-                    <div key={row.line} className="flex items-center gap-3 py-3 text-[14px] [&+&]:border-t [&+&]:border-[#EAEADF]">
+                    <div key={row.line} className="flex items-center gap-3 py-3 text-body-m [&+&]:border-t [&+&]:border-light-525">
                       {row.reason ? (
-                        <Info className="size-4 flex-none text-[#C93939]" strokeWidth={1.5} aria-label="Skipped" />
+                        <Info className="size-4 flex-none text-error-600" strokeWidth={1.5} aria-label="Skipped" />
                       ) : (
-                        <Check className="size-4 flex-none text-[#289A42]" strokeWidth={1.5} aria-label="Ready" />
+                        <Check className="size-4 flex-none text-success-600" strokeWidth={1.5} aria-label="Ready" />
                       )}
                       <span className="min-w-0 grow truncate">{row.name || "(no name)"}</span>
-                      <span className={cn(cap, "shrink-0", row.reason && "text-[#972B2B]")}>
+                      <span className={cn(cap, "shrink-0", row.reason && "text-error-700")}>
                         {row.reason ? `${row.reason}, skipped` : row.athleteFirstName}
                       </span>
                     </div>
@@ -268,7 +268,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
                 <span className={label}>Your invite link</span>
                 <span className="flex gap-2">
                   <input
-                    className={cn(input, "min-w-0 flex-1 bg-[#F4F4EB] text-[#767980]")}
+                    className={cn(input, "min-w-0 flex-1 bg-light-400 text-dark-300")}
                     readOnly
                     value={shareLink}
                     onFocus={(e) => e.target.select()}
@@ -278,7 +278,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
                   </button>
                 </span>
               </label>
-              <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+              <p className="text-body-m text-dark-300">
                 Share it in your group chat, email signature or club newsletter. Parents who sign up through it appear in Invites for you to approve.
               </p>
             </>
@@ -289,7 +289,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
           </p>
         </div>
 
-        <div className={cn("flex flex-wrap gap-[10px] border-t border-[#EAEADF] px-4 py-4 sm:px-[25px]", tab === "link" ? "justify-end" : "justify-between")}>
+        <div className={cn("flex flex-wrap gap-2.5 border-t border-light-525 px-4 py-4 sm:px-[25px]", tab === "link" ? "justify-end" : "justify-between")}>
           {tab === "link" ? (
             <button type="button" className={primaryButton} onClick={close}>Done</button>
           ) : (

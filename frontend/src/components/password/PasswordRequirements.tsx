@@ -1,4 +1,4 @@
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import type { PasswordValidationItem } from "@/hooks/usePasswordValidation";
 
@@ -14,19 +14,19 @@ export const PasswordRequirements = ({
   label = "Password must include",
 }: PasswordRequirementsProps) => {
   return (
-    <div className={cn("text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]", className)}>
-      <p className="font-medium text-[#484D56]">{label}</p>
+    <div className={cn("text-caption text-dark-300", className)}>
+      <p className="text-label-xsm text-dark-400">{label}</p>
       <ul className="mt-1.5 space-y-1.5">
         {items.map((item) => (
           <li
             key={item.key}
-            className={cn("flex items-center gap-2", item.isValid ? "text-[#1A202C]" : "text-[#767980]")}
+            className={cn("flex items-center gap-2", item.isValid ? "text-dark" : "text-dark-300")}
           >
             <span
               aria-hidden="true"
               className={cn(
                 "inline-flex h-3.5 w-3.5 flex-none items-center justify-center rounded-full",
-                item.isValid ? "bg-[#CBE7D1] text-[#1E7431]" : "border border-[#C1C1B8]"
+                item.isValid ? "border border-success-300 bg-success-100 text-success-700" : "border border-light-600"
               )}
             >
               {item.isValid && <Check strokeWidth={2.5} className="h-2.5 w-2.5" />}

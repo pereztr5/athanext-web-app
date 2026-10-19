@@ -4,7 +4,7 @@
  */
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, CircleHelp, Hash, Tag, type LucideIcon } from "lucide-react";
+import { ChevronDown, CircleHelp, Hash, Tag, type LucideIcon } from "@/components/icons";
 import { isShopifyConfigured } from "@/api/shopify";
 import { useGearProducts } from "@/hooks/useGear";
 import { useToast } from "@/hooks/use-toast";
@@ -18,14 +18,14 @@ import { caption, plural } from "./shared";
 type Key = "faq" | "chat" | "gear";
 
 const Item = ({ icon: Icon, title, sub, open, onToggle, children }: { icon: LucideIcon; title: string; sub: string; open: boolean; onToggle: () => void; children: ReactNode }) => (
-  <div className="[&+&]:border-t [&+&]:border-[#EAEADF]">
-    <button type="button" className="flex w-full items-center gap-3 px-[18px] py-4 text-left" aria-expanded={open} onClick={onToggle}>
-      <Icon className="size-5 shrink-0 text-[#484D56]" strokeWidth={1.5} aria-hidden="true" />
+  <div className="[&+&]:border-t [&+&]:border-light-525">
+    <button type="button" className="flex w-full items-center gap-3 rounded-card px-[18px] py-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary" aria-expanded={open} onClick={onToggle}>
+      <Icon className="size-5 shrink-0 text-dark-400" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
-        <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{title}</span>
+        <span className="text-label-sm text-dark">{title}</span>
         <span className={caption}>{sub}</span>
       </span>
-      <ChevronDown className={cn("size-4 shrink-0 text-[#A3A6AB] transition-transform motion-reduce:transition-none", open && "rotate-180")} aria-hidden="true" />
+      <ChevronDown className={cn("size-4 shrink-0 text-dark-200 transition-transform motion-reduce:transition-none", open && "rotate-180")} strokeWidth={1.5} aria-hidden="true" />
     </button>
     {open ? <div className="flex flex-col gap-3 px-[18px] pb-[18px]">{children}</div> : null}
   </div>
@@ -68,9 +68,9 @@ export const MoreList = ({
     items.push(
       <Item key="faq" icon={CircleHelp} title="Questions families ask" sub={plural(faqs.length, "answer")} open={open === "faq"} onToggle={() => toggle("faq")}>
         {faqs.map((faq) => (
-          <div key={faq.id} className="flex flex-col gap-1.5 [&+&]:border-t [&+&]:border-[#EAEADF] [&+&]:pt-3">
-            <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{faq.question}</span>
-            <span className="text-[14px] leading-[20px] text-[#767980]">{faq.answer}</span>
+          <div key={faq.id} className="flex flex-col gap-1.5 [&+&]:border-t [&+&]:border-light-525 [&+&]:pt-3">
+            <span className="text-label-sm text-dark">{faq.question}</span>
+            <span className="text-paragraph text-dark-300">{faq.answer}</span>
           </div>
         ))}
       </Item>
@@ -80,7 +80,7 @@ export const MoreList = ({
       <Item key="chat" icon={Hash} title="Group chats" sub={`${plural(channels.length, "chat")} ${channels.length === 1 ? "shows" : "show"} here with a Join button`} open={open === "chat"} onToggle={() => toggle("chat")}>
         {channels.map((ch) => (
           <Link key={ch.conversationId} to={`/chat?conversationId=${ch.conversationId}`} className="flex min-w-0 flex-col gap-1 hover:underline">
-            <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">#{ch.title || "group-chat"}</span>
+            <span className="truncate text-label-sm text-dark">#{ch.title || "group-chat"}</span>
             <span className={cn(caption, "truncate")}>
               {[plural(ch.memberCount, "family", "families"), ch.description ?? ""].filter(Boolean).join(" · ")}
             </span>
@@ -102,13 +102,13 @@ export const MoreList = ({
         {deals.map((deal) => (
           <div key={deal.url} className="flex items-center justify-between gap-3">
             <a href={deal.url} target="_blank" rel="sponsored noopener noreferrer" className="flex min-w-0 flex-col gap-1 hover:underline">
-              <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{deal.brand}</span>
+              <span className="truncate text-label-sm text-dark">{deal.brand}</span>
               <span className={cn(caption, "truncate")}>{deal.url.replace(/^https?:\/\/(www\.)?/, "")}</span>
             </a>
             {deal.code ? (
               <button
                 type="button"
-                className="inline-flex h-[26px] shrink-0 items-center rounded-[4px] border border-dashed border-[#C1C1B8] px-2 font-mono text-[12px] text-[#484D56]"
+                className="inline-flex h-[26px] shrink-0 items-center rounded-pill border border-dashed border-light-600 px-2 font-mono text-caption text-dark-400 hover:border-dark-250 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 aria-label={`Copy code ${deal.code}`}
                 onClick={() => void copy(deal.code!)}
               >
@@ -119,7 +119,7 @@ export const MoreList = ({
         ))}
         {gear.map((product) => (
           <Link key={product.id} to={`/gear/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:underline">
-            <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{product.title}</span>
+            <span className="truncate text-label-sm text-dark">{product.title}</span>
             <span className={cn(caption, "shrink-0")}>{formatPriceRange(product)}</span>
           </Link>
         ))}
@@ -129,8 +129,8 @@ export const MoreList = ({
   if (!items.length) return null;
   return (
     <div className="flex flex-col gap-2">
-      <span className="pl-0.5 text-[12px] font-medium leading-[13px] text-[#767980]">More</span>
-      <div className="flex flex-col rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">{items}</div>
+      <span className="pl-0.5 text-label-xsm text-dark-300">More</span>
+      <div className="flex flex-col rounded-card border border-light-525 bg-light-300">{items}</div>
     </div>
   );
 };

@@ -30,7 +30,7 @@ const ReviewRow = ({ review, first }: { review: Review; first: string }) => {
     <div className="flex flex-col gap-2.5 py-[14px]">
       <div className="flex items-center justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2.5">
-          <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#F1F1E6] text-[12px] font-medium text-[#484D56]">
+          <span className="flex size-8 shrink-0 items-center justify-center rounded-full border border-light-550 bg-light text-label-xsm text-dark-400">
             {initialsOf(name)}
           </span>
           <span className="flex min-w-0 flex-col gap-1">
@@ -41,12 +41,12 @@ const ReviewRow = ({ review, first }: { review: Review; first: string }) => {
         <Stars value={review.rating} size={12} />
       </div>
       {review.review_text ? (
-        <p className="text-[14px] leading-[20px] tracking-[-0.03em] text-[#484D56]">{review.review_text}</p>
+        <p className="text-paragraph text-dark-400">{review.review_text}</p>
       ) : null}
       {review.coach_reply?.trim() ? (
-        <div className="flex flex-col gap-1.5 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
+        <div className="flex flex-col gap-1.5 rounded-control bg-light-400 px-3 py-2.5">
           <span className={lbl}>Reply from {first}</span>
-          <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C]">{review.coach_reply}</span>
+          <span className="text-paragraph text-dark">{review.coach_reply}</span>
         </div>
       ) : null}
     </div>
@@ -84,7 +84,7 @@ export const ReviewsCard = ({
         ) : null}
       </div>
       {shown.length ? (
-        <div className="flex flex-col divide-y divide-[#EAEADF]">
+        <div className="flex flex-col divide-y divide-light-525">
           {shown.map((review) => (
             <ReviewRow key={review.id} review={review} first={first} />
           ))}

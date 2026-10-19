@@ -3,9 +3,9 @@
  * (Working Copy `.fbh` / coach2 session identity).
  */
 import type { ReactNode } from "react";
-import { ChevronLeft, Clock, MapPin } from "lucide-react";
+import { ChevronLeft, Clock, MapPin } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
-import { textButton } from "@/components/schedule/styles";
+import { buttonVariants } from "@/components/ui/button";
 import { SessionDateTile } from "@/components/my-session/CoachSessionCard";
 import { cn } from "@/lib/utils";
 import { formatDayISO, sessionEnd, sessionStart } from "@/utils/schedule";
@@ -40,7 +40,7 @@ const initials = (name: string) =>
     .map((p) => p[0]!.toUpperCase())
     .join("");
 
-const caption = "text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]";
+const caption = "text-caption text-dark-300";
 
 /** Page chrome: Back + title + subtitle + actions (Working Copy `AN.ph`). */
 export const SessionPageHeader = ({
@@ -57,14 +57,14 @@ export const SessionPageHeader = ({
   backLabel?: string;
 }) => (
   <>
-    <button type="button" className={cn(textButton, "-mb-1.5 self-start text-[#767980]")} onClick={onBack}>
+    <button type="button" className={cn(buttonVariants({ variant: "back" }), "-mb-1.5 self-start")} onClick={onBack}>
       <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
       {backLabel}
     </button>
     <header className="flex items-start gap-4">
-      <div className="flex min-w-0 grow flex-col gap-1">
-        <h1 className="text-[24px] font-bold leading-[1.15] tracking-[-0.05em] text-[#1A202C] md:text-[32px] md:leading-[1.1]">{title}</h1>
-        {subtitle ? <span className="text-[14px] leading-[18px] text-[#767980]">{subtitle}</span> : null}
+      <div className="flex min-w-0 grow flex-col gap-2.5">
+        <h1 className="text-page-title-phone text-dark md:text-page-title">{title}</h1>
+        {subtitle ? <span className="text-body-m text-dark-300">{subtitle}</span> : null}
       </div>
       {actions ? <div className="hidden flex-wrap items-center gap-2 md:flex">{actions}</div> : null}
     </header>
@@ -89,7 +89,7 @@ export const SessionHeader = ({
   const people = session.people ?? [];
 
   return (
-    <section aria-label="Session" className={cn("flex flex-col gap-3.5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[18px] pb-4 pt-[18px]", className)}>
+    <section aria-label="Session" className={cn("flex flex-col gap-3.5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-4 pt-[18px]", className)}>
       <div className="flex flex-wrap gap-1.5">
         {group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="blue">Individual</BrandPill>}
         {session.pillar ? <BrandPill tone="neutral">{session.pillar}</BrandPill> : null}
@@ -98,7 +98,7 @@ export const SessionHeader = ({
       <div className="flex items-center gap-3.5">
         <SessionDateTile day={day} size="lg" />
         <div className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[20px] font-semibold leading-[22px] tracking-[-0.05em] text-[#1A202C]">{session.title}</span>
+          <span className="text-card-title text-dark">{session.title}</span>
           <span className={cn(caption, "flex items-center gap-1.5")}>
             <Clock className="size-3.5 flex-none" strokeWidth={1.5} aria-hidden="true" />
             {formatDayISO(day, { weekday: "short", month: "short", day: "numeric" })} · {formatInstantSpan(start, end, timeZone)}
@@ -110,7 +110,7 @@ export const SessionHeader = ({
         </div>
       </div>
       {people.length ? (
-        <div className="flex items-center gap-2.5 border-t border-[#EAEADF] pt-3.5">
+        <div className="flex items-center gap-2.5 border-t border-light-525 pt-3.5">
           {group ? (
             <>
               <span className="flex">
@@ -118,7 +118,7 @@ export const SessionHeader = ({
                   <span
                     key={`${a.name}-${i}`}
                     className={cn(
-                      "flex size-[28px] items-center justify-center overflow-hidden rounded-full border-2 border-[#F7F7F0] bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]",
+                      "flex size-[28px] items-center justify-center overflow-hidden rounded-full border-2 border-light-300 bg-primary-50 text-label-xsm text-primary",
                       i > 0 && "-ml-1.5"
                     )}
                     aria-hidden="true"
@@ -128,7 +128,7 @@ export const SessionHeader = ({
                 ))}
                 {people.length > 4 ? (
                   <span
-                    className="-ml-1.5 flex size-[28px] items-center justify-center rounded-full border-2 border-[#F7F7F0] bg-[#F4F4EB] text-[10px] font-semibold text-[#484D56]"
+                    className="-ml-1.5 flex size-[28px] items-center justify-center rounded-full border-2 border-light-300 bg-light-400 text-label-xsm text-dark-400"
                     aria-hidden="true"
                   >
                     +{people.length - 4}
@@ -139,11 +139,11 @@ export const SessionHeader = ({
             </>
           ) : (
             <>
-              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[11px] font-semibold text-[#0054B4]">
+              <span className="flex size-8 items-center justify-center overflow-hidden rounded-full border border-primary-300 bg-primary-50 text-label-xsm text-primary">
                 {people[0].imageUrl ? <img src={people[0].imageUrl} alt="" className="size-full object-cover" /> : initials(people[0].name)}
               </span>
               <span className="flex min-w-0 flex-col gap-1">
-                <span className="truncate text-[14px] font-medium text-[#1A202C]">{people[0].name}</span>
+                <span className="truncate text-label-sm text-dark">{people[0].name}</span>
                 {people[0].line ? <span className={caption}>{people[0].line}</span> : null}
               </span>
             </>

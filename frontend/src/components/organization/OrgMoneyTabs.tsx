@@ -4,14 +4,15 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight, Mail, UserPlus } from "lucide-react";
-import { organizationsAPI } from "@/api/organizations";
+import { ChevronRight, Mail, UserPlus } from "@/components/icons";
+import { BrandPill } from "@/components/brand";
+import { organizationsAPI, type OrgRemovalRequest } from "@/api/organizations";
 import {
   ChangeRateDialog,
   CoachDetailDialog,
   InviteCoachDialog,
   OrgSessionDialog,
-  RemoveCoachDialog,
+  RequestRemovalDialog,
 } from "@/components/organization/OrgDialogs";
 import { card, meta, primaryButton, secondaryButton, segButton, segGroup, textButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
@@ -33,30 +34,24 @@ import {
 import { addDaysISO, formatClock, formatDayISO, plural } from "@/utils/schedule";
 
 const pill = (text: string, tone: "blue" | "teal" = "blue") => (
-  <span
-    key={text}
-    className={cn(
-      "inline-flex rounded-[4px] px-2 py-[3px] text-[12px] font-medium leading-[13px]",
-      tone === "blue" ? "bg-[#E5EDF7] text-[#0054B4]" : "bg-[#E7F4F8] text-[#117A96]"
-    )}
-  >
+  <BrandPill key={text} tone={tone}>
     {text}
-  </span>
+  </BrandPill>
 );
 
 const Avatar = ({ coach, size = 28 }: { coach: OrgCoach; size?: number }) =>
   coach.photo ? (
-    <img src={coach.photo} alt="" style={{ width: size, height: size }} className="shrink-0 rounded-full bg-[#C1C1B8] object-cover" />
+    <img src={coach.photo} alt="" style={{ width: size, height: size }} className="shrink-0 rounded-full bg-light-600 object-cover" />
   ) : (
-    <span style={{ width: size, height: size }} className="flex shrink-0 items-center justify-center rounded-full bg-[#CCDDF0] text-[11px] font-semibold text-[#00326C]">
+    <span style={{ width: size, height: size }} className="flex shrink-0 items-center justify-center rounded-full bg-primary-100 text-label-xsm text-primary-700">
       {initials(coach.name)}
     </span>
   );
 
 const Stat = ({ title, value, note }: { title: string; value: string | number; note: string }) => (
   <section className={cn(card, "gap-[6px]")}>
-    <span className="text-[14px] font-medium tracking-[-0.03em] text-[#767980]">{title}</span>
-    <span className="text-[28px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C] tabular-nums">{value}</span>
+    <span className="text-label-sm text-dark-300">{title}</span>
+    <span className="text-highlight text-dark tabular-nums">{value}</span>
     <span className={meta}>{note}</span>
   </section>
 );
@@ -75,12 +70,14 @@ const Overview = ({
   org,
   month,
   monthName,
+  removals,
   onInvite,
   onCoach,
 }: {
   org: Org;
   month: OrgSession[];
   monthName: string;
+  removals: Record<string, OrgRemovalRequest>;
   onInvite: () => void;
   onCoach: (c: OrgCoach) => void;
 }) => {
@@ -116,7 +113,7 @@ const Overview = ({
 
       <section className={card}>
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em]">Coaches</h2>
+          <h2 className="text-card-title">Coaches</h2>
           <span className="flex items-center gap-3">
             <span className={cn(meta, "hidden md:inline")}>{monthName}</span>
             <button type="button" className={secondaryButton} onClick={onInvite}>
@@ -127,9 +124,9 @@ const Overview = ({
         </div>
 
         <div className="hidden md:block">
-          <table className="w-full table-fixed text-left text-[14px]">
+          <table className="w-full table-fixed text-left text-body-m">
             <thead>
-              <tr className="border-b border-[#EAEADF] text-[12px] font-medium text-[#767980]">
+              <tr className="border-b border-light-525 text-label-xsm text-dark-300">
                 <th className="w-[24%] py-2 font-medium">Coach</th>
                 <th className="w-[22%] py-2 font-medium">Pillars</th>
                 <th className="py-2 font-medium">Sessions</th>
@@ -143,15 +140,16 @@ const Overview = ({
               {rows.map((r) => (
                 <tr
                   key={r.coach.coachId}
-                  className="cursor-pointer border-b border-[#EAEADF] hover:bg-[#F4F4EB]"
+                  className="cursor-pointer border-b border-light-525 hover:bg-light-400"
                   onClick={() => onCoach(r.coach)}
                 >
                   <td className="py-2.5">
                     <button type="button" className="flex min-w-0 items-center gap-2.5 text-left" onClick={() => onCoach(r.coach)}>
                       <Avatar coach={r.coach} />
-                      <span className="flex min-w-0 flex-col">
+                      <span className="flex min-w-0 flex-col gap-1">
                         <span className="truncate font-medium">{r.coach.name}</span>
                         {r.coach.isOwner ? <span className={meta}>Owner</span> : null}
+                        {removals[r.coach.coachId] ? <BrandPill tone="amber">Removal requested</BrandPill> : null}
                       </span>
                     </button>
                   </td>
@@ -162,7 +160,7 @@ const Overview = ({
                   <td className="py-2.5 tabular-nums">{money(r.broughtIn)}</td>
                   <td className="py-2.5"><RateCell coach={r.coach} /></td>
                   <td className="py-2.5 tabular-nums">{money(r.toOrg)}</td>
-                  <td className="py-2.5 text-[#A3A6AB]"><ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" /></td>
+                  <td className="py-2.5 text-dark-300"><ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" /></td>
                 </tr>
               ))}
               <tr className="font-medium">
@@ -188,7 +186,7 @@ const Overview = ({
             <button
               key={r.coach.coachId}
               type="button"
-              className="flex items-start gap-3 border-b border-[#EAEADF] py-3 text-left last:border-0"
+              className="flex items-start gap-3 border-b border-light-525 py-3 text-left last:border-0"
               onClick={() => onCoach(r.coach)}
             >
               <Avatar coach={r.coach} size={36} />
@@ -197,6 +195,7 @@ const Overview = ({
                 <span className={meta}>
                   {plural(r.sessions, "session")} · {money(r.broughtIn)} · {r.coach.isOwner ? "all yours" : `${rateLabel(r.coach.rate ?? 0)} to the org`}
                 </span>
+                {removals[r.coach.coachId] ? <BrandPill tone="amber">Removal requested</BrandPill> : null}
                 <span className="flex flex-wrap gap-1">{r.coach.pillars.map((p) => pill(p))}</span>
               </span>
             </button>
@@ -212,18 +211,18 @@ const Overview = ({
           <div className="flex flex-col gap-1">
             <span className={meta}>Invites waiting</span>
             {org.invites.map((inv) => (
-              <div key={inv.id} className="flex items-center gap-3 border-b border-[#EAEADF] py-2.5 last:border-0">
-                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-[#F1F1E6] text-[#767980]">
+              <div key={inv.id} className="flex items-center gap-3 border-b border-light-525 py-2.5 last:border-0">
+                <span className="flex size-8 shrink-0 items-center justify-center rounded-full bg-light text-dark-300">
                   <Mail className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col">
-                  <span className="truncate text-[14px] font-medium">{inv.email}</span>
+                  <span className="truncate text-label-sm">{inv.email}</span>
                   <span className={meta}>
                     {rateLabel(inv.rate)} to the org · sent {new Date(inv.sentAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
                   </span>
                 </span>
                 <button type="button" className={textButton} disabled={resend.isPending} onClick={() => resend.mutate(inv.id)}>Resend</button>
-                <button type="button" className={cn(textButton, "text-[#767980]")} disabled={cancel.isPending} onClick={() => cancel.mutate(inv.id)}>Cancel</button>
+                <button type="button" className={cn(textButton, "text-dark-300")} disabled={cancel.isPending} onClick={() => cancel.mutate(inv.id)}>Cancel</button>
               </div>
             ))}
           </div>
@@ -259,7 +258,7 @@ const Sessions = ({
     (s) => s.date >= since && (coachFilter === "all" || s.coachId === coachFilter) && (type === "all" || s.type === type)
   );
   const name = (id: string) => org.coaches.find((c) => c.coachId === id)?.name ?? "Coach";
-  const sel = "h-[34px] rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-3 text-[14px]";
+  const sel = "h-[34px] rounded-control border border-dark-250 bg-light px-3 text-body-m text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-primary";
   const when = (s: OrgSession) => {
     const at = zonedWallTimeToUtc(s.date, s.startTime);
     return at
@@ -294,9 +293,9 @@ const Sessions = ({
         {list.length ? (
           <>
             <div className="hidden md:block">
-              <table className="w-full table-fixed text-left text-[14px]">
+              <table className="w-full table-fixed text-left text-body-m">
                 <thead>
-                  <tr className="border-b border-[#EAEADF] text-[12px] text-[#767980]">
+                  <tr className="border-b border-light-525 text-caption text-dark-300">
                     <th className="w-[16%] py-2 font-medium">When</th>
                     <th className="w-[19%] py-2 font-medium">Coach</th>
                     <th className="py-2 font-medium">Session</th>
@@ -310,7 +309,7 @@ const Sessions = ({
                   {list.slice(0, limit).map((s) => {
                     const w = when(s);
                     return (
-                      <tr key={s.id} className="cursor-pointer border-b border-[#EAEADF] hover:bg-[#F4F4EB]" onClick={() => onOpen(s)}>
+                      <tr key={s.id} className="cursor-pointer border-b border-light-525 hover:bg-light-400" onClick={() => onOpen(s)}>
                         <td className="py-2.5">
                           <span className="flex flex-col">
                             <span className="font-medium">{w.day}</span>
@@ -325,9 +324,9 @@ const Sessions = ({
                           </span>
                         </td>
                         <td className="py-2.5 tabular-nums">{s.type === "group" ? `${s.athletes} of ${s.capacity}` : s.athletes}</td>
-                        <td className="py-2.5 text-[#767980]">{attendanceLabel(s)}</td>
+                        <td className="py-2.5 text-dark-300">{attendanceLabel(s)}</td>
                         <td className="py-2.5">{s.pillar ? pill(s.pillar) : null}</td>
-                        <td className="py-2.5 text-[#A3A6AB]"><ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" /></td>
+                        <td className="py-2.5 text-dark-300"><ChevronRight className="size-4" strokeWidth={1.5} aria-hidden="true" /></td>
                       </tr>
                     );
                   })}
@@ -338,7 +337,7 @@ const Sessions = ({
               {list.slice(0, limit).map((s) => {
                 const w = when(s);
                 return (
-                  <button key={s.id} type="button" className="flex items-center gap-3 border-b border-[#EAEADF] py-3 text-left last:border-0" onClick={() => onOpen(s)}>
+                  <button key={s.id} type="button" className="flex items-center gap-3 border-b border-light-525 py-3 text-left last:border-0" onClick={() => onOpen(s)}>
                     <span className="flex min-w-0 flex-1 flex-col gap-1">
                       <span className="truncate font-medium">{s.name}</span>
                       <span className={meta}>
@@ -358,7 +357,7 @@ const Sessions = ({
             ) : null}
           </>
         ) : (
-          <p className="text-[14px] text-[#767980]">No sessions match these filters.</p>
+          <p className="text-body-m text-dark-300">No sessions match these filters.</p>
         )}
       </section>
       <p className={meta}>Open a session to see who came. Session scores and what coaches write to families stay private to each coach.</p>
@@ -376,6 +375,19 @@ export const OrgMoneyTabs = ({ org, tab, onTab }: { org: Org; tab: OrgMoneyTab; 
   const [rating, setRating] = useState<OrgCoach | null>(null);
   const [removing, setRemoving] = useState<OrgCoach | null>(null);
   const [opened, setOpened] = useState<OrgSession | null>(null);
+  const { toast } = useToast();
+  const qc = useQueryClient();
+  const removalQuery = useQuery({ queryKey: ["org-removals"], queryFn: () => organizationsAPI.listRemovals() });
+  const removals = Object.fromEntries((removalQuery.data ?? []).map((row) => [row.coachId, row]));
+  const cancelRemoval = useMutation({
+    mutationFn: (coachId: string) => organizationsAPI.cancelRemoval(coachId),
+    onSuccess: (_, coachId) => {
+      qc.invalidateQueries({ queryKey: ["org-removals"] });
+      const name = org.coaches.find((c) => c.coachId === coachId)?.name.split(" ")[0] ?? "They";
+      toast({ title: `Request cancelled. ${name} stays in the organization` });
+    },
+    onError: (e: Error) => toast({ title: "Couldn't cancel the request", description: e.message, variant: "destructive" }),
+  });
 
   const today = getZonedISODate(new Date(), timeZone);
   const monthStart = `${today.slice(0, 7)}-01`;
@@ -392,9 +404,9 @@ export const OrgMoneyTabs = ({ org, tab, onTab }: { org: Org; tab: OrgMoneyTab; 
 
   return (
     <>
-      {sessions.isError ? <p className="text-[14px] text-[#972B2B]">Couldn't load sessions. {(sessions.error as Error).message}</p> : null}
+      {sessions.isError ? <p className="text-body-m text-error-700">Couldn't load sessions. {(sessions.error as Error).message}</p> : null}
       {tab === "coaches" ? (
-        <Overview org={org} month={month} monthName={monthName} onInvite={() => setInviting(true)} onCoach={setDetail} />
+        <Overview org={org} month={month} monthName={monthName} removals={removals} onInvite={() => setInviting(true)} onCoach={setDetail} />
       ) : (
         <Sessions org={org} all={all} today={today} coachFilter={coachFilter} setCoachFilter={setCoachFilter} onOpen={setOpened} />
       )}
@@ -403,6 +415,8 @@ export const OrgMoneyTabs = ({ org, tab, onTab }: { org: Org; tab: OrgMoneyTab; 
       <CoachDetailDialog
         coach={detail}
         sessions={detailSessions}
+        removal={detail ? removals[detail.coachId] ?? null : null}
+        cancelling={cancelRemoval.isPending}
         onClose={() => setDetail(null)}
         onRate={() => {
           setRating(detail);
@@ -412,6 +426,7 @@ export const OrgMoneyTabs = ({ org, tab, onTab }: { org: Org; tab: OrgMoneyTab; 
           setRemoving(detail);
           setDetail(null);
         }}
+        onCancelRemoval={() => detail && cancelRemoval.mutate(detail.coachId)}
         onSessions={() => {
           setCoachFilter(detail!.coachId);
           setDetail(null);
@@ -419,7 +434,7 @@ export const OrgMoneyTabs = ({ org, tab, onTab }: { org: Org; tab: OrgMoneyTab; 
         }}
       />
       <ChangeRateDialog coach={rating} price={rating?.hourlyRate || 70} onClose={() => setRating(null)} />
-      <RemoveCoachDialog coach={removing} onClose={() => setRemoving(null)} onRemoved={() => setRemoving(null)} />
+      <RequestRemovalDialog coach={removing} onClose={() => setRemoving(null)} onDone={() => setRemoving(null)} />
       <OrgSessionDialog session={opened} coachName={opened ? coachName(opened.coachId) : ""} onClose={() => setOpened(null)} />
     </>
   );

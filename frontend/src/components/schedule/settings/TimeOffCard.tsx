@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarOff, Plus, X } from "lucide-react";
+import { CalendarOff, Plus, X } from "@/components/icons";
 import { scheduleAPI, type TimeOffDay } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -56,17 +56,17 @@ export const TimeOffCard = ({ days, today, loading }: { days: TimeOffDay[]; toda
       <CardHeading icon={CalendarOff} title="Time off" />
       <p className={cn(caption, "-mt-2.5")}>Days you're away. Families can't book them.</p>
       {loading ? (
-        <div className="h-[34px] animate-pulse rounded-[8px] bg-[#F1F1E6]" />
+        <div className="h-[34px] animate-pulse rounded-control bg-light" />
       ) : upcoming.length ? (
         upcoming.map((d) => (
           <div key={d.date} className="flex items-center justify-between gap-3">
             <div className="flex min-w-0 flex-col gap-0.5">
-              <span className="font-medium">{formatDayISO(d.date, { weekday: "long", month: "short", day: "numeric" })}</span>
+              <span className="text-label-sm text-dark">{formatDayISO(d.date, { weekday: "long", month: "short", day: "numeric" })}</span>
               {d.note ? <span className={caption}>{d.note}</span> : null}
             </div>
             <button
               type="button"
-              className="inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F4F4EB] hover:text-[#1A202C] disabled:opacity-50"
+              className="inline-flex size-[30px] flex-none items-center justify-center rounded-control text-dark-300 hover:bg-light-400 hover:text-dark disabled:cursor-not-allowed disabled:text-dark-200"
               aria-label={`Remove ${short(d.date)}`}
               disabled={remove.isPending && remove.variables === d.date}
               onClick={() => remove.mutate(d.date)}
@@ -76,7 +76,7 @@ export const TimeOffCard = ({ days, today, loading }: { days: TimeOffDay[]; toda
           </div>
         ))
       ) : (
-        <p className="text-[14px] text-[#767980]">No time off coming up.</p>
+        <p className="text-body-m text-dark-300">No time off coming up.</p>
       )}
       <div className="flex flex-col gap-2">
         <input className={input} type="date" min={today} value={date} onChange={(e) => setDate(e.target.value)} aria-label="Day off" />

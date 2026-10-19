@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { CheckCircle, AlertCircle, Loader2, RefreshCw } from "lucide-react";
+import { CheckCircle, AlertCircle, Loader2, RefreshCw } from "@/components/icons";
 
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
@@ -111,10 +111,14 @@ const PackageConfirmation = () => {
           setError(result.error.message || "Unable to load package details.");
           return;
         }
-        setPkg(result.data);
+        const loaded = result.data;
+        setPkg(loaded);
+        if (loaded?.kind === "camp") {
+          setStatusMessage("Payment confirmed. You're registered for this camp. It does not add session credits.");
+        }
       } catch (err) {
         console.error("Failed to load package confirmation:", err);
-        setError("An unexpected error occurred. Please try again.");
+        setError("That didn't load. Try again");
       } finally {
         setLoading(false);
       }
@@ -143,42 +147,43 @@ const PackageConfirmation = () => {
     status !== "success" ||
     (!pkg && !error);
 
+  const isCamp = pkg?.kind === "camp";
   const title =
-    status === "success" ? "Package confirmed" : status === "error" ? "We couldn’t confirm your package" : "Finishing up";
+    status === "success" ? (isCamp ? "Camp confirmed" : "Package confirmed") : status === "error" ? "We couldn’t confirm your package" : "Finishing up";
   const statusIcon =
     status === "error" ? (
-      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#FDF7EC]">
-        <AlertCircle strokeWidth={1.5} className="h-5 w-5 text-[#906A29]" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-control border border-info-300 bg-info-50">
+        <AlertCircle strokeWidth={1.5} className="h-5 w-5 text-info-700" />
       </div>
     ) : status === "success" ? (
-      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#CBE7D1]">
-        <CheckCircle strokeWidth={1.5} className="h-5 w-5 text-[#1E7431]" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-control border border-success-300 bg-success-50">
+        <CheckCircle strokeWidth={1.5} className="h-5 w-5 text-success-700" />
       </div>
     ) : (
-      <div className="flex h-10 w-10 items-center justify-center rounded-[8px] bg-[#F4F4EB]">
-        <Loader2 strokeWidth={1.5} className="h-5 w-5 animate-spin text-[#767980]" />
+      <div className="flex h-10 w-10 items-center justify-center rounded-control bg-light-400">
+        <Loader2 strokeWidth={1.5} className="h-5 w-5 animate-spin text-dark-300" />
       </div>
     );
-  const detailLabel = "text-[12px] font-medium leading-[13px] text-[#767980]";
+  const detailLabel = "text-label-xsm text-dark-300";
 
   return (
-    <div className="flex items-start justify-center px-4 py-8 font-sans tracking-[-0.03em] text-[#1A202C] sm:py-12 lg:py-16">
-      <div className="w-full max-w-2xl overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
+    <div className="flex items-start justify-center px-4 py-8 font-sans text-dark sm:py-12 lg:py-16">
+      <div className="w-full max-w-wrapper-focused overflow-hidden rounded-card border border-light-525 bg-light-300">
         {/* Status header */}
         <div className="flex flex-col items-start gap-4 px-[25px] pb-5 pt-[30px]" aria-live="polite">
           {statusIcon}
           <div className="flex flex-col gap-2.5">
             <div className="flex flex-wrap items-center gap-2.5">
-              <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em]">{title}</h1>
+              <h1 className="text-section">{title}</h1>
               {status === "success" && <BrandPill tone="green">Paid</BrandPill>}
             </div>
-            <p className="text-[14px] leading-[18px] text-[#484D56]">{statusMessage}</p>
+            <p className="text-body-m text-dark-300">{statusMessage}</p>
           </div>
         </div>
         {/* Package details (hidden when verification failed and there's nothing to show) */}
         {!academy && (status !== "error" || error) && (
         <>
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
         <div className="flex flex-col gap-5 px-[25px] py-5">
           {showPackageSkeleton && status !== "error" && (
             <>
@@ -189,7 +194,7 @@ const PackageConfirmation = () => {
                 </div>
                 <Skeleton className="h-[30px] w-24" />
               </div>
-              <Skeleton className="h-[84px] w-full rounded-[8px]" />
+              <Skeleton className="h-[84px] w-full rounded-control" />
             </>
           )}
 
@@ -197,39 +202,48 @@ const PackageConfirmation = () => {
             <>
               <div className="flex items-start justify-between gap-5">
                 <div className="flex min-w-0 flex-col gap-2.5">
-                  <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em]">
+                  <p className="text-card-title">
                     {pkg.package_name} with {coachName}
                   </p>
                   <div className="flex flex-wrap gap-1.5">
-                    <BrandPill tone="blue">Package</BrandPill>
+                    <BrandPill tone="blue">{isCamp ? "Camp" : "Package"}</BrandPill>
                   </div>
                   {pkg.description && (
-                    <p className="text-[14px] leading-[18px] text-[#484D56]">{pkg.description}</p>
+                    <p className="text-body-m text-dark-300">{pkg.description}</p>
                   )}
                 </div>
                 <div className="flex flex-none flex-col items-end gap-1.5 text-right">
-                  <p className="text-[32px] font-bold leading-[30px]">{priceLabel}</p>
-                  <p className="text-[12px] leading-[14px] text-[#767980]">Total paid</p>
+                  <p className="text-stat">{priceLabel}</p>
+                  <p className="text-caption text-dark-300">Total paid</p>
                 </div>
               </div>
 
-              <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-[8px] bg-[#F4F4EB] px-5 py-4 sm:grid-cols-3">
-                {[
-                  { label: "Sessions", value: pkg.session_count },
-                  { label: "Duration", value: `${pkg.duration_minutes} min each` },
-                  { label: "Valid for", value: `${pkg.validity_days} days` },
-                ].map((item) => (
+              <dl className="grid grid-cols-1 gap-x-6 gap-y-4 rounded-control bg-light-400 px-5 py-4 sm:grid-cols-3">
+                {(isCamp
+                  ? [
+                      { label: "Daily session", value: `${pkg.duration_minutes} min` },
+                      ...((pkg as { camp_location?: string | null }).camp_location
+                        ? [{ label: "Place", value: (pkg as { camp_location?: string | null }).camp_location as string }]
+                        : []),
+                      { label: "Credits", value: "None. This is a camp registration." },
+                    ]
+                  : [
+                      { label: "Sessions", value: String(pkg.session_count) },
+                      { label: "Duration", value: `${pkg.duration_minutes} min each` },
+                      { label: "Valid for", value: `${pkg.validity_days} days` },
+                    ]
+                ).map((item) => (
                   <div key={item.label} className="flex flex-col gap-1.5">
                     <dt className={detailLabel}>{item.label}</dt>
-                    <dd className="text-[14px] leading-[18px]">{item.value}</dd>
+                    <dd className="text-body-m">{item.value}</dd>
                   </div>
                 ))}
               </dl>
 
               {pkg.features && pkg.features.length > 0 && (
                 <div className="flex flex-col gap-2.5">
-                  <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">What’s included</p>
-                  <ul className="flex list-disc flex-col gap-1.5 pl-5 text-[14px] leading-[18px] text-[#484D56] marker:text-[#A3A6AB]">
+                  <p className="text-subtitle">What’s included</p>
+                  <ul className="flex list-disc flex-col gap-1.5 pl-5 text-body-m text-dark-300 marker:text-dark-200">
                     {pkg.features.map((feature, idx) => (
                       <li key={`${feature}-${idx}`}>{feature}</li>
                     ))}
@@ -240,7 +254,7 @@ const PackageConfirmation = () => {
           )}
 
           {error && (
-            <p className="flex items-center gap-2 text-[14px] leading-[18px] text-destructive">
+            <p className="flex items-center gap-2 text-body-m text-error-700">
               <AlertCircle strokeWidth={1.5} className="h-4 w-4 flex-none" />
               {error}
             </p>
@@ -250,7 +264,7 @@ const PackageConfirmation = () => {
         )}
 
         {/* Actions */}
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
         <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
           <Button
             variant={status === "error" ? "outline" : "default"}

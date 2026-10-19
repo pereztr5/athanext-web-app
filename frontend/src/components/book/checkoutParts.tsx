@@ -3,7 +3,7 @@
  * `.paym`, `.info`). Payment always happens on Stripe's page; nothing is saved to the account.
  */
 import type { ButtonHTMLAttributes, ComponentType, ReactNode } from "react";
-import { CreditCard } from "lucide-react";
+import { CreditCard } from "@/components/icons";
 import { dialogContent } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 
@@ -18,12 +18,12 @@ export const sheetContent = cn(
   "max-sm:data-[state=open]:slide-in-from-left-0 max-sm:data-[state=closed]:slide-out-to-left-0 max-sm:data-[state=open]:slide-in-from-bottom-full max-sm:data-[state=closed]:slide-out-to-bottom-full max-sm:data-[state=open]:zoom-in-100 max-sm:data-[state=closed]:zoom-out-100"
 );
 export const wideContent = cn(dialogContent, "flex max-w-[940px] flex-col overflow-hidden max-[430px]:overflow-hidden");
-export const sheetHeader = "flex-none space-y-1 border-b border-[#EAEADF] px-4 py-5 pr-14 text-left sm:px-[25px]";
-export const sheetTitle = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
+export const sheetHeader = "flex-none space-y-1 border-b border-light-525 px-4 py-5 pr-14 text-left sm:px-[25px]";
+export const sheetTitle = "text-section text-dark";
 export const sheetBody = "flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5 sm:px-[25px]";
-export const sheetFooter = "flex flex-none flex-wrap gap-2.5 border-t border-[#EAEADF] px-4 py-4 sm:px-[25px]";
+export const sheetFooter = "flex flex-none flex-wrap gap-2.5 border-t border-light-525 px-4 py-4 sm:px-[25px]";
 /** Working Copy `.stat-28`. */
-export const stat28 = "text-[28px] font-bold leading-[30px] tracking-[-0.05em] tabular-nums text-[#1A202C]";
+export const stat28 = "text-highlight tabular-nums text-dark";
 
 const AppleLogo = ({ className }: { className?: string }) => (
   <svg viewBox="0 0 384 512" aria-hidden="true" className={className}>
@@ -37,7 +37,7 @@ export const ApplePayButton = ({ label, className, ...props }: ButtonHTMLAttribu
     type="button"
     aria-label={`${label} Apple Pay`}
     className={cn(
-      "inline-flex h-[44px] items-center justify-center gap-1 rounded-[8px] bg-black px-5 text-[16px] font-semibold tracking-[-0.01em] text-white transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:opacity-35",
+      "inline-flex h-[44px] items-center justify-center gap-1 rounded-control bg-black px-5 text-label text-light transition-opacity hover:opacity-90 disabled:cursor-not-allowed disabled:border disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200 disabled:[&_svg]:fill-dark-200",
       className
     )}
     {...props}
@@ -48,7 +48,7 @@ export const ApplePayButton = ({ label, className, ...props }: ButtonHTMLAttribu
 );
 
 const AppleBadge = () => (
-  <span className="inline-flex flex-none items-center gap-0.5 rounded-[4px] bg-black px-1.5 py-[3px] text-[12px] font-semibold text-white">
+  <span className="inline-flex flex-none items-center gap-0.5 rounded-pill bg-black px-1.5 py-[3px] text-label-xsm text-light">
     <AppleLogo className="size-[11px] fill-white" />
     Pay
   </span>
@@ -57,11 +57,11 @@ const AppleBadge = () => (
 const PayRow = ({ name, checked, onSelect, children }: { name: string; checked: boolean; onSelect: () => void; children: ReactNode }) => (
   <label
     className={cn(
-      "flex cursor-pointer items-center gap-2.5 rounded-[8px] border px-3 py-2.5 text-[14px] leading-[18px] text-[#1A202C]",
-      checked ? "border-[#0054B4] bg-[#F7F7F0] shadow-[0_0_0_1px_#0054B4]" : "border-[#EAEADF] bg-[#F4F4EB]"
+      "flex cursor-pointer items-center gap-2.5 rounded-control border px-3 py-2.5 text-body-m text-dark",
+      checked ? "border-primary bg-primary-50" : "border-light-525 bg-light-400"
     )}
   >
-    <input type="radio" name={name} checked={checked} onChange={onSelect} className="accent-[#0054B4]" />
+    <input type="radio" name={name} checked={checked} onChange={onSelect} className="accent-primary" />
     {children}
   </label>
 );
@@ -86,7 +86,7 @@ export const PayMethodList = ({
       </PayRow>
     ) : null}
     <PayRow name={name} checked={value === "card"} onSelect={() => onChange("card")}>
-      <CreditCard className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+      <CreditCard className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex-1">Card, Apple Pay or Google Pay on Stripe's secure page</span>
     </PayRow>
   </div>
@@ -94,7 +94,7 @@ export const PayMethodList = ({
 
 /** Working Copy `.info`: sunk box with an icon and muted 12px text. */
 export const InfoBox = ({ icon: Icon, children, className }: { icon: ComponentType<{ className?: string; strokeWidth?: string | number }>; children: ReactNode; className?: string }) => (
-  <div className={cn("flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]", className)}>
+  <div className={cn("flex items-start gap-2.5 rounded-control bg-light-400 px-3.5 py-3 text-caption text-dark-300", className)}>
     <Icon className="-mt-px size-4 flex-none" strokeWidth={1.5} />
     <span>{children}</span>
   </div>

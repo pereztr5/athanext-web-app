@@ -8,7 +8,7 @@ import {
   Heart, 
   DollarSign, 
   TrendingUp 
-} from "lucide-react";
+} from "@/components/icons";
 
 export const ATHLETE_BENEFITS = [
   {

@@ -1,4 +1,4 @@
-import { useEffect } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
@@ -16,6 +16,9 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 
 import "./App.css";
+
+// Dev-only design system gallery; tree-shaken out of production builds.
+const DsGallery = import.meta.env.DEV ? lazy(() => import("./pages/dev/DsGallery")) : null;
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -67,6 +70,9 @@ const AppContent = () => {
       <ScrollToTop />
       <NetworkStatusBanner />
       <Routes>
+        {DsGallery && (
+          <Route path="/__ds" element={<Suspense fallback={null}><DsGallery /></Suspense>} />
+        )}
         <Route element={<MarketingLayout />}>
           {[...PUBLIC_ROUTES, ...AUTH_FLOW_ROUTES].map(({ path, element }) => (
             <Route key={path} path={path} element={element} />

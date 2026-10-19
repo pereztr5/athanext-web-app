@@ -30,7 +30,7 @@ const FavoritePositionsField = ({
 
   return (
     <div className="space-y-1.5">
-      <Label className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
+      <Label className="text-label-xsm text-dark-300">
         Positions coached
       </Label>
       {sport ? (
@@ -42,34 +42,34 @@ const FavoritePositionsField = ({
                 <label
                   key={option.value}
                   className={cn(
-                    "flex min-h-[38px] cursor-pointer items-center gap-3 rounded-[8px] border px-3 py-2 transition-colors",
+                    "flex min-h-[38px] cursor-pointer items-center gap-3 rounded-control border px-3 py-2 transition-colors",
                     checked
-                      ? "border-[#6698D2] bg-[#E5EDF7]"
-                      : "border-[#EAEADF] bg-[#F1F1E6] hover:bg-[#F4F4EB]"
+                      ? "border-primary bg-primary-50"
+                      : "border-light-525 bg-light-300 hover:bg-light-200"
                   )}
                 >
                   <input
                     type="checkbox"
-                    className="h-4 w-4 accent-[#0054B4]"
+                    className="h-4 w-4 accent-primary"
                     checked={checked}
                     onChange={() => onToggle(option.value)}
                   />
-                  <span className="text-[14px] tracking-[-0.03em] text-[#1A202C]">{option.label}</span>
+                  <span className="text-body-m text-dark">{option.label}</span>
                 </label>
               );
             })}
           </div>
         ) : (
-          <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+          <p className="text-caption text-dark-300">
             No positions available for this sport.
           </p>
         )
       ) : (
-        <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+        <p className="text-caption text-dark-300">
           Choose a sport first to pick the positions you coach.
         </p>
       )}
-      {error && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p>}
+      {error && <p className="text-caption text-error-700">{error}</p>}
     </div>
   );
 };

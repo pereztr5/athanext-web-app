@@ -43,16 +43,24 @@ export const useContactSubmission = () => {
   const { toast } = useToast();
 
   const submitContactForm = async (
-    formData: ContactFormData
+    formData: ContactFormData,
+    quiet = false
   ): Promise<boolean> => {
+    const notify = (options: {
+      title: string;
+      description?: string;
+      variant?: "default" | "destructive";
+    }) => {
+      if (!quiet) toast(options);
+    };
     setErrors({});
 
     try {
       // Check rate limiting
       if (!checkRateLimit(RATE_LIMIT_KEY, RATE_LIMIT_MINUTES)) {
-        toast({
-          title: "Too Many Requests",
-          description: `Please wait ${RATE_LIMIT_MINUTES} minutes before submitting another message.`,
+        notify({
+          title: "Too many requests",
+          description: `Wait ${RATE_LIMIT_MINUTES} minutes before sending another message.`,
           variant: "destructive",
         });
         return false;
@@ -203,10 +211,10 @@ export const useContactSubmission = () => {
       setRateLimit(RATE_LIMIT_KEY);
 
       // Show success message
-      toast({
+      notify({
         title: emailNotificationFailed
-          ? "Message Received (Email Issue)"
-          : "Message Sent Successfully!",
+          ? "Message received"
+          : "Message sent",
         description: emailNotificationFailed
           ? "We saved your message but couldn't send the notification email. Our team will review it shortly."
           : "Thank you for contacting us. We'll get back to you within 24 hours.",
@@ -227,31 +235,31 @@ export const useContactSubmission = () => {
         });
         setErrors(fieldErrors);
 
-        toast({
-          title: "Validation Error",
-          description: "Please check the form for errors and try again.",
+        notify({
+          title: "Check the form",
+          description: "Fix the highlighted fields and try again.",
           variant: "destructive",
         });
       }
       // Handle network/database errors
       else if (error instanceof Error) {
         const errorMessage = error.message.includes("unique constraint")
-          ? "A message with this email was recently submitted. Please try again later."
+          ? "A message with this email was sent recently. Try again later."
           : error.message.includes("network")
-          ? "Network error. Please check your connection and try again."
+          ? "Network error. Check your connection and try again."
           : error.message || "An unexpected error occurred";
 
-        toast({
-          title: "Submission Failed",
+        notify({
+          title: "Message didn't send",
           description: errorMessage,
           variant: "destructive",
         });
       }
       // Handle unknown errors
       else {
-        toast({
-          title: "Unexpected Error",
-          description: "Unable to send your message. Please try again later.",
+        notify({
+          title: "Message didn't send",
+          description: "Try again later.",
           variant: "destructive",
         });
       }
@@ -261,11 +269,13 @@ export const useContactSubmission = () => {
   };
 
   const submitMutation = useMutation({
-    mutationFn: submitContactForm,
+    mutationFn: (input: { formData: ContactFormData; quiet?: boolean }) =>
+      submitContactForm(input.formData, input.quiet === true),
   });
 
   return {
-    submitContactForm: submitMutation.mutateAsync,
+    submitContactForm: (formData: ContactFormData, options?: { quiet?: boolean }) =>
+      submitMutation.mutateAsync({ formData, quiet: options?.quiet }),
     isSubmitting: submitMutation.isPending,
     errors,
   };

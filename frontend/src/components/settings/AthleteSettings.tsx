@@ -5,22 +5,31 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { useMutation } from "@tanstack/react-query";
-import { Download, Lock, Plus, ShieldCheck, User, UserPlus } from "lucide-react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { Download, Lock, Plus, ShieldCheck, User, UserPlus } from "@/components/icons";
 import { userProfilesAPI } from "@/api";
 import { BrandPill } from "@/components/brand";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
+import { Banner } from "@/components/ui/banner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { dialogContent, input, label, meta, primaryButton, secondaryButton, smallButton } from "@/components/schedule/styles";
+import { dialogContent, input, label, meta, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
+import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { ATHLETE_NOTIFICATIONS, DELETE_WORD, DELETION_GRACE_DAYS } from "@/utils/settings";
 import { downloadJson } from "@/utils/download";
 import { LegalCard } from "@/components/legal/LegalLinks";
+import {
+  deleteAthleteGuardian,
+  insertAthleteGuardian,
+  isMissingGuardiansTable,
+  listAthleteGuardians,
+  sendGuardianInvite,
+} from "./guardians";
 import { Card, ConfirmWordCard, Field, NotificationsTab, SecurityTab, SettingsShell, ToggleRow, sub } from "./CoachSettings";
 
 type Tab = "account" | "notifications" | "privacy" | "security" | "legal";
@@ -62,9 +71,9 @@ export const AthleteSettings = () => {
       banner={extras.deletion_requested_at ? <DeletionBanner requestedAt={extras.deletion_requested_at} /> : null}
       render={(tab) => (
         <>
-          {tab === "account" ? <AccountTab isParent={isParent} athleteFirst={athleteFirst} parentName={extras.name || "you"} onDirtyChange={setDirty} /> : null}
+          {tab === "account" ? <AccountTab isParent={isParent} athleteId={athlete?.id} athleteFirst={athleteFirst} parentName={extras.name || "you"} onDirtyChange={setDirty} /> : null}
           {tab === "notifications" ? (
-            <NotificationsTab kinds={ATHLETE_NOTIFICATIONS} caption="Email on the web app, push on the mobile app. Safety messages always come through." />
+            <NotificationsTab kinds={ATHLETE_NOTIFICATIONS} caption="Email is sent for bookings and messages. Notes and reminders are on your notifications list." />
           ) : null}
           {tab === "privacy" ? <PrivacyTab athleteId={athlete?.id} athleteFirst={athleteFirst} isParent={isParent} /> : null}
           {tab === "security" ? (
@@ -81,8 +90,9 @@ export const AthleteSettings = () => {
 
 type Draft = { name: string; relationship: string; phone: string };
 
-const AccountTab = ({ isParent, athleteFirst, parentName, onDirtyChange }: {
+const AccountTab = ({ isParent, athleteId, athleteFirst, parentName, onDirtyChange }: {
   isParent: boolean;
+  athleteId?: string;
   athleteFirst: string;
   parentName: string;
   onDirtyChange: (dirty: boolean) => void;
@@ -128,15 +138,15 @@ const AccountTab = ({ isParent, athleteFirst, parentName, onDirtyChange }: {
 
   return (
     <>
-    <Card icon={<User className="size-5 text-[#767980]" strokeWidth={1.5} />} title={isParent ? "Parent or guardian" : "Account"}>
+    <Card icon={<User className="size-5 text-dark-300" strokeWidth={1.5} />} title={isParent ? "Parent or guardian" : "Account"}>
       {isParent ? (
         <div className="-mt-1 flex flex-wrap items-center gap-2">
           <BrandPill tone="blue">Account holder</BrandPill>
         </div>
       ) : null}
       {isParent ? (
-        <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-          <ShieldCheck className="mt-[1px] size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <div className="flex items-start gap-2 rounded-control border border-light-525 bg-light-400 px-3 py-2.5">
+          <ShieldCheck className="mt-[1px] size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
           <span className={sub}>
             {athleteFirst} is under 18, so {parentName} holds the account. {parentName} is part of every message about {athleteFirst} and sees session notes. No separate parent login is needed.
           </span>
@@ -161,7 +171,7 @@ const AccountTab = ({ isParent, athleteFirst, parentName, onDirtyChange }: {
           </Field>
         ) : null}
         <Field label="Email" hint="Sign-in email and receipts">
-          <input className={cn(input, "text-[#767980]")} value={extras.email || user?.email || ""} readOnly />
+          <input className={cn(input, "text-dark-300")} value={extras.email || user?.email || ""} readOnly />
         </Field>
         <Field label="Phone" error={errors.phone}>
           <input
@@ -174,17 +184,16 @@ const AccountTab = ({ isParent, athleteFirst, parentName, onDirtyChange }: {
         </Field>
         <div className="flex flex-col gap-1.5">
           <span className={label}>Time zone</span>
-          <TimeZoneSelect className="h-[38px] w-full rounded-[8px] border-[#EAEADF] bg-[#F9F9F5]" />
+          <TimeZoneSelect className="h-input w-full rounded-control border-dark-250 bg-light" />
           <span className={meta}>Saves straight away. Session times show in this zone.</span>
         </div>
       </div>
       <p className={meta}>
         {isParent ? `${athleteFirst}'s` : "Your"} details (name, birthday, position, team) are on{" "}
-        <Link to={ROUTES.DASHBOARD} className="font-medium text-[#0054B4] hover:underline">Home</Link>.
+        <Link to={ROUTES.DASHBOARD} className="font-medium text-primary hover:underline">Home</Link>.
       </p>
-      {isParent ? <ReceiptsToggle name={parentName} /> : null}
       {dirty ? (
-        <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-[8px] border border-[#CCDDF0] bg-[#E5EDF7] px-4 py-3 md:bottom-4">
+        <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-control border border-primary-300 bg-primary-50 px-4 py-3 md:bottom-4">
           <span className={sub}>You have unsaved changes</span>
           <div className="flex gap-2">
             <button type="button" className={secondaryButton} onClick={() => { setDraft(saved); setErrors({}); }} disabled={save.isPending}>
@@ -197,123 +206,204 @@ const AccountTab = ({ isParent, athleteFirst, parentName, onDirtyChange }: {
         </div>
       ) : null}
     </Card>
-    {isParent ? <GuardianCard athleteFirst={athleteFirst} holder={parentName} /> : null}
+    {isParent ? <GuardianCard athleteId={athleteId} athleteFirst={athleteFirst} holder={parentName} /> : null}
   </>
   );
 };
 
-const prefKey = (kind: string, id: string) => `athanext.pref.${kind}.${id}`;
-const readPref = (kind: string, id: string, fallback = false) => {
-  try {
-    const raw = localStorage.getItem(prefKey(kind, id));
-    return raw == null ? fallback : raw === "1";
-  } catch {
-    return fallback;
-  }
-};
-const writePref = (kind: string, id: string, value: boolean) => {
-  try {
-    localStorage.setItem(prefKey(kind, id), value ? "1" : "0");
-  } catch {
-    /* ignore */
-  }
+const readPrefs = (profile: unknown) => {
+  const raw = (profile as { notification_prefs?: unknown } | null)?.notification_prefs;
+  return raw && typeof raw === "object" && !Array.isArray(raw) ? { ...(raw as Record<string, unknown>) } : {};
 };
 
-const ReceiptsToggle = ({ name }: { name: string }) => {
-  const { user } = useAuth();
-  const id = user?.id || "me";
-  const [on, setOn] = useState(() => readPref("receipts", id, true));
+const ReceiptsToggle = () => {
+  const { user, userProfile, refreshUserProfile } = useAuth();
+  const { toast } = useToast();
+  const saved = readPrefs(userProfile).receipts_email !== false;
+  const [on, setOn] = useState(saved);
+  useEffect(() => setOn(saved), [saved]);
+
+  const toggle = async (next: boolean) => {
+    if (!user?.id) return;
+    const previous = on;
+    setOn(next);
+    const prefs = { ...readPrefs(userProfile), receipts_email: next };
+    const { error } = await userProfilesAPI.updateUserProfile(user.id, { notification_prefs: prefs as unknown as Json });
+    if (error) {
+      setOn(previous);
+      toast({ title: "Couldn't save", description: "Try again.", variant: "destructive" });
+      return;
+    }
+    void refreshUserProfile();
+  };
+
   return (
     <ToggleRow
-      title="Copy on receipts and reminders"
-      detail={`Send booking receipts and session reminders to ${name}`}
+      title="Send booking receipts to your second guardians too"
+      detail="Turn off to send receipts only to this account"
       checked={on}
-      onChange={(next) => {
-        setOn(next);
-        writePref("receipts", id, next);
-      }}
-      ariaLabel="Copy on receipts"
+      onChange={(next) => void toggle(next)}
+      ariaLabel="Send booking receipts to your second guardians too"
     />
   );
 };
 
-type Invite = { name: string; email: string; rel: string };
-const invitesKey = (id: string) => `athanext.guardians.${id}`;
-const readInvites = (id: string): Invite[] => {
-  try {
-    const raw = localStorage.getItem(invitesKey(id));
-    return raw ? (JSON.parse(raw) as Invite[]) : [];
-  } catch {
-    return [];
-  }
-};
+const initials = (name: string) =>
+  name.split(/\s+/).slice(0, 2).map((part) => part[0]?.toUpperCase() ?? "").join("") || "G";
 
-const GuardianCard = ({ athleteFirst, holder }: { athleteFirst: string; holder: string }) => {
-  const { user } = useAuth();
+const GuardianCard = ({ athleteId, athleteFirst, holder }: { athleteId?: string; athleteFirst: string; holder: string }) => {
   const { toast } = useToast();
-  const id = user?.id || "me";
+  const queryClient = useQueryClient();
+  const list = useQuery({
+    queryKey: ["athlete-guardians", athleteId],
+    enabled: Boolean(athleteId),
+    queryFn: () => listAthleteGuardians(athleteId as string),
+  });
   const [open, setOpen] = useState(false);
-  const [list, setList] = useState<Invite[]>(() => readInvites(id));
+  const [sending, setSending] = useState(false);
+  const [resending, setResending] = useState<string | null>(null);
   const [form, setForm] = useState({ name: "", email: "", rel: "Parent" });
   const [errors, setErrors] = useState<{ name?: string; email?: string }>({});
 
-  const persist = (next: Invite[]) => {
-    setList(next);
-    try {
-      localStorage.setItem(invitesKey(id), JSON.stringify(next));
-    } catch {
-      /* ignore */
-    }
-  };
+  const refresh = () => queryClient.invalidateQueries({ queryKey: ["athlete-guardians", athleteId] });
+  const missing = list.data?.missing === true;
+  const rows = list.data?.rows ?? [];
 
-  const send = () => {
+  const send = async () => {
+    if (!athleteId) return;
     const next: typeof errors = {};
-    if (!form.name.trim()) next.name = "Required";
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email.trim())) next.email = "Enter a valid email";
+    const name = form.name.trim();
+    const email = form.email.trim().toLowerCase();
+    if (!name) next.name = "Required";
+    else if (name.length > 120) next.name = "Use 120 characters or fewer";
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) next.email = "Enter a valid email";
     setErrors(next);
     if (Object.keys(next).length) return;
-    persist([...list, { name: form.name.trim(), email: form.email.trim(), rel: form.rel }]);
+
+    setSending(true);
+    const created = await insertAthleteGuardian({ athlete_id: athleteId, name, email, relationship: form.rel });
+    if (created.error || !created.data) {
+      setSending(false);
+      if (isMissingGuardiansTable(created.error)) {
+        setOpen(false);
+        void refresh();
+        return;
+      }
+      toast({
+        title: created.error?.code === "23505" ? "That guardian is already added" : "That didn't save. Try again",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    const emailed = await sendGuardianInvite(created.data.id);
+    setSending(false);
     setOpen(false);
     setForm({ name: "", email: "", rel: "Parent" });
-    toast({ title: "Invite sent" });
+    await refresh();
+    toast(
+      emailed
+        ? { title: "Invite sent" }
+        : { title: "Guardian saved", description: "The email didn't send. Try again.", variant: "destructive" }
+    );
+  };
+
+  const remove = async (id: string) => {
+    const { error } = await deleteAthleteGuardian(id);
+    if (error) {
+      if (isMissingGuardiansTable(error)) {
+        void refresh();
+        return;
+      }
+      toast({ title: "Couldn't remove that guardian. Try again.", variant: "destructive" });
+      return;
+    }
+    await refresh();
+    toast({ title: "Guardian removed" });
+  };
+
+  const resend = async (id: string) => {
+    setResending(id);
+    const emailed = await sendGuardianInvite(id);
+    setResending(null);
+    if (emailed) {
+      await refresh();
+      toast({ title: "Invite sent" });
+      return;
+    }
+    toast({ title: "The email didn't send. Try again.", variant: "destructive" });
   };
 
   return (
     <>
-      <Card icon={<UserPlus className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Second guardian">
-        <p className={sub}>Add another parent or guardian who can book and message coaches for {athleteFirst}.</p>
-        <button type="button" className={cn(secondaryButton, smallButton, "self-start")} onClick={() => setOpen(true)}>
-          <Plus strokeWidth={1.5} aria-hidden="true" />
-          Invite a guardian
-        </button>
-        {list.map((g) => (
-          <div key={g.email} className="flex items-center gap-2.5 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-            <span className="flex size-9 shrink-0 items-center justify-center rounded-full bg-[#E5EDF7] text-[12px] font-medium text-[#0054B4]">
-              {g.name.split(/\s+/).slice(0, 2).map((p) => p[0]?.toUpperCase() ?? "").join("") || "G"}
-            </span>
-            <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-              <span className="text-[14px] font-medium">{g.name}</span>
-              <span className={meta}>{g.email} · invite sent</span>
-            </span>
-            <button
-              type="button"
-              className="text-[14px] font-medium text-[#767980] hover:text-[#1A202C]"
-              onClick={() => {
-                persist(list.filter((x) => x.email !== g.email));
-                toast({ title: "Guardian removed" });
-              }}
-            >
-              Remove
+      <Card icon={<UserPlus className="size-5 text-dark-300" strokeWidth={1.5} />} title="Second guardian">
+        <p className={sub}>Add another parent or guardian. They get a copy of booking receipts for {athleteFirst}.</p>
+        {!athleteId ? (
+          <p className={meta}>Add {athleteFirst} on Home before you can add a guardian.</p>
+        ) : list.isLoading ? (
+          <p className={meta}>Loading…</p>
+        ) : missing ? (
+          <>
+            <Banner tone="neutral">Coming soon</Banner>
+            <button type="button" className={cn(secondaryButton, smallButton, "self-start")} disabled>
+              <Plus strokeWidth={1.5} aria-hidden="true" />
+              Invite a guardian
             </button>
-          </div>
-        ))}
+          </>
+        ) : list.isError ? (
+          <>
+            <p className="text-body-m text-error-700">Couldn't load guardians. Try again.</p>
+            <button type="button" className={cn(secondaryButton, smallButton, "self-start")} onClick={() => void list.refetch()}>
+              Try again
+            </button>
+          </>
+        ) : (
+          <>
+            <button type="button" className={cn(secondaryButton, smallButton, "self-start")} onClick={() => setOpen(true)}>
+              <Plus strokeWidth={1.5} aria-hidden="true" />
+              Invite a guardian
+            </button>
+            {rows.map((guardian) => (
+              <div key={guardian.id} className="flex items-center gap-2.5 rounded-control border border-light-525 bg-light-400 px-3 py-2.5">
+                <span className="flex size-9 shrink-0 items-center justify-center rounded-full border border-primary-300 bg-primary-50 text-label-xsm text-primary">
+                  {initials(guardian.name)}
+                </span>
+                <span className="flex min-w-0 flex-1 flex-col gap-0.5">
+                  <span className="text-label-sm">{guardian.name}</span>
+                  <span className={meta}>
+                    {guardian.email}
+                    {guardian.emailed_at ? " · invite sent" : " · saved, email not sent"}
+                  </span>
+                </span>
+                {guardian.emailed_at ? null : (
+                  <button
+                    type="button"
+                    className={textButton}
+                    disabled={resending === guardian.id}
+                    onClick={() => void resend(guardian.id)}
+                  >
+                    {resending === guardian.id ? "Sending…" : "Try again"}
+                  </button>
+                )}
+                <button
+                  type="button"
+                  className="rounded-control text-label-sm text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                  onClick={() => void remove(guardian.id)}
+                >
+                  Remove
+                </button>
+              </div>
+            ))}
+            {rows.length > 0 ? <ReceiptsToggle /> : null}
+          </>
+        )}
       </Card>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent className={dialogContent}>
           <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-            <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Invite a guardian</DialogTitle>
+            <DialogTitle>Invite a guardian</DialogTitle>
             <DialogDescription className={meta}>
-              They can book, pay and message coaches for {athleteFirst}. {holder} stays the account holder.
+              They get a copy of booking receipts for {athleteFirst}. {holder} stays the account holder.
             </DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
@@ -331,8 +421,10 @@ const GuardianCard = ({ athleteFirst, holder }: { athleteFirst: string; holder: 
               </select>
             </Field>
             <div className="flex justify-end gap-2">
-              <button type="button" className={secondaryButton} onClick={() => setOpen(false)}>Cancel</button>
-              <button type="button" className={primaryButton} onClick={send}>Send invite</button>
+              <button type="button" className={secondaryButton} onClick={() => setOpen(false)} disabled={sending}>Cancel</button>
+              <button type="button" className={primaryButton} onClick={() => void send()} disabled={sending}>
+                {sending ? "Sending…" : "Send invite"}
+              </button>
             </div>
           </div>
         </DialogContent>
@@ -370,14 +462,14 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
       );
     },
     onSuccess: () => toast({ title: "Your data is downloading" }),
-    onError: () => toast({ title: "Couldn't download the data", description: "Please try again.", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't download the data", description: "Try again.", variant: "destructive" }),
   });
 
   return (
-    <Card icon={<ShieldCheck className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Privacy and safety">
-      <HideNameToggle athleteFirst={athleteFirst} storageId={athleteId || user?.id || "me"} />
-      <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-        <Lock className="mt-[1px] size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+    <Card icon={<ShieldCheck className="size-5 text-dark-300" strokeWidth={1.5} />} title="Privacy and safety">
+      <p className={sub}>Other families in a group session see a spot count, never {athleteFirst}'s name.</p>
+      <div className="flex items-start gap-2 rounded-control border border-light-525 bg-light-400 px-3 py-2.5">
+        <Lock className="mt-[1px] size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <span className={sub}>
           {isParent
             ? `${athleteFirst}'s profile is visible only to you and ${athleteFirst}'s coaches. No photos of athletes are shown on AthaNext.`
@@ -389,22 +481,6 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
         {exportData.isPending ? "Preparing…" : `Download ${whose} data`}
       </button>
     </Card>
-  );
-};
-
-const HideNameToggle = ({ athleteFirst, storageId }: { athleteFirst: string; storageId: string }) => {
-  const [on, setOn] = useState(() => readPref("hideRoster", storageId, false));
-  return (
-    <ToggleRow
-      title={`Keep ${athleteFirst}'s name private in group sessions`}
-      detail="Other athletes see a spot count, not names"
-      checked={on}
-      onChange={(next) => {
-        setOn(next);
-        writePref("hideRoster", storageId, next);
-      }}
-      ariaLabel="Hide name in groups"
-    />
   );
 };
 
@@ -454,8 +530,8 @@ const DeletionBanner = ({ requestedAt }: { requestedAt: string }) => {
     onError: () => toast({ title: "Couldn't undo", variant: "destructive" }),
   });
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-[10px] border border-[#FDB5B5] bg-[#FEECEC] px-4 py-3">
-      <span className="text-[14px] leading-[18px] text-[#972B2B]">
+    <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-error-300 bg-error-50 px-4 py-3">
+      <span className="text-body-m text-error-700">
         <b className="font-medium">This account is scheduled for deletion on {deletionDate(requestedAt)}.</b>
       </span>
       <button type="button" className={primaryButton} disabled={undo.isPending} onClick={() => undo.mutate()}>

@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Globe, MapPin, Minus, Plus, Repeat, TriangleAlert, User, Users, Video, X } from "lucide-react";
+import { ChevronLeft, ChevronRight, Globe, MapPin, Minus, Plus, Repeat, TriangleAlert, User, Users, Video, X } from "@/components/icons";
 import { coachesAPI } from "@/api";
 import { ToastAction } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -36,6 +36,7 @@ import {
   addChip,
   chip,
   groupBox,
+  phoneSheet,
   sheetBody,
   sheetButton,
   sheetContent,
@@ -72,16 +73,16 @@ const LENGTHS = [45, 60, 75, 90, 120];
 const GROUP_PRICE = "35";
 /** Time tiles shown before "Other" (Working Copy shows 11). */
 const TILES = 11;
-const arrowButton = cn(iconButton, "size-[30px] bg-[#F7F7F0]");
+const arrowButton = cn(iconButton, "size-[30px] bg-light-300");
 
 /** `.affix`: "$" and the input read as one box. */
 const PriceField = ({ label: text, value, onChange, white }: { label: string; value: string; onChange: (v: string) => void; white?: boolean }) => (
   <label className="flex min-w-0 flex-col gap-1.5">
     <span className={label}>{text}</span>
-    <span className={cn("flex h-[38px] items-center rounded-[8px] bg-[#F1F1E6] focus-within:ring-2 focus-within:ring-[#6698D2]", white && whiteInput)}>
-      <span className="pl-3 text-[14px] text-[#767980]" aria-hidden="true">$</span>
+    <span className={cn("flex h-[38px] items-center rounded-control border border-dark-250 bg-light focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary", white && whiteInput)}>
+      <span className="pl-3 text-body-m text-dark-300" aria-hidden="true">$</span>
       <input
-        className="h-full w-full min-w-0 bg-transparent pl-1 pr-3 text-[14px] text-[#1A202C] focus:outline-none"
+        className="h-full w-full min-w-0 bg-transparent pl-1 pr-3 text-body-m text-dark focus:outline-none"
         type="number"
         min={0}
         inputMode="decimal"
@@ -410,7 +411,7 @@ export const CreateSessionDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className={cn(dialogContent, sheetContent)}>
+      <DialogContent className={cn(dialogContent, sheetContent, phoneSheet)}>
         <DialogHeader className={sheetHeader}>
           <DialogTitle className={sheetTitle}>{title}</DialogTitle>
           <DialogDescription className="sr-only">
@@ -470,7 +471,7 @@ export const CreateSessionDialog = ({
               <div className="flex items-center justify-between">
                 <span className="flex items-center gap-2">
                   <span className={label}>Day</span>
-                  <span className="text-[14px] font-semibold leading-[18px] tracking-[-0.02em] text-[#1A202C]">{monthRangeLabel(stripDates)}</span>
+                  <span className="text-label-sm text-dark">{monthRangeLabel(stripDates)}</span>
                 </span>
                 <span className="flex gap-1.5">
                   <button
@@ -501,12 +502,12 @@ export const CreateSessionDialog = ({
                         setTimes([]);
                         setOther(false);
                       }}
-                      className={cn(dayTile(on), !on && "bg-[#F7F7F0]")}
+                      className={cn(dayTile(on), !on && "bg-light-300")}
                     >
                       <small className={dayTileWeekday(on)}>{formatDayISO(d, { weekday: "short" })}</small>
                       <b className={dayTileNumber}>{formatDayISO(d, { day: "numeric" })}</b>
                       <span className="flex h-[5px] gap-[3px]" aria-hidden="true">
-                        {openDays.has(d) ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#F1F1E6]" : "bg-[#0054B4]")} /> : null}
+                        {openDays.has(d) ? <i className={cn("size-[5px] rounded-full", on ? "bg-light" : "bg-primary")} /> : null}
                       </span>
                     </button>
                   );
@@ -532,12 +533,12 @@ export const CreateSessionDialog = ({
                       type="button"
                       aria-pressed={on}
                       disabled={Boolean(taken)}
-                      className={cn(timeTile(on), "h-[50px] disabled:text-[#A3A6AB]")}
+                      className={cn(timeTile(on), "h-[50px] disabled:text-dark-200")}
                       onClick={() => toggleTime(minutes)}
                     >
-                      <span className="text-[15px]">{formatMinutes(minutes)}</span>
+                      <span className="text-body-m">{formatMinutes(minutes)}</span>
                       {taken ? (
-                        <small className="max-w-full truncate px-1 text-[10px] font-medium text-[#A3A6AB]">{taken}</small>
+                        <small className="max-w-full truncate px-1 text-label-xsm text-dark-200">{taken}</small>
                       ) : openNow ? (
                         <small className={timeTileNote(on)}>Open now</small>
                       ) : null}
@@ -546,14 +547,14 @@ export const CreateSessionDialog = ({
                 })}
                 <button
                   type="button"
-                  className={cn(timeTile(other), "h-[50px]", !other && "border-dashed text-[#0054B4]")}
+                  className={cn(timeTile(other), "h-[50px]", !other && "border-dashed text-primary")}
                   aria-pressed={other}
                   onClick={() => {
                     if (!other && times[0] !== undefined) setOtherMinutes(times[0]);
                     setOther((v) => !v);
                   }}
                 >
-                  <span className="text-[15px]">Other</span>
+                  <span className="text-body-m">Other</span>
                 </button>
               </div>
               {other ? (
@@ -588,7 +589,7 @@ export const CreateSessionDialog = ({
                       <button
                         type="button"
                         aria-pressed={on}
-                        className="inline-flex h-[34px] items-center gap-1.5 rounded-l-[18px] pl-3 pr-1.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] [&>svg]:size-3.5"
+                        className="inline-flex h-[34px] items-center gap-1.5 rounded-l-control pl-3 pr-1.5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary [&>svg]:size-3.5"
                         onClick={() => setPlaceKey(p.key)}
                       >
                         {icon}
@@ -597,7 +598,7 @@ export const CreateSessionDialog = ({
                       <button
                         type="button"
                         aria-label={`Remove ${p.label} from your locations`}
-                        className="inline-flex size-6 items-center justify-center rounded-full text-[#767980] hover:bg-[#F4F4EB] hover:text-[#1A202C]"
+                        className="inline-flex size-6 items-center justify-center rounded-control text-dark-300 hover:bg-light-400 hover:text-dark"
                         onClick={() => removeLocation(p.key)}
                       >
                         <X className="size-[13px]" strokeWidth={1.5} />
@@ -661,7 +662,7 @@ export const CreateSessionDialog = ({
                         <button type="button" className={arrowButton} aria-label="Fewer spots" onClick={() => setSpots((s) => Math.max(2, s - 1))}>
                           <Minus strokeWidth={1.5} />
                         </button>
-                        <b className="min-w-5 text-center text-[16px]">{spots}</b>
+                        <b className="min-w-5 text-center text-subtitle tabular-nums">{spots}</b>
                         <button type="button" className={arrowButton} aria-label="More spots" onClick={() => setSpots((s) => Math.min(30, s + 1))}>
                           <Plus strokeWidth={1.5} />
                         </button>
@@ -688,10 +689,10 @@ export const CreateSessionDialog = ({
                   Every {weekday}
                 </button>
               </div>
-              <p className="-mt-1.5 text-[13px] leading-[17px] text-[#484D56]">
+              <p className="-mt-1.5 text-body-m text-dark-400">
                 {repeat ? (
                   <>
-                    <b className="font-semibold">Every {weekday}</b>
+                    <b className="font-medium">Every {weekday}</b>
                     {openSlots ? ", ongoing" : ` · ${weeks} weeks`}
                   </>
                 ) : (

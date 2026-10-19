@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import type { ReactNode } from "react";
 
 interface CoachProfileCardProps {
@@ -8,14 +9,14 @@ interface CoachProfileCardProps {
   "aria-label"?: string;
 }
 
-/** Working Copy `.card`: #F7F7F0 on page #F1F1E6, 10px radius, 30/25/25 padding, 22/18/20 on phone */
+/** Working Copy `.card`: light-300 on the light page, 10px radius, 30/25/25 padding, 22/18/20 on phone */
 export function CoachProfileCard({ children, className, id, "aria-label": ariaLabel }: CoachProfileCardProps) {
   return (
     <section
       id={id}
       aria-label={ariaLabel}
       className={cn(
-        "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]",
+        "flex w-full min-w-0 flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]",
         className
       )}
     >
@@ -37,7 +38,7 @@ export function CoachProfileCardHeader({
 }: CoachProfileCardHeaderProps) {
   return (
     <div className={cn("flex min-h-[30px] w-full items-center justify-between gap-3", className)}>
-      <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">{title}</h2>
+      <h2 className="text-card-title text-dark">{title}</h2>
       {actions ? <div className="flex shrink-0 items-center gap-[10px]">{actions}</div> : null}
     </div>
   );
@@ -53,7 +54,7 @@ interface CoachProfileButtonProps {
   type?: "button" | "submit";
 }
 
-/** Figma: primary #0054B4 / secondary #F4F4EB, h=30, radius=8 */
+/** Small button: primary or secondary, 30px tall (btn-sm). */
 export function CoachProfileButton({
   children = "Edit",
   onClick,
@@ -66,10 +67,8 @@ export function CoachProfileButton({
       type={type}
       onClick={onClick}
       className={cn(
-        "inline-flex items-center justify-center gap-[3px] rounded-[8px] border px-4 py-[6px] text-[14px] font-medium leading-[18px] tracking-[-0.42px]",
-        variant === "primary"
-          ? "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6]"
-          : "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C]",
+        buttonVariants({ variant: variant === "primary" ? "default" : "secondary", size: "sm" }),
+        "gap-[3px]",
         className
       )}
     >
@@ -83,7 +82,7 @@ export function CoachProfileEditButton(props: CoachProfileButtonProps) {
   return <CoachProfileButton variant="secondary" {...props} />;
 }
 
-/** Figma pillar/label chip: #E5EDF7, radius 4, h=26 */
+/** Pillar/label chip: blue pill (primary-100 fill, primary-300 border). */
 export function CoachProfileChip({
   label,
   className,
@@ -94,7 +93,7 @@ export function CoachProfileChip({
   return (
     <span
       className={cn(
-        "inline-flex items-center rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-1 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#0054B4]",
+        "inline-flex items-center rounded-pill border border-primary-300 bg-primary-100 px-2 py-1 text-label-sm text-primary",
         className
       )}
     >

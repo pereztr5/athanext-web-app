@@ -1,5 +1,5 @@
 import { useNavigate } from "react-router-dom";
-import { ArrowDown, ArrowUp, ArrowUpDown } from "lucide-react";
+import { ArrowDown, ArrowUp, ArrowUpDown } from "@/components/icons";
 import type { RosterAthlete } from "@/api/roster";
 import { BrandPill } from "@/components/brand";
 import { meta, secondaryButton, smallButton } from "@/components/schedule/styles";
@@ -16,7 +16,7 @@ const COLUMNS: [RosterSort, string][] = [
   ["pos", "Position"],
 ];
 
-const cap = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
+const cap = "text-caption text-dark-300";
 
 interface RosterTableProps {
   rows: RosterAthlete[];
@@ -34,7 +34,7 @@ export const RosterTable = ({ rows, sort, dir, timeZone, onSort, onBook }: Roste
 
   return (
     <div className="flex flex-col">
-      <div className={cn(rosterGrid, "hidden border-b border-[#EAEADF] pb-[10px] pt-[6px] md:grid")}>
+      <div className={cn(rosterGrid, "hidden border-b border-light-525 pb-[10px] pt-[6px] md:grid")}>
         {COLUMNS.map(([key, text]) => {
           const on = sort === key;
           const Icon = on ? (dir > 0 ? ArrowUp : ArrowDown) : ArrowUpDown;
@@ -42,12 +42,12 @@ export const RosterTable = ({ rows, sort, dir, timeZone, onSort, onBook }: Roste
             <button
               key={key}
               type="button"
-              className={cn("inline-flex items-center gap-1 justify-self-start whitespace-nowrap text-left text-[12px] font-medium", on ? "text-[#1A202C]" : "text-[#767980]")}
+              className={cn("inline-flex items-center gap-1 justify-self-start whitespace-nowrap text-left text-label-xsm", on ? "text-dark" : "text-dark-300")}
               aria-sort={on ? (dir > 0 ? "ascending" : "descending") : "none"}
               onClick={() => onSort(key)}
             >
               {text}
-              <Icon className={cn("size-3", on ? "text-[#0054B4]" : "opacity-50")} strokeWidth={1.5} aria-hidden="true" />
+              <Icon className={cn("size-3", on ? "text-primary" : "opacity-50")} strokeWidth={1.5} aria-hidden="true" />
             </button>
           );
         })}
@@ -61,7 +61,7 @@ export const RosterTable = ({ rows, sort, dir, timeZone, onSort, onBook }: Roste
             key={athlete.id}
             role="button"
             tabIndex={0}
-            className={cn(rosterGrid, "group cursor-pointer border-b border-[#EAEADF] py-3 text-[14px] last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]")}
+            className={cn(rosterGrid, "group cursor-pointer border-b border-light-525 py-3 text-body-m last:border-b-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary")}
             onClick={() => open(athlete.id)}
             onKeyDown={(e) => {
               if (e.target === e.currentTarget && (e.key === "Enter" || e.key === " ")) {
@@ -75,7 +75,7 @@ export const RosterTable = ({ rows, sort, dir, timeZone, onSort, onBook }: Roste
                 {athlete.imageUrl ? <img src={athlete.imageUrl} alt="" className="size-full object-cover" /> : initials(athlete.name)}
               </span>
               <div className="flex min-w-0 flex-col gap-1">
-                <span className="truncate font-medium transition-colors group-hover:text-[#0054B4]">{athlete.name}</span>
+                <span className="truncate font-medium transition-colors group-hover:text-primary">{athlete.name}</span>
                 <span className={cn(cap, "max-md:hidden")}>{rosterSubtitle(athlete)}</span>
                 <span className={cn(cap, "truncate md:hidden")}>
                   {next || "Not booked"}
@@ -90,14 +90,14 @@ export const RosterTable = ({ rows, sort, dir, timeZone, onSort, onBook }: Roste
               ) : left != null ? (
                 <div className="flex min-w-0 flex-col gap-1">
                   <span className={cap}>{left} of {athlete.packageTotal} left</span>
-                  <span className="block h-[5px] w-full max-w-[110px] rounded-[3px] bg-[#EAEADF]">
-                    <i className="block h-full rounded-[3px] bg-[#0054B4]" style={{ width: `${(left / athlete.packageTotal!) * 100}%` }} />
+                  <span className="block h-[5px] w-full max-w-[110px] rounded-full bg-light-525">
+                    <i className="block h-full rounded-full bg-primary" style={{ width: `${(left / athlete.packageTotal!) * 100}%` }} />
                   </span>
                 </div>
               ) : null}
             </div>
             <div>
-              <span className={cn(meta, "leading-[14px] max-md:hidden")}>{athlete.position || ""}</span>
+              <span className={cn(meta, "max-md:hidden")}>{athlete.position || ""}</span>
               {athlete.credits ? <BrandPill tone="green" className="md:hidden">{plural(athlete.credits, "credit")}</BrandPill> : null}
             </div>
             <span>

@@ -1,5 +1,5 @@
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { formatWholePrice } from "@/utils/sessionFormatting";
@@ -53,13 +53,13 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
       } else {
         toast({
           title: strings.packages.purchaseFailed,
-          description: "This package is not available for purchase right now.",
+          description: "This package isn't available to buy right now.",
           variant: "destructive",
         });
       }
     } catch (error: unknown) {
       console.error('Error purchasing package:', error);
-      const errorMessage = error instanceof Error ? error.message : 'Failed to initiate package purchase. Please try again.';
+      const errorMessage = error instanceof Error ? error.message : "That didn't go through. Try again.";
       toast({
         title: strings.packages.purchaseFailed,
         description: errorMessage,
@@ -80,19 +80,19 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
       <DialogContent
         className={cn(
           "max-w-4xl max-h-[90vh] overflow-y-auto gap-0 p-0",
-          "bg-[#F7F7F0] border border-[#EAEADF] rounded-[10px] sm:rounded-[10px] shadow-[0_0_15px_rgba(0,0,0,0.05)] font-sans text-[#1A202C] tracking-[-0.03em]",
-          "[&>button]:text-[#767980] [&>button]:opacity-100 [&>button:hover]:text-[#1A202C] [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]"
+          "bg-light-300 border border-light-525 rounded-card sm:rounded-card shadow-overlay font-sans text-dark",
+          "[&>button]:text-dark-300 [&>button]:opacity-100 [&>button:hover]:text-dark [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]"
         )}
       >
         <DialogHeader className="px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             Packages with {coachName}
           </DialogTitle>
         </DialogHeader>
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         {orderedPackages.length === 0 ? (
-          <div className="px-[25px] py-10 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <div className="px-[25px] py-10 text-center text-body-m text-dark-300">
             No packages available at this time.
           </div>
         ) : (
@@ -103,22 +103,22 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
               return (
                 <div
                   key={pkg.id}
-                  className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[25px]"
+                  className="flex flex-col gap-5 rounded-card border border-light-525 bg-light-400 p-[25px]"
                 >
                   <div className="flex flex-col gap-2">
-                    <h3 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+                    <h3 className="text-card-title text-dark">
                       {pkg.package_name}
                     </h3>
                     {pkg.description && (
-                      <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{pkg.description}</p>
+                      <p className="text-body-m text-dark-300">{pkg.description}</p>
                     )}
                   </div>
 
                   <div className="flex flex-col gap-1.5">
-                    <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
+                    <span className="text-stat text-dark">
                       {formatWholePrice(pkg.total_price / 100)}
                     </span>
-                    <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                    <span className="text-caption text-dark-300">
                       {formatWholePrice(pkg.price_per_session / 100)} per session
                     </span>
                   </div>
@@ -130,11 +130,11 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
                     <BrandPill tone="neutral">Valid {pkg.validity_days} days</BrandPill>
                   </div>
 
-                  <div className="flex flex-1 flex-col gap-2 text-[14px] leading-[18px] tracking-[-0.03em]">
+                  <div className="flex flex-1 flex-col gap-2 text-body-m">
                     {Array.isArray(pkg.features) &&
                       pkg.features.map((feature, idx) => (
                         <div key={idx} className="flex items-center gap-2">
-                          <Check strokeWidth={1.5} className="h-4 w-4 flex-none text-[#0054B4]" aria-hidden="true" />
+                          <Check strokeWidth={1.5} className="h-4 w-4 flex-none text-primary" aria-hidden="true" />
                           <span>{feature}</span>
                         </div>
                       ))}
@@ -145,10 +145,10 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
                     onClick={() => handlePurchasePackage(pkg)}
                     disabled={isPurchasing}
                     className={cn(
-                      "flex h-[34px] w-full items-center justify-center rounded-[8px] border px-4 text-[16px] font-medium tracking-[-0.03em] transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F4EB]",
+                      "flex h-[34px] w-full items-center justify-center rounded-control border px-4 text-label-sm transition-colors disabled:pointer-events-none disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                       isPrimary
-                        ? "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#004390]"
-                        : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] hover:bg-[#F1F1E6]"
+                        ? "border-primary-300 bg-primary text-light hover:bg-primary-600"
+                        : "border-light-525 bg-light-300 text-dark hover:bg-light"
                     )}
                   >
                     {isPurchasing ? strings.packages.processing : `Choose ${pkg.package_name}`}

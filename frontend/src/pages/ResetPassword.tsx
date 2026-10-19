@@ -1,4 +1,4 @@
-import { Eye, EyeOff, Loader2 } from "lucide-react";
+import { Eye, EyeOff, Loader2 } from "@/components/icons";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -171,8 +171,8 @@ const ResetPassword = () => {
     if (status === "checking") {
       return (
         <div className="flex flex-col items-center gap-4 py-8">
-          <Loader2 strokeWidth={1.5} className="h-6 w-6 animate-spin text-[#0054B4]" />
-          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{statusMessage}</p>
+          <Loader2 strokeWidth={1.5} className="h-6 w-6 animate-spin text-primary" />
+          <p className="text-body-m text-dark-300">{statusMessage}</p>
         </div>
       );
     }
@@ -180,7 +180,7 @@ const ResetPassword = () => {
     if (status === "error") {
       return (
         <div className="space-y-4">
-          <p className="text-center text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">{statusMessage}</p>
+          <p className="text-center text-body-m text-error-700">{statusMessage}</p>
           <Button
             type="button"
             size="lg"
@@ -196,7 +196,7 @@ const ResetPassword = () => {
     return (
       <form onSubmit={handleSubmit} className="space-y-4">
         <div className="space-y-1.5">
-          <Label htmlFor="new-password" className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
+          <Label htmlFor="new-password" className="text-label-xsm text-dark-300">
             New password
           </Label>
           <div className="relative">
@@ -212,7 +212,7 @@ const ResetPassword = () => {
             <button
               type="button"
               onClick={() => setShowNew((v) => !v)}
-              className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+              className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               aria-label={showNew ? "Hide password" : "Show password"}
             >
               {showNew ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
@@ -220,7 +220,7 @@ const ResetPassword = () => {
           </div>
         </div>
         <div className="space-y-1.5">
-          <Label htmlFor="confirm-password" className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]">
+          <Label htmlFor="confirm-password" className="text-label-xsm text-dark-300">
             Confirm password
           </Label>
           <div className="relative">
@@ -236,14 +236,14 @@ const ResetPassword = () => {
             <button
               type="button"
               onClick={() => setShowConfirm((v) => !v)}
-              className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+              className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               aria-label={showConfirm ? "Hide password" : "Show password"}
             >
               {showConfirm ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
             </button>
           </div>
         </div>
-        {formError && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{formError}</p>}
+        {formError && <p className="text-caption text-error-700">{formError}</p>}
         <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
           {isSubmitting ? "Updating password…" : "Reset password"}
         </Button>
@@ -257,10 +257,10 @@ const ResetPassword = () => {
         <Card className="w-full max-w-[440px]">
           <CardHeader className="items-center gap-2.5 space-y-0 text-center">
             <img src={logo} alt="AthaNext" className="h-7 w-auto" />
-            <CardTitle className="pt-2 text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+            <CardTitle className="pt-2 text-section text-dark">
               Reset password
             </CardTitle>
-            <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            <CardDescription className="text-body-m text-dark-300">
               Choose a new password for your account.
             </CardDescription>
           </CardHeader>

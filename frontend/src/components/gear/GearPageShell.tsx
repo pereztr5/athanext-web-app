@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import type { LucideIcon } from "lucide-react";
+import type { LucideIcon } from "@/components/icons";
 import { useRole } from "@/hooks/useRole";
 import { GearCartButton } from "./GearCart";
 
@@ -20,13 +20,13 @@ export const GearPageShell = ({
   const inAppShell = ready && isAuthenticated;
 
   return (
-    <div className={inAppShell ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-[#F1F1E6] px-4 pb-16 pt-[calc(3.8rem+40px)] font-sans"}>
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+    <div className={inAppShell ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-light px-4 pb-16 pt-[calc(3.8rem+40px)] font-sans"}>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-[10px]">
-            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">{title}</h1>
+            <h1 className="text-page-title-phone text-dark md:text-page-title">{title}</h1>
             {subtitle ? (
-              <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">{subtitle}</p>
+              <p className="text-body-m text-dark-300">{subtitle}</p>
             ) : null}
           </div>
           <GearCartButton />
@@ -49,13 +49,13 @@ export const GearNotice = ({
   description: string;
   action?: ReactNode;
 }) => (
-  <div className="flex flex-col items-center gap-[15px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center">
-    <span className="inline-flex size-10 items-center justify-center rounded-[8px] bg-[#F4F4EB] text-[#767980]" aria-hidden="true">
+  <div className="flex flex-col items-center gap-[15px] rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center">
+    <span className="inline-flex size-10 items-center justify-center rounded-control bg-light-400 text-dark-300" aria-hidden="true">
       <Icon className="size-5" strokeWidth={1.5} />
     </span>
     <div className="flex flex-col gap-[6px]">
-      <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">{title}</p>
-      <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{description}</p>
+      <p className="text-card-title text-dark">{title}</p>
+      <p className="text-body-m text-dark-300">{description}</p>
     </div>
     {action}
   </div>
@@ -63,7 +63,7 @@ export const GearNotice = ({
 
 export const GearLoading = ({ label }: { label: string }) => (
   <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center">
-    <div className="size-10 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
-    <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{label}</p>
+    <div className="size-10 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
+    <p className="text-label-sm text-dark">{label}</p>
   </div>
 );

@@ -47,7 +47,7 @@ function describeSaveError(error: { code?: string; message?: string }): string {
   if (error.code === "PGRST116") {
     return "This package no longer exists or you don't have permission to edit it.";
   }
-  return error.message || "Please try again.";
+  return error.message || "Try again.";
 }
 
 function parseFeatures(raw: string): string[] {
@@ -209,7 +209,7 @@ export function PackageEditorDialog({
     } catch (err) {
       toast({
         title: "Something went wrong",
-        description: err instanceof Error ? err.message : "Please try again.",
+        description: err instanceof Error ? err.message : "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -219,23 +219,23 @@ export function PackageEditorDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             {isEdit ? "Edit package" : "Add package"}
           </DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             {isEdit
               ? "Update this coaching package. Prices are entered in dollars and saved as cents."
               : "Create a coaching package athletes can purchase. Prices are entered in dollars and saved as cents."}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto px-[25px] py-5">
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pkg-name" className="text-[12px] font-medium text-[#767980]">
+            <Label htmlFor="pkg-name" className="text-label-xsm text-dark-300">
               Package name
             </Label>
             <Input
@@ -247,7 +247,7 @@ export function PackageEditorDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pkg-description" className="text-[12px] font-medium text-[#767980]">
+            <Label htmlFor="pkg-description" className="text-label-xsm text-dark-300">
               Description
             </Label>
             <Textarea
@@ -261,7 +261,7 @@ export function PackageEditorDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pkg-sessions" className="text-[12px] font-medium text-[#767980]">
+              <Label htmlFor="pkg-sessions" className="text-label-xsm text-dark-300">
                 Session count
               </Label>
               <Input
@@ -273,7 +273,7 @@ export function PackageEditorDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pkg-duration" className="text-[12px] font-medium text-[#767980]">
+              <Label htmlFor="pkg-duration" className="text-label-xsm text-dark-300">
                 Duration (minutes)
               </Label>
               <Input
@@ -288,7 +288,7 @@ export function PackageEditorDialog({
 
           <div className="grid gap-4 sm:grid-cols-2">
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pkg-pps" className="text-[12px] font-medium text-[#767980]">
+              <Label htmlFor="pkg-pps" className="text-label-xsm text-dark-300">
                 Price per session ($)
               </Label>
               <Input
@@ -307,7 +307,7 @@ export function PackageEditorDialog({
               />
             </div>
             <div className="flex flex-col gap-1.5">
-              <Label htmlFor="pkg-total" className="text-[12px] font-medium text-[#767980]">
+              <Label htmlFor="pkg-total" className="text-label-xsm text-dark-300">
                 Total price ($)
               </Label>
               <Input
@@ -323,7 +323,7 @@ export function PackageEditorDialog({
                 placeholder="0.00"
               />
               {!totalPriceTouched && computedTotalCents > 0 ? (
-                <p className="text-[12px] text-[#767980]">
+                <p className="text-caption text-dark-300">
                   Auto: sessions × per-session
                 </p>
               ) : null}
@@ -331,7 +331,7 @@ export function PackageEditorDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pkg-validity" className="text-[12px] font-medium text-[#767980]">
+            <Label htmlFor="pkg-validity" className="text-label-xsm text-dark-300">
               Validity (days)
             </Label>
             <Input
@@ -344,7 +344,7 @@ export function PackageEditorDialog({
           </div>
 
           <div className="flex flex-col gap-1.5">
-            <Label htmlFor="pkg-features" className="text-[12px] font-medium text-[#767980]">
+            <Label htmlFor="pkg-features" className="text-label-xsm text-dark-300">
               Features (comma-separated)
             </Label>
             <Textarea
@@ -356,10 +356,10 @@ export function PackageEditorDialog({
             />
           </div>
 
-          <div className="flex items-center justify-between rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-3">
+          <div className="flex items-center justify-between rounded-control border border-light-525 bg-light-400 px-4 py-3">
             <div>
-              <p className="text-[14px] font-medium text-[#1A202C]">Active</p>
-              <p className="text-[12px] text-[#767980]">
+              <p className="text-label-sm text-dark">Active</p>
+              <p className="text-caption text-dark-300">
                 Inactive packages are hidden from athletes.
               </p>
             </div>
@@ -367,7 +367,7 @@ export function PackageEditorDialog({
           </div>
         </div>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         <DialogFooter className="px-[25px] py-4">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={saving}>

@@ -22,7 +22,7 @@ const RatingStars = ({
       <button
         key={star}
         type="button"
-        className="rounded-[4px] p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+        className="rounded-[4px] p-0.5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-300"
         onClick={() => onChange(star)}
         onMouseEnter={() => onHover(star)}
         onMouseLeave={onLeave}

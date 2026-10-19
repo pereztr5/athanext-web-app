@@ -106,7 +106,7 @@ export const AddToGroupDialog = ({
               <p className={cap}>{first} books from a link and pays you directly.</p>
             ) : (
               <div className="flex flex-col gap-1.5">
-                <span className="text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]">Payment</span>
+                <span className="text-label-xsm text-dark-300">Payment</span>
                 <div className="flex flex-wrap gap-2">
                   {choices.map((c) => (
                     <button key={c.value} type="button" className={choice(pay === c.value)} disabled={!c.ok} aria-pressed={pay === c.value} onClick={() => setPayment(c.value)}>

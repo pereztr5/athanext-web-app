@@ -49,16 +49,16 @@ export const RenewingPackages = () => {
   if (!renewing.length) return null;
 
   return (
-    <section className="flex flex-col gap-2 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-4 py-3">
-      <span className="text-[12px] font-medium leading-[14px] text-[#767980]">Monthly packages</span>
+    <section className="flex flex-col gap-2 rounded-card border border-light-525 bg-light-300 px-4 py-3">
+      <span className="text-label-xsm text-dark-300">Monthly packages</span>
       {renewing.map((p) => (
         <div key={p.id} className="flex items-center justify-between gap-3">
-          <span className="min-w-0 text-[14px] leading-[18px]">
+          <span className="min-w-0 text-body-m">
             {p.status === "trialing"
               ? "Renews monthly · no credits yet"
               : `${plural(p.sessions_remaining, "credit")} left`}
             {p.expiry_date ? (
-              <span className="text-[#767980]">
+              <span className="text-dark-300">
                 {" "}
                 · through {new Date(p.expiry_date).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
               </span>

@@ -12,20 +12,20 @@ export const money2 = (n: number) =>
 
 /** Three-line date tile: month, day number, weekday. */
 export const DateTile = ({ day }: { day: string }) => (
-  <span className="flex h-[54px] w-[44px] flex-none flex-col items-center justify-center gap-0.5 rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0]">
-    <small className="text-[10px] font-semibold uppercase leading-[11px] text-[#0054B4]">
+  <span className="flex h-[54px] w-[44px] flex-none flex-col items-center justify-center gap-0.5 rounded-control border border-light-525 bg-light-300">
+    <small className="text-label-xsm text-primary">
       {formatDayISO(day, { month: "short" })}
     </small>
-    <b className="text-[18px] font-bold leading-[18px] tracking-[-0.05em]">{formatDayISO(day, { day: "numeric" })}</b>
-    <em className="text-[10px] font-medium not-italic leading-[11px] text-[#767980]">
-      {formatDayISO(day, { weekday: "short" }).toUpperCase()}
+    <b className="text-card-title">{formatDayISO(day, { day: "numeric" })}</b>
+    <em className="text-label-xsm not-italic text-dark-300">
+      {formatDayISO(day, { weekday: "short" })}
     </em>
   </span>
 );
 
 export const FillMini = ({ booked, capacity }: { booked: number; capacity: number }) => (
-  <span className="block h-[4px] w-16 overflow-hidden rounded-full bg-[#D9D9CF]" aria-hidden="true">
-    <i className="block h-full rounded-full bg-[#117A96]" style={{ width: `${Math.min(100, (booked / Math.max(1, capacity)) * 100)}%` }} />
+  <span className="block h-[4px] w-16 overflow-hidden rounded-pill bg-secondary-100" aria-hidden="true">
+    <i className="block h-full rounded-pill bg-secondary-600" style={{ width: `${Math.min(100, (booked / Math.max(1, capacity)) * 100)}%` }} />
   </span>
 );
 
@@ -61,14 +61,14 @@ export const SessionPills = ({ session, role }: { session: GroupOfferSession; ro
   </>
 );
 
-export const cardShell = "flex w-full max-w-[460px] flex-col overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]";
-export const cardHead = "flex flex-col gap-1 border-b border-[#EAEADF] px-4 py-3.5";
-export const cardFoot = "flex flex-col gap-2.5 border-t border-[#EAEADF] px-4 py-3.5";
+export const cardShell = "flex w-full max-w-[460px] flex-col overflow-hidden rounded-card border border-light-525 bg-light-300";
+export const cardHead = "flex flex-col gap-1 border-b border-light-525 px-4 py-3.5";
+export const cardFoot = "flex flex-col gap-2.5 border-t border-light-525 px-4 py-3.5";
 export const rowClass = (opts?: { faded?: boolean; tap?: boolean }) =>
   cn(
     "flex w-full flex-wrap items-center gap-3 px-4 py-3 text-left",
     opts?.faded && "opacity-60",
-    opts?.tap && "cursor-pointer hover:bg-[#F1F1E6]"
+    opts?.tap && "cursor-pointer hover:bg-light-200"
   );
-export const titleClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
-export const tiny = "text-[12px] font-medium leading-[14px] tracking-[-0.03em]";
+export const titleClass = "text-label-sm text-dark";
+export const tiny = "text-label-xsm";

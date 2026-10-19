@@ -26,8 +26,17 @@ export interface SessionDetails {
   about?: string[];
   level?: string;
   ages?: string;
+  /** Age group or level on a planned group session (U12, Youth development). */
+  tag?: string;
   bring?: string;
 }
+
+/** PostgREST / Postgres when an RPC from a not-yet-applied migration is missing. */
+export const isMissingRpc = (error: unknown) => {
+  const code = (error as { code?: string } | null)?.code;
+  const message = error instanceof Error ? error.message : String((error as { message?: string } | null)?.message ?? "");
+  return code === "PGRST202" || code === "42883" || /could not find the function/i.test(message) || /does not exist/i.test(message);
+};
 
 export interface ScheduleSession {
   id: string;
@@ -412,6 +421,23 @@ export const scheduleAPI = {
     );
     if (error) throw error;
     return data as unknown as string;
+  },
+
+  /**
+   * Writes per-session tags onto the published week card.
+   * until types are regenerated after the migration is applied.
+   * Returns "unavailable" when that RPC is not deployed yet (tags still live on the session).
+   */
+  async setOfferSessionTags(offerId: string, tags: Record<string, string>): Promise<"saved" | "unavailable"> {
+    // until types are regenerated after the migration is applied
+    const rpc = supabase.rpc as unknown as (
+      fn: string,
+      args?: Record<string, unknown>,
+    ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
+    const { error } = await rpc("schedule_set_offer_session_tags", { p_offer_id: offerId, p_tags: tags });
+    if (!error) return "saved";
+    if (isMissingRpc(error)) return "unavailable";
+    throw new Error(error.message || "Couldn't save the tags");
   },
 };
 

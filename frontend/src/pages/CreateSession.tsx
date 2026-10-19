@@ -5,12 +5,12 @@
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
 import { SessionDialog } from "@/components/schedule/SessionDialog";
 import { AddSessionSheet } from "@/components/schedule/createweek/AddSessionSheet";
 import { WeekDayGrid } from "@/components/schedule/WeekDayGrid";
-import { pageTitle } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
 import { calendarCard, navArrow } from "@/components/schedule/views/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -96,7 +96,7 @@ export default function CreateSession() {
   if (!ready) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
       </div>
     );
   }
@@ -113,25 +113,18 @@ export default function CreateSession() {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-5">
-        <button
-          type="button"
-          className="inline-flex items-center gap-1 self-start p-0 text-[14px] font-medium text-[#767980] hover:text-[#1A202C]"
-          onClick={() => navigate(ROUTES.SCHEDULE)}
-        >
-          <ChevronLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
-          My Schedule
-        </button>
-
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-1.5">
-            <h1 className={pageTitle}>Create session</h1>
-            <p className="text-[14px] leading-[18px] text-[#767980]">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+        <PageHeader
+          title="Create session"
+          back={{ label: "My schedule", onClick: () => navigate(ROUTES.SCHEDULE) }}
+          subtitle={
+            <>
               {rangeLabel}
               {pill ? ` · ${pill}` : ""} · {plural(allSessions.length, "session")} on {plural(daysWith, "day")}. Pick a
               day to add to it.
-            </p>
-          </div>
+            </>
+          }
+          actions={
           <div className="flex items-center gap-2">
             <button
               type="button"
@@ -147,7 +140,7 @@ export default function CreateSession() {
             >
               <ChevronLeft strokeWidth={1.5} />
             </button>
-            <span className="whitespace-nowrap text-[14px] font-medium text-[#1A202C]">
+            <span className="whitespace-nowrap text-label-sm text-dark">
               {formatDayISO(dates[0], { month: "short", day: "numeric" })} to{" "}
               {formatDayISO(dates[6], { month: "short", day: "numeric" })}
             </span>
@@ -160,10 +153,11 @@ export default function CreateSession() {
               <ChevronRight strokeWidth={1.5} />
             </button>
           </div>
-        </header>
+          }
+        />
 
         {schedule.isLoading || !rules ? (
-          <div className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-4 py-10 text-center text-[14px] text-[#767980]">
+          <div className="rounded-card border border-light-525 bg-light-300 px-4 py-10 text-center text-body-m text-dark-300">
             Loading…
           </div>
         ) : (

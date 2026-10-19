@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Search, UserPlus } from "lucide-react";
+import { Search, UserPlus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -75,19 +75,19 @@ export const AddWalkInAthleteDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] sm:max-w-lg">
+      <DialogContent className="gap-0 overflow-hidden p-0 font-sans text-dark sm:max-w-lg">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             Add an athlete
           </DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-            Search for someone who already has an AthaNext account. They pay from My Sessions. A free session is added with no charge.
+          <DialogDescription className="text-body-m text-dark-300">
+            Search for someone who already has an AthaNext account. They pay from My sessions. A free session is added with no charge.
           </DialogDescription>
         </DialogHeader>
-        <div className="h-px bg-[#EAEADF]" />
-        <div className="flex flex-col gap-[10px] px-[25px] pb-[25px] pt-5">
+        <div className="h-px bg-light-525" />
+        <div className="flex flex-col gap-2.5 px-[25px] pb-[25px] pt-5">
           <form
-            className="flex gap-[10px]"
+            className="flex gap-2.5"
             onSubmit={(event) => {
               event.preventDefault();
               void search();
@@ -95,7 +95,7 @@ export const AddWalkInAthleteDialog = ({
           >
             <div className="relative flex-1">
               <Search
-                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]"
+                className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-300"
                 strokeWidth={1.5}
                 aria-hidden="true"
               />
@@ -111,38 +111,38 @@ export const AddWalkInAthleteDialog = ({
               Search
             </Button>
           </form>
-          {error ? <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p> : null}
+          {error ? <p className="text-caption text-error-700">{error}</p> : null}
           {searched && results.length === 0 ? (
-            <p className="rounded-[8px] bg-[#F4F4EB] p-4 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            <p className="rounded-control border border-light-525 bg-light-400 p-4 text-body-m text-dark-300">
               This person needs an AthaNext account before they can be added.
             </p>
           ) : null}
           {results.length > 0 ? (
-            <div className="flex max-h-[320px] flex-col gap-[10px] overflow-y-auto">
+            <div className="flex max-h-[320px] flex-col gap-2.5 overflow-y-auto">
               {results.map((athlete) => (
                 <div
                   key={athlete.id}
-                  className="flex items-center justify-between gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 py-3"
+                  className="flex items-center justify-between gap-3 rounded-control border border-light-525 bg-light-400 px-4 py-3"
                 >
                   <div className="flex min-w-0 flex-col gap-1.5">
-                    <p className="truncate text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                    <p className="truncate text-subtitle text-dark">
                       {athlete.name}
                     </p>
                     {athlete.email ? (
-                      <p className="truncate text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{athlete.email}</p>
+                      <p className="truncate text-body-m text-dark-300">{athlete.email}</p>
                     ) : null}
                   </div>
                   <Button
                     type="button"
                     size="sm"
                     variant="outline"
-                    className="shrink-0 bg-[#F7F7F0]"
+                    className="shrink-0 bg-light-300"
                     disabled={pendingId === athlete.id}
                     onClick={() => void add(athlete.id)}
                     aria-label={`Add ${athlete.name}`}
                   >
                     <UserPlus className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                    {pendingId === athlete.id ? "Adding..." : "Add"}
+                    {pendingId === athlete.id ? "Adding…" : "Add"}
                   </Button>
                 </div>
               ))}

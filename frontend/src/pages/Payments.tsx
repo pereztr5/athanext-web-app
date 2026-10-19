@@ -8,13 +8,15 @@
 import { useMemo, useState } from "react";
 import { Link, Navigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChartColumn, ChartSpline, Check, ChevronDown, DollarSign, Download, FileText, Plus, Search, TrendingDown, TrendingUp, Wallet } from "lucide-react";
+import { ChartColumn, ChartSpline, Check, ChevronDown, DollarSign, Download, FileText, Plus, Search, TrendingDown, TrendingUp, Wallet } from "@/components/icons";
 import { BrandPill, type BrandPillTone } from "@/components/brand";
 import { invoicesAPI } from "@/api/invoices";
 import { CreateInvoiceDialog, MarkPaidDialog } from "@/components/payments/InvoiceDialogs";
 import { MoneyChart } from "@/components/payments/MoneyChart";
 import { OrgMoneyTabs, type OrgMoneyTab } from "@/components/organization/OrgMoneyTabs";
-import { card, iconButton, input, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
+import { Banner } from "@/components/ui/banner";
+import { PageHeader } from "@/components/ui/page-header";
+import { card, iconButton, input, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { useCoachPayMode } from "@/hooks/useCoachPayMode";
 import { useMyOrganization } from "@/hooks/useOrganizations";
@@ -53,8 +55,8 @@ const shortDate = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLo
 const longDate = (iso: string) => new Date(`${iso.slice(0, 10)}T12:00:00`).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric" });
 const RANGES = ["1D", "7D", "30D", "60D", "Custom"] as const;
 type Range = (typeof RANGES)[number];
-const h2 = "text-[20px] font-medium leading-[18px] tracking-[-0.05em]";
-const cap = "text-[12px] leading-[14px] text-[#767980]";
+const h2 = "text-card-title";
+const cap = "text-caption text-dark-300";
 const inlineSeg = cn(segGroup, "inline-flex max-w-full overflow-x-auto [scrollbar-width:none]");
 
 const MoneyIn = ({ entries, today }: { entries: MoneyEntry[]; today: string }) => {
@@ -102,20 +104,20 @@ const MoneyIn = ({ entries, today }: { entries: MoneyEntry[]; today: string }) =
       {custom ? (
         <div className="grid max-w-[380px] grid-cols-2 gap-3">
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-medium leading-[13px] text-[#767980]">From</span>
+            <span className="text-label-xsm text-dark-300">From</span>
             <input type="date" className={input} value={from} max={today} onChange={(e) => setFrom(e.target.value)} />
           </label>
           <label className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-medium leading-[13px] text-[#767980]">To</span>
+            <span className="text-label-xsm text-dark-300">To</span>
             <input type="date" className={input} value={to} max={today} onChange={(e) => setTo(e.target.value)} />
           </label>
         </div>
       ) : null}
       <div className="flex flex-wrap items-baseline gap-3">
-        <span className="text-[40px] font-bold leading-[40px] tracking-[-0.03em] tabular-nums">{money(s.total)}</span>
+        <span className="text-stat tabular-nums">{money(s.total)}</span>
         {pct !== null ? (
-          <span className={cn("inline-flex items-center gap-[3px] text-[12px] font-medium", pct >= 0 ? "text-[#1E7431]" : "text-[#972B2B]")}>
-            {pct >= 0 ? <TrendingUp className="size-[13px]" strokeWidth={1.5} /> : <TrendingDown className="size-[13px]" strokeWidth={1.5} />}
+          <span className={cn("inline-flex items-center gap-[3px] text-label-xsm", pct >= 0 ? "text-success-700" : "text-error-700")}>
+            {pct >= 0 ? <TrendingUp className="size-3" strokeWidth={2} /> : <TrendingDown className="size-3" strokeWidth={2} />}
             {pct >= 0 ? "+" : ""}
             {pct}% vs previous {n === 1 ? "day" : `${n} days`}
           </span>
@@ -125,9 +127,9 @@ const MoneyIn = ({ entries, today }: { entries: MoneyEntry[]; today: string }) =
       {s.total ? (
         <MoneyChart days={s.days} type={type} />
       ) : (
-        <div className="rounded-[8px] border border-dashed border-[#C1C1B8] p-[18px] text-center text-[13px] text-[#767980]">No money in for this period yet.</div>
+        <div className="rounded-control border border-dashed border-light-600 p-4 text-center text-body-m text-dark-300">No money in for this period yet.</div>
       )}
-      <div className="grid grid-cols-1 gap-3 border-t border-[#EAEADF] pt-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 border-t border-light-525 pt-4 md:grid-cols-3">
         {(
           [
             ["Your clients, no fee", s.own],
@@ -137,7 +139,7 @@ const MoneyIn = ({ entries, today }: { entries: MoneyEntry[]; today: string }) =
         ).map(([l, v]) => (
           <div key={l} className="flex flex-col gap-1">
             <span className={cap}>{l}</span>
-            <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] tabular-nums">{money(v)}</span>
+            <span className="text-card-title tabular-nums">{money(v)}</span>
           </div>
         ))}
       </div>
@@ -257,40 +259,42 @@ const PaymentsPage = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4 md:gap-6">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
         {payMode.data === "self" ? (
-          <div className="flex flex-wrap items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] px-[14px] py-3 text-[12px] leading-[14px] text-[#767980]">
-            <Wallet className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-            <span className="flex-1">Booking only is on. New bookings are paid to you directly, outside AthaNext. Past payments stay here.</span>
-            <Link to={`${ROUTES.SETTINGS}?tab=booking`} className={cn(textButton, "text-[12px]")}>
-              Change
-            </Link>
-          </div>
+          <Banner
+            tone="neutral"
+            icon={<Wallet strokeWidth={1.5} aria-hidden="true" />}
+            action={
+              <Link to={`${ROUTES.SETTINGS}?tab=booking`} className={textButton}>
+                Change
+              </Link>
+            }
+          >
+            Booking only is on. New bookings are paid to you directly, outside AthaNext. Past payments stay here.
+          </Banner>
         ) : null}
 
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex flex-col gap-[10px]">
-            <h1 className={pageTitle}>Business</h1>
-            <p className="text-[14px] text-[#767980]">
-              {tab === "money" || !org ? "Money in and invoices" : `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}`}
-            </p>
-          </div>
-          {tab === "money" ? (
-            <div className="flex flex-wrap gap-2">
-              <button type="button" className={secondaryButton} onClick={exportCsv} disabled={!list.length}>
-                <Download strokeWidth={1.5} aria-hidden="true" />
-                Export CSV
-              </button>
-              <button type="button" className={primaryButton} onClick={() => setCreating(true)}>
-                <Plus strokeWidth={1.5} aria-hidden="true" />
-                Create invoice
-              </button>
-            </div>
-          ) : null}
-        </header>
+        <PageHeader
+          title="Business"
+          subtitle={tab === "money" || !org ? "Money in and invoices" : `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}`}
+          actions={
+            tab === "money" ? (
+              <>
+                <button type="button" className={secondaryButton} onClick={exportCsv} disabled={!list.length}>
+                  <Download strokeWidth={1.5} aria-hidden="true" />
+                  Export CSV
+                </button>
+                <button type="button" className={primaryButton} onClick={() => setCreating(true)}>
+                  <Plus strokeWidth={1.5} aria-hidden="true" />
+                  Create invoice
+                </button>
+              </>
+            ) : undefined
+          }
+        />
 
         {org ? (
-          <div className="flex gap-1 overflow-x-auto border-b border-[#EAEADF]" role="tablist" aria-label="Business">
+          <div className={inlineSeg} role="tablist" aria-label="Business">
             {ORG_TABS.map(([k, l]) => (
               <button
                 key={k}
@@ -298,10 +302,7 @@ const PaymentsPage = () => {
                 role="tab"
                 aria-selected={tab === k}
                 onClick={() => setTab(k)}
-                className={cn(
-                  "-mb-px whitespace-nowrap border-b-2 px-[14px] py-[10px] text-[14px] font-medium",
-                  tab === k ? "border-[#0054B4] text-[#0054B4]" : "border-transparent text-[#767980] hover:text-[#1A202C]"
-                )}
+                className={cn(segButton(tab === k), "flex-none")}
               >
                 {l}
               </button>
@@ -313,7 +314,7 @@ const PaymentsPage = () => {
           <OrgMoneyTabs org={org} tab={tab as OrgMoneyTab} onTab={(t) => setTab(t)} />
         ) : (
           <>
-            {data.isError ? <p className="text-[14px] text-[#972B2B]">Couldn't load payments. {(data.error as Error).message}</p> : null}
+            {data.isError ? <p className="text-body-m text-error-700">Couldn't load payments. {(data.error as Error).message}</p> : null}
 
             <MoneyIn entries={entries} today={today} />
 
@@ -324,11 +325,11 @@ const PaymentsPage = () => {
                 aria-expanded={invoicesOpen}
                 onClick={() => setInvoicesOpen((v) => !v)}
               >
-                <span className={cn(h2, "flex items-center gap-[10px]")}>
+                <span className={cn(h2, "flex items-center gap-2.5")}>
                   <FileText className="size-5" strokeWidth={1.5} aria-hidden="true" />
                   Invoices
                 </span>
-                <span className="flex items-center gap-[10px]">
+                <span className="flex items-center gap-2.5">
                   <span className={cap}>{open.length ? `${open.length} outstanding · ${money(open.reduce((n, i) => n + i.amount, 0))} due` : "Nothing outstanding"}</span>
                   <ChevronDown className={cn("size-5 transition-transform", invoicesOpen && "rotate-180")} strokeWidth={1.5} aria-hidden="true" />
                 </span>
@@ -352,13 +353,13 @@ const PaymentsPage = () => {
                     </div>
                     <label className="relative w-full sm:w-[220px]">
                       <span className="sr-only">Search invoices</span>
-                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                      <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                       <input className={cn(input, "pl-9")} placeholder="Search families" value={query} onChange={(e) => setQuery(e.target.value)} />
                     </label>
                   </div>
-                  {data.isLoading ? <p className="text-[14px] text-[#767980]">Loading…</p> : null}
+                  {data.isLoading ? <p className="text-body-m text-dark-300">Loading…</p> : null}
                   {!data.isLoading && !list.length ? (
-                    <div className="rounded-[8px] border border-dashed border-[#C1C1B8] p-[18px] text-center text-[13px] text-[#767980]">No invoices here.</div>
+                    <div className="rounded-control border border-dashed border-light-600 p-4 text-center text-body-m text-dark-300">No invoices here.</div>
                   ) : null}
                   {list.length ? (
                     <>
@@ -367,27 +368,27 @@ const PaymentsPage = () => {
                         {list.slice(0, limit).map((r) => {
                           const isOpen = openRow === r.key;
                           return (
-                            <div key={r.key} className="border-t border-[#EAEADF] first:border-t-0">
+                            <div key={r.key} className="border-t border-light-525 first:border-t-0">
                               <button
                                 type="button"
-                                className="flex w-full items-center gap-[10px] py-3 text-left"
+                                className="flex w-full items-center gap-2.5 py-3 text-left"
                                 aria-expanded={isOpen}
                                 onClick={() => setOpenRow(isOpen ? null : r.key)}
                               >
                                 <span className="flex min-w-0 grow flex-col gap-1">
-                                  <span className="truncate text-[14px] font-medium">{r.family}</span>
+                                  <span className="truncate text-label-sm">{r.family}</span>
                                   <span className={cap}>
                                     {r.athlete || r.family} · {r.invoice ? "due" : "paid"} {shortDate(r.date)}
                                   </span>
                                 </span>
                                 <span className="flex flex-col items-end gap-1">
-                                  <span className="text-[14px] font-medium tabular-nums">{money(r.amount)}</span>
+                                  <span className="text-label-sm tabular-nums">{money(r.amount)}</span>
                                   <StatusPill status={r.status} />
                                 </span>
-                                <ChevronDown className={cn("size-4 flex-none text-[#A3A6AB] transition-transform", isOpen && "rotate-180")} strokeWidth={1.5} aria-hidden="true" />
+                                <ChevronDown className={cn("size-4 flex-none text-dark-300 transition-transform", isOpen && "rotate-180")} strokeWidth={1.5} aria-hidden="true" />
                               </button>
                               {isOpen ? (
-                                <div className="flex flex-col gap-2 pb-[14px] text-[14px]">
+                                <div className="flex flex-col gap-2 pb-3 text-body-m">
                                   <div className="flex justify-between gap-3">
                                     <span className={cap}>For</span>
                                     <span>{r.service}</span>
@@ -413,9 +414,9 @@ const PaymentsPage = () => {
                         ) : null}
                       </div>
                       <div className="hidden overflow-x-auto md:block">
-                        <table className="w-full min-w-[600px] border-collapse text-left text-[14px]">
+                        <table className="w-full min-w-[600px] border-collapse text-left text-body-m">
                           <thead>
-                            <tr className="text-[12px] leading-[13px] text-[#767980]">
+                            <tr className="text-label-xsm text-dark-300">
                               <th className="whitespace-nowrap py-3 pr-[10px] font-medium">Family</th>
                               <th className="whitespace-nowrap py-3 pr-[10px] font-medium">Service</th>
                               <th className="whitespace-nowrap py-3 pr-[10px] font-medium">Due</th>
@@ -426,15 +427,15 @@ const PaymentsPage = () => {
                           </thead>
                           <tbody>
                             {list.map((r) => (
-                              <tr key={r.key} className="border-t border-[#EAEADF]">
+                              <tr key={r.key} className="border-t border-light-525">
                                 <td className="whitespace-nowrap py-[14px] pr-[10px]">
                                   <span className="flex flex-col gap-1">
                                     <span className="font-medium">{r.family}</span>
                                     {r.athlete && r.athlete !== r.family ? <span className={cap}>{r.athlete}</span> : null}
                                   </span>
                                 </td>
-                                <td className="whitespace-nowrap py-[14px] pr-[10px] text-[#767980]">{r.service}</td>
-                                <td className="whitespace-nowrap py-[14px] pr-[10px] text-[#767980]">{shortDate(r.date)}</td>
+                                <td className="whitespace-nowrap py-[14px] pr-[10px] text-dark-300">{r.service}</td>
+                                <td className="whitespace-nowrap py-[14px] pr-[10px] text-dark-300">{shortDate(r.date)}</td>
                                 <td className="whitespace-nowrap py-[14px] pr-[10px] text-right tabular-nums">{money(r.amount)}</td>
                                 <td className="whitespace-nowrap py-[14px] pr-[10px] text-right">
                                   <StatusPill status={r.status} />

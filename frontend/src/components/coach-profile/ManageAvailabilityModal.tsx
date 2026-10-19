@@ -10,7 +10,7 @@ import { Input } from '@/components/ui/input';
 
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ConfirmationDialog } from '@/components/common/ConfirmationDialog';
-import { AlertCircle, Calendar, X } from 'lucide-react';
+import { AlertCircle, Calendar, X } from "@/components/icons";
 import {
   validateAvailabilityForm,
   hasValidationErrors,
@@ -84,7 +84,7 @@ const addDays = (date: Date, days: number) => {
 
 
 const errorAlertClass =
-  "flex min-h-[50px] items-center gap-2 rounded-[8px] border-0 bg-[#FDF1F1] px-[15px] py-2 [&>svg]:static [&>svg]:text-[#FB4747] [&>svg~*]:pl-0 [&>svg+div]:translate-y-0";
+  "flex min-h-[50px] items-center gap-2 rounded-control border border-error-300 bg-error-50 px-[15px] py-2 [&>svg]:static [&>svg]:text-error-600 [&>svg~*]:pl-0 [&>svg+div]:translate-y-0";
 
 export const ManageAvailabilityModal = ({
   open,
@@ -943,17 +943,17 @@ export const ManageAvailabilityModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex w-[min(1160px,calc(100vw-2rem))] max-w-none max-h-[90vh] flex-col gap-0 overflow-hidden border border-[#EAEADF] bg-[#F7F7F0] p-0 shadow-[0_0_15px_rgba(0,0,0,0.05)] sm:rounded-[10px] [&>button]:hidden"
+        className="flex w-[min(1160px,calc(100vw-2rem))] max-w-none max-h-[90vh] flex-col gap-0 overflow-hidden border border-light-525 bg-light-300 p-0 shadow-overlay sm:rounded-card [&>button]:hidden"
       >
-        <div className="flex items-center justify-between border-b border-[#EAEADF] p-[25px]">
-          <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
-            <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+        <div className="flex items-center justify-between border-b border-light-525 p-[25px]">
+          <h2 className="flex items-center gap-2 text-card-title text-dark">
+            <Calendar className="size-5 flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
             {isEditMode ? "Edit availability" : "Add availability"}
           </h2>
           <button
             type="button"
             onClick={() => onOpenChange(false)}
-            className="inline-flex size-[30px] items-center justify-center rounded-[8px] text-[#767980] transition-colors hover:bg-[#F1F1E6] hover:text-[#1A202C]"
+            className="inline-flex size-[30px] items-center justify-center rounded-control text-dark-300 transition-colors hover:bg-light-400 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             aria-label="Close"
           >
             <X className="size-5" strokeWidth={1.5} />
@@ -1005,14 +1005,14 @@ export const ManageAvailabilityModal = ({
             <Alert variant="destructive" className={errorAlertClass}>
               <AlertCircle className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
               <div className="flex w-full flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
-                <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#B42318]">
+                <p className="text-label-sm text-error-700">
                   Availability incomplete. Finish the highlighted days before saving.
                 </p>
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={goToFirstIssue}
-                  className="h-[30px] w-fit rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]"
+                  className="w-fit"
                 >
                   Review
                 </Button>
@@ -1022,16 +1022,16 @@ export const ManageAvailabilityModal = ({
           {duplicateError && (
             <Alert variant="destructive" className={errorAlertClass}>
               <AlertCircle className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
-              <AlertDescription className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#B42318]">
+              <AlertDescription className="text-label-sm text-error-700">
                 {duplicateError}
               </AlertDescription>
             </Alert>
           )}
           {errors.dateRange && (
-            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#FB4747]">{errors.dateRange}</p>
+            <p className="text-caption text-error-700">{errors.dateRange}</p>
           )}
           {errors.general && (
-            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#FB4747]">{errors.general}</p>
+            <p className="text-caption text-error-700">{errors.general}</p>
           )}
           {/* Weekly Time Slots Section - with scrollable table */}
           <WeeklySlotsTable
@@ -1063,19 +1063,17 @@ export const ManageAvailabilityModal = ({
         </div>
 
         {/* Footer */}
-        <div className="flex justify-end gap-3 border-t border-[#EAEADF] px-[25px] py-5">
+        <div className="flex justify-end gap-3 border-t border-light-525 px-[25px] py-5">
           <Button
             variant="outline"
             onClick={() => onOpenChange(false)}
             disabled={isSubmitting}
-            className="h-[34px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]"
           >
             Cancel
           </Button>
           <Button
             onClick={handleSubmit}
             disabled={isSubmitting || isOccurrencesBusy}
-            className="h-[34px] rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] hover:bg-[#004390] disabled:opacity-60"
           >
             {isSubmitting ? 'Saving…' : 'Save availability'}
           </Button>

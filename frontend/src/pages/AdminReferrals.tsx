@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { PageHeader } from "@/components/ui/page-header";
 import {
   Select, SelectContent, SelectItem, SelectTrigger, SelectValue,
 } from "@/components/ui/select";
@@ -31,14 +32,14 @@ const AdminReferrals = () => {
   const [modalOpen, setModalOpen] = useState(false);
 
   return (
-    <div className="mx-auto w-full max-w-4xl px-4 pt-8 pb-16">
-      <h1 className="mb-2 text-2xl font-semibold">Referral links</h1>
-      <p className="mb-6 text-sm text-muted-foreground">
-        Confirmed coach and athlete pairs pay no platform fee on sessions with each other. Use the override to import a
-        coach's book of business or fix a typo (remove the row and add it again with the right email).
-      </p>
+    <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
+    <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+      <PageHeader
+        title="Referral links"
+        subtitle="Confirmed coach and athlete pairs pay no platform fee on sessions with each other. Use the override to import a coach's book of business or fix a typo (remove the row and add it again with the right email)."
+      />
 
-      <div className="mb-8 flex flex-wrap items-end gap-2 rounded-lg border p-4">
+      <div className="flex flex-wrap items-end gap-2 rounded-card border border-light-525 bg-light-300 p-4">
         <div className="min-w-48">
           <Select value={coachId} onValueChange={setCoachId}>
             <SelectTrigger><SelectValue placeholder="Coach" /></SelectTrigger>
@@ -55,17 +56,17 @@ const AdminReferrals = () => {
       </div>
 
       {isLoading ? (
-        <p className="text-sm text-muted-foreground">Loading…</p>
+        <p className="text-body-m text-dark-300">Loading…</p>
       ) : (
-        <ul className="divide-y rounded-lg border">
+        <ul className="divide-y divide-light-525 rounded-card border border-light-525 bg-light-300">
           {referrals.map((r) => (
             <li key={r.id} className="flex flex-wrap items-center justify-between gap-4 p-4">
               <div className="min-w-0">
-                <p className="truncate font-medium">
+                <p className="truncate text-label-sm text-dark">
                   {coachNames[r.coach_id] ?? r.coach_id} &rarr; {r.client_name ? `${r.client_name} · ` : ""}
                   {r.client_email}
                 </p>
-                <p className="text-xs text-muted-foreground">
+                <p className="text-caption text-dark-300">
                   <Badge variant={r.status === "confirmed" ? "default" : "secondary"}>
                     {referralStatusLabel(r)}
                   </Badge>
@@ -114,6 +115,7 @@ const AdminReferrals = () => {
         coachId={coachId || undefined}
         onClose={() => setModalOpen(false)}
       />
+    </div>
     </div>
   );
 };

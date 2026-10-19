@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, Trash2, Calendar } from "lucide-react";
+import { Plus, Trash2, Calendar } from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
@@ -70,20 +70,18 @@ export function AvailabilitySection({
     onDeleteSlot?.(slotId);
   };
 
-  const labelClass = "text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]";
+  const labelClass = "text-caption text-dark-300";
   const fieldClass =
-    "h-[38px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] shadow-none focus-visible:ring-0";
-  const primaryClass =
-    "h-[34px] rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] hover:bg-[#004390]";
-  const secondaryClass =
-    "h-[34px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]";
+    "h-[38px] rounded-control border border-dark-250 bg-light px-[10px] text-body-m text-dark focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-primary focus-visible:ring-0 focus-visible:ring-offset-0";
+  const primaryClass = "";
+  const secondaryClass = "";
 
   return (
-    <Card className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] shadow-none">
+    <Card className="rounded-card border border-light-525 bg-light-300">
       <CardHeader className="px-[25px] pb-5 pt-[30px]">
         <div className="flex items-center justify-between gap-3">
-          <CardTitle className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
-            <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+          <CardTitle className="flex items-center gap-2 text-card-title text-dark">
+            <Calendar className="size-5 flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
             Availability
           </CardTitle>
           {isEditMode && (
@@ -101,7 +99,7 @@ export function AvailabilitySection({
       </CardHeader>
       <CardContent className="flex flex-col gap-3 px-[25px] pb-[25px]">
         {isAdding && isEditMode && (
-          <div className="flex flex-col gap-3 rounded-[8px] bg-[#F4F4EB] p-[15px]">
+          <div className="flex flex-col gap-3 rounded-control bg-light-400 p-[15px]">
             <div className="flex flex-col gap-[5px]">
               <Label className={labelClass}>Select date</Label>
               <Input
@@ -213,13 +211,13 @@ export function AvailabilitySection({
             return (
               <div
                 key={slot.id}
-                className="group flex items-center justify-between gap-3 border-t border-[#EAEADF] py-3 first:border-t-0 first:pt-0"
+                className="group flex items-center justify-between gap-3 border-t border-light-525 py-3 first:border-t-0 first:pt-0"
               >
-                <div className="flex-1 text-[14px] leading-[18px] tracking-[-0.03em]">
-                  <span className="font-medium text-[#1A202C]">
+                <div className="flex-1 text-body-m">
+                  <span className="font-medium text-dark">
                     {slot.date ? `${formatDate(slot.date)} (${dayName})` : dayName}
                   </span>
-                  <span className="ml-2 text-[#767980]">
+                  <span className="ml-2 text-dark-300">
                     {formatTime(slot.start_time)} to {formatTime(slot.end_time)}
                   </span>
                 </div>
@@ -228,7 +226,7 @@ export function AvailabilitySection({
                     type="button"
                     onClick={() => handleDeleteSlot(slot.id)}
                     aria-label="Delete slot"
-                    className="inline-flex size-4 items-center justify-center text-[#767980] opacity-0 transition-opacity hover:text-[#1A202C] focus-visible:opacity-100 group-hover:opacity-100"
+                    className="inline-flex size-4 items-center justify-center text-dark-300 opacity-0 transition-opacity hover:text-dark focus-visible:opacity-100 group-hover:opacity-100"
                   >
                     <Trash2 className="size-4" strokeWidth={1.5} />
                   </button>
@@ -237,8 +235,8 @@ export function AvailabilitySection({
             );
           })
         ) : (
-          <div className="rounded-[8px] bg-[#F4F4EB] px-5 py-6 text-center">
-            <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <div className="rounded-control bg-light-400 px-5 py-6 text-center">
+            <p className="text-body-m text-dark-300">
               {isEditMode
                 ? 'No availability slots. Select "Add" to create one.'
                 : 'The coach has no available slots at this time.'}

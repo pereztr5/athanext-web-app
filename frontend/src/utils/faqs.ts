@@ -17,7 +17,7 @@ export const DEFAULT_FAQS = [
     id: '2',
     question: 'Can I try multiple coaches?',
     answer:
-      "Yes! Many athletes combine specialists—for example, a technical skills coach and a mental performance coach—to create a well-rounded development plan.",
+      "Yes. Many athletes combine specialists (for example, a technical skills coach and a mental performance coach) to create a well-rounded development plan.",
     category: 'coaches',
     order: 2,
   },

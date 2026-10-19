@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { ShieldCheck } from "lucide-react";
+import { ShieldCheck } from "@/components/icons";
 import { supabase } from "@/integrations/supabase/client";
 
 type Safeguard = { athlete_first: string; holder_name: string; viewer_is_family: boolean; held_by_parent: boolean };
@@ -30,8 +30,8 @@ export const SafeguardingStrip = ({ conversationId }: { conversationId: string }
       : `${first} is under 18. Keep messages to sessions and training.`;
 
   return (
-    <div className="flex items-start gap-2 border-b border-[#EAEADF] bg-[#E5EDF7] px-4 py-2 text-[12px] leading-[16px] text-[#00326C]">
-      <ShieldCheck className="mt-[1px] size-3.5 shrink-0" strokeWidth={1.75} aria-hidden="true" />
+    <div className="flex items-start gap-2 rounded-control border border-light-525 bg-light-400 px-3 py-2.5 text-paragraph-sm text-dark-400">
+      <ShieldCheck className="mt-[1px] size-3.5 shrink-0 text-dark-300" strokeWidth={2} aria-hidden="true" />
       <span>{text}</span>
     </div>
   );

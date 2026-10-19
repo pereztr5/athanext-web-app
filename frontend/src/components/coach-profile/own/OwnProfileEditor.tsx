@@ -8,14 +8,15 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { Award, BadgeCheck, Check, Image as ImageIcon, Layers, Pencil, Plus, ShieldCheck, Trash2, Upload, Video } from "lucide-react";
+import { Award, BadgeCheck, Check, Image as ImageIcon, Layers, Pencil, Plus, ShieldCheck, Trash2, Upload, Video } from "@/components/icons";
 import { BASE_SERVICE_ID, coachProfileAPI, type ProfileService } from "@/api/coachProfile";
 import { packagesAPI } from "@/api/packages";
 import { BrandPill } from "@/components/brand";
 import { ToastAction } from "@/components/ui/toast";
 import { Switch } from "@/components/ui/switch";
-import { card, iconButton, input, label, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
-import { PATHWAY_TAGS, MAX_PATHWAY_TAGS, sanitizePathwayTags } from "@/constants/pathwayTags";
+import { PageHeader } from "@/components/ui/page-header";
+import { card, iconButton, input, label, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
+import { LEVEL_OPTIONS, LEVEL_TAGS, sanitizePathwayTags, type LevelTag } from "@/constants/pathwayTags";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -26,7 +27,6 @@ import { hasRichTextMarkup, stripRichTextToPlainText } from "@/utils/richText";
 import { BrandLogos } from "../BrandLogos";
 import { organizationsForProfile } from "../organizationLogos";
 import type { CoachProfileData, ProfileReview } from "../CoachProfileView";
-import type { CoachFaqItem } from "../FAQSection";
 import { GearAndDealsCard } from "../GearAndDealsCard";
 import { CompletenessList } from "./Completeness";
 import { OwnReviews } from "./OwnReviews";
@@ -34,13 +34,16 @@ import { ServiceEditorDialog } from "./ServiceEditorDialog";
 import { useSaveServices, type StepName } from "./hooks";
 import { Avatar } from "./parts";
 import { caption, chip, money, repliesLabel, sessionTypesFromWhere } from "./shared";
+import type { Camp } from "@/api/packages";
+import { CampEditorDialog } from "@/components/camps/CampEditorDialog";
+import { CampEditorList } from "@/components/camps/CampEditorList";
+import { packageKind } from "@/components/camps/format";
 
-const RESPONSE_TIMES = [1, 2, 4, 12, 24, 48];
 const AGE_OPTIONS = Array.from({ length: 28 }, (_, i) => i + 5);
 const BIO_MAX = 600;
-const h2 = "flex items-center gap-2 text-[20px] font-medium leading-[22px] tracking-[-0.05em] text-[#1A202C] [&>svg]:size-5 [&>svg]:text-[#767980]";
+const h2 = "flex items-center gap-2 text-card-title text-dark [&>svg]:size-5 [&>svg]:text-dark-300";
 const field = "flex flex-col gap-1.5";
-const help = "text-[12px] leading-[14px] text-[#767980]";
+const help = "text-caption text-dark-300";
 
 type EditCoach = CoachProfileData & {
   image_url?: string | null;
@@ -117,6 +120,7 @@ export const OwnProfileEditor = ({
   const [languagesDraft, setLanguagesDraft] = useState((coach.languages || []).join(", "));
   const [placesDraft, setPlacesDraft] = useState((coach.locations || []).join(", "));
   const [editingService, setEditingService] = useState<ProfileService | null>(null);
+  const [campDraft, setCampDraft] = useState<Camp | null | undefined>(undefined);
 
   useEffect(() => () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
@@ -127,10 +131,9 @@ export const OwnProfileEditor = ({
   const photo = photoPreview || coach.profile_image_url || coach.image_url;
   const cover = coverPreview || coach.cover_image_urls?.[0];
   const bio = hasRichTextMarkup(coach.bio) ? stripRichTextToPlainText(coach.bio) : coach.bio ?? "";
-  const ownFaqs: CoachFaqItem[] = Array.isArray(coach.profile_faqs) ? coach.profile_faqs : [];
   const individual = services.filter((s) => s.on && s.format === "individual" && s.price > 0);
   const from = individual.length ? Math.min(...individual.map((s) => s.price)) : 0;
-  const sortedPackages = [...packages].sort((a, b) => a.total_price - b.total_price);
+  const sortedPackages = packages.filter((pkg) => packageKind(pkg) !== "camp").sort((a, b) => a.total_price - b.total_price);
 
   const togglePillar = (title: string) => {
     const on = pillars.includes(title);
@@ -141,17 +144,15 @@ export const OwnProfileEditor = ({
     onField("specialties", on ? pillars.filter((p) => p !== title) : [...pillars, title]);
   };
 
-  const toggleLevel = (level: (typeof PATHWAY_TAGS)[number]) => {
-    const on = levels.includes(level);
-    if (on && levels.length === 1) {
+  // The four levels from sign-up; anything else stored earlier drops off on the next change.
+  const toggleLevel = (level: LevelTag) => {
+    const current = levels.filter((l): l is LevelTag => (LEVEL_TAGS as readonly string[]).includes(l));
+    const on = current.includes(level);
+    if (on && current.length === 1) {
       toast({ title: "Keep at least one level" });
       return;
     }
-    if (!on && levels.length >= MAX_PATHWAY_TAGS) {
-      toast({ title: `Pick up to ${MAX_PATHWAY_TAGS} levels` });
-      return;
-    }
-    onField("pathway_tags", PATHWAY_TAGS.filter((l) => l === level ? !on : levels.includes(l)));
+    onField("pathway_tags", LEVEL_TAGS.filter((l) => (l === level ? !on : current.includes(l))));
   };
 
   const uploadCover = async (file: File) => {
@@ -162,7 +163,7 @@ export const OwnProfileEditor = ({
       toast({ title: "Cover photo updated" });
       onCoachUpdated();
     } catch (err) {
-      toast({ title: "Couldn't upload the cover", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+      toast({ title: "Couldn't upload the cover", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
     } finally {
       setCoverSaving(false);
     }
@@ -174,7 +175,7 @@ export const OwnProfileEditor = ({
       await saveServices(next);
       return true;
     } catch (err) {
-      toast({ title: "Couldn't save session types", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+      toast({ title: "Couldn't save session types", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
       return false;
     }
   };
@@ -214,35 +215,16 @@ export const OwnProfileEditor = ({
       });
   };
 
-  const setFaqs = (next: CoachFaqItem[]) => onField("profile_faqs", next);
-  const addFaq = () => {
-    const id = `faq-${Date.now()}`;
-    setFaqs([...ownFaqs, { id, question: "", answer: "" }]);
-    setTimeout(() => document.getElementById(`faq-q-${id}`)?.focus(), 0);
-  };
-  const removeFaq = (index: number) => {
-    const before = ownFaqs;
-    setFaqs(ownFaqs.filter((_, i) => i !== index));
-    toast({
-      title: "Question removed",
-      action: (
-        <ToastAction altText="Undo remove question" onClick={() => setFaqs(before)}>
-          Undo
-        </ToastAction>
-      ),
-    });
-  };
-  const updateFaq = (index: number, patch: Partial<CoachFaqItem>) => setFaqs(ownFaqs.map((faq, i) => (i === index ? { ...faq, ...patch } : faq)));
 
   const serviceRow = (s: ProfileService) => (
-    <div key={s.id} className="flex items-center gap-[10px] py-[10px] [&+&]:border-t [&+&]:border-[#EAEADF]">
+    <div key={s.id} className="flex items-center gap-[10px] py-[10px] [&+&]:border-t [&+&]:border-light-525">
       <div className={cn("flex min-w-0 flex-1 flex-col gap-1", !s.on && "opacity-55")}>
-        <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{s.name}</span>
+        <span className="text-label-sm text-dark">{s.name}</span>
         <span className={caption}>
           {s.minutes} min · {s.where}
         </span>
       </div>
-      <span className={cn("text-[14px] font-medium tabular-nums text-[#1A202C]", !s.on && "opacity-55")}>{s.price ? money(s.price) : "Not set"}</span>
+      <span className={cn("text-label-sm tabular-nums text-dark", !s.on && "opacity-55")}>{s.price ? money(s.price) : "Not set"}</span>
       <Switch checked={s.on} onCheckedChange={() => toggleService(s)} aria-label={`Show ${s.name}`} />
       <button type="button" className={cn(iconButton, "size-[30px] border-0 bg-transparent")} aria-label={`Edit ${s.name}`} onClick={() => setEditingService(s)}>
         <Pencil strokeWidth={1.5} />
@@ -251,7 +233,7 @@ export const OwnProfileEditor = ({
   );
   const serviceCol = (title: string, sub: string, list: ProfileService[]) =>
     list.length ? (
-      <div className="flex min-w-0 flex-col rounded-[10px] bg-[#F4F4EB] px-[14px] pb-1 pt-3">
+      <div className="flex min-w-0 flex-col rounded-card bg-light-400 px-[14px] pb-1 pt-3">
         <div className="flex items-baseline justify-between gap-2 pb-1">
           <span className={label}>{title}</span>
           {sub ? <span className={caption}>{sub}</span> : null}
@@ -262,28 +244,25 @@ export const OwnProfileEditor = ({
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-[10px] border border-[#CCDDF0] bg-[#E5EDF7] px-4 py-3 text-[#0054B4]">
+      <div className="sticky top-2 z-20 flex flex-wrap items-center gap-3 rounded-card border border-primary-300 bg-primary-50 px-4 py-3 text-primary-700">
         <Pencil className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-        <p className="min-w-0 flex-1 text-[14px] leading-[18px]">
-          <b className="font-semibold">Editing your profile.</b> Changes save when you press Done.
+        <p className="min-w-0 flex-1 text-body-m">
+          <b className="font-medium">Editing your profile.</b> Changes save when you press Done.
         </p>
         <button type="button" className={cn(primaryButton, smallButton)} onClick={onDone} disabled={saving}>
           {saving ? "Saving…" : "Done"}
         </button>
       </div>
 
-      <header className="flex flex-col gap-[10px]">
-        <h1 className={pageTitle}>My Profile</h1>
-        <p className="text-[14px] text-[#767980]">Update anything families see. Turn off what you don't want shown.</p>
-      </header>
+      <PageHeader title="My profile" subtitle="Update anything families see. Turn off what you don't want shown." />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
         <div className="flex min-w-0 flex-col gap-6">
           <section className={card} aria-label="Your profile">
             <div
               className={cn(
-                "relative flex h-[150px] items-center justify-center gap-2 overflow-hidden rounded-[8px] px-4 text-center font-medium",
-                cover ? "bg-[#D9D9CF] text-[#484D56]" : "border border-dashed border-[#C1C1B8] bg-[#F4F4EB] text-[#767980]"
+                "relative flex h-[150px] items-center justify-center gap-2 overflow-hidden rounded-control px-4 text-center font-medium",
+                cover ? "bg-light-550 text-dark-400" : "border border-dashed border-light-600 bg-light-400 text-dark-300"
               )}
             >
               {cover ? (
@@ -313,7 +292,7 @@ export const OwnProfileEditor = ({
             <div className="flex flex-wrap items-start gap-3">
               <div className="flex flex-col items-center gap-1.5">
                 <Avatar name={coach.name} src={photo} size={64} />
-                <label className={cn(textButton, "cursor-pointer text-[12px]")}>
+                <label className={cn(textButton, "cursor-pointer text-caption")}>
                   {photo ? "Change photo" : "Add photo"}
                   <input
                     type="file"
@@ -331,8 +310,8 @@ export const OwnProfileEditor = ({
               </div>
               <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                 <div className="flex flex-wrap items-center gap-2">
-                  <span className="text-[24px] font-semibold leading-[28px] tracking-[-0.05em] text-[#1A202C]">{coach.name}</span>
-                  {coach.is_verified ? <BadgeCheck className="size-[18px] fill-[#0054B4] text-[#F7F7F0]" aria-label="Verified" /> : null}
+                  <span className="text-section text-dark">{coach.name}</span>
+                  {coach.is_verified ? <BadgeCheck className="size-5 shrink-0 text-primary" strokeWidth={1.5} aria-label="Verified" /> : null}
                   {coach.sport ? <BrandPill tone="teal">{coach.sport.charAt(0).toUpperCase() + coach.sport.slice(1)}</BrandPill> : null}
                 </div>
                 <div className="grid max-w-[420px] grid-cols-1 gap-4 sm:grid-cols-2">
@@ -380,39 +359,39 @@ export const OwnProfileEditor = ({
             <div className={field}>
               <span className={label}>Levels you coach</span>
               <div className="flex flex-wrap gap-2">
-                {PATHWAY_TAGS.map((level) => {
-                  const on = levels.includes(level);
+                {LEVEL_OPTIONS.map(({ label: levelName, tag }) => {
+                  const on = levels.includes(tag);
                   return (
-                    <button key={level} type="button" aria-pressed={on} className={chip(on)} onClick={() => toggleLevel(level)}>
+                    <button key={tag} type="button" aria-pressed={on} className={chip(on)} onClick={() => toggleLevel(tag)}>
                       {on ? <Check strokeWidth={2} aria-hidden="true" /> : null}
-                      {level}
+                      {levelName}
                     </button>
                   );
                 })}
               </div>
-              <span className={help}>Shown on your profile. The same levels athletes pick on theirs.</span>
+              <span className={help}>Shown on your profile. The same four levels athletes pick when they sign up.</span>
             </div>
 
             <label className={field}>
               <span className={label}>About you</span>
               <textarea
-                className={cn(input, "h-auto py-2 leading-[20px]")}
+                className={cn(input, "h-auto py-2 text-paragraph")}
                 rows={4}
                 maxLength={Math.max(BIO_MAX, bio.length)}
                 placeholder="Your background, who you coach and how a session runs"
                 value={bio}
                 onChange={(e) => onField("bio", e.target.value)}
               />
-              <span className={cn(help, bio.length > BIO_MAX && "text-[#972B2B]")}>
+              <span className={cn(help, bio.length > BIO_MAX && "text-error-700")}>
                 {bio.length} of {BIO_MAX} characters
               </span>
             </label>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] bg-[#F4F4EB] px-4 py-3">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-control bg-light-400 px-4 py-3">
               <span className="flex min-w-0 items-center gap-2.5">
-                <Video className="size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                <Video className="size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                 <span className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[14px] font-medium text-[#1A202C]">Coaching video</span>
+                  <span className="text-label-sm text-dark">Coaching video</span>
                   <span className={cn(caption, "truncate")}>{coachingVideoUrl || "A 30 to 90 second clip of you coaching"}</span>
                 </span>
               </span>
@@ -421,7 +400,7 @@ export const OwnProfileEditor = ({
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-4 border-t border-[#EAEADF] pt-[14px] md:grid-cols-4">
+            <div className="grid grid-cols-2 gap-4 border-t border-light-525 pt-[14px] md:grid-cols-4">
               {[
                 ["Individual sessions", from ? `From ${money(from)}` : "Not set"],
                 ["Locations", (coach.locations ?? []).join(", ") || locationLabel || "Not set"],
@@ -430,7 +409,7 @@ export const OwnProfileEditor = ({
               ].map(([l, v]) => (
                 <div key={l} className="flex min-w-0 flex-col gap-1">
                   <span className={label}>{l}</span>
-                  <span className="break-words text-[14px] font-medium text-[#1A202C]">{v}</span>
+                  <span className="break-words text-label-sm text-dark">{v}</span>
                 </div>
               ))}
             </div>
@@ -452,7 +431,7 @@ export const OwnProfileEditor = ({
             <span className={label}>Packages</span>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
               {sortedPackages.map((p) => (
-                <div key={p.id} className="flex flex-col gap-1.5 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px]">
+                <div key={p.id} className="flex flex-col gap-1.5 rounded-control bg-light-400 px-4 py-[14px]">
                   {p.id === mostBookedId ? (
                     <BrandPill tone="blue" className="self-start">
                       Most booked
@@ -463,8 +442,8 @@ export const OwnProfileEditor = ({
                       Not for sale
                     </BrandPill>
                   ) : null}
-                  <span className={cn("text-[14px] font-medium text-[#1A202C]", !p.is_active && "opacity-60")}>{p.package_name}</span>
-                  <span className={cn("text-[28px] font-bold leading-[30px] tracking-[-0.05em] text-[#1A202C]", !p.is_active && "opacity-60")}>{money(p.total_price / 100)}</span>
+                  <span className={cn("text-label-sm text-dark", !p.is_active && "opacity-60")}>{p.package_name}</span>
+                  <span className={cn("text-highlight text-dark", !p.is_active && "opacity-60")}>{money(p.total_price / 100)}</span>
                   <span className={caption}>
                     {money(p.total_price / 100 / Math.max(1, p.session_count))} per session · valid {p.validity_days} days
                   </span>
@@ -473,7 +452,7 @@ export const OwnProfileEditor = ({
                       Edit
                     </button>
                     {p.is_active ? (
-                      <button type="button" className={cn(textButton, "text-[#767980]")} onClick={() => void setPackageActive(p, false)}>
+                      <button type="button" className={cn(textButton, "text-dark-300")} onClick={() => void setPackageActive(p, false)}>
                         Remove
                       </button>
                     ) : (
@@ -486,13 +465,23 @@ export const OwnProfileEditor = ({
               ))}
               <button
                 type="button"
-                className="flex min-h-[80px] items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#C1C1B8] bg-[#F4F4EB] font-medium text-[#0054B4] hover:border-[#6698D2]"
+                className="flex min-h-[80px] items-center justify-center gap-2 rounded-control border border-dashed border-light-600 bg-light-400 text-label-sm text-primary hover:border-primary-300"
                 onClick={() => onEditPackage(null)}
               >
                 <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 Add package
               </button>
+              <button
+                type="button"
+                className="flex min-h-[80px] items-center justify-center gap-2 rounded-control border border-dashed border-light-600 bg-light-400 text-label-sm text-primary hover:border-primary-300"
+                onClick={() => setCampDraft(null)}
+              >
+                <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+                Add camp
+              </button>
             </div>
+
+            <CampEditorList coachId={coach.id} mostBookedId={mostBookedId} onEdit={(camp) => setCampDraft(camp)} />
 
             <span className={cn(label, "-mb-1.5")}>Single sessions</span>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
@@ -507,11 +496,11 @@ export const OwnProfileEditor = ({
               <Plus strokeWidth={1.5} aria-hidden="true" />
               Add session type
             </button>
-            <div className="flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] px-[14px] py-3 text-[12px] leading-[14px] text-[#767980]">
+            <div className="flex items-start gap-[10px] rounded-control bg-light-400 px-[14px] py-3 text-caption text-dark-300">
               <ShieldCheck className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span>
                 {cancelHours} hours notice for a session credit. Booking up to {windowWeeks} weeks ahead.{" "}
-                <Link to={ROUTES.SCHEDULE_SETTINGS} className="font-medium text-[#0054B4] hover:underline">
+                <Link to={ROUTES.SCHEDULE_SETTINGS} className="font-medium text-primary hover:underline">
                   Edit booking rules
                 </Link>
               </span>
@@ -527,19 +516,19 @@ export const OwnProfileEditor = ({
               {(coach.certifications ?? [])
                 .filter((cert) => (cert.certification_name ?? "").trim().toLowerCase() !== "background check")
                 .map((cert, i) => (
-                <div key={cert.id ?? i} className="flex items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-4">
-                  <span className="flex size-8 shrink-0 items-center justify-center rounded-[8px] bg-[#CBE7D1] text-[#1E7431]">
+                <div key={cert.id ?? i} className="flex items-center gap-3 rounded-card border border-light-525 bg-light-400 p-4">
+                  <span className="flex size-8 shrink-0 items-center justify-center rounded-control border border-success-300 bg-success-100 text-success-700">
                     <Check className="size-4" strokeWidth={2} aria-hidden="true" />
                   </span>
                   <span className="flex min-w-0 flex-col gap-1">
-                    <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{cert.certification_name || "Certification"}</span>
+                    <span className="text-subtitle">{cert.certification_name || "Certification"}</span>
                     {cert.issuing_organization ? <span className={caption}>{cert.issuing_organization}</span> : null}
                   </span>
                 </div>
               ))}
               <button
                 type="button"
-                className="flex min-h-[80px] items-center justify-center gap-2 rounded-[8px] border border-dashed border-[#C1C1B8] bg-[#F4F4EB] font-medium text-[#0054B4] hover:border-[#6698D2]"
+                className="flex min-h-[80px] items-center justify-center gap-2 rounded-control border border-dashed border-light-600 bg-light-400 text-label-sm text-primary hover:border-primary-300"
                 onClick={onEditCertifications}
               >
                 {coach.certifications?.length ? <Pencil className="size-4" strokeWidth={1.5} aria-hidden="true" /> : <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />}
@@ -557,113 +546,11 @@ export const OwnProfileEditor = ({
             <span className={caption}>Complete profiles show first in marketplace search.</span>
           </section>
 
-          <section className={card} aria-label="Quick info">
-            <h2 className={h2}>Quick info</h2>
-            <div className="flex flex-col gap-[10px]">
-              <label className={field}>
-                <span className={label}>Response time</span>
-                <select className={input} value={String(coach.response_time_hours ?? 24)} onChange={(e) => onField("response_time_hours", Number(e.target.value))}>
-                  {RESPONSE_TIMES.map((h) => (
-                    <option key={h} value={h}>
-                      {repliesLabel(h)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-              <label className={field}>
-                <span className={label}>Where you coach</span>
-                <input
-                  className={input}
-                  placeholder="Zilker Park, Round Rock"
-                  value={placesDraft}
-                  onChange={(e) => {
-                    setPlacesDraft(e.target.value);
-                    onField("locations", e.target.value.split(",").map((s) => s.trim()).filter(Boolean));
-                  }}
-                />
-              </label>
-              <label className={field}>
-                <span className={label}>Languages</span>
-                <input
-                  className={input}
-                  placeholder="English, Spanish"
-                  value={languagesDraft}
-                  onChange={(e) => {
-                    setLanguagesDraft(e.target.value);
-                    onField("languages", e.target.value.split(",").map((s) => s.trim()).filter(Boolean));
-                  }}
-                />
-              </label>
-              <div className={field}>
-                <span className={label}>Ages you coach</span>
-                <div className="flex items-center gap-2">
-                  <select
-                    className={input}
-                    aria-label="Youngest age"
-                    value={coach.age_min ?? ""}
-                    onChange={(e) => onField("age_min", e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">From</option>
-                    {AGE_OPTIONS.map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                  </select>
-                  <span className="text-[14px] text-[#767980]">to</span>
-                  <select
-                    className={input}
-                    aria-label="Oldest age"
-                    value={coach.age_max ?? ""}
-                    onChange={(e) => onField("age_max", e.target.value ? Number(e.target.value) : null)}
-                  >
-                    <option value="">To</option>
-                    {AGE_OPTIONS.filter((a) => a >= (coach.age_min ?? 0)).map((a) => (
-                      <option key={a} value={a}>
-                        {a}
-                      </option>
-                    ))}
-                    <option value={AGE_AND_UP}>and up</option>
-                  </select>
-                </div>
-              </div>
-            </div>
-          </section>
-
-          <section className={card} aria-label="FAQ">
-            <h2 className={h2}>FAQ</h2>
-            <div className="flex flex-col gap-3">
-              {!ownFaqs.length ? <p className={help}>Families see AthaNext's general questions until you add your own.</p> : null}
-              {ownFaqs.map((faq, index) => (
-                <div key={faq.id} className="flex flex-col gap-2 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px]">
-                  <div className="flex items-center gap-2">
-                    <input
-                      id={`faq-q-${faq.id}`}
-                      className={cn(input, "bg-[#F7F7F0]")}
-                      placeholder="Question"
-                      aria-label="Question"
-                      value={faq.question}
-                      onChange={(e) => updateFaq(index, { question: e.target.value })}
-                    />
-                    <button type="button" className={cn(iconButton, "shrink-0 border-0 bg-transparent")} aria-label="Remove question" onClick={() => removeFaq(index)}>
-                      <Trash2 strokeWidth={1.5} />
-                    </button>
-                  </div>
-                  <textarea
-                    className={cn(input, "h-auto bg-[#F7F7F0] py-2 leading-[18px]")}
-                    rows={2}
-                    placeholder="Answer"
-                    aria-label="Answer"
-                    value={faq.answer}
-                    onChange={(e) => updateFaq(index, { answer: e.target.value })}
-                  />
-                </div>
-              ))}
-              <button type="button" className={cn(textButton, "self-start")} onClick={addFaq}>
-                <Plus strokeWidth={1.5} aria-hidden="true" />
-                Add question
-              </button>
-            </div>
+          {/* Quick info and FAQs are managed by AthaNext in the database, not typed in by coaches
+              (Michael's change log, 2026-10-19). Families still see them on the profile. */}
+          <section className={card} aria-label="Quick info and FAQs">
+            <h2 className={h2}>Quick info and FAQs</h2>
+            <p className={help}>AthaNext keeps these up to date for every coach. To change yours, message support from Help.</p>
           </section>
 
           <GearAndDealsCard
@@ -692,6 +579,14 @@ export const OwnProfileEditor = ({
       </div>
 
       <ServiceEditorDialog service={editingService} onClose={() => setEditingService(null)} onSave={saveService} onDelete={deleteService} />
+      <CampEditorDialog
+        open={campDraft !== undefined}
+        camp={campDraft ?? null}
+        coachId={coach.id}
+        onOpenChange={(open) => {
+          if (!open) setCampDraft(undefined);
+        }}
+      />
     </div>
   );
 };

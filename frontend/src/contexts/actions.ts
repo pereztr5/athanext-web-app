@@ -144,8 +144,8 @@ export const signIn = async (
   }
 
   toast({
-    title: "Welcome back!",
-    description: "You've been successfully signed in.",
+    title: "Welcome back",
+    description: "You're signed in.",
   });
 
   return { error: null };
@@ -184,12 +184,12 @@ export const signOut = async (
   if (response.error) {
     toast({
       title: "Signed out",
-      description: "You've been successfully signed out.",
+      description: "You're signed out.",
     });
   } else {
     toast({
       title: "Signed out",
-      description: "You've been successfully signed out.",
+      description: "You're signed out.",
     });
   }
 
@@ -261,7 +261,7 @@ export const changePassword = async (
     const error = new Error("No authenticated user.");
     toast({
       title: "Unable to update password",
-      description: "Please sign in again and try changing your password.",
+      description: "Sign in again and try changing your password.",
       variant: "destructive",
     });
     return { error };
@@ -275,15 +275,21 @@ export const changePassword = async (
     });
 
   if (verifyError) {
-    toast({
-      title: "Incorrect current password",
-      description: "Please double-check your current password and try again.",
-      variant: "destructive",
-    });
-    return { error: verifyError };
+    const text = verifyError.message?.toLowerCase() ?? "";
+    const wrongPassword =
+      verifyError.status === 400 ||
+      text.includes("invalid login") ||
+      text.includes("invalid credentials");
+    return {
+      error: new Error(wrongPassword ? "That password isn't right" : "Couldn't update your password. Try again."),
+    };
   }
 
-  return updatePassword(newPassword, toast);
+  const response = await authAPI.updatePassword(newPassword);
+  if (response.error) {
+    return { error: new Error("Couldn't update your password. Try again.") };
+  }
+  return { error: null };
 };
 
 /**

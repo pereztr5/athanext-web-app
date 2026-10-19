@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CircleCheck, Copy, MessageCircle, MessageSquare, Search, UserCheck, Users } from "lucide-react";
+import { Check, CircleCheck, Copy, MessageCircle, MessageSquare, Search, UserCheck, Users } from "@/components/icons";
 import { chatAPI } from "@/api";
 import { rosterAPI } from "@/api/roster";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
@@ -54,7 +54,7 @@ export const ShareSession = ({
   const [step, setStep] = useState<"share" | "assign">("share");
 
   const athletesQuery = useQuery({ queryKey: ["schedule-athlete-options"], queryFn: () => scheduleAPI.athleteOptions() });
-  // Same query as My Athletes, for photos.
+  // Same query as My athletes, for photos.
   const rosterQuery = useQuery({ queryKey: ["coach-roster"], queryFn: () => rosterAPI.roster() });
   const channelsQuery = useQuery({
     queryKey: ["coach-channels", coachId, "owner"],
@@ -107,7 +107,7 @@ export const ShareSession = ({
     onError: (error: unknown) =>
       toast({
         title: "Couldn't send it",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: error instanceof Error ? error.message : "Try again.",
         variant: "destructive",
       }),
   });
@@ -153,7 +153,7 @@ export const ShareSession = ({
 
       <span className={label}>Send to athletes</span>
       <label className="relative flex items-center">
-        <Search className="pointer-events-none absolute left-3 size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <Search className="pointer-events-none absolute left-3 size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <input
           className={cn(input, "pl-9")}
           value={query}

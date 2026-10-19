@@ -1,7 +1,7 @@
 /** Family booking sheet for a free intro call (Working Copy `intro-book`): day, time, answers. */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "@/components/icons";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { introCallsAPI, type CoachIntro } from "@/api/introCalls";
 import {
@@ -101,13 +101,13 @@ export const IntroBookingDialog = ({
           <>
             <SheetHeader title="Intro call booked" />
             <div className="flex flex-col items-center gap-3 px-5 pb-1 pt-3 text-center sm:px-[25px]">
-              <span className="flex size-14 items-center justify-center rounded-full bg-[#CBE7D1] text-[#1E7431]">
+              <span className="flex size-14 items-center justify-center rounded-full border border-success-300 bg-success-100 text-success-700">
                 <Check className="size-6" strokeWidth={2} aria-hidden="true" />
               </span>
-              <span className="text-[16px] font-medium leading-[20px] tracking-[-0.05em] text-[#1A202C]">
+              <span className="text-subtitle text-dark">
                 {introWhen(done, timeZone)} · {intro.minutes} min with {coachName}
               </span>
-              <p className="max-w-[420px] text-[14px] leading-[20px] text-[#767980]">
+              <p className="max-w-[420px] text-paragraph text-dark-300">
                 {video ? `Join from ${coachFirst}'s profile at the time.` : `${coachFirst} calls you at the time.`} {coachFirst} has your answers ahead of the call.{" "}
                 {parent} joins as {athleteFirst}'s parent.
               </p>
@@ -126,7 +126,7 @@ export const IntroBookingDialog = ({
             />
             <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
               {!days.length ? (
-                <p className="rounded-[8px] bg-[#F4F4EB] px-[14px] py-3 text-[14px] leading-[20px] text-[#484D56]">
+                <p className="rounded-control border border-light-525 bg-light-400 px-[14px] py-3 text-paragraph text-dark-400">
                   {coachFirst} has no open times in the next two weeks. Check back soon or send a message.
                 </p>
               ) : (
@@ -145,7 +145,7 @@ export const IntroBookingDialog = ({
                             aria-label={formatDayISO(d.date, { weekday: "long", month: "long", day: "numeric" })}
                             onClick={() => pickDay(d.date)}
                           >
-                            <small className={cn(dayTileWeekday(on), "text-[11px] font-semibold uppercase tracking-[0.02em]")}>
+                            <small className={dayTileWeekday(on)}>
                               {formatDayISO(d.date, { weekday: "short" })}
                             </small>
                             <b className={dayTileNumber}>{formatDayISO(d.date, { day: "numeric" })}</b>
@@ -160,7 +160,7 @@ export const IntroBookingDialog = ({
                       {times.map((t) => {
                         const on = t === slot;
                         return (
-                          <button key={t} type="button" className={cn(timeTile(on), "h-[38px] px-[14px] text-[14px] font-medium")} aria-pressed={on} onClick={() => setSlot(t)}>
+                          <button key={t} type="button" className={cn(timeTile(on), "h-[38px] px-[14px] text-label-sm")} aria-pressed={on} onClick={() => setSlot(t)}>
                             {formatClock(new Date(t), timeZone)}
                           </button>
                         );
@@ -179,7 +179,7 @@ export const IntroBookingDialog = ({
                     <input className={input} value={answers[i] ?? ""} maxLength={500} onChange={(e) => setAnswers((a) => a.map((x, j) => (j === i ? e.target.value : x)))} />
                   ) : (
                     <textarea
-                      className={cn(input, "h-auto py-2.5 leading-[18px]")}
+                      className={cn(input, "h-auto py-2.5 text-paragraph")}
                       rows={2}
                       value={answers[i] ?? ""}
                       maxLength={500}
@@ -189,8 +189,8 @@ export const IntroBookingDialog = ({
                   )}
                 </label>
               ))}
-              <div className="flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] px-[14px] py-3">
-                <ShieldCheck className="mt-px size-[18px] flex-none text-[#117A96]" strokeWidth={1.5} aria-hidden="true" />
+              <div className="flex items-start gap-[10px] rounded-control border border-light-525 bg-light-400 px-[14px] py-3">
+                <ShieldCheck className="mt-px size-[18px] flex-none text-secondary-600" strokeWidth={1.5} aria-hidden="true" />
                 <span className="flex flex-col gap-1">
                   <span className={mText}>
                     {parent} joins as {athleteFirst}'s parent
@@ -203,7 +203,7 @@ export const IntroBookingDialog = ({
                 </span>
               </div>
               {error ? (
-                <p role="alert" className="text-[14px] text-[#972B2B]">
+                <p role="alert" className="text-body-m text-error-700">
                   {error}
                 </p>
               ) : null}

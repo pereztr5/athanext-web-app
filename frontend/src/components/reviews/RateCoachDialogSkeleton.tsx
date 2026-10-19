@@ -9,16 +9,16 @@ type RateCoachDialogSkeletonProps = {
 export const RateCoachDialogSkeleton = ({ className }: RateCoachDialogSkeletonProps) => (
   <div className={cn("flex flex-col gap-5", className)} aria-hidden="true">
     <div className="flex flex-col gap-[10px]">
-      <Skeleton className="h-[18px] w-32 rounded-[4px] bg-[#EAEADF]" />
+      <Skeleton className="h-[18px] w-32 rounded-pill bg-light-525" />
       <div className="flex items-center gap-1.5">
         {[1, 2, 3, 4, 5].map((i) => (
-          <Skeleton key={i} className="h-6 w-6 rounded-[4px] bg-[#EAEADF]" />
+          <Skeleton key={i} className="h-6 w-6 rounded-pill bg-light-525" />
         ))}
       </div>
     </div>
     <div className="flex flex-col gap-[10px]">
-      <Skeleton className="h-[18px] w-32 rounded-[4px] bg-[#EAEADF]" />
-      <Skeleton className="h-[90px] w-full rounded-[8px] bg-[#F1F1E6]" />
+      <Skeleton className="h-[18px] w-32 rounded-pill bg-light-525" />
+      <Skeleton className="h-[90px] w-full rounded-control bg-light" />
     </div>
   </div>
 );

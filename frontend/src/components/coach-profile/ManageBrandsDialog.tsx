@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, Pencil, Plus, X } from "lucide-react";
+import { ArrowDown, ArrowUp, Pencil, Plus, X } from "@/components/icons";
 import {
   Dialog,
   DialogContent,
@@ -52,11 +52,11 @@ const emptyForm = (name = ""): BrandForm => ({
 
 function BrandThumb({ brand }: { brand: Pick<Brand, "name" | "logo_url"> }) {
   return (
-    <span className="flex h-8 w-14 shrink-0 items-center justify-center rounded-[6px] border border-[#EAEADF] bg-white">
+    <span className="flex h-8 w-14 shrink-0 items-center justify-center rounded-control border border-light-525 bg-light-50">
       {brand.logo_url ? (
         <img src={brand.logo_url} alt="" className="max-h-6 max-w-12 object-contain" />
       ) : (
-        <span className="text-[12px] font-medium text-[#A3A6AB]">{brand.name.slice(0, 2)}</span>
+        <span className="text-label-xsm text-dark-300">{brand.name.slice(0, 2)}</span>
       )}
     </span>
   );
@@ -156,7 +156,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
     } catch (error) {
       toast({
         title: "Could not save brand",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: error instanceof Error ? error.message : "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -174,7 +174,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
     } catch (error) {
       toast({
         title: "Could not save brands",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: error instanceof Error ? error.message : "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -192,12 +192,12 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
 
         <div className="flex flex-col gap-2">
           {draft.length === 0 ? (
-            <p className="text-sm text-muted-foreground">No brands yet.</p>
+            <p className="text-body-m text-dark-300">No brands yet.</p>
           ) : (
             draft.map((brand, index) => (
-              <div key={brand.id} className="flex items-center gap-3 rounded-[8px] border border-[#EAEADF] p-2">
+              <div key={brand.id} className="flex items-center gap-3 rounded-control border border-light-525 p-2">
                 <BrandThumb brand={brand} />
-                <span className="min-w-0 flex-1 truncate text-sm font-medium">{brand.name}</span>
+                <span className="min-w-0 flex-1 truncate text-label-sm text-dark">{brand.name}</span>
                 <Button
                   type="button"
                   variant="ghost"
@@ -207,7 +207,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                   onClick={() => moveBrand(index, -1)}
                   aria-label={`Move ${brand.name} up`}
                 >
-                  <ArrowUp className="size-4" />
+                  <ArrowUp className="size-4" strokeWidth={1.5} />
                 </Button>
                 <Button
                   type="button"
@@ -218,7 +218,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                   onClick={() => moveBrand(index, 1)}
                   aria-label={`Move ${brand.name} down`}
                 >
-                  <ArrowDown className="size-4" />
+                  <ArrowDown className="size-4" strokeWidth={1.5} />
                 </Button>
                 {canEdit(brand) ? (
                   <Button
@@ -237,7 +237,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                     }
                     aria-label={`Edit ${brand.name}`}
                   >
-                    <Pencil className="size-4" />
+                    <Pencil className="size-4" strokeWidth={1.5} />
                   </Button>
                 ) : null}
                 <Button
@@ -248,7 +248,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                   onClick={() => setDraft((prev) => prev.filter((b) => b.id !== brand.id))}
                   aria-label={`Remove ${brand.name}`}
                 >
-                  <X className="size-4" />
+                  <X className="size-4" strokeWidth={1.5} />
                 </Button>
               </div>
             ))
@@ -256,8 +256,8 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
         </div>
 
         {form ? (
-          <div className="flex flex-col gap-3 rounded-[8px] border border-[#EAEADF] p-3">
-            <p className="text-sm font-medium">{form.brandId ? "Edit brand" : "Create new brand"}</p>
+          <div className="flex flex-col gap-3 rounded-control border border-light-525 p-3">
+            <p className="text-label-sm text-dark">{form.brandId ? "Edit brand" : "Create new brand"}</p>
             <div className="flex flex-col gap-1.5">
               <Label htmlFor="brand-name">Name</Label>
               <Input
@@ -267,7 +267,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                 onChange={(e) => setForm({ ...form, name: e.target.value })}
               />
               {duplicateOfOther ? (
-                <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
+                <div className="flex items-center justify-between gap-2 text-body-m text-dark-300">
                   <span>“{duplicateOfOther.name}” already exists.</span>
                   {!form.brandId ? (
                     <Button type="button" size="sm" variant="outline" onClick={() => addBrand(duplicateOfOther)}>
@@ -299,14 +299,14 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                   onChange={(e) => handleLogoChange(e.target.files?.[0])}
                 />
               </div>
-              <p className="text-xs text-muted-foreground">PNG, JPG, WebP or SVG, up to 2MB.</p>
+              <p className="text-caption text-dark-300">PNG, JPG, WebP or SVG, up to 2MB.</p>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="outline" onClick={() => setForm(null)} disabled={savingForm}>
                 Cancel
               </Button>
               <Button type="button" onClick={handleSaveBrand} disabled={savingForm || Boolean(duplicateOfOther)}>
-                {savingForm ? "Saving..." : form.brandId ? "Save brand" : "Create brand"}
+                {savingForm ? "Saving…" : form.brandId ? "Save brand" : "Create brand"}
               </Button>
             </div>
           </div>
@@ -317,12 +317,12 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
               <button
                 key={brand.id}
                 type="button"
-                className="flex items-center gap-3 rounded-[8px] p-2 text-left hover:bg-[#F4F4EB]"
+                className="flex items-center gap-3 rounded-control p-2 text-left hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onClick={() => addBrand(brand)}
               >
                 <BrandThumb brand={brand} />
-                <span className="min-w-0 flex-1 truncate text-sm">{brand.name}</span>
-                <Plus className="size-4 text-[#767980]" />
+                <span className="min-w-0 flex-1 truncate text-body-m text-dark">{brand.name}</span>
+                <Plus className="size-4 text-dark-300" strokeWidth={1.5} />
               </button>
             ))}
             {!exactMatch ? (
@@ -332,7 +332,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
                 className="self-start"
                 onClick={() => setForm(emptyForm(cleanBrandName(query)))}
               >
-                <Plus className="size-4" />
+                <Plus className="size-4" strokeWidth={1.5} />
                 {cleanBrandName(query) ? `Create “${cleanBrandName(query)}”` : "Create new brand"}
               </Button>
             ) : null}
@@ -344,7 +344,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
             Cancel
           </Button>
           <Button type="button" onClick={handleSave} disabled={saving || savingForm || Boolean(form)}>
-            {saving ? "Saving..." : "Save"}
+            {saving ? "Saving…" : "Save"}
           </Button>
         </DialogFooter>
       </DialogContent>

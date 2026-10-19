@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, ChevronRight, Lock, Pencil, Plus, Video } from "lucide-react";
+import { CalendarPlus, ChevronRight, Lock, Pencil, Plus, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { athleteHomeAPI, type AthleteProfileEdit } from "@/api/athleteHome";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -23,7 +23,7 @@ import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatDayISO, plural } from "@/utils/schedule";
 import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
 
-const h3 = "text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]";
+const h3 = "text-subtitle text-dark";
 const splitName = (full: string) => {
   const parts = full.trim().split(/\s+/);
   return { first: parts[0] ?? "", last: parts.slice(1).join(" ") };
@@ -34,7 +34,7 @@ const initials = (name: string) =>
 
 const Avatar = ({ name, photo, size, className }: { name: string; photo: string | null; size: number; className?: string }) => (
   <span
-    className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] font-medium text-[#0054B4]", className)}
+    className={cn("inline-flex shrink-0 items-center justify-center overflow-hidden rounded-full bg-primary-50 font-medium text-primary", className)}
     style={{ width: size, height: size, fontSize: size / 2.6 }}
   >
     {photo ? <img src={photo} alt="" className="size-full object-cover" /> : initials(name)}
@@ -61,8 +61,8 @@ export const AthleteHome = () => {
   }
   if (!a) {
     return (
-      <div className="mx-auto flex max-w-[640px] flex-col items-center gap-3 px-4 py-16 text-center">
-        <h1 className="text-[24px] font-semibold">Set up your athlete profile</h1>
+      <div className="mx-auto flex max-w-wrapper-focused flex-col items-center gap-3 px-4 py-16 text-center">
+        <h1 className="text-section">Set up your athlete profile</h1>
         <p className={meta}>Add the athlete's details so coaches can plan sessions.</p>
         <Link to={ROUTES.CREATE_ATHLETE_PROFILE} className={primaryButton}>Create profile</Link>
       </div>
@@ -85,12 +85,12 @@ export const AthleteHome = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-5">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-5">
         <section className={cn(card, "flex-row flex-wrap items-center gap-5 max-[820px]:gap-3.5")}>
-          <Avatar name={a.fullName} photo={a.photo} size={80} className="max-[820px]:!size-14 max-[820px]:!text-[18px]" />
+          <Avatar name={a.fullName} photo={a.photo} size={80} className="max-[820px]:!size-14 max-[820px]:!text-subtitle" />
           <div className="flex min-w-0 flex-1 flex-col gap-2 max-[820px]:basis-[calc(100%-80px)]">
             <h1 className={pageTitle}>{a.fullName || "Your athlete"}</h1>
-            {line ? <span className="text-[14px] text-[#767980]">{line}</span> : null}
+            {line ? <span className="text-body-m text-dark-300">{line}</span> : null}
             <div className="flex flex-wrap gap-1.5">
               {a.sport ? <BrandPill tone="teal">{sportLabel(a.sport)}</BrandPill> : null}
               {a.pathway ? <BrandPill tone="neutral">{a.pathway}</BrandPill> : null}
@@ -109,16 +109,16 @@ export const AthleteHome = () => {
         </section>
 
         {done < items.length ? (
-          <section className={cn(card, "border-[#99BBE1]")}>
+          <section className={cn(card, "border-primary-200")}>
             <div className="flex items-start justify-between gap-3">
               <div className="flex flex-col gap-1">
                 <span className={h3}>Finish {whose} profile</span>
                 <span className={meta}>Coaches use this to plan {whose} sessions</span>
               </div>
-              <span className="text-[14px] font-medium">{done} of {items.length}</span>
+              <span className="text-label-sm">{done} of {items.length}</span>
             </div>
-            <div className="h-[5px] overflow-hidden rounded-full bg-[#D9D9CF]" aria-hidden="true">
-              <div className="h-full rounded-full bg-[#0054B4]" style={{ width: `${Math.round((done / items.length) * 100)}%` }} />
+            <div className="h-[5px] overflow-hidden rounded-full bg-light-550" aria-hidden="true">
+              <div className="h-full rounded-full bg-primary" style={{ width: `${Math.round((done / items.length) * 100)}%` }} />
             </div>
             <div className="flex flex-wrap gap-2">
               {items.filter((i) => !i.done).map((i) => (
@@ -139,18 +139,18 @@ export const AthleteHome = () => {
             </div>
             {next ? (
               <Link to={`/sessions/${next.id}`} className="flex items-center gap-3 text-left hover:opacity-90">
-                <span className="flex size-11 shrink-0 flex-col items-center justify-center rounded-[8px] bg-[#F4F4EB]">
-                  <small className="text-[10px] font-medium uppercase leading-[12px] text-[#767980]">{formatDateInZone(new Date(next.start), timeZone, { weekday: "short" })}</small>
-                  <b className="text-[16px] font-bold leading-[18px]">{formatDateInZone(new Date(next.start), timeZone, { day: "numeric" })}</b>
+                <span className="flex size-11 shrink-0 flex-col items-center justify-center rounded-control border border-light-525 bg-light-400">
+                  <small className="text-label-xsm text-dark-300">{formatDateInZone(new Date(next.start), timeZone, { weekday: "short" })}</small>
+                  <b className="text-subtitle">{formatDateInZone(new Date(next.start), timeZone, { day: "numeric" })}</b>
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                  <b className="truncate text-[14px] font-medium">{next.title} with {next.coachName}</b>
+                  <b className="truncate text-label-sm">{next.title} with {next.coachName}</b>
                   <span className={meta}>
                     {formatInstantSpan(new Date(next.start), new Date(next.end), timeZone)}
                     {next.place ? ` · ${next.place === "online" ? "Video call" : next.place === "in-person" ? "In person" : next.place}` : ""}
                   </span>
                 </span>
-                <ChevronRight className="size-4 shrink-0 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                <ChevronRight className="size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
               </Link>
             ) : (
               <>
@@ -162,9 +162,9 @@ export const AthleteHome = () => {
               </>
             )}
             {focus ? (
-              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
+              <div className="flex flex-wrap items-baseline gap-x-2 gap-y-1 rounded-control bg-light-400 px-3 py-2.5">
                 <span className={label}>Working on</span>
-                <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{focus.text}</span>
+                <span className="text-label-sm text-dark">{focus.text}</span>
                 <span className={meta}>
                   From {focus.coachName.split(" ")[0]}'s feedback, {formatDayISO(focus.date, { month: "short", day: "numeric" })}
                 </span>
@@ -178,13 +178,13 @@ export const AthleteHome = () => {
               <Link to={ROUTES.COACHES} className={textButton}>Find a coach</Link>
             </div>
             {coaches.length ? (
-              <ul className="flex flex-col divide-y divide-[#EAEADF]">
+              <ul className="flex flex-col divide-y divide-light-525">
                 {coaches.map((c) => (
                   <li key={c.id}>
                     <Link to={coachProfilePath(c.slug || c.id)} className="flex items-center gap-3 py-2.5 hover:opacity-90">
                       <Avatar name={c.name} photo={c.photo} size={36} />
                       <span className="flex min-w-0 flex-1 flex-col">
-                        <b className="truncate text-[14px] font-medium">{c.name}</b>
+                        <b className="truncate text-label-sm">{c.name}</b>
                         <span className={meta}>
                           {c.nextDate ? `Next: ${formatDayISO(c.nextDate, { weekday: "short", month: "short", day: "numeric" })}` : "No session booked"}
                         </span>
@@ -213,17 +213,17 @@ export const AthleteHome = () => {
               <div key={l} className="flex flex-col gap-1">
                 <span className={label}>{l}</span>
                 {v ? (
-                  <span className="text-[14px] text-[#1A202C]">{v}</span>
+                  <span className="text-body-m text-dark">{v}</span>
                 ) : (
                   <button type="button" className={cn(textButton, "self-start")} onClick={() => setEditing("open")}>Add</button>
                 )}
               </div>
             ))}
           </div>
-          <div className="flex flex-col gap-1 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
+          <div className="flex flex-col gap-1 rounded-control bg-light-400 px-3 py-2.5">
             <span className={label}>Season goal</span>
             {a.seasonGoal ? (
-              <span className="text-[14px] font-medium text-[#1A202C]">{a.seasonGoal}</span>
+              <span className="text-label-sm text-dark">{a.seasonGoal}</span>
             ) : (
               <button type="button" className={cn(textButton, "self-start text-left")} onClick={() => setEditing("goal")}>
                 Add a goal so coaches know what {isParent ? `${first} is` : "you're"} working toward
@@ -231,7 +231,7 @@ export const AthleteHome = () => {
             )}
           </div>
           <div className="flex items-center gap-2">
-            <Video className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+            <Video className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
             {a.highlightVideoUrl ? (
               <a className={textButton} href={toUrl(a.highlightVideoUrl)} target="_blank" rel="noopener noreferrer">Highlight video</a>
             ) : (
@@ -334,7 +334,7 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
     <label className="flex flex-col gap-1.5">
       <span className={label}>{text}</span>
       {control}
-      {errors[key] ? <span className="text-[12px] text-[#972B2B]">{errors[key]}</span> : null}
+      {errors[key] ? <span className="text-caption text-error-700">{errors[key]}</span> : null}
     </label>
   );
 
@@ -342,7 +342,7 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
     <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={dialogContent}>
         <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Edit profile</DialogTitle>
+          <DialogTitle className="text-section">Edit profile</DialogTitle>
           <DialogDescription className={meta}>
             Only coaches {isParent ? "your athlete has" : "you have"} booked with see this.
           </DialogDescription>
@@ -399,7 +399,7 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
           {field("seasonGoal", "Season goal (optional)", (
             <textarea
               id="ep-goal"
-              className={cn(input, "h-auto py-2 leading-[18px]")}
+              className={cn(input, "h-auto py-2")}
               rows={2}
               maxLength={300}
               value={form.seasonGoal}

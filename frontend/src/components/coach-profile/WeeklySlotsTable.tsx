@@ -7,12 +7,14 @@
 import React, { useCallback, useEffect } from 'react';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Alert } from '@/components/ui/alert';
-import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Plus } from 'lucide-react';
+import { AlertCircle, Calendar, ChevronLeft, ChevronRight, Plus } from "@/components/icons";
 import { timeZoneAbbreviation } from '@/utils/viewerTime';
 import { BrandPill } from '@/components/brand';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 
 const weekNavButtonClass =
-  "inline-flex size-[30px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:bg-[#F7F7F0] disabled:text-[#A3A6AB]";
+  "inline-flex size-[30px] items-center justify-center rounded-control border border-light-525 bg-light-400 text-dark transition-colors hover:border-light-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200";
 import {
   calculateEndTime,
   normalizeTimeFormat,
@@ -461,30 +463,30 @@ export const WeeklySlotsTable = ({
 
   return (
     <div
-      className="-mx-[25px] flex min-h-[360px] max-h-[65vh] flex-col border-t border-[#EAEADF] px-[25px] pt-5"
+      className="-mx-[25px] flex min-h-[360px] max-h-[65vh] flex-col border-t border-light-525 px-[25px] pt-5"
       ref={scrollRef}
     >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
-          <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+          <Calendar className="size-5 flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
           <h3
-            className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]"
+            className="text-card-title text-dark"
             title={currentWeek ? formatClampedWeekRange(currentWeek, formStartDate, formEndDate).replace(" - ", " – ") : undefined}
           >
             {weekStartLabel ? `Week of ${weekStartLabel}` : "Weekly time slots"}
           </h3>
           {/* Times are entered and stored in Eastern; show EST or EDT for this week. */}
           <span title="Session times are entered in Eastern Time">
-            <BrandPill tone="amber">{timeZoneAbbreviation(SESSION_TIME_ZONE, currentWeek ?? new Date())}</BrandPill>
+            <BrandPill tone="neutral">{timeZoneAbbreviation(SESSION_TIME_ZONE, currentWeek ?? new Date())}</BrandPill>
           </span>
           {currentWeekISO && weekErrorSet.has(currentWeekISO) && (
-            <span className="inline-flex size-2 rounded-full bg-[#FB4747]" title="Issues in this week">
+            <span className="inline-flex size-2 rounded-full bg-error-600" title="Issues in this week">
               <span className="sr-only">Issues in this week</span>
             </span>
           )}
         </div>
         <div className="flex items-center justify-between gap-3 sm:justify-end">
-          <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]" aria-live="polite">
+          <span className="text-body-m text-dark-300" aria-live="polite">
             Week {currentWeekIndex + 1} of {Math.max(weeks.length, 1)}
           </span>
           <div className="flex items-center gap-1.5">
@@ -513,9 +515,9 @@ export const WeeklySlotsTable = ({
       <div className="min-h-0 flex-1 overflow-x-auto overflow-y-auto">
         {isOccurrencesBusy ? (
           <div className="flex flex-col gap-3 py-2">
-            <Skeleton className="h-[13px] w-40 rounded-[4px] bg-[#F1F1E6]" />
+            <Skeleton className="h-[13px] w-40 rounded-pill bg-light" />
             {[1, 2, 3, 4, 5, 6, 7].map((i) => (
-              <Skeleton key={i} className="h-[50px] w-full rounded-[8px] bg-[#F1F1E6]" />
+              <Skeleton key={i} className="h-[50px] w-full rounded-control bg-light" />
             ))}
           </div>
         ) : (
@@ -573,7 +575,7 @@ export const WeeklySlotsTable = ({
                   )
                 ) && (
                   <tr>
-                    <td colSpan={10} className="py-6 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                    <td colSpan={10} className="py-6 text-center text-body-m text-dark-300">
                       No upcoming slots this week.
                     </td>
                   </tr>
@@ -595,7 +597,7 @@ export const WeeklySlotsTable = ({
           const slots = occurrenceSlots[currentWeekISO]?.[firstDay] || [];
           addSlotToDay(firstDay, currentWeekISO, slots[slots.length - 1]);
         }}
-        className="mt-5 inline-flex h-[30px] w-fit items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+        className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-5 w-fit gap-[5px]")}
       >
         <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
         Add slot
@@ -605,10 +607,10 @@ export const WeeklySlotsTable = ({
       {currentWeekErrors.overlap && (
         <Alert
           variant="destructive"
-          className="mt-3 flex items-center gap-2 rounded-[8px] border-0 bg-[#FDF1F1] px-3 py-2 [&>svg]:static [&>svg]:text-[#FB4747] [&>svg~*]:pl-0"
+          className="mt-3 flex items-center gap-2 rounded-control border border-error-300 bg-error-50 px-3 py-2 [&>svg]:static [&>svg]:text-error-600 [&>svg~*]:pl-0"
         >
-          <AlertCircle className="size-4 flex-none text-[#FB4747]" strokeWidth={1.5} aria-hidden="true" />
-          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#B42318]">{currentWeekErrors.overlap}</span>
+          <AlertCircle className="size-4 flex-none text-error-600" strokeWidth={1.5} aria-hidden="true" />
+          <span className="text-label-sm text-error-700">{currentWeekErrors.overlap}</span>
         </Alert>
       )}
     </div>

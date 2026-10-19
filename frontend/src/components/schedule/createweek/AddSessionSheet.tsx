@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { MapPin, Minus, Plus, Video } from "lucide-react";
+import { MapPin, Minus, Plus, Video } from "@/components/icons";
 import { coachesAPI } from "@/api";
 import { scheduleAPI, type ScheduleRules } from "@/api/schedule";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -181,9 +181,9 @@ export const AddSessionSheet = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(dialogContent, "w-[calc(100vw-16px)] max-w-[480px] gap-0 p-0 md:w-[calc(100vw-32px)]")}>
-        <DialogHeader className="border-b border-[#EAEADF] px-4 py-5 pr-14 text-left md:px-[25px]">
-          <DialogTitle className="text-[20px] font-semibold leading-[24px] tracking-[-0.05em]">Add a session</DialogTitle>
-          <DialogDescription className="text-[14px] text-[#767980]">{formatDayISO(date, { weekday: "long", month: "short", day: "numeric" })}</DialogDescription>
+        <DialogHeader className="border-b border-light-525 px-4 py-5 pr-14 text-left md:px-[25px]">
+          <DialogTitle className="text-card-title">Add a session</DialogTitle>
+          <DialogDescription className="text-body-m text-dark-300">{formatDayISO(date, { weekday: "long", month: "short", day: "numeric" })}</DialogDescription>
         </DialogHeader>
         <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto px-4 py-5 md:px-[25px]">
           <div className={segGroup} role="group" aria-label="Type">
@@ -213,15 +213,15 @@ export const AddSessionSheet = ({
                     key={k}
                     type="button"
                     className={cn(
-                      "flex items-start gap-3 rounded-[10px] border px-3 py-3 text-left",
-                      one === k ? "border-[#0054B4] bg-[#F1F1E6]" : "border-[#EAEADF] bg-[#F7F7F0]",
+                      "flex items-start gap-3 rounded-card border px-3 py-3 text-left",
+                      one === k ? "border-primary bg-primary-50" : "border-light-525 bg-light-300 hover:bg-light-200",
                     )}
                     aria-pressed={one === k}
                     onClick={() => setOne(k)}
                   >
-                    <span className={cn("mt-1 size-3.5 rounded-full border-2", one === k ? "border-[#0054B4] bg-[#0054B4]" : "border-[#C1C1B8]")} />
+                    <span className={cn("mt-1 size-3.5 rounded-full border-2", one === k ? "border-primary bg-primary" : "border-light-600")} />
                     <span className="flex flex-col gap-0.5">
-                      <span className="text-[14px] font-medium">{t}</span>
+                      <span className="text-label-sm">{t}</span>
                       <span className={meta}>{d}</span>
                     </span>
                   </button>
@@ -260,7 +260,7 @@ export const AddSessionSheet = ({
               </select>
             </label>
           </div>
-          <span className={cn(meta, clash && "text-[#B42318]")}>
+          <span className={cn(meta, clash && "text-error-700")}>
             {clash
               ? `Overlaps ${clash.kind === "busy" ? "a busy time" : clash.session?.sessionName || "a session"} at ${formatMinutes(minutesInZone(clash.start, timeZone))}`
               : formatDuration(duration)}
@@ -276,11 +276,11 @@ export const AddSessionSheet = ({
             <div className="flex flex-wrap gap-2">
               {places.map((p) =>
                 editingLocs && p !== "Video call" ? (
-                  <span key={p} className="inline-flex items-center gap-1 rounded-[18px] border border-[#EAEADF] bg-[#F4F4EB] px-3 py-1.5 text-[13px]">
+                  <span key={p} className="inline-flex items-center gap-1 rounded-control border border-light-525 bg-light-400 px-3 py-1.5 text-body-m">
                     {p}
                     <button
                       type="button"
-                      className="text-[#B42318]"
+                      className="text-error-700"
                       aria-label={`Remove ${p}`}
                       onClick={() => {
                         const next = rules.locations.filter((l) => l !== p);
@@ -298,8 +298,8 @@ export const AddSessionSheet = ({
                     key={p}
                     type="button"
                     className={cn(
-                      "inline-flex items-center gap-1.5 rounded-[18px] border px-3 py-1.5 text-[13px] font-medium",
-                      loc === p ? "border-[#0054B4] bg-[#0054B4] text-[#F1F1E6]" : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]",
+                      "inline-flex items-center gap-1.5 rounded-control border px-3 py-1.5 text-label-sm",
+                      loc === p ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200",
                     )}
                     onClick={() => setLoc(p)}
                   >
@@ -309,13 +309,13 @@ export const AddSessionSheet = ({
                 ),
               )}
               {!editingLocs ? (
-                <button type="button" className="rounded-[18px] border border-dashed border-[#C1C1B8] px-3 py-1.5 text-[13px] text-[#0054B4]" onClick={() => setNewLoc(true)}>
+                <button type="button" className="rounded-control border border-dashed border-light-600 px-3 py-1.5 text-label-sm text-primary hover:bg-light-200" onClick={() => setNewLoc(true)}>
                   + New location
                 </button>
               ) : null}
             </div>
             {newLoc ? (
-              <div className="flex flex-col gap-2 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-3">
+              <div className="flex flex-col gap-2 rounded-card border border-light-525 bg-light-400 p-3">
                 <input className={input} value={newName} onChange={(e) => setNewName(e.target.value)} placeholder="Location name" />
                 <div className="flex justify-end gap-2">
                   <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setNewLoc(false)}>Cancel</button>
@@ -341,59 +341,59 @@ export const AddSessionSheet = ({
 
           {type === "group" ? (
             <>
-              <div className="flex items-center justify-between border-b border-[#EAEADF] py-3">
-                <span className="text-[14px] font-medium">Spots</span>
+              <div className="flex items-center justify-between border-b border-light-525 py-3">
+                <span className="text-label-sm">Spots</span>
                 <div className="flex items-center gap-3">
                   <button type="button" className={cn(secondaryButton, "size-9 p-0")} disabled={cap <= 2} onClick={() => setCap((c) => Math.max(2, c - 1))} aria-label="Fewer spots">
                     <Minus className="size-4" />
                   </button>
-                  <b className="min-w-[24px] text-center">{cap}</b>
+                  <b className="min-w-[24px] text-center text-subtitle tabular-nums">{cap}</b>
                   <button type="button" className={cn(secondaryButton, "size-9 p-0")} onClick={() => setCap((c) => Math.min(40, c + 1))} aria-label="More spots">
                     <Plus className="size-4" />
                   </button>
                 </div>
               </div>
-              <label className="flex items-center justify-between gap-3 border-b border-[#EAEADF] py-3">
-                <span className="text-[14px] font-medium">Price per athlete</span>
-                <span className="flex h-[38px] w-[120px] items-center rounded-[8px] bg-[#F1F1E6] pl-3">
-                  <span className="text-[#767980]">$</span>
+              <label className="flex items-center justify-between gap-3 border-b border-light-525 py-3">
+                <span className="text-label-sm">Price per athlete</span>
+                <span className="flex h-[38px] w-[120px] items-center rounded-control border border-dark-250 bg-light pl-3 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary">
+                  <span className="text-dark-300">$</span>
                   <input className="h-full w-full bg-transparent px-1 text-right focus:outline-none" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} />
                 </span>
               </label>
             </>
           ) : (
             <>
-              <label className="flex items-center justify-between gap-3 border-b border-[#EAEADF] py-3">
+              <label className="flex items-center justify-between gap-3 border-b border-light-525 py-3">
                 <span className="flex flex-col gap-0.5">
-                  <span className="text-[14px] font-medium">Price</span>
+                  <span className="text-label-sm">Price</span>
                   <span className={meta}>Your usual 1-on-1 rate</span>
                 </span>
-                <span className="flex h-[38px] w-[120px] items-center rounded-[8px] bg-[#F1F1E6] pl-3">
-                  <span className="text-[#767980]">$</span>
+                <span className="flex h-[38px] w-[120px] items-center rounded-control border border-dark-250 bg-light pl-3 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary">
+                  <span className="text-dark-300">$</span>
                   <input className="h-full w-full bg-transparent px-1 text-right focus:outline-none" inputMode="numeric" value={oprice} onChange={(e) => setOprice(e.target.value)} />
                 </span>
               </label>
               {one === "open" ? (
                 <div className="flex items-center justify-between py-2">
                   <span className="flex flex-col gap-0.5">
-                    <span className="text-[14px] font-medium">Repeat every {weekday}</span>
+                    <span className="text-label-sm">Repeat every {weekday}</span>
                     <span className={meta}>{rep ? "Open every week until you turn it off" : "Just this once"}</span>
                   </span>
                   <button
                     type="button"
                     role="switch"
                     aria-checked={rep}
-                    className={cn("h-5 w-9 rounded-full p-0.5 transition-colors", rep ? "bg-[#0054B4]" : "bg-[#C1C1B8]")}
+                    className={cn("h-5 w-9 rounded-full p-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary", rep ? "bg-primary" : "bg-light-600")}
                     onClick={() => setRep((v) => !v)}
                   >
-                    <span className={cn("block size-4 rounded-full bg-white transition-transform", rep && "translate-x-4")} />
+                    <span className={cn("block size-4 rounded-full bg-light-50 transition-transform", rep && "translate-x-4")} />
                   </button>
                 </div>
               ) : null}
             </>
           )}
         </div>
-        <div className="border-t border-[#EAEADF] px-4 py-4 md:px-[25px]">
+        <div className="border-t border-light-525 px-4 py-4 md:px-[25px]">
           <button
             type="button"
             className={cn(primaryButton, "h-[44px] w-full")}

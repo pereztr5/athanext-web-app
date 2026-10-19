@@ -1,13 +1,14 @@
 /**
- * My Organization dialogs (ATH-90): invite a coach, coach detail, change rate, remove, and a
+ * My organization dialogs (ATH-90): invite a coach, coach detail, change rate, remove, and a
  * read-only session view.
  */
 import { useState, type ReactNode } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Info, Send } from "lucide-react";
-import { organizationsAPI } from "@/api/organizations";
+import { Info, Send, UserX } from "@/components/icons";
+import { organizationsAPI, type OrgRemovalRequest } from "@/api/organizations";
+import { Banner } from "@/components/ui/banner";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { dangerButton, dangerTextButton, dialogContent, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { dangerButton, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
@@ -42,7 +43,7 @@ const Shell = ({
   <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
     <DialogContent className={dialogContent}>
       <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-        <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">{title}</DialogTitle>
+        <DialogTitle className="text-section">{title}</DialogTitle>
         {sub ? <DialogDescription className={meta}>{sub}</DialogDescription> : <DialogDescription className="sr-only">{title}</DialogDescription>}
       </DialogHeader>
       <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px] sm:pb-[25px]">
@@ -54,7 +55,7 @@ const Shell = ({
 );
 
 const InfoNote = ({ children }: { children: ReactNode }) => (
-  <div className="flex items-start gap-2 rounded-[8px] bg-[#E5EDF7] px-3 py-2.5 text-[13px] leading-[18px] text-[#00326C]">
+  <div className="flex items-start gap-2 rounded-control border border-primary-300 bg-primary-50 px-3 py-2.5 text-body-m text-primary-700">
     <Info className="mt-px size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
     <span>{children}</span>
   </div>
@@ -65,7 +66,7 @@ const KV = ({ items }: { items: [string, ReactNode][] }) => (
     {items.map(([k, v]) => (
       <div key={k} className="flex flex-col gap-1">
         <dt className={label}>{k}</dt>
-        <dd className="text-[14px] text-[#1A202C]">{v}</dd>
+        <dd className="text-body-m text-dark">{v}</dd>
       </div>
     ))}
   </dl>
@@ -118,12 +119,12 @@ export const InviteCoachDialog = ({ org, open, onClose }: { org: MyOrganization;
       <label className="flex flex-col gap-1.5">
         <span className={label}>Coach's email</span>
         <input className={input} type="email" placeholder="name@email.com" value={email} onChange={(e) => setEmail(e.target.value)} aria-invalid={tried && !emailOk} />
-        {tried && !emailOk ? <span className="text-[12px] text-[#972B2B]">Add an email address</span> : null}
+        {tried && !emailOk ? <span className="text-caption text-error-700">Add an email address</span> : null}
       </label>
       <label className="flex flex-col gap-1.5">
         <span className={label}>Org share of each paid session (%)</span>
         <input className={input} type="number" min={0} max={100} value={rate} onChange={(e) => setRate(e.target.value)} aria-invalid={tried && !isValidRate(rate)} />
-        {tried && !isValidRate(rate) ? <span className="text-[12px] text-[#972B2B]">Between 0 and 100</span> : null}
+        {tried && !isValidRate(rate) ? <span className="text-caption text-error-700">Between 0 and 100</span> : null}
       </label>
       <InfoNote>
         They see the rate in the invite and accept it to join. From then on, every paid session splits {rateLabel(r)} to {org.name},{" "}
@@ -178,9 +179,9 @@ export const ChangeRateDialog = ({ coach, price, onClose }: { coach: OrgCoach | 
         <span className={label}>Org share of each paid session (%)</span>
         <input className={input} type="number" min={0} max={100} value={value} onChange={(e) => setRate(e.target.value)} />
       </label>
-      <div className="flex flex-col gap-1 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
+      <div className="flex flex-col gap-1 rounded-control border border-light-525 bg-light px-3 py-2.5">
         <span className={meta}>On a {money(price)} session</span>
-        <span className="text-[14px]">
+        <span className="text-body-m">
           {money(ex.toOrg)} to the org · {money(ex.toCoach)} to {first}
         </span>
       </div>
@@ -192,38 +193,109 @@ export const ChangeRateDialog = ({ coach, price, onClose }: { coach: OrgCoach | 
   );
 };
 
-export const RemoveCoachDialog = ({ coach, onClose, onRemoved }: { coach: OrgCoach | null; onClose: () => void; onRemoved: () => void }) => {
-  const { toast } = useToast();
+/** Ask AthaNext to remove a coach. The coach stays until support finishes the request. */
+export const RequestRemovalDialog = ({
+  coach,
+  onClose,
+  onDone,
+}: {
+  coach: OrgCoach | null;
+  onClose: () => void;
+  onDone: () => void;
+}) => {
   const qc = useQueryClient();
   const first = coach?.name.split(" ")[0] ?? "";
-  const remove = useMutation({
-    mutationFn: () => organizationsAPI.removeCoach(coach!.coachId),
-    onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["my-organization"] });
-      qc.invalidateQueries({ queryKey: ["org-sessions"] });
-      qc.invalidateQueries({ queryKey: ["organizations-public"] });
-      toast({ title: `${first} removed from the org` });
-      onRemoved();
+  const [reason, setReason] = useState("");
+  const [result, setResult] = useState<{ emailed: boolean } | null>(null);
+  const [failed, setFailed] = useState<string | null>(null);
+  const send = useMutation({
+    mutationFn: () => organizationsAPI.requestRemoval(coach!.coachId, reason.trim()),
+    onSuccess: (res) => {
+      qc.invalidateQueries({ queryKey: ["org-removals"] });
+      setFailed(null);
+      setResult({ emailed: res.emailed });
     },
-    onError: (e: Error) => toast({ title: "Couldn't remove the coach", description: e.message, variant: "destructive" }),
+    onError: (e: Error) => setFailed(e.message || "That didn't save. Try again."),
   });
+  const close = () => {
+    setReason("");
+    setResult(null);
+    setFailed(null);
+    if (result) onDone();
+    else onClose();
+  };
+
+  if (result) {
+    return (
+      <Shell
+        open
+        onClose={close}
+        title={result.emailed ? "Request sent" : "Request saved"}
+        foot={
+          result.emailed ? (
+            <button type="button" className={primaryButton} onClick={close}>Done</button>
+          ) : (
+            <>
+              <button type="button" className={secondaryButton} onClick={close}>Close</button>
+              <button type="button" className={primaryButton} disabled={send.isPending} onClick={() => send.mutate()}>
+                {send.isPending ? "Sending…" : "Try the email again"}
+              </button>
+            </>
+          )
+        }
+      >
+        {result.emailed ? (
+          <div className="flex flex-col gap-2.5 text-body-m text-dark">
+            <p>We've received your request to remove {first}. Someone from AthaNext support will be in touch to settle splits, payouts and package credits.</p>
+            <p className="text-dark-300">Until support finishes, splits keep running and {first} stays on the organization page. You can cancel the request from {first}'s manage panel.</p>
+          </div>
+        ) : (
+          <p className="text-body-m text-dark">
+            The request to remove {first} is saved, but the email to AthaNext support didn't go out. Nothing else changed. You can try the email again now, or cancel the request and contact AthaNext.
+          </p>
+        )}
+      </Shell>
+    );
+  }
+
   return (
     <Shell
       open={Boolean(coach)}
-      onClose={onClose}
-      title={`Remove ${first} from the org?`}
+      onClose={close}
+      title={`Request to remove ${first}`}
       foot={
         <>
-          <button type="button" className={secondaryButton} onClick={onClose}>Cancel</button>
-          <button type="button" className={dangerButton} disabled={remove.isPending} onClick={() => remove.mutate()}>
-            {remove.isPending ? "Removing…" : "Remove"}
+          <button type="button" className={secondaryButton} onClick={close}>Cancel</button>
+          <button type="button" className={dangerButton} disabled={!coach || send.isPending} onClick={() => send.mutate()}>
+            <UserX strokeWidth={1.5} aria-hidden="true" />
+            {send.isPending ? "Sending…" : "Send request"}
           </button>
         </>
       }
     >
-      <p className="text-[14px] leading-[20px] text-[#484D56]">
-        They keep their own profile, athletes and payments. Splits stop for sessions booked from now on, and they come off the org page.
+      <p className="text-body-m text-dark">
+        AthaNext support settles everything before {first} leaves the organization, so no money gets lost along the way.
       </p>
+      <ul className="list-disc space-y-1 pl-5 text-body-m text-dark">
+        <li>Splits on sessions already booked</li>
+        <li>Payouts that are in progress</li>
+        <li>Academy package credits families already paid for</li>
+      </ul>
+      <p className="text-body-m text-dark-300">
+        Until support finishes, nothing changes. Splits keep running and {first} stays on the organization page.
+      </p>
+      <label className="flex flex-col gap-1.5">
+        <span className={label}>Reason <span className="font-normal text-dark-300">Optional</span></span>
+        <textarea
+          className="min-h-[72px] w-full rounded-control border border-dark-250 bg-light px-3 py-2 text-body-m text-dark placeholder:text-dark-200 focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary"
+          rows={2}
+          maxLength={500}
+          value={reason}
+          onChange={(e) => setReason(e.target.value)}
+          placeholder="For example, moving to another city at the end of October"
+        />
+      </label>
+      {failed ? <p className="text-body-m text-error-700">{failed}</p> : null}
     </Shell>
   );
 };
@@ -231,17 +303,23 @@ export const RemoveCoachDialog = ({ coach, onClose, onRemoved }: { coach: OrgCoa
 export const CoachDetailDialog = ({
   coach,
   sessions,
+  removal,
   onClose,
   onRate,
   onRemove,
+  onCancelRemoval,
+  cancelling,
   onSessions,
 }: {
   coach: OrgCoach | null;
   /** This month's sessions for the coach. */
   sessions: OrgSession[];
+  removal: OrgRemovalRequest | null;
   onClose: () => void;
   onRate: () => void;
   onRemove: () => void;
+  onCancelRemoval: () => void;
+  cancelling?: boolean;
   onSessions: () => void;
 }) => {
   const timeZone = useViewerTimeZone();
@@ -259,16 +337,34 @@ export const CoachDetailDialog = ({
       sub={coach.isOwner ? "Owner" : `Coach since ${new Date(coach.joinedAt).toLocaleDateString("en-US", { month: "long", year: "numeric" })}`}
       foot={
         <>
+          {coach.isOwner ? null : removal ? null : (
+            <button type="button" className={`${dangerButton} mr-auto`} onClick={onRemove}>
+              <UserX strokeWidth={1.5} aria-hidden="true" />
+              Request removal
+            </button>
+          )}
           {coach.isOwner ? null : (
-            <>
-              <button type="button" className={`${dangerTextButton} mr-auto`} onClick={onRemove}>Remove from org</button>
-              <button type="button" className={secondaryButton} onClick={onRate}>Change rate</button>
-            </>
+            <button type="button" className={secondaryButton} onClick={onRate}>Change rate</button>
           )}
           <button type="button" className={secondaryButton} onClick={onSessions}>See sessions</button>
         </>
       }
     >
+      {removal ? (
+        <Banner
+          tone="info"
+          action={
+            <button type="button" className={textButton} disabled={cancelling} onClick={onCancelRemoval}>
+              {cancelling ? "Cancelling…" : "Cancel request"}
+            </button>
+          }
+        >
+          <span className="block">
+            Removal requested {new Date(removal.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric" })}. AthaNext support will be in touch to settle splits, payouts and package credits. Until then, nothing changes.
+          </span>
+          {removal.reason ? <span className="mt-1 block text-caption">Reason: {removal.reason}</span> : null}
+        </Banner>
+      ) : null}
       <KV
         items={[
           ["Sessions this month", sessions.length],

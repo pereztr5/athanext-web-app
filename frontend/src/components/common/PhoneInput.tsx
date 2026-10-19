@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Check, ChevronDown } from "lucide-react";
+import { Check, ChevronDown } from "@/components/icons";
 import { Input } from "@/components/ui/input";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Command, CommandEmpty, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
@@ -75,12 +75,12 @@ export const PhoneInput = ({ id, value, onChange, invalid, disabled }: PhoneInpu
             aria-expanded={open}
             disabled={disabled}
             aria-label={`Country code, ${country.name} +${country.dialCode}`}
-            className="flex h-[38px] w-[112px] shrink-0 items-center justify-between rounded-[8px] border border-input bg-[#F1F1E6] px-3 py-2 text-[14px] leading-[18px] tracking-[-0.03em] text-foreground ring-offset-background focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex h-input w-[112px] shrink-0 items-center justify-between rounded-control border border-dark-250 bg-light px-3 py-2 text-body-m text-dark hover:border-dark-300 focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary disabled:cursor-not-allowed disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200"
           >
             <span className="line-clamp-1">
               <span aria-hidden>{phoneCountryFlag(country.iso)}</span> +{country.dialCode}
             </span>
-            <ChevronDown className="h-4 w-4 opacity-50" />
+            <ChevronDown className="size-4 text-dark-300" strokeWidth={1.5} />
           </button>
         </PopoverTrigger>
         <PopoverContent

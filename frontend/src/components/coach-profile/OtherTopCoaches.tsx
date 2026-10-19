@@ -22,10 +22,10 @@ export function OtherTopCoaches({ currentCoachId }: OtherTopCoachesProps) {
         {coachesLoading ? (
           [...Array(3)].map((_, index) => (
             <div key={index} className="flex items-center gap-3 p-2">
-              <Skeleton className="size-10 shrink-0 rounded-[8px]" />
+              <Skeleton className="size-10 shrink-0 rounded-full" />
               <div className="flex-1 space-y-2">
-                <Skeleton className="h-4 w-3/4 rounded-[4px]" />
-                <Skeleton className="h-3 w-1/2 rounded-[4px]" />
+                <Skeleton className="h-4 w-3/4 rounded-pill" />
+                <Skeleton className="h-3 w-1/2 rounded-pill" />
               </div>
             </div>
           ))
@@ -37,10 +37,10 @@ export function OtherTopCoaches({ currentCoachId }: OtherTopCoachesProps) {
               <button
                 type="button"
                 key={coach.id}
-                className="flex w-full items-center gap-3 rounded-[8px] p-2 text-left transition-colors hover:bg-[#F4F4EB]"
+                className="flex w-full items-center gap-3 rounded-control p-2 text-left transition-colors hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 onClick={() => navigate(`/coach/${coach.id}`)}
               >
-                <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-[8px] bg-[#C1C1B8] text-[14px] font-medium text-[#484D56]">
+                <span className="flex size-10 shrink-0 items-center justify-center overflow-hidden rounded-full border border-light-550 bg-light-600 text-label-sm text-dark-400">
                   {coach.profile_image_url ? (
                     <img src={coach.profile_image_url} alt={coach.name} className="size-full object-cover" />
                   ) : (
@@ -48,21 +48,21 @@ export function OtherTopCoaches({ currentCoachId }: OtherTopCoachesProps) {
                   )}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                  <span className="block truncate text-label-sm text-dark">
                     {coach.name}
                   </span>
-                  <span className="block truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                  <span className="block truncate text-caption text-dark-300">
                     {coach.specialties?.[0] || "Coach"}
                   </span>
                 </span>
-                <span className="flex shrink-0 items-center gap-[3px] text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                <span className="flex shrink-0 items-center gap-[3px] text-caption text-dark-300">
                   <BrandStar size={10} />
                   {publicCoachRatingLabel(coach.rating, coach.total_reviews)}
                 </span>
               </button>
             ))
         ) : (
-          <p className="py-4 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">
+          <p className="py-4 text-center text-body-m text-dark-300">
             No other coaches yet
           </p>
         )}

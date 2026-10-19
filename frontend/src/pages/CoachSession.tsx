@@ -11,13 +11,14 @@ import AthleteSessionPage from "./AthleteSession";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarSync, ChevronLeft, ChevronRight, Eye, FileText, Lock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "lucide-react";
+import { CalendarSync, ChevronLeft, ChevronRight, Eye, FileText, Lock, MapPin, MessageCircle, Pencil, Plus, Target, Ticket, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { chatAPI } from "@/api/chat";
 import { coachSessionAPI, type CoachSessionBooking } from "@/api/coachSession";
 import { offlinePayAPI } from "@/api/offlinePay";
-import { meta, primaryButton, secondaryButton, textButton, dangerTextButton } from "@/components/schedule/styles";
+import { meta, primaryButton, secondaryButton, smallButton, textButton, dangerTextButton } from "@/components/schedule/styles";
+import { buttonVariants } from "@/components/ui/button";
 import { AddToGroupDialog } from "@/components/coach-session/AddToGroupDialog";
 import { CancelDialog } from "@/components/coach-session/CancelDialog";
 import { DeclineDialog } from "@/components/coach-session/DeclineDialog";
@@ -98,7 +99,7 @@ const CoachSessionPage = () => {
     refresh();
   };
   const fail = (error: unknown) =>
-    toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    toast({ title: "That didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" });
 
   // Opens the athlete's thread or the coach's group channel; plain Messages if that fails.
   const message = useMutation({
@@ -129,8 +130,8 @@ const CoachSessionPage = () => {
   if (!isCoach) return <AthleteSessionPage />;
   if (query.isError) {
     return (
-      <div className="mx-auto max-w-[760px] px-4 py-10">
-        <p className="text-[14px] text-[#972B2B]">Session not found. It may have been removed.</p>
+      <div className="mx-auto w-full max-w-wrapper px-4 py-10">
+        <p className="text-body-m text-error-700">Session not found. It may have been removed.</p>
       </div>
     );
   }
@@ -218,9 +219,9 @@ const CoachSessionPage = () => {
 
   const fact = (Icon: typeof MapPin, a: string, b?: string | null, right?: JSX.Element | null) => (
     <div className="flex items-start gap-3">
-      <Icon className="mt-[2px] size-[17px] flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+      <Icon className="mt-[2px] size-[17px] flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{a}</span>
+        <span className="text-label-sm text-dark">{a}</span>
         {b ? <span className={cap}>{b}</span> : null}
       </span>
       {right}
@@ -258,11 +259,11 @@ const CoachSessionPage = () => {
     <Link
       key={b.id}
       to={`/athletes/${b.athleteId}`}
-      className="flex items-center gap-2.5 py-2 [&+&]:border-t [&+&]:border-[#EAEADF] hover:opacity-90"
+      className="flex items-center gap-2.5 py-2 [&+&]:border-t [&+&]:border-light-525 hover:opacity-90"
     >
       <Avatar name={b.name} imageUrl={b.imageUrl} />
       <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{b.name}</span>
+        <span className="truncate text-label-sm text-dark">{b.name}</span>
         <span className={cap}>{line ?? whoLine(b)}</span>
       </span>
       {extra}
@@ -277,9 +278,9 @@ const CoachSessionPage = () => {
 
   return (
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => navigate(-1)}>
+          <button type="button" className={cn(buttonVariants({ variant: "back" }), "self-start")} onClick={() => navigate(-1)}>
             <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
             Back
           </button>
@@ -314,7 +315,7 @@ const CoachSessionPage = () => {
                 null,
                 s.place ? (
                   <a
-                    className="text-[13px] font-medium text-[#0054B4] hover:underline"
+                    className="text-label-sm text-primary hover:underline"
                     href={`https://www.google.com/maps/search/${encodeURIComponent(s.place)}`}
                     target="_blank"
                     rel="noreferrer"
@@ -331,7 +332,7 @@ const CoachSessionPage = () => {
                 first?.paymentStatus === "pending_offline" ? (
                   <button
                     type="button"
-                    className={cn(secondaryButton, "h-8 shrink-0 px-3 text-[13px]")}
+                    className={cn(secondaryButton, smallButton, "shrink-0")}
                     disabled={confirmOffline.isPending}
                     onClick={() => confirmOffline.mutate(first.id)}
                   >
@@ -342,10 +343,10 @@ const CoachSessionPage = () => {
             : null}
           {!group && first ? (
             <>
-              <div className="h-px bg-[#EAEADF]" />
+              <div className="h-px bg-light-525" />
               {athleteRow(
                 first,
-                <ChevronRight className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />,
+                <ChevronRight className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />,
                 s.ended && first.attendance && !cancelled ? (first.attendance === "present" ? "Attended" : "No-show") : request ? `${whoLine(first)} · request` : undefined
               )}
             </>
@@ -353,11 +354,11 @@ const CoachSessionPage = () => {
         </section>
 
         {lastFocus ? (
-          <div className="flex items-center gap-3 rounded-[12px] bg-[#E5EDF7] px-4 py-3">
-            <Target className="size-[18px] flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+          <div className="flex items-center gap-3 rounded-card border border-primary-300 bg-primary-50 px-4 py-3">
+            <Target className="size-[18px] flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
             <span className="flex min-w-0 flex-col gap-0.5">
-              <span className={cn(cap, "text-[#0054B4]")}>Focus from last time</span>
-              <span className="text-[14px] font-medium leading-[18px] text-[#1A202C]">{lastFocus.text}</span>
+              <span className={cn(cap, "text-primary")}>Focus from last time</span>
+              <span className="text-label-sm text-dark">{lastFocus.text}</span>
             </span>
           </div>
         ) : null}
@@ -386,7 +387,7 @@ const CoachSessionPage = () => {
                 )}
               </div>
             ) : (
-              <p className={cn(cap, "py-2")}>Nobody yet. Share it from My Schedule.</p>
+              <p className={cn(cap, "py-2")}>Nobody yet. Share it from My schedule.</p>
             )}
             {live.length > SHOWN ? (
               <button type="button" className={cn(textButton, "self-start")} onClick={() => setShowAll(!showAll)}>
@@ -402,15 +403,15 @@ const CoachSessionPage = () => {
               <div className="flex items-center justify-between gap-3">
                 <h3 className={h3}>{fb.noShow ? "No-show" : "Feedback"}</h3>
                 {!fb.noShow && fb.score ? (
-                  <span className="text-[14px] font-medium text-[#0054B4]">
-                    <b className="text-[20px] font-bold">{fb.score}</b>/10 · {scoreWord(fb.score)}
+                  <span className="text-label-sm text-primary">
+                    <b className="text-card-title">{fb.score}</b>/10 · {scoreWord(fb.score)}
                   </span>
                 ) : null}
               </div>
               {fb.summary ? (
-                <p className="whitespace-pre-wrap text-[14px] leading-[20px] text-[#1A202C]">{fb.summary}</p>
+                <p className="whitespace-pre-wrap text-paragraph text-dark">{fb.summary}</p>
               ) : fb.noShow ? (
-                <p className="text-[14px] text-[#767980]">No message sent. The session stays charged.</p>
+                <p className="text-body-m text-dark-300">No message sent. The session stays charged.</p>
               ) : null}
               <span className={cn(cap, "inline-flex items-center gap-1.5")}>
                 {fb.summary ? <Eye className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <Lock className="size-3" strokeWidth={1.5} aria-hidden="true" />}
@@ -418,7 +419,7 @@ const CoachSessionPage = () => {
               </span>
               {group ? (
                 <>
-                  <div className="h-px bg-[#EAEADF]" />
+                  <div className="h-px bg-light-525" />
                   <div className="flex flex-wrap items-center justify-between gap-3">
                     <span className={cap}>
                       {notesFor.length ? `Notes sent for ${notesFor.map((b) => b.name.split(" ")[0]).join(", ")}` : "No notes for individual athletes yet"}

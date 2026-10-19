@@ -1,5 +1,6 @@
-import { Mail, Phone, MapPin } from "lucide-react";
+import { Mail, Phone, MapPin } from "@/components/icons";
 import { Card } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 import type { ContactMethod } from "@/types/contact";
 
 /**
@@ -17,40 +18,33 @@ const iconMap = {
   location: MapPin,
 };
 
-const colorMap = {
-  email: "bg-blue-500",
-  phone: "bg-blue-500",
-  location: "bg-blue-500",
-};
-
 export const ContactInfoCard = ({ method, className = "" }: ContactInfoCardProps) => {
   const Icon = iconMap[method.icon];
-  const bgColor = colorMap[method.icon];
-  
+
   const content = (
-    <Card className={`p-6 text-center hover:shadow-lg transition-shadow duration-300 ${className}`}>
-      <div className={`${bgColor} w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4`}>
-        <Icon className="h-8 w-8 text-white" />
+    <Card
+      className={cn(
+        "flex flex-col items-center gap-2 px-[18px] pb-5 pt-[22px] text-center transition-colors md:px-[25px] md:pb-[25px] md:pt-[30px]",
+        method.link && "hover:bg-light-200",
+        className
+      )}
+    >
+      <div className="mb-2 flex size-12 items-center justify-center rounded-control border border-primary-300 bg-primary-50 text-primary">
+        <Icon className="size-6" strokeWidth={1.5} />
       </div>
-      <h3 className="text-lg font-semibold text-slate-900 mb-2">
-        {method.title}
-      </h3>
-      <p className="text-blue-600 font-medium mb-1">
-        {method.value}
-      </p>
-      <p className="text-sm text-slate-600">
-        {method.description}
-      </p>
+      <h3 className="text-subtitle text-dark">{method.title}</h3>
+      <p className="text-label-sm text-primary">{method.value}</p>
+      <p className="text-caption text-dark-300">{method.description}</p>
     </Card>
   );
 
   if (method.link) {
     return (
-      <a 
+      <a
         href={method.link}
         target={method.icon === 'location' ? '_blank' : undefined}
         rel={method.icon === 'location' ? 'noopener noreferrer' : undefined}
-        className="block"
+        className="block rounded-card focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
       >
         {content}
       </a>

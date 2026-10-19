@@ -4,7 +4,7 @@
  */
 import { useEffect, useState, type ReactNode } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Plus, X } from "lucide-react";
+import { Plus, X } from "@/components/icons";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Switch } from "@/components/ui/switch";
 import { introCallsAPI, type IntroSettings } from "@/api/introCalls";
@@ -28,7 +28,7 @@ const DEFAULTS: IntroSettings = {
 const Seg = <T extends string | number>({ value, options, onChange, ariaLabel }: { value: T; options: [T, string][]; onChange: (v: T) => void; ariaLabel: string }) => (
   <div className={cn(segGroup, "w-full sm:w-auto")} role="group" aria-label={ariaLabel}>
     {options.map(([v, text]) => (
-      <button key={String(v)} type="button" className={cn(segButton(value === v), "h-[30px] text-[13px]")} aria-pressed={value === v} onClick={() => onChange(v)}>
+      <button key={String(v)} type="button" className={cn(segButton(value === v), "h-[30px]")} aria-pressed={value === v} onClick={() => onChange(v)}>
         {text}
       </button>
     ))}
@@ -89,14 +89,14 @@ export const IntroSettingsDialog = ({ open, turnOn = false, onClose }: { open: b
           {settingsQuery.isLoading ? (
             <p className={capText}>Loading…</p>
           ) : settingsQuery.isError ? (
-            <p role="alert" className="text-[14px] text-[#972B2B]">Couldn't load your intro call settings.</p>
+            <p role="alert" className="text-body-m text-error-700">Couldn't load your intro call settings.</p>
           ) : (
             <>
               <Line title="Offer a free intro call" detail="Families can meet you before they book">
                 <Switch checked={form.enabled} onCheckedChange={(v) => set("enabled", v)} aria-label="Offer a free intro call" />
               </Line>
               {form.enabled ? (
-                <div className="flex flex-col gap-[14px] border-t border-[#EAEADF] pt-[18px]">
+                <div className="flex flex-col gap-[14px] border-t border-light-525 pt-[18px]">
                   <Line title="Length">
                     <Seg ariaLabel="Length" value={form.minutes} onChange={(v) => set("minutes", v)} options={[[10, "10 min"], [15, "15 min"], [20, "20 min"]]} />
                   </Line>
@@ -157,7 +157,7 @@ export const IntroSettingsDialog = ({ open, turnOn = false, onClose }: { open: b
             </>
           )}
           {error ? (
-            <p role="alert" className="text-[14px] text-[#972B2B]">
+            <p role="alert" className="text-body-m text-error-700">
               {error}
             </p>
           ) : null}

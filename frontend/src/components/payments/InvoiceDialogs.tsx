@@ -18,7 +18,7 @@ const Shell = ({ open, onClose, title, sub, children, foot }: { open: boolean; o
   <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
     <DialogContent className={dialogContent}>
       <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-        <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">{title}</DialogTitle>
+        <DialogTitle className="text-section">{title}</DialogTitle>
         <DialogDescription className={sub ? meta : "sr-only"}>{sub ?? title}</DialogDescription>
       </DialogHeader>
       <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px] sm:pb-[25px]">
@@ -33,7 +33,7 @@ const Field = ({ text, error, children }: { text: string; error?: string; childr
   <label className="flex flex-col gap-1.5">
     <span className={label}>{text}</span>
     {children}
-    {error ? <span className="text-[12px] text-[#972B2B]">{error}</span> : null}
+    {error ? <span className="text-caption text-error-700">{error}</span> : null}
   </label>
 );
 
@@ -106,7 +106,7 @@ export const CreateInvoiceDialog = ({ open, clients, today, onClose }: { open: b
         </Field>
         <Field text="Amount" error={tried ? errors.amount : ""}>
           <span className="relative">
-            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#767980]">$</span>
+            <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body-m text-dark-300">$</span>
             <input className={cn(input, "pl-6")} type="number" min={1} max={10000} value={form.amount} onChange={(e) => set({ amount: e.target.value })} />
           </span>
         </Field>
@@ -148,7 +148,7 @@ export const MarkPaidDialog = ({ invoice, onClose }: { invoice: Invoice | null; 
         </>
       }
     >
-      <p className="text-[14px] leading-[20px] text-[#484D56]">
+      <p className="text-body-m text-dark-400">
         Use this when {invoice?.family} paid you {invoice ? money(invoice.amount) : ""} outside AthaNext, for example in cash or by bank
         transfer.
       </p>

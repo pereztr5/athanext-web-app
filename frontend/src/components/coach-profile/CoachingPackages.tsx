@@ -1,12 +1,13 @@
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
+import { buttonVariants } from '@/components/ui/button';
 import type { CoachPackage } from '@/hooks/useCoachPackages';
 import { useToast } from '@/hooks/use-toast';
 import { useNavigate } from 'react-router-dom';
 import { strings } from '@/config/strings';
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
-import { Check } from 'lucide-react';
+import { Check } from "@/components/icons";
 import { BrandPill } from '@/components/brand';
 import { formatWholePrice } from '@/utils/sessionFormatting';
 import { packagesAPI } from "@/api/packages";
@@ -119,11 +120,11 @@ export const CoachingPackages = ({
   };
 
   return (
-    <section className="w-full rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] font-sans text-[#1A202C] tracking-[-0.03em]">
+    <section className="w-full rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] font-sans text-dark md:px-[25px] md:pb-[25px] md:pt-[30px]">
       <div className="flex flex-col gap-2 sm:flex-row sm:items-start sm:justify-between">
         <div className="flex flex-col gap-2">
-          <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Coaching packages</h2>
-          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <h2 className="text-card-title text-dark">Coaching packages</h2>
+          <p className="text-body-m text-dark-300">
             Choose the package that fits your journey. Every path to growth starts with a single step.
           </p>
         </div>
@@ -131,7 +132,7 @@ export const CoachingPackages = ({
           <button
             type="button"
             onClick={() => setShareOpen(true)}
-            className="inline-flex h-[34px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C]"
+            className={cn(buttonVariants({ variant: "secondary" }), "shrink-0")}
           >
             Share pricing
           </button>
@@ -139,8 +140,8 @@ export const CoachingPackages = ({
       </div>
 
       {resolvedPackages.length === 0 ? (
-        <div className="mt-5 rounded-[8px] bg-[#F4F4EB] px-5 py-6 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
-          No packages are currently provided by this coach.
+        <div className="mt-5 rounded-control bg-light-400 px-5 py-6 text-center text-body-m text-dark-300">
+          No packages yet.
         </div>
       ) : (
         <div className="mt-5 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -151,17 +152,17 @@ export const CoachingPackages = ({
             return (
               <div
                 key={pkg.id}
-                className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[25px]"
+                className="flex flex-col gap-5 rounded-card border border-light-525 bg-light-400 p-[25px]"
               >
                 <div className="flex flex-col gap-2">
-                  <h3 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">{pkg.title}</h3>
+                  <h3 className="text-card-title text-dark">{pkg.title}</h3>
                   {pkg.description && (
-                    <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{pkg.description}</p>
+                    <p className="text-body-m text-dark-300">{pkg.description}</p>
                   )}
                 </div>
                 <div className="flex flex-col gap-1.5">
-                  <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{pkg.price}</span>
-                  <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                  <span className="text-highlight tabular-nums text-dark">{pkg.price}</span>
+                  <span className="text-caption text-dark-300">
                     {pkg.perSession} per session
                   </span>
                 </div>
@@ -171,10 +172,10 @@ export const CoachingPackages = ({
                   </BrandPill>
                   <BrandPill tone="neutral">Valid {pkg.source.validity_days} days</BrandPill>
                 </div>
-                <div className="flex flex-1 flex-col gap-2 text-[14px] leading-[18px] tracking-[-0.03em]">
+                <div className="flex flex-1 flex-col gap-2 text-body-m">
                   {features.map((feature, idx) => (
                     <div key={idx} className="flex items-center gap-2">
-                      <Check strokeWidth={1.5} className="h-4 w-4 flex-none text-[#0054B4]" aria-hidden="true" />
+                      <Check strokeWidth={1.5} className="h-4 w-4 flex-none text-primary" aria-hidden="true" />
                       <span>{feature}</span>
                     </div>
                   ))}
@@ -184,12 +185,7 @@ export const CoachingPackages = ({
                     type="button"
                     onClick={() => handlePurchase(pkg.id, pkg.source)}
                     disabled={isPurchasing}
-                    className={cn(
-                      'flex h-[34px] w-full items-center justify-center rounded-[8px] border px-4 text-[16px] font-medium tracking-[-0.03em] transition-colors disabled:pointer-events-none disabled:opacity-50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] focus-visible:ring-offset-2 focus-visible:ring-offset-[#F4F4EB]',
-                      isPrimary
-                        ? 'border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#004390]'
-                        : 'border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] hover:bg-[#F1F1E6]'
-                    )}
+                    className={cn(buttonVariants({ variant: isPrimary ? "default" : "secondary" }), "w-full")}
                   >
                     {isPurchasing ? strings.packages.processing : `Choose ${pkg.title}`}
                   </button>

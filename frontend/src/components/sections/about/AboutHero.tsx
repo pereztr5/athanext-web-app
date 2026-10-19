@@ -1,6 +1,6 @@
 import { useAboutPageData } from '@/hooks/useAboutPageData';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, AlertCircle, Database } from 'lucide-react';
+import { ArrowRight, AlertCircle, Database } from "@/components/icons";
 import { PRIMARY, SECONDARY } from '@/config/colors';
 import { strings } from '@/config/strings';
 import heroImage from '@/assets/images/about-hero-section.svg';

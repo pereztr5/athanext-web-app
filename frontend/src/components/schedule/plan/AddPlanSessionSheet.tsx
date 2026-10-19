@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Minus, Plus } from "lucide-react";
+import { Minus, Plus } from "@/components/icons";
 import { scheduleAPI, type ScheduleRules } from "@/api/schedule";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
@@ -13,6 +13,7 @@ import { money } from "@/utils/booking";
 import { ALL_START_MINUTES, formatDayISO, formatMinutes, viewerToEastern } from "@/utils/schedule";
 import { dialogContent, input, label, meta, primaryButton, secondaryButton, segButton, segGroup } from "../styles";
 import { pickRow } from "./parts";
+import { SessionTagField } from "./SessionTag";
 import { saveUsual, type UsualSession } from "./usualSessions";
 
 const PILLARS = [
@@ -56,6 +57,7 @@ export const AddPlanSessionSheet = ({
   const [loc, setLoc] = useState(rules.locations[0] ?? VIDEO);
   const [cap, setCap] = useState(8);
   const [price, setPrice] = useState("40");
+  const [tag, setTag] = useState("");
   const [save, setSave] = useState(true);
 
   const places = useMemo(() => {
@@ -74,10 +76,11 @@ export const AddPlanSessionSheet = ({
     setLoc(places[0] ?? VIDEO);
     setCap(8);
     setPrice(String(rules.hourlyRate && type === "slot" ? rules.hourlyRate : 40));
+    setTag("");
     setSave(true);
   }, [open, places, rules.hourlyRate]);
 
-  const ok = (type === "slot" || name.trim().length > 0) && Number(price) > 0;
+  const ok = (type === "slot" || name.trim().length > 0) && tag.trim().length > 0 && Number(price) > 0;
 
   const createFromUsual = useMutation({
     mutationFn: async (u: UsualSession) => {
@@ -96,6 +99,7 @@ export const AddPlanSessionSheet = ({
           location: online ? "online" : "in-person",
           place: online ? null : u.place === "In person" ? null : u.place,
           pillar: u.pillar,
+          details: u.tag ? { tag: u.tag, ages: u.tag } : undefined,
           isDraft: true,
         });
       }
@@ -111,6 +115,7 @@ export const AddPlanSessionSheet = ({
         location: online ? "online" : "in-person",
         place: online ? null : u.place === "In person" ? null : u.place,
         pillar: u.pillar,
+        details: !u.isOneOnOne && u.tag ? { tag: u.tag, ages: u.tag } : undefined,
         isDraft: true,
       });
     },
@@ -145,6 +150,7 @@ export const AddPlanSessionSheet = ({
         location: online ? "online" : "in-person",
         place: online || loc === "In person" ? null : loc,
         pillar,
+        details: tag.trim() ? { tag: tag.trim(), ages: tag.trim() } : undefined,
         isDraft: true,
       });
       if (!result.created.length) throw new Error("That time overlaps another session. Pick another time.");
@@ -158,6 +164,7 @@ export const AddPlanSessionSheet = ({
           capacity: isSlot ? 1 : cap,
           pillar,
           isOneOnOne: isSlot,
+          tag: tag.trim() || undefined,
         });
       }
       return title;
@@ -185,11 +192,11 @@ export const AddPlanSessionSheet = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={cn(dialogContent, "w-[calc(100vw-16px)] max-w-[480px] gap-0 p-0 md:w-[calc(100vw-32px)]")}>
-        <DialogHeader className="border-b border-[#EAEADF] px-4 py-5 pr-14 text-left md:px-[25px]">
-          <DialogTitle className="text-[20px] font-semibold leading-[24px] tracking-[-0.05em]">
+        <DialogHeader className="border-b border-light-525 px-4 py-5 pr-14 text-left md:px-[25px]">
+          <DialogTitle className="text-card-title">
             {view === "form" ? "New session" : "Add a session"}
           </DialogTitle>
-          <DialogDescription className="text-[14px] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             {formatDayISO(date, { weekday: "long", month: "short", day: "numeric" })}
           </DialogDescription>
         </DialogHeader>
@@ -208,24 +215,24 @@ export const AddPlanSessionSheet = ({
                     onClick={() => createFromUsual.mutate(u)}
                   >
                     <span className="flex min-w-0 flex-1 flex-col gap-1 text-left">
-                      <span className="text-[14px] font-medium leading-[18px]">{u.title}</span>
+                      <span className="text-label-sm">{u.title}</span>
                       <span className={meta}>
                         {formatMinutes(u.startMinutes)} · {u.durationMinutes} min · {u.place}
                       </span>
                     </span>
                     <span className="flex flex-none flex-col items-end gap-1">
-                      <span className="text-[14px] font-medium">{money(u.price)}</span>
+                      <span className="text-label-sm">{money(u.price)}</span>
                       <span className={meta}>{u.isOneOnOne ? "1-on-1" : `${u.capacity} spots`}</span>
                     </span>
                   </button>
                 ))}
               </>
             ) : (
-              <p className="text-[14px] text-[#767980]">No usual sessions yet. Create one and save it for next time.</p>
+              <p className="text-body-m text-dark-300">No usual sessions yet. Create one and save it for next time.</p>
             )}
             <button
               type="button"
-              className="mt-1 flex h-11 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#C1C1B8] text-[15px] font-medium text-[#0054B4] hover:bg-[#F4F4EB]"
+              className="mt-1 flex h-11 w-full items-center justify-center gap-1.5 rounded-control border border-dashed border-light-600 text-label-sm text-primary hover:bg-light-400"
               onClick={() => {
                 setView("form");
                 setPrice(String(type === "slot" ? rules.hourlyRate || 90 : 40));
@@ -283,6 +290,11 @@ export const AddPlanSessionSheet = ({
               ) : null}
 
               <div className="flex flex-col gap-1.5">
+                <span className={label}>Tag</span>
+                <SessionTagField value={tag} onChange={setTag} />
+              </div>
+
+              <div className="flex flex-col gap-1.5">
                 <span className={label}>Pillar</span>
                 <div className="flex flex-wrap gap-1.5">
                   {PILLARS.map((p) => (
@@ -290,8 +302,8 @@ export const AddPlanSessionSheet = ({
                       key={p}
                       type="button"
                       className={cn(
-                        "h-8 rounded-full border px-3 text-[14px]",
-                        pillar === p ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]" : "border-[#EAEADF] bg-[#F1F1E6] text-[#484D56]",
+                        "h-8 rounded-control border px-3 text-label-sm transition-colors",
+                        pillar === p ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200",
                       )}
                       aria-pressed={pillar === p}
                       onClick={() => setPillar(p)}
@@ -334,8 +346,8 @@ export const AddPlanSessionSheet = ({
                       key={p}
                       type="button"
                       className={cn(
-                        "h-8 rounded-full border px-3 text-[14px]",
-                        loc === p ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]" : "border-[#EAEADF] bg-[#F1F1E6] text-[#484D56]",
+                        "h-8 rounded-control border px-3 text-label-sm transition-colors",
+                        loc === p ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200",
                       )}
                       aria-pressed={loc === p}
                       onClick={() => setLoc(p)}
@@ -360,7 +372,7 @@ export const AddPlanSessionSheet = ({
                       >
                         <Minus className="size-4" />
                       </button>
-                      <b className="min-w-[24px] text-center">{cap}</b>
+                      <b className="min-w-[24px] text-center text-subtitle tabular-nums">{cap}</b>
                       <button
                         type="button"
                         className={cn(secondaryButton, "size-[30px] p-0")}
@@ -374,8 +386,8 @@ export const AddPlanSessionSheet = ({
                 ) : null}
                 <label className="flex flex-col gap-1.5">
                   <span className={label}>{type === "group" ? "Price per athlete" : "Price"}</span>
-                  <span className="flex h-10 items-center rounded-[8px] bg-[#F1F1E6] pl-3">
-                    <span className="text-[#767980]">$</span>
+                  <span className="flex h-10 items-center rounded-control border border-dark-250 bg-light pl-3 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary">
+                    <span className="text-dark-300">$</span>
                     <input
                       className="h-full w-full bg-transparent px-2 focus:outline-none"
                       inputMode="numeric"
@@ -389,14 +401,14 @@ export const AddPlanSessionSheet = ({
               <label className="flex cursor-pointer items-center gap-2.5">
                 <input
                   type="checkbox"
-                  className="size-4 accent-[#0054B4]"
+                  className="size-4 accent-primary"
                   checked={save}
                   onChange={(e) => setSave(e.target.checked)}
                 />
-                <span className="text-[14px]">Save to my usual sessions</span>
+                <span className="text-body-m">Save to my usual sessions</span>
               </label>
             </div>
-            <div className="flex gap-2 border-t border-[#EAEADF] px-4 py-4 md:px-[25px]">
+            <div className="flex gap-2 border-t border-light-525 px-4 py-4 md:px-[25px]">
               <button type="button" className={cn(secondaryButton, "h-11 flex-1")} onClick={() => setView("list")}>
                 Back
               </button>

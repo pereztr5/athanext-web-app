@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import { WifiOff, Wifi } from "lucide-react";
+import { WifiOff, Wifi } from "@/components/icons";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 
 export const NetworkStatusBanner = () => {
@@ -58,9 +58,9 @@ export const NetworkStatusBanner = () => {
     return (
       <div
         ref={bannerRef}
-        className="fixed top-0 left-0 right-0 z-[60] w-full border-b border-[#EAEADF] bg-[#FDF7EC] text-[#906A29]"
+        className="fixed top-0 left-0 right-0 z-[60] w-full border-b border-info-300 bg-info-50 text-info-700"
       >
-        <div className="max-w-8xl mx-auto flex items-center gap-2 px-4 py-2 text-[14px] font-medium leading-[18px] tracking-[-0.03em]">
+        <div className="mx-auto flex max-w-wrapper items-center gap-2 px-4 py-2 text-label-sm">
           <WifiOff strokeWidth={1.5} className="h-4 w-4 flex-none" />
           <span>
             {isCompact
@@ -76,10 +76,10 @@ export const NetworkStatusBanner = () => {
     return (
       <div
         ref={bannerRef}
-        className="fixed top-0 left-0 right-0 z-[60] w-full border-b border-[#EAEADF] bg-[#F4F4EB] text-[#484D56]"
+        className="fixed top-0 left-0 right-0 z-[60] w-full border-b border-light-525 bg-light-400 text-dark-400"
       >
-        <div className="max-w-8xl mx-auto flex items-center gap-2 px-4 py-2 text-[14px] font-medium leading-[18px] tracking-[-0.03em]">
-          <Wifi strokeWidth={1.5} className="h-4 w-4 flex-none text-[#767980]" />
+        <div className="mx-auto flex max-w-wrapper items-center gap-2 px-4 py-2 text-label-sm">
+          <Wifi strokeWidth={1.5} className="h-4 w-4 flex-none text-dark-300" />
           <span>
             {isCompact
               ? "Slow connection, loading…"

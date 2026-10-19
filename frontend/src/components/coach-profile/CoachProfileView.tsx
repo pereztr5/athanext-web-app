@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { ChevronLeft } from "lucide-react";
+import { packagesAPI, type Camp } from "@/api/packages";
+import type { CampRegisterResult } from "@/components/camps/CampCards";
+import { ChevronLeft } from "@/components/icons";
 import { formatRichTextForRender } from "@/utils/richText";
 import type { ProfileData } from "@/utils/profileCompletion";
 import { fetchLocationFromZipCode, formatLocationDisplay } from "@/utils/geolocation";
@@ -187,6 +189,23 @@ export function CoachProfileView({
     navigate(`${ROUTES.BOOK}?coach=${coach.id}`, { state: { from: location } });
   };
 
+  const registerCamp = async (camp: Camp): Promise<CampRegisterResult> => {
+    if (isOwn) {
+      toast({ title: "This is your own profile", description: "Families register for your camps here." });
+      return { redirect: false, message: null };
+    }
+    if (!user) {
+      navigate(`${ROUTES.AUTH}?mode=signin`, { state: { from: location } });
+      return { redirect: false, message: null };
+    }
+    const payment = await packagesAPI.createPackagePayment({ package_id: camp.id, coach_id: camp.coachId });
+    if (payment.error || !payment.data?.url) {
+      return { redirect: false, message: payment.error?.message || "Could not start registration." };
+    }
+    window.location.assign(payment.data.url);
+    return { redirect: true, message: null };
+  };
+
   const buy = (pkg: CoachPackage) => {
     if (isOwn) {
       toast({ title: "This is your own profile", description: "Families buy your packages here." });
@@ -203,11 +222,11 @@ export function CoachProfileView({
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4">
         <button
           type="button"
           onClick={back}
-          className="inline-flex w-fit items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980] hover:text-[#1A202C]"
+          className="inline-flex w-fit items-center gap-1 text-label-sm text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
           Back
@@ -243,20 +262,19 @@ export function CoachProfileView({
           credentials={credentials}
         />
 
-        {sessions.length || activePackages.length ? (
-          <PricingCard
-            coachId={coach.id}
-            first={first}
-            packages={activePackages}
-            sessions={sessions}
-            cancellation={cancellation}
-            paysDirect={paysDirect}
-            buying={null}
-            onBuy={buy}
-            onAsk={onMessage}
-            mostBookedId={extras?.mostBookedPackageId}
-          />
-        ) : null}
+        <PricingCard
+          coachId={coach.id}
+          first={first}
+          packages={activePackages}
+          sessions={sessions}
+          cancellation={cancellation}
+          paysDirect={paysDirect}
+          buying={null}
+          onBuy={buy}
+          onAsk={onMessage}
+          onRegister={registerCamp}
+          mostBookedId={extras?.mostBookedPackageId}
+        />
 
         {totalReviews > 0 || reviews.length ? (
           <ReviewsCard first={first} reviews={reviews} rating={averageRating} totalReviews={totalReviews} showRating={showRating} />

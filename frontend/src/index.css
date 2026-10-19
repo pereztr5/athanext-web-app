@@ -22,11 +22,12 @@ All colors MUST be HSL.
     --primary: 212 100% 35.3%;
     --primary-foreground: 60 28.2% 92.4%; /* #F1F1E6 */
 
-    --secondary: 60 29% 93.9%; /* #F4F4EB */
-    --secondary-foreground: 220 25.7% 13.7%;
+    /* Design system `secondary` is teal #1599BC. Cream secondary surfaces use `light-400`. */
+    --secondary: 192.6 79.9% 41%; /* #1599BC */
+    --secondary-foreground: 60 28.2% 92.4%; /* light */
 
     --muted: 60 29% 93.9%;
-    --muted-foreground: 222 4.1% 48.2%; /* #767980 */
+    --muted-foreground: 222 4.6% 42.7%; /* dark-300 #686B72, AA on every cream surface */
 
     --accent: 60 20.8% 89.6%; /* #EAEADF */
     --accent-foreground: 220 25.7% 13.7%;
@@ -43,12 +44,12 @@ All colors MUST be HSL.
     --pastel-pink: 330 70% 95%;
     --pastel-pink-foreground: 330 80% 25%;
 
-    --destructive: 0 84.2% 60.2%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 55.7% 38%; /* error-700 #972B2B */
+    --destructive-foreground: 60 28.2% 92.4%; /* light */
 
     --border: 60 20.8% 89.6%; /* #EAEADF */
-    --input: 60 20.8% 89.6%;
-    --ring: 212 54.5% 61.2%; /* #6698D2 */
+    --input: 216 4.3% 54.5%; /* dark-250 #868A90: 3:1 control boundary */
+    --ring: 212 100% 35.3%; /* primary: 2px focus ring, 6.3:1 */
 
     --radius: 10px;
 
@@ -186,17 +187,26 @@ All colors MUST be HSL.
   select,
   textarea {
     color-scheme: light;
-    background-color: #f9f9f5;
+    background-color: #f1f1e6; /* light: design system field fill */
     color: #1a202c;
   }
 
   option {
-    background-color: #f9f9f5;
+    background-color: #f7f7f0;
     color: #1a202c;
   }
 
   body {
     @apply bg-background text-foreground font-sans antialiased;
+    font-size: 14px;
+    line-height: 18px;
+    letter-spacing: -0.03em;
+  }
+
+  /* Design system focus: 2px solid primary, 2px offset (6.3:1). Applies to raw buttons and links too. */
+  :focus-visible {
+    outline: 2px solid hsl(var(--primary));
+    outline-offset: 2px;
   }
 }
 

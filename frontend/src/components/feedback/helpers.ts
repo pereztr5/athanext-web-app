@@ -53,7 +53,7 @@ export const summaryStarters = (pillar: string | null) => {
 };
 
 /** Working Copy `.cap` and `.fb-ta`. */
-export const caption = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
+export const caption = "text-caption text-dark-300";
 
 export const textarea =
-  "min-h-[88px] w-full resize-y rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-3 text-[14px] leading-[20px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus:border-[#99BBE1] focus:outline-none disabled:bg-[#F4F4EB] disabled:text-[#A3A6AB]";
+  "min-h-[88px] w-full resize-y rounded-control border border-dark-250 bg-light p-3 text-paragraph text-dark placeholder:text-dark-200 hover:border-dark-300 focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200";

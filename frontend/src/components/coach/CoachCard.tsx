@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { KeyboardEvent } from "react";
 import { Button } from '../ui/button';
-import { MapPin, Instagram, MessageCircle, Loader2 } from 'lucide-react';
+import { MapPin, Instagram, MessageCircle, Loader2 } from "@/components/icons";
 import { Card, CardContent } from '../ui/card';
 import rowerIcon from '../../assets/images/colored-rowing.png';
 import footballIcon from '../../assets/images/colored-soccer.png';
@@ -40,10 +40,10 @@ const toSentenceCase = (value: string) => {
 };
 
 const pillToggleClass =
-    "inline-flex items-center whitespace-nowrap rounded-[4px] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40";
+    "inline-flex items-center whitespace-nowrap rounded-pill px-2 py-[3px] text-label-xsm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 const actionButtonBase =
-    "h-[34px] rounded-[8px] border text-[14px] font-medium tracking-[-0.03em] shadow-none min-w-0";
+    "h-[34px] rounded-control border text-label-sm min-w-0";
 
 const CoachCard = ({
     coach,
@@ -126,7 +126,7 @@ const CoachCard = ({
             aria-label={`View ${coach?.name} profile`}
             onClick={openProfile}
             onKeyDown={handleCardKeyDown}
-            className="h-full w-full max-w-md md:max-w-none mx-auto flex flex-col cursor-pointer rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] shadow-none transition-colors hover:border-[#DCDCCF] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/30"
+            className="h-full w-full max-w-md md:max-w-none mx-auto flex flex-col cursor-pointer rounded-card border border-light-525 bg-light-300 text-dark transition-colors hover:border-light-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
             <CardContent className="flex flex-1 flex-col gap-5 px-[25px] pt-[30px] pb-[25px]">
                 <div className="flex flex-1 flex-col gap-5">
@@ -140,7 +140,7 @@ const CoachCard = ({
                                     className="size-10 rounded-full object-cover"
                                 />
                             ) : (
-                                <div className="flex size-10 items-center justify-center rounded-full bg-[#E5EDF7] text-[14px] font-medium tracking-[-0.03em] text-[#0054B4]">
+                                <div className="flex size-10 items-center justify-center rounded-full bg-primary-50 text-label-sm text-primary">
                                     {initials}
                                 </div>
                             )}
@@ -148,13 +148,13 @@ const CoachCard = ({
                                 src={sportIcon}
                                 alt=""
                                 aria-hidden="true"
-                                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-[#F7F7F0] p-px"
+                                className="absolute -bottom-1 -right-1 size-4 rounded-full bg-light-300 p-px"
                             />
                         </div>
 
                         <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                             <div className="flex min-w-0 items-center gap-1.5">
-                                <p className="truncate text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                                <p className="truncate text-card-title text-dark">
                                     {coach?.name || 'Unknown coach'}
                                 </p>
                                 {coach?.is_verified && (
@@ -164,7 +164,7 @@ const CoachCard = ({
                                             height="16"
                                             viewBox="0 0 24 24"
                                             fill="none"
-                                            stroke="#0054B4"
+                                            className="stroke-primary"
                                             strokeWidth={1.5}
                                             strokeLinecap="round"
                                             strokeLinejoin="round"
@@ -182,7 +182,7 @@ const CoachCard = ({
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={(e) => e.stopPropagation()}
-                                        className="inline-flex flex-none items-center justify-center rounded-[4px] text-[#767980] transition-colors hover:text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40"
+                                        className="inline-flex flex-none items-center justify-center rounded-pill text-dark-300 transition-colors hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                                         aria-label={`View ${coach.name}'s Instagram profile`}
                                     >
                                         <Instagram className="size-4" strokeWidth={1.5} />
@@ -190,32 +190,32 @@ const CoachCard = ({
                                 )}
                             </div>
                             <div className="flex min-w-0 flex-wrap items-center gap-[6px]">
-                                <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                                <p className="text-body-m text-dark-300">
                                     {primarySpecialty}
                                 </p>
                                 {academy && (
                                     <Link
                                         to={organizationPath(academy)}
                                         onClick={(e) => e.stopPropagation()}
-                                        className="min-w-0 max-w-full rounded-[4px] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                                        className="min-w-0 max-w-full rounded-pill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                                     >
-                                        <BrandPill tone="muted" className="min-w-0 max-w-full hover:text-[#0054B4]">
+                                        <BrandPill tone="muted" className="min-w-0 max-w-full hover:text-primary">
                                             <span className="truncate">{academy}</span>
                                         </BrandPill>
                                     </Link>
                                 )}
                             </div>
-                            <p className="flex items-center gap-1 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                            <p className="flex items-center gap-1 text-caption text-dark-300">
                                 <MapPin className="size-3 flex-none" strokeWidth={2} aria-hidden="true" />
                                 <span className="truncate">{primaryLocation}</span>
                             </p>
                         </div>
 
-                        <div className="flex flex-none items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                        <div className="flex flex-none items-center gap-1 text-label-sm text-dark">
                             <BrandStar filled={ratingVisible} size={16} />
                             <span>{publicCoachRatingLabel(coach?.rating, coach?.total_reviews)}</span>
                             {ratingVisible ? (
-                                <span className="text-[12px] font-normal leading-[14px] text-[#767980]">
+                                <span className="text-caption text-dark-300">
                                     {coach?.total_reviews || 0} reviews
                                 </span>
                             ) : null}
@@ -237,7 +237,7 @@ const CoachCard = ({
                                         event.stopPropagation();
                                         setShowAllSpecialties((prev) => !prev);
                                     }}
-                                    className={`${pillToggleClass} bg-[#F1F1E6] text-[#484D56] hover:bg-[#EAEADF]`}
+                                    className={`${pillToggleClass} border border-light-600 bg-light-525 text-dark-400 hover:bg-light-550`}
                                     aria-expanded={showAllSpecialties}
                                     aria-label={
                                         showAllSpecialties
@@ -260,7 +260,7 @@ const CoachCard = ({
                                         event.stopPropagation();
                                         setShowAllPositions((prev) => !prev);
                                     }}
-                                    className={`${pillToggleClass} bg-[#E7F4F8] text-[#1599BC] hover:bg-[#D9EEF4]`}
+                                    className={`${pillToggleClass} border border-secondary-300 bg-secondary-100 text-secondary-700 hover:bg-secondary-200`}
                                     aria-expanded={showAllPositions}
                                     aria-label={
                                         showAllPositions
@@ -280,7 +280,7 @@ const CoachCard = ({
                     <div className="flex gap-2">
                         <Button
                             type="button"
-                            className={`${actionButtonBase} flex-1 border-[#6698D2] bg-[#0054B4] px-3 text-[#F1F1E6] hover:bg-[#004390]`}
+                            className={`${actionButtonBase} flex-1 border-primary-300 bg-primary px-3 text-light hover:bg-primary-600`}
                             onClick={(event) => {
                                 event.stopPropagation();
                                 if (onSession) {
@@ -294,7 +294,7 @@ const CoachCard = ({
                         </Button>
                         <Button
                             type="button"
-                            className={`${actionButtonBase} flex-1 border-[#EAEADF] bg-[#F4F4EB] px-3 text-[#1A202C] hover:bg-[#EAEADF]`}
+                            className={`${actionButtonBase} flex-1 border-light-525 bg-light-400 px-3 text-dark hover:bg-light-525`}
                             onClick={(event) => {
                                 event.stopPropagation();
                                 if (onViewPackages) {
@@ -308,7 +308,7 @@ const CoachCard = ({
                         </Button>
                         <Button
                             type="button"
-                            className={`${actionButtonBase} w-[34px] flex-none border-[#EAEADF] bg-[#F4F4EB] p-0 text-[#1A202C] hover:bg-[#EAEADF] disabled:opacity-60`}
+                            className={`${actionButtonBase} w-[34px] flex-none border-light-525 bg-light-400 p-0 text-dark hover:bg-light-525 disabled:bg-light-400 disabled:border-light-525 disabled:text-dark-200`}
                             disabled={messageDisabled}
                             aria-label={isSendingMessage ? 'Starting a conversation' : `Send ${coach?.name || 'this coach'} a message`}
                             aria-busy={isSendingMessage || undefined}
@@ -329,7 +329,7 @@ const CoachCard = ({
                     </div>
                     <button
                         type="button"
-                        className="self-center rounded-[4px] text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] transition-colors hover:text-[#004390] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#0054B4]/40"
+                        className="self-center rounded-pill text-label-sm text-primary transition-colors hover:text-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         onClick={(event) => {
                             event.stopPropagation();
                             openProfile();

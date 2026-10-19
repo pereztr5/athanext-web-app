@@ -11,7 +11,7 @@ interface AvailabilityTableHeaderProps {
 }
 
 const head =
-  "h-auto px-0 py-3 text-left text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+  "h-auto px-0 py-3 text-left text-label-xsm text-dark-300";
 
 // `appearance` is kept for API compatibility; both views now share the same columns.
 export function AvailabilityTableHeader({ showActions = true }: AvailabilityTableHeaderProps) {

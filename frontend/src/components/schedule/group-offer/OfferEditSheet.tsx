@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, ChevronRight, Minus, Plus } from "lucide-react";
+import { Check, ChevronRight, Minus, Plus } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -16,7 +16,7 @@ import {
 } from "@/api/schedule";
 import { sheetBody, sheetContent, sheetFooter, sheetHeader, sheetTitle } from "@/components/book/checkoutParts";
 import { loadSavedUsual } from "@/components/schedule/plan/usualSessions";
-import { dangerTextButton, input, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { dangerTextButton, iconButton, input, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ALL_START_MINUTES, addDaysISO, formatDayISO, formatMinutes, plural, weekStartISO } from "@/utils/schedule";
@@ -168,7 +168,7 @@ export const OfferEditSheet = ({
     onError: (err: unknown) =>
       toast({
         title: "Couldn't update the post",
-        description: err instanceof Error ? err.message : "Please try again.",
+        description: err instanceof Error ? err.message : "Try again.",
         variant: "destructive",
       }),
   });
@@ -254,7 +254,7 @@ export const OfferEditSheet = ({
                     <button
                       key={key}
                       type="button"
-                      className={cn("flex w-full items-center gap-3 rounded-[8px] px-1.5 py-2.5 text-left hover:bg-[#F1F1E6]", x && "opacity-75")}
+                      className={cn("flex w-full items-center gap-3 rounded-control px-1.5 py-2.5 text-left hover:bg-light-200", x && "opacity-75")}
                       onClick={() => openSes(key)}
                     >
                       <DateTile day={e.date} />
@@ -266,7 +266,7 @@ export const OfferEditSheet = ({
                           {ch && !x ? <BrandPill tone="amber">Edited</BrandPill> : null}
                           {x ? <BrandPill tone="red">{bk ? "Will be cancelled" : "Will be removed"}</BrandPill> : null}
                         </span>
-                        <span className={cn(meta, x && bk && "text-[#972B2B]")}>
+                        <span className={cn(meta, x && bk && "text-error-700")}>
                           {x
                             ? bk
                               ? `${plural(bk, "family", "families")} get a session credit when you update`
@@ -274,24 +274,24 @@ export const OfferEditSheet = ({
                             : `${formatMinutes(parseHm(e.startTime))} · ${e.where} · ${money(e.price)} · ${plural(e.capacity, "spot")}`}
                         </span>
                       </span>
-                      <ChevronRight className="size-4 flex-none text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+                      <ChevronRight className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                     </button>
                   );
                 })}
               </div>
               <button
                 type="button"
-                className="flex h-11 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#C1C1B8] text-[15px] font-medium text-[#0054B4] hover:bg-[#F4F4EB]"
+                className="flex h-11 w-full items-center justify-center gap-1.5 rounded-control border border-dashed border-light-600 text-label-sm text-primary hover:bg-light-400"
                 onClick={() => setView("add")}
               >
                 <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 Add a session
               </button>
-              <label className="flex cursor-pointer items-center gap-2.5 text-[14px]">
-                <input type="checkbox" className="size-4 accent-[#0054B4]" checked={closed} onChange={(e) => setClosed(e.target.checked)} />
+              <label className="flex cursor-pointer items-center gap-2.5 text-body-m">
+                <input type="checkbox" className="size-4 accent-primary" checked={closed} onChange={(e) => setClosed(e.target.checked)} />
                 <span>Close picks now. Booked sessions stay booked.</span>
               </label>
-              <div className="rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[13px] text-[#767980]">{parts.length ? parts.join(" · ") : "No changes yet"}</div>
+              <div className="rounded-control border border-light-525 bg-light-400 px-3.5 py-3 text-body-m text-dark-300">{parts.length ? parts.join(" · ") : "No changes yet"}</div>
             </div>
             <div className={cn(sheetFooter, "justify-between")}>
               <button type="button" className={cn(secondaryButton, "h-10")} onClick={() => onOpenChange(false)}>
@@ -307,7 +307,7 @@ export const OfferEditSheet = ({
         {view === "add" ? (
           <>
             <DialogHeader className={sheetHeader}>
-              <button type="button" className="mb-1 text-left text-[14px] font-medium text-[#0054B4]" onClick={() => setView("list")}>
+              <button type="button" className="mb-1 text-left text-label-sm text-primary" onClick={() => setView("list")}>
                 Back
               </button>
               <DialogTitle className={sheetTitle}>Add a session</DialogTitle>
@@ -319,7 +319,7 @@ export const OfferEditSheet = ({
                   <button
                     key={`${u.title}-${i}`}
                     type="button"
-                    className="flex w-full items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#FDFDFC] px-3.5 py-3 text-left hover:border-[#6698D2]"
+                    className="flex w-full items-center gap-3 rounded-card border border-light-525 bg-light-300 px-3.5 py-3 text-left hover:bg-light-200"
                     onClick={() => {
                       const day = weekDays[0] ?? live[0]?.date;
                       if (!day) return;
@@ -348,7 +348,7 @@ export const OfferEditSheet = ({
                       </span>
                     </span>
                     <span className="flex flex-none flex-col items-end gap-0.5">
-                      <span className="text-[14px] font-medium">{money(u.price)}</span>
+                      <span className="text-label-sm">{money(u.price)}</span>
                       <span className={meta}>{plural(u.capacity, "spot")}</span>
                     </span>
                   </button>
@@ -363,7 +363,7 @@ export const OfferEditSheet = ({
         {view === "ses" && form && cur ? (
           <>
             <DialogHeader className={sheetHeader}>
-              <button type="button" className="mb-1 text-left text-[14px] font-medium text-[#0054B4]" onClick={() => setView("list")}>
+              <button type="button" className="mb-1 text-left text-label-sm text-primary" onClick={() => setView("list")}>
                 Back
               </button>
               <DialogTitle className={sheetTitle}>
@@ -375,7 +375,7 @@ export const OfferEditSheet = ({
             </DialogHeader>
             <div className={sheetBody}>
               {removed.includes(cur) ? (
-                <p className="text-[13px] leading-4 text-[#972B2B]">{sesNote()}</p>
+                <p className="text-body-m text-error-700">{sesNote()}</p>
               ) : (
                 <>
                   <div className="grid grid-cols-[64px_minmax(0,1fr)] items-center gap-x-3 gap-y-3.5">
@@ -411,17 +411,17 @@ export const OfferEditSheet = ({
                     <div className="flex items-center gap-2.5">
                       <button
                         type="button"
-                        className="inline-flex size-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] disabled:opacity-40"
+                        className={iconButton}
                         disabled={form.capacity <= Math.max(2, cur.startsWith("new") ? 0 : live.find((s) => s.id === cur)?.bookedCount ?? 0)}
                         onClick={() => setForm({ ...form, capacity: form.capacity - 1 })}
                         aria-label="Fewer spots"
                       >
                         <Minus className="size-4" strokeWidth={1.5} />
                       </button>
-                      <b className="min-w-[24px] text-center text-[16px]">{form.capacity}</b>
+                      <b className="min-w-[24px] text-center text-subtitle tabular-nums">{form.capacity}</b>
                       <button
                         type="button"
-                        className="inline-flex size-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB]"
+                        className={iconButton}
                         onClick={() => setForm({ ...form, capacity: form.capacity + 1 })}
                         aria-label="More spots"
                       >
@@ -430,7 +430,7 @@ export const OfferEditSheet = ({
                     </div>
                     <span className={meta}>Price</span>
                     <span className="relative max-w-[130px]">
-                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#767980]">$</span>
+                      <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body-m text-dark-300">$</span>
                       <input
                         className={cn(input, "pl-7")}
                         inputMode="numeric"
@@ -440,7 +440,7 @@ export const OfferEditSheet = ({
                       />
                     </span>
                   </div>
-                  {sesNote() ? <p className="text-[13px] leading-4 text-[#767980]">{sesNote()}</p> : null}
+                  {sesNote() ? <p className="text-body-m text-dark-300">{sesNote()}</p> : null}
                 </>
               )}
             </div>

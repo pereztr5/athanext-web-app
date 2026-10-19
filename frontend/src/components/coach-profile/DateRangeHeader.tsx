@@ -7,11 +7,12 @@
 import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Switch } from '@/components/ui/switch';
-import { AlertCircle, Info } from 'lucide-react';
+import { AlertCircle, Info } from "@/components/icons";
 import { SETUP_INSTRUCTIONS } from '@/utils/db';
 import { DateRangePicker } from '@/components/ui/DateRangePicker';
 import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
+import { segButton, segGroup } from '@/components/schedule/styles';
 import { formatDateForInput } from '@/utils/helperFunctions';
 import { parseISODateLocal } from '@/utils/dateHelpers';
 import type { AvailabilityFormData } from '@/types/availability';
@@ -52,7 +53,7 @@ interface DateRangeHeaderProps {
 }
 
 const dateInputClass =
-  "h-[38px] w-[150px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none focus-visible:ring-0";
+  "h-[38px] w-[150px] rounded-control border-0 bg-light px-[10px] text-body-m text-dark focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-primary focus-visible:ring-0";
 
 /** Parses a date input's value, ignoring partial years while it's being typed (e.g. "0002-10-05"). */
 const parseDateInput = (value: string): Date | null => {
@@ -100,7 +101,7 @@ export const DateRangeHeader = ({
           <div
             role="radiogroup"
             aria-label="Schedule type"
-            className="inline-flex w-fit rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] p-[3px]"
+            className={cn(segGroup, "w-fit")}
           >
             {SCHEDULE_MODES.map((mode) => {
               const selected = scheduleMode === mode.value;
@@ -111,10 +112,7 @@ export const DateRangeHeader = ({
                   role="radio"
                   aria-checked={selected}
                   onClick={() => onScheduleModeChange(mode.value)}
-                  className={cn(
-                    "h-[30px] rounded-[6px] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] transition-colors",
-                    selected ? "bg-[#F7F7F0] text-[#1A202C] shadow-[0_0_4px_rgba(0,0,0,0.06)]" : "text-[#767980] hover:text-[#1A202C]"
-                  )}
+                  className={cn(segButton(selected), "flex-none px-3")}
                 >
                   {mode.label}
                 </button>
@@ -123,7 +121,7 @@ export const DateRangeHeader = ({
           </div>
         )}
         <div className="flex flex-wrap items-center gap-3">
-          <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <span className="text-label-sm text-dark-300">
             {scheduleMode === 'single' ? 'Session date' : scheduleMode === 'rolling' ? 'Starts on' : 'Availability period'}
           </span>
           {scheduleMode === 'single' || scheduleMode === 'rolling' ? (
@@ -153,7 +151,7 @@ export const DateRangeHeader = ({
           )}
         </div>
         {scheduleMode === 'rolling' && !isEditMode && (
-          <p className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">
+          <p className="text-caption text-dark-300">
             Repeats weekly, no end date. Sessions stay open 8 weeks ahead.
           </p>
         )}
@@ -164,14 +162,14 @@ export const DateRangeHeader = ({
                 checked={rollingEdit.repeating}
                 onCheckedChange={rollingEdit.onRepeatingChange}
                 id="repeats-weekly-toggle"
-                className="h-5 w-9 border-0 data-[state=checked]:bg-[#0054B4] data-[state=unchecked]:bg-[#D9D9CF] [&>span]:h-4 [&>span]:w-4 [&>span]:bg-[#F7F7F0] [&>span]:data-[state=checked]:translate-x-4"
+                className="h-5 w-9 border-0 data-[state=checked]:bg-primary data-[state=unchecked]:bg-light-550 [&>span]:h-4 [&>span]:w-4 [&>span]:bg-light-300 [&>span]:data-[state=checked]:translate-x-4"
               />
-              <label htmlFor="repeats-weekly-toggle" className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+              <label htmlFor="repeats-weekly-toggle" className="text-label-sm text-dark">
                 Repeats weekly, no end date
               </label>
               {!rollingEdit.repeating && (
                 <>
-                  <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">Ends on</span>
+                  <span className="text-label-sm text-dark-300">Ends on</span>
                   <Input
                     type="date"
                     aria-label="End date"
@@ -187,7 +185,7 @@ export const DateRangeHeader = ({
                 </>
               )}
             </div>
-            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">
+            <p className="text-caption text-dark-300">
               {rollingEdit.repeating
                 ? 'Sessions stay open 8 weeks ahead.'
                 : 'Sessions after the end date are removed. It can’t be before your last booked session.'}
@@ -200,39 +198,39 @@ export const DateRangeHeader = ({
             checked={isRecurring}
             onCheckedChange={onRecurringToggle}
             id="recurring-toggle"
-            className="h-5 w-9 border-0 data-[state=checked]:bg-[#0054B4] data-[state=unchecked]:bg-[#D9D9CF] [&>span]:h-4 [&>span]:w-4 [&>span]:bg-[#F7F7F0] [&>span]:data-[state=checked]:translate-x-4"
+            className="h-5 w-9 border-0 data-[state=checked]:bg-primary data-[state=unchecked]:bg-light-550 [&>span]:h-4 [&>span]:w-4 [&>span]:bg-light-300 [&>span]:data-[state=checked]:translate-x-4"
           />
-          <label htmlFor="recurring-toggle" className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+          <label htmlFor="recurring-toggle" className="text-label-sm text-dark">
             Recurring session
           </label>
-          <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">
+          <span className="text-caption text-dark-300">
             {isRecurring ? "Applies to all weeks" : "Only this week"}
           </span>
           <div ref={infoPopoverRef} className="relative">
             <button
               type="button"
               onClick={() => setShowInfoPopover(!showInfoPopover)}
-              className="text-[#767980] hover:text-[#1A202C]"
+              className="text-dark-300 hover:text-dark"
               title="Setup instructions"
               aria-label="Setup instructions"
             >
               <Info className="size-4" strokeWidth={1.5} />
             </button>
             {showInfoPopover && (
-              <div className="absolute left-0 z-50 mt-2 w-80 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)]">
-                <h3 className="mb-3 text-[14px] font-medium text-[#1A202C]">{SETUP_INSTRUCTIONS.title}</h3>
-                <ul className="space-y-2 text-[12px] leading-[14px] text-[#484D56]">
+              <div className="absolute left-0 z-50 mt-2 w-80 rounded-card border border-light-525 bg-light-300 p-4 text-dark shadow-overlay">
+                <h3 className="mb-3 text-label-sm text-dark">{SETUP_INSTRUCTIONS.title}</h3>
+                <ul className="space-y-2 text-caption text-dark-400">
                   {SETUP_INSTRUCTIONS.steps.map((step, idx) => (
                     <li key={idx} className="flex gap-2">
-                      <span className="font-medium text-[#0054B4]">{idx + 1}.</span>
+                      <span className="font-medium text-primary">{idx + 1}.</span>
                       <span>{step}</span>
                     </li>
                   ))}
                 </ul>
                 {recurringInfo && (
-                  <div className="mt-3 border-t border-[#EAEADF] pt-3">
-                    <p className="mb-1 text-[14px] font-medium text-[#1A202C]">{recurringInfo.title}</p>
-                    <p className="text-[12px] leading-[14px] text-[#767980]">{recurringInfo.description}</p>
+                  <div className="mt-3 border-t border-light-525 pt-3">
+                    <p className="mb-1 text-label-sm text-dark">{recurringInfo.title}</p>
+                    <p className="text-caption text-dark-300">{recurringInfo.description}</p>
                   </div>
                 )}
               </div>
@@ -242,29 +240,27 @@ export const DateRangeHeader = ({
         )}
       </div>
       {showDateChangeConfirm && pendingDateRange && (
-        <div className="flex flex-col gap-3 rounded-[8px] bg-[#FDF7EC] px-[15px] py-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex flex-col gap-3 rounded-control border border-info-300 bg-info-50 px-[15px] py-3 sm:flex-row sm:items-center sm:justify-between">
           <div className="flex items-start gap-2">
-            <AlertCircle className="mt-[1px] size-4 flex-none text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
+            <AlertCircle className="mt-[1px] size-4 flex-none text-info-700" strokeWidth={1.5} aria-hidden="true" />
             <div className="flex flex-col gap-[3px]">
-              <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Apply new date range?</p>
-              <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+              <p className="text-label-sm text-dark">Apply new date range?</p>
+              <p className="text-caption text-dark-300">
                 Changing dates may reset weekly slots. Overlapping weeks will be preserved.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2">
             <Button
-              variant="ghost"
+              variant="secondary"
               size="sm"
               onClick={onCancelDateChange}
-              className="h-[30px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] hover:bg-[#EAEADF]"
             >
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={onConfirmDateChange}
-              className="h-[30px] rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] hover:bg-[#004390]"
             >
               Apply
             </Button>

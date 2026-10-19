@@ -66,11 +66,10 @@ export function PathwayTagChips({
               disabled={atLimit}
               onClick={() => toggle(tag)}
               className={cn(
-                "rounded-[4px] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] transition-colors",
+                "rounded-pill border px-2 py-[3px] text-label-xsm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200",
                 isOn
-                  ? "bg-[#E7F4F8] text-[#1599BC] ring-1 ring-[#1599BC]/40"
-                  : "bg-[#F1F1E6] text-[#484D56] hover:bg-[#EAEADF]",
-                atLimit && "cursor-not-allowed opacity-40"
+                  ? "border-secondary-300 bg-secondary-100 text-secondary-700"
+                  : "border-light-525 bg-light-400 text-dark-400 hover:bg-light-200"
               )}
               aria-pressed={isOn}
             >
@@ -81,8 +80,8 @@ export function PathwayTagChips({
       </div>
       {pendingSuggestions.length > 0 ? (
         <div className="flex flex-col gap-1.5">
-          <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
-            Suggested from age / graduation — tap to add
+          <p className="text-caption text-dark-300">
+            Suggested from age and graduation year. Tap to add
           </p>
           <div className="flex flex-wrap gap-2">
             {pendingSuggestions.map((tag) => (
@@ -90,7 +89,7 @@ export function PathwayTagChips({
                 key={`suggest-${tag}`}
                 type="button"
                 onClick={() => acceptSuggestion(tag)}
-                className="rounded-[4px] border border-dashed border-[#CCDDF0] bg-[#E5EDF7]/60 px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#0054B4]"
+                className="rounded-pill border border-dashed border-primary-300 bg-primary-50 px-2 py-[3px] text-label-xsm text-primary focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 + {tag}
               </button>
@@ -98,7 +97,7 @@ export function PathwayTagChips({
           </div>
         </div>
       ) : null}
-      <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+      <p className="text-caption text-dark-300">
         Up to {MAX_PATHWAY_TAGS} pathway tags ({current.length}/{MAX_PATHWAY_TAGS})
       </p>
     </div>

@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2 } from "@/components/icons";
 import { BrandPill } from '@/components/brand';
 import { formatSlotTime } from '@/utils/sessionFormatting';
 import {
@@ -78,8 +78,7 @@ export const ManageAvailabilityTableRow = ({
 }: ManageAvailabilityTableRowProps) => {
   const isEnabled = slot?.is_enabled ?? false;
   const cellClass = "px-1 py-2 align-middle";
-  const fieldClass =
-    "h-[38px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C] shadow-none placeholder:text-[#A3A6AB] focus-visible:ring-0 disabled:opacity-100";
+  const fieldClass = "h-[38px] px-[10px]";
   const dateLabel = slot?.occurrence_date
     ? parseISODateLocal(slot.occurrence_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
@@ -88,7 +87,7 @@ export const ManageAvailabilityTableRow = ({
   const isPastDate = lockPastDates && slot?.occurrence_date ? slot.occurrence_date < todayISO : false;
   const isLocked = isPastDate || isBookingLocked;
   const inputDisabled = !isEnabled || isLocked;
-  const rowClass = `border-b border-[#EAEADF] ${isLocked ? "opacity-60" : ""}`;
+  const rowClass = `border-b border-light-525 ${isLocked ? "opacity-60" : ""}`;
 
   return (
     <tr className={rowClass}>
@@ -98,11 +97,11 @@ export const ManageAvailabilityTableRow = ({
             checked={isEnabled}
             onCheckedChange={() => onToggle(dayOfWeek, slotIndex)}
             disabled={isLocked}
-            className="size-4 rounded-[4px] border-[#D9D9CF] bg-[#FDFDFC] data-[state=checked]:border-[#6698D2] data-[state=checked]:bg-[#0054B4] data-[state=checked]:text-white"
+            className="size-4 rounded-pill border-light-550 bg-light-50 data-[state=checked]:border-primary-300 data-[state=checked]:bg-primary data-[state=checked]:text-light"
           />
-          <div className="flex flex-col leading-tight">
-            <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{dayName}</span>
-            {dateLabel && <span className="mt-[2px] text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">{dateLabel}</span>}
+          <div className="flex flex-col">
+            <span className="text-label-sm text-dark">{dayName}</span>
+            {dateLabel && <span className="mt-[2px] text-caption text-dark-300">{dateLabel}</span>}
             {isPastDate && (
               <BrandPill tone="neutral" className="mt-1 w-fit">Unavailable</BrandPill>
             )}
@@ -120,7 +119,7 @@ export const ManageAvailabilityTableRow = ({
           onChange={(e) => onChange(dayOfWeek, 'session_name', e.target.value, slotIndex)}
           disabled={inputDisabled}
           id={`session-name-${dayOfWeek}`}
-          className={`${fieldClass} w-[147px] ${slotError?.session_name ? "border border-[#FB4747]" : ""}`}
+          className={`${fieldClass} w-[147px] ${slotError?.session_name ? "border-error-600" : ""}`}
           data-week={weekISO}
           data-day={dayOfWeek}
           data-slot={slotIndex}
@@ -136,7 +135,7 @@ export const ManageAvailabilityTableRow = ({
           disabled={inputDisabled || pillars.length === 0}
         >
           <SelectTrigger
-            className={`${fieldClass} w-[147px] text-left ${slotError?.pillar_slot ? "border border-[#FB4747]" : ""}`}
+            className={`${fieldClass} w-[147px] text-left ${slotError?.pillar_slot ? "border-error-600" : ""}`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -157,13 +156,13 @@ export const ManageAvailabilityTableRow = ({
 
       <td className={`${cellClass}`}>
         <div className="relative">
-          <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-[14px] text-[#1A202C]">$</span>
+          <span className="pointer-events-none absolute left-[10px] top-1/2 -translate-y-1/2 text-body-m text-dark">$</span>
           <Input
             type="number"
             value={slot?.price ?? 50}
             onChange={(e) => onChange(dayOfWeek, 'price', parseFloat(e.target.value), slotIndex)}
             disabled={inputDisabled}
-            className={`${fieldClass} w-[82px] pl-6 ${slotError?.price ? "border border-[#FB4747]" : ""}`}
+            className={`${fieldClass} w-[82px] pl-6 ${slotError?.price ? "border-error-600" : ""}`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
@@ -209,14 +208,14 @@ export const ManageAvailabilityTableRow = ({
             value={slot?.start_time || '10:00'}
             onChange={(e) => onChange(dayOfWeek, 'start_time', e.target.value, slotIndex)}
             disabled={inputDisabled}
-            className={`${fieldClass} w-[92px] ${slotError?.start_time ? "border border-[#FB4747]" : ""}`}
+            className={`${fieldClass} w-[92px] ${slotError?.start_time ? "border-error-600" : ""}`}
             data-week={weekISO}
             data-day={dayOfWeek}
             data-slot={slotIndex}
             data-field="start_time"
             ref={(el) => registerFocusRef?.(weekISO, dayOfWeek, slotIndex, 'start_time', el)}
           />
-          <span className="whitespace-nowrap text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <span className="whitespace-nowrap text-body-m text-dark-300">
             to {formatSlotTime(slot?.end_time || '11:00')}
           </span>
         </div>
@@ -283,7 +282,7 @@ export const ManageAvailabilityTableRow = ({
         <div className="flex items-center justify-end gap-3">
           {onAddSlot && (
             <button
-              className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex size-4 items-center justify-center text-dark-300 hover:text-dark disabled:cursor-not-allowed disabled:text-dark-200"
               title="Duplicate this slot"
               aria-label="Duplicate this slot"
               onClick={() => onAddSlot(slot)}
@@ -295,7 +294,7 @@ export const ManageAvailabilityTableRow = ({
           )}
           {onDeleteSlot && canDelete && (
             <button
-              className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
+              className="inline-flex size-4 items-center justify-center text-dark-300 hover:text-dark disabled:cursor-not-allowed disabled:text-dark-200"
               title="Delete this slot"
               aria-label="Delete this slot"
               onClick={onDeleteSlot}

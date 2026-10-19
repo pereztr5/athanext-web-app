@@ -1,5 +1,5 @@
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { Link } from "react-router-dom";
 
 import { BrandPill, BrandStar } from "@/components/brand";
@@ -39,8 +39,8 @@ const RatingStars = ({ value, onChange, onHover, onLeave, disabled = false }: Ra
         key={star}
         type="button"
         className={cn(
-          "rounded-[4px] p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]",
-          disabled && "cursor-not-allowed opacity-60"
+          "rounded-pill p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+          disabled && "cursor-not-allowed"
         )}
         onClick={() => !disabled && onChange(star)}
         onMouseEnter={() => !disabled && onHover(star)}
@@ -86,9 +86,7 @@ type RateCoachDialogProps = {
 };
 
 const sectionClass = "px-[25px] py-5";
-const Divider = () => <div className="h-px bg-[#EAEADF]" />;
-const buttonBase =
-  "h-[34px] rounded-[8px] border px-4 text-[16px] font-medium leading-[18px] tracking-[-0.03em]";
+const Divider = () => <div className="h-px bg-light-525" />;
 
 export const RateCoachDialog = ({
   open,
@@ -123,11 +121,11 @@ export const RateCoachDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(nextOpen) => !nextOpen && onCancel()}>
-      <DialogContent className="max-w-[720px] gap-0 overflow-hidden rounded-[10px] border-[#EAEADF] bg-[#F7F7F0] p-0 font-sans tracking-[-0.03em] text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)] sm:rounded-[10px] [&>button]:right-[17px] [&>button]:top-[19px] [&>button]:text-[#767980] [&>button[data-state=open]]:bg-transparent [&>button[data-state=open]]:text-[#767980]">
+      <DialogContent className="max-w-[720px] gap-0 overflow-hidden rounded-card border-light-525 bg-light-300 p-0 font-sans tracking-[-0.03em] text-dark shadow-overlay sm:rounded-card [&>button]:right-[17px] [&>button]:top-[19px] [&>button]:text-dark-300 [&>button[data-state=open]]:bg-transparent [&>button[data-state=open]]:text-dark-300">
         {session && (
           <>
             <DialogHeader className={cn(sectionClass, "space-y-0 pr-14 text-left")}>
-              <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+              <DialogTitle className="text-section text-dark">
                 {isFeedbackLocked ? "Your rating" : "Rate your coach"}
               </DialogTitle>
               <DialogDescription className="sr-only">
@@ -143,13 +141,13 @@ export const RateCoachDialog = ({
               <div className="flex items-center gap-3">
                 <Avatar className="h-10 w-10 shrink-0">
                   <AvatarImage src={session.coachAvatar ?? getAvatarUrlFromName(session.coach)} alt={session.coach} />
-                  <AvatarFallback className="bg-[#E5EDF7] text-[14px] font-medium text-[#0054B4]">
+                  <AvatarFallback className="bg-primary-50 text-label-sm text-primary">
                     {getInitialsFromName(session.coach)}
                   </AvatarFallback>
                 </Avatar>
                 <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-                  <p className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{session.coach}</p>
-                  <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{metaLine}</p>
+                  <p className="text-subtitle text-dark">{session.coach}</p>
+                  <p className="text-body-m text-dark-300">{metaLine}</p>
                 </div>
                 {coachSport ? (
                   <BrandPill tone="teal" className="shrink-0">
@@ -159,11 +157,11 @@ export const RateCoachDialog = ({
               </div>
 
               {coachSummary || existingFeedback?.feedback_to_athlete ? (
-                <div className="flex flex-col gap-1.5 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-4">
-                  <p className="text-[14px] leading-[18px] font-medium text-[#1A202C]">From your coach</p>
-                  {coachSummary ? <p className="whitespace-pre-wrap text-[14px] leading-[18px] text-[#767980]">{coachSummary}</p> : null}
+                <div className="flex flex-col gap-1.5 rounded-card border border-light-525 bg-light-400 p-4">
+                  <p className="text-label-sm text-dark">From your coach</p>
+                  {coachSummary ? <p className="whitespace-pre-wrap text-paragraph text-dark-300">{coachSummary}</p> : null}
                   {existingFeedback?.feedback_to_athlete ? (
-                    <p className="whitespace-pre-wrap text-[14px] leading-[18px] text-[#484D56]">
+                    <p className="whitespace-pre-wrap text-paragraph text-dark-400">
                       {coachSummary ? <b className="font-medium">Just for you: </b> : null}
                       {existingFeedback.feedback_to_athlete}
                     </p>
@@ -172,7 +170,7 @@ export const RateCoachDialog = ({
               ) : null}
 
               {isFeedbackLocked && existingFeedback ? (
-                <p className="text-[14px] leading-[18px] text-[#767980]">
+                <p className="text-body-m text-dark-300">
                   You sent this rating on{" "}
                   {new Date(existingFeedback.athlete_rated_at || existingFeedback.created_at).toLocaleDateString(
                     "en-US",
@@ -181,7 +179,7 @@ export const RateCoachDialog = ({
                   . Ratings are final once submitted.
                 </p>
               ) : !isLoadingFeedback ? (
-                <p className="text-[14px] leading-[18px] text-[#767980]">
+                <p className="text-body-m text-dark-300">
                   Ratings are final once submitted and can't be changed.
                 </p>
               ) : null}
@@ -191,7 +189,7 @@ export const RateCoachDialog = ({
               ) : (
                 <>
                   <div className="flex flex-col gap-[10px]">
-                    <p className="text-[16px] font-medium leading-[18px] text-[#1A202C]">Overall rating</p>
+                    <p className="text-subtitle text-dark">Overall rating</p>
                     <div className="flex items-center gap-3">
                       <RatingStars
                         value={displayedRating}
@@ -201,18 +199,18 @@ export const RateCoachDialog = ({
                         disabled={isFeedbackLocked}
                       />
                       {displayedRating > 0 ? (
-                        <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
+                        <span className="text-subtitle text-dark" aria-live="polite">
                           {displayedRating} of 5
                         </span>
                       ) : null}
                     </div>
                     {!isFeedbackLocked && rating < 1 && (
-                      <p className="text-[12px] leading-[14px] text-[#767980]">Select at least 1 star to submit</p>
+                      <p className="text-caption text-dark-300">Select at least 1 star to submit</p>
                     )}
                   </div>
 
                   <div className="flex flex-col gap-[10px]">
-                    <label htmlFor="rate-coach-comment" className="text-[16px] font-medium leading-[18px] text-[#1A202C]">
+                    <label htmlFor="rate-coach-comment" className="text-subtitle text-dark">
                       What went well
                     </label>
                     <Textarea
@@ -222,7 +220,7 @@ export const RateCoachDialog = ({
                       placeholder="Optional. Your coach sees this"
                       readOnly={isFeedbackLocked}
                       disabled={isFeedbackLocked}
-                      className="min-h-[90px] rounded-[8px] border-0 bg-[#F1F1E6] p-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#1A202C] placeholder:text-[#A3A6AB] focus-visible:ring-[#6698D2] disabled:cursor-default disabled:opacity-100"
+                      className="min-h-[90px] rounded-control border border-dark-250 bg-light p-3 text-paragraph text-dark placeholder:text-dark-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-1 focus-visible:outline-primary focus-visible:ring-0 focus-visible:ring-offset-0 disabled:cursor-default disabled:bg-light-400 disabled:border-light-525 disabled:text-dark-200"
                       maxLength={2000}
                     />
                   </div>
@@ -236,7 +234,6 @@ export const RateCoachDialog = ({
                 <div className={cn(sectionClass, "flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end")}>
                   <Button
                     variant="outline"
-                    className={cn(buttonBase, "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] hover:bg-[#EAEADF] hover:text-[#1A202C]")}
                     onClick={onCancel}
                     disabled={isSubmitting || isSubmitted}
                   >
@@ -245,17 +242,11 @@ export const RateCoachDialog = ({
                   {isFeedbackLocked ? (
                     <Button
                       asChild
-                      className={cn(buttonBase, "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#0054B4]/90")}
                     >
                       <Link to={ROUTES.CONTACT_US}>Contact support</Link>
                     </Button>
                   ) : (
                     <Button
-                      className={cn(
-                        buttonBase,
-                        "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6] hover:bg-[#0054B4]/90",
-                        isSubmitted && "disabled:opacity-100"
-                      )}
                       onClick={onSubmit}
                       disabled={isSubmitting || isSubmitted || rating < 1}
                     >
@@ -265,7 +256,7 @@ export const RateCoachDialog = ({
                           Feedback submitted
                         </>
                       ) : isSubmitting ? (
-                        "Submitting..."
+                        "Submitting…"
                       ) : (
                         "Submit rating"
                       )}

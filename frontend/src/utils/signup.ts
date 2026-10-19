@@ -3,6 +3,8 @@
  * written into the profile. Session flags keep Auth from sending a half-finished
  * account to the old complete-profile form.
  */
+import { LEVEL_OPTIONS } from "@/constants/pathwayTags";
+
 export type SignupWho = "coach" | "self" | "parent";
 export type SignupRole = "athlete" | "coach" | "parent";
 
@@ -116,13 +118,8 @@ export const clearSignupSession = () => {
   }
 };
 
-/** Map WC4 level labels onto pathway_tags stored in the DB. */
-export const LEVEL_TO_PATHWAY: Record<string, string> = {
-  Recreational: "Adult/Recreation",
-  "Youth development": "Youth Development",
-  "Elite pathway": "Elite Pathway",
-  "College or pro": "College",
-};
+/** Map sign-up level labels onto pathway_tags stored in the DB (shared with the coach profile). */
+export const LEVEL_TO_PATHWAY: Record<string, string> = Object.fromEntries(LEVEL_OPTIONS.map((o) => [o.label, o.tag]));
 
 export const COACH_POS_TO_DB: Record<string, string> = {
   Goalkeepers: "Goalkeeper",

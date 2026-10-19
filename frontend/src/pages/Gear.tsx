@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle, Search, ShoppingBag, UserCheck } from "lucide-react";
+import { AlertCircle, Search, ShoppingBag, UserCheck } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { GearLoading, GearNotice, GearPageShell } from "@/components/gear/GearPageShell";
 import { GearProductCard } from "@/components/gear/GearProductCard";
@@ -25,8 +25,8 @@ const ALL = "__all";
 const NO_FILTERS: GearFilters = { search: "", sport: null, category: null, price: null, fromMyCoaches: false };
 
 const chipClass = (on: boolean) =>
-  `inline-flex h-[30px] items-center rounded-[8px] border px-3 text-[14px] font-medium transition-colors ${
-    on ? "border-[#1A202C] bg-[#F7F7F0] text-[#1A202C]" : "border-transparent bg-[#F4F4EB] text-[#1A202C] hover:bg-[#EAEADF]"
+  `inline-flex h-[30px] items-center rounded-control border px-3 text-label-sm transition-colors ${
+    on ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-400 text-dark hover:bg-light-525"
   }`;
 
 const Gear = () => {
@@ -117,7 +117,7 @@ const Gear = () => {
           <div className="flex flex-wrap items-center gap-2">
             <label className="relative min-w-[240px] flex-1">
               <span className="sr-only">Search gear</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
               <input
                 className={cn(input, "pl-9")}
                 placeholder="Search gear"
@@ -162,9 +162,9 @@ const Gear = () => {
         </div>
 
         {featured && !filters.fromMyCoaches && !filters.search ? (
-          <section className="flex flex-col gap-4 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 md:p-5">
+          <section className="flex flex-col gap-4 rounded-card border border-light-525 bg-light-300 p-4 md:p-5">
             <div className="flex items-center justify-between gap-3">
-              <b className="text-[16px] font-medium tracking-[-0.05em]">From {featured.coach.name.split(" ")[0]}'s store</b>
+              <b className="text-subtitle">From {featured.coach.name.split(" ")[0]}'s store</b>
               <span className={meta}>
                 Your coach · {featured.picks.length} {featured.picks.length === 1 ? "product" : "products"}
               </span>
@@ -177,7 +177,7 @@ const Gear = () => {
           </section>
         ) : null}
 
-        <p className="text-[12px] leading-[16px] text-[#767980]">
+        <p className="text-paragraph-sm text-dark-300">
           {filtered.length} {filtered.length === 1 ? "product" : "products"}
         </p>
 

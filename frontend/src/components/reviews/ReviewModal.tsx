@@ -75,21 +75,21 @@ export const ReviewModal = ({ open, onOpenChange, coachName, onSubmit }: ReviewM
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-[560px] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-w-[560px] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             Rate your session with {coachName}
           </DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             Your review helps other athletes find the right coach
           </DialogDescription>
         </DialogHeader>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         <div className="flex flex-col gap-5 px-[25px] py-5">
           <div className="flex flex-col gap-[10px]">
-            <p id="review-rating-label" className="text-[16px] font-medium leading-[18px] text-[#1A202C]">
+            <p id="review-rating-label" className="text-subtitle text-dark">
               Overall rating
             </p>
             <div className="flex items-center gap-3">
@@ -103,14 +103,14 @@ export const ReviewModal = ({ open, onOpenChange, coachName, onSubmit }: ReviewM
                     onMouseLeave={() => setHoveredRating(0)}
                     aria-label={`Rate ${star} star${star > 1 ? "s" : ""}`}
                     aria-pressed={star <= rating}
-                    className="rounded-[4px] p-0 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                    className="rounded-pill p-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                   >
                     <BrandStar filled={star <= displayedRating} size={24} />
                   </button>
                 ))}
               </div>
               {displayedRating > 0 ? (
-                <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]" aria-live="polite">
+                <span className="text-subtitle text-dark" aria-live="polite">
                   {displayedRating} of 5
                 </span>
               ) : null}
@@ -118,7 +118,7 @@ export const ReviewModal = ({ open, onOpenChange, coachName, onSubmit }: ReviewM
           </div>
 
           <div className="flex flex-col gap-[10px]">
-            <label htmlFor="review-modal-text" className="text-[16px] font-medium leading-[18px] text-[#1A202C]">
+            <label htmlFor="review-modal-text" className="text-subtitle text-dark">
               Your review
             </label>
             <Textarea
@@ -128,22 +128,22 @@ export const ReviewModal = ({ open, onOpenChange, coachName, onSubmit }: ReviewM
               onChange={(e) => setReviewText(e.target.value)}
               rows={5}
               maxLength={1000}
-              className="min-h-[90px] p-3 leading-[18px]"
+              className="min-h-[90px] p-3 text-paragraph"
             />
-            <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+            <p className="text-caption text-dark-300">
               {reviewText.length} of 1,000 characters
             </p>
           </div>
         </div>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
           <Button variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
             Cancel
           </Button>
           <Button onClick={handleSubmit} disabled={rating === 0 || isSubmitting}>
-            {isSubmitting ? "Submitting..." : "Submit review"}
+            {isSubmitting ? "Submitting…" : "Submit review"}
           </Button>
         </div>
       </DialogContent>

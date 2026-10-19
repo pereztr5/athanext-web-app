@@ -4,11 +4,11 @@ import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO } from "@/utils/schedule";
 
 /** Working Copy `.sp-lh`. */
-export const listLabel = "mb-0.5 mt-2 text-[11px] font-semibold uppercase leading-[14px] tracking-[0.06em] text-[#767980]";
+export const listLabel = "mb-0.5 mt-2 text-label-xsm text-dark-300";
 /** Working Copy `.sp-due`. */
-export const dueText = "text-[12px] font-semibold text-[#906A29]";
+export const dueText = "text-label-xsm text-info-800";
 /** Working Copy `.lnkb`. */
-export const linkButton = "font-medium text-[#0054B4] hover:underline";
+export const linkButton = "font-medium text-primary hover:underline";
 
 /** Day and time of a session in the viewer's zone: "2026-09-28" and "4:00 pm". */
 export const zoned = (date: string, startTime: string, timeZone: string) => {

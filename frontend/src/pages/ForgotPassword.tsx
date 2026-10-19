@@ -43,10 +43,10 @@ const ForgotPassword = () => {
         <Card className="w-full max-w-[440px]">
           <CardHeader className="items-center gap-2.5 space-y-0 text-center">
             <img src={logo} alt="AthaNext" className="h-7 w-auto" />
-            <CardTitle className="pt-2 text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+            <CardTitle className="pt-2 text-section text-dark">
               Forgot password?
             </CardTitle>
-            <CardDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+            <CardDescription className="text-body-m text-dark-300">
               {hasSentEmail
                 ? `If an account exists for ${email}, a reset link is on its way. Check your inbox and spam folder.`
                 : "Enter the email you use for your account and we'll send you a reset link."}
@@ -57,7 +57,7 @@ const ForgotPassword = () => {
               <div className="space-y-1.5">
                 <Label
                   htmlFor="reset-email"
-                  className="text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]"
+                  className="text-label-xsm text-dark-300"
                 >
                   {strings.form.labels.email}
                 </Label>
@@ -69,7 +69,7 @@ const ForgotPassword = () => {
                   onChange={(event) => setEmail(event.target.value)}
                   disabled={isSubmitting}
                 />
-                {error && <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p>}
+                {error && <p className="text-caption text-error-700">{error}</p>}
               </div>
               <Button type="submit" size="lg" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Sending reset link…" : hasSentEmail ? "Resend reset link" : "Send reset link"}

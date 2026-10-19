@@ -1,7 +1,8 @@
 import { Navigate } from "react-router-dom";
 import { useMemo } from "react";
-import { Calendar, CircleDollarSign } from "lucide-react";
-import { BrandStar } from "@/components/brand";
+import { Calendar, CircleDollarSign } from "@/components/icons";
+import { BrandPill, BrandStar } from "@/components/brand";
+import { PageHeader } from "@/components/ui/page-header";
 import { useRole } from "@/hooks/useRole";
 import { useDashboardData } from "@/hooks/useDashboardData";
 import { useReviews } from "@/hooks/useReviews";
@@ -10,7 +11,7 @@ import { ROUTES } from "@/routes";
 import type { SessionUIModel } from "@/types/sessions-api";
 
 const cardClass =
-  "flex min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]";
+  "flex min-w-0 flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]";
 
 function lastSixMonths(now = new Date()) {
   return Array.from({ length: 6 }, (_, index) => {
@@ -107,7 +108,7 @@ const AnalyticsPage = () => {
   if (!ready) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
       </div>
     );
   }
@@ -116,77 +117,69 @@ const AnalyticsPage = () => {
     return <Navigate to={ROUTES.DASHBOARD} replace />;
   }
 
-  const sessionsValue = error ? "—" : isLoading ? "…" : String(stats.sessionsThisMonth);
-  const avgValue = error || derived.avgPrice == null ? "—" : isLoading ? "…" : formatDollars(derived.avgPrice);
-  const ratingValue = totalReviews > 0 ? averageRating.toFixed(1) : "—";
+  const sessionsValue = error ? "None" : isLoading ? "…" : String(stats.sessionsThisMonth);
+  const avgValue = error || derived.avgPrice == null ? "None" : isLoading ? "…" : formatDollars(derived.avgPrice);
+  const ratingValue = totalReviews > 0 ? averageRating.toFixed(1) : "None";
   const filledStars = totalReviews > 0 ? Math.round(averageRating) : 0;
   const maxRatingCount = Math.max(1, ...[5, 4, 3, 2, 1].map((star) => ratingDistribution[star] ?? 0));
   const maxMonthlySessions = Math.max(1, ...derived.monthlySessions);
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
-        <header className="flex flex-col gap-[10px]">
-          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Analytics</h1>
-          <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
-            Track how your coaching business is performing.
-          </p>
-        </header>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
+        <PageHeader title="Analytics" subtitle="Track how your coaching business is performing." />
 
         <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
           <MetricCard
             icon="dollar"
-            value="—"
+            value="None"
             label="Revenue this month"
             sub="Not connected yet"
           />
           <MetricCard icon="calendar" value={sessionsValue} label="Sessions delivered" sub="This month" />
           <MetricCard icon="dollar" value={avgValue} label="Avg session price" sub="Across all pillars" />
-          <MetricCard icon="dollar" value="—" label="Pending payout" sub="Released after feedback" />
+          <MetricCard icon="dollar" value="None" label="Pending payout" sub="Released after feedback" />
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2.08fr)_minmax(0,1fr)]">
           <section className={cardClass}>
             <div className="flex flex-col gap-5">
-              <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Revenue and sessions</h2>
-              <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">Last 6 months</p>
+              <h2 className="text-card-title text-dark">Revenue and sessions</h2>
+              <p className="text-caption text-dark-300">Last 6 months</p>
             </div>
             <RevenueChart months={months} sessionCounts={derived.monthlySessions} maxSessions={maxMonthlySessions} />
           </section>
 
           <section className={cardClass}>
-            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Athlete retention</h2>
-            <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">
-              {isLoading ? "…" : derived.repeatRate == null ? "—" : `${derived.repeatRate}%`}
+            <h2 className="text-card-title text-dark">Athlete retention</h2>
+            <p className="text-stat tabular-nums text-dark">
+              {isLoading ? "…" : derived.repeatRate == null ? "None" : `${derived.repeatRate}%`}
             </p>
-            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">Repeat booking rate</p>
-            <div className="flex flex-col gap-[10px]">
-              <RetentionLine label="Returning athletes" value={isLoading ? "…" : derived.activeThisMonth === 0 && derived.lapsed === 0 ? "—" : String(derived.returning)} />
-              <RetentionLine label="New this month" value={isLoading ? "…" : derived.activeThisMonth === 0 && derived.lapsed === 0 ? "—" : String(derived.newcomers)} />
-              <RetentionLine label="Lapsed (60+ days)" value={isLoading ? "…" : derived.activeThisMonth === 0 && derived.lapsed === 0 ? "—" : String(derived.lapsed)} />
+            <p className="text-caption text-dark-300">Repeat booking rate</p>
+            <div className="flex flex-col gap-2.5">
+              <RetentionLine label="Returning athletes" value={isLoading ? "…" : derived.activeThisMonth === 0 && derived.lapsed === 0 ? "None" : String(derived.returning)} />
+              <RetentionLine label="New this month" value={isLoading ? "…" : derived.activeThisMonth === 0 && derived.lapsed === 0 ? "None" : String(derived.newcomers)} />
+              <RetentionLine label="Lapsed (60+ days)" value={isLoading ? "…" : derived.activeThisMonth === 0 && derived.lapsed === 0 ? "None" : String(derived.lapsed)} />
             </div>
           </section>
         </div>
 
         <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,2.08fr)_minmax(0,1fr)]">
           <section className={cardClass}>
-            <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Top performing sessions</h2>
-            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">By revenue, this month</p>
+            <h2 className="text-card-title text-dark">Top performing sessions</h2>
+            <p className="text-caption text-dark-300">By revenue, this month</p>
             {derived.topSessions.length === 0 ? (
-              <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#767980]">
+              <p className="text-body-l text-dark-300">
                 {isLoading ? "Loading sessions…" : "No delivered sessions this month."}
               </p>
             ) : (
-              <div className="flex flex-col gap-[14px]">
+              <div className="flex flex-col gap-3">
                 {derived.topSessions.map((row) => (
                   <div key={row.label} className="flex items-center gap-3">
-                    <span className="rounded-[4px] border border-[#CCDDF0] bg-[#E5EDF7] px-2 py-1 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#0054B4]">
-                      {row.label}
-                    </span>
-                    <span className="min-w-0 flex-1 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+                    <BrandPill tone="blue">{row.label}</BrandPill>
+                    <span className="min-w-0 flex-1 text-caption text-dark-300">
                       {row.count} {row.count === 1 ? "session" : "sessions"}
                     </span>
-                    <span className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">—</span>
                   </div>
                 ))}
               </div>
@@ -195,15 +188,15 @@ const AnalyticsPage = () => {
 
           <section className={cardClass}>
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Ratings</h2>
+              <h2 className="text-card-title text-dark">Ratings</h2>
               <div className="flex items-center gap-[3px]" aria-hidden>
                 {[1, 2, 3, 4, 5].map((star) => (
                   <BrandStar key={star} filled={star <= filledStars} size={12} />
                 ))}
               </div>
             </div>
-            <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">{ratingValue}</p>
-            <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+            <p className="text-stat tabular-nums text-dark">{ratingValue}</p>
+            <p className="text-caption text-dark-300">
               {totalReviews > 0
                 ? `Based on ${totalReviews} verified ${totalReviews === 1 ? "session" : "sessions"}`
                 : "No verified ratings yet"}
@@ -213,14 +206,14 @@ const AnalyticsPage = () => {
                 const count = ratingDistribution[star] ?? 0;
                 const width = totalReviews > 0 ? Math.round((count / maxRatingCount) * 100) : 0;
                 return (
-                  <div key={star} className="flex items-center gap-[10px]">
-                    <span className="w-[38px] shrink-0 text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+                  <div key={star} className="flex items-center gap-2.5">
+                    <span className="w-[38px] shrink-0 text-caption text-dark-300">
                       {star} star
                     </span>
-                    <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]">
-                      <span className="block h-[5px] rounded-[10px] bg-[#0054B4]" style={{ width: `${width}%` }} />
+                    <span className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-full bg-light-550">
+                      <span className="block h-[5px] rounded-full bg-primary" style={{ width: `${width}%` }} />
                     </span>
-                    <span className="w-6 shrink-0 text-right text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+                    <span className="w-6 shrink-0 text-right text-caption text-dark-300">
                       {count}
                     </span>
                   </div>
@@ -248,13 +241,13 @@ function MetricCard({
   const Icon = icon === "calendar" ? Calendar : CircleDollarSign;
   return (
     <section className={cardClass}>
-      <span className="flex size-8 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
+      <span className="flex size-8 items-center justify-center rounded-control border border-primary-200 bg-primary-50 text-primary">
         <Icon className="size-4" strokeWidth={1.5} />
       </span>
       <div className="flex flex-col gap-[3px]">
-        <p className="text-[32px] font-bold leading-[30px] tracking-[-0.96px] text-[#1A202C]">{value}</p>
-        <p className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">{label}</p>
-        <p className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{sub}</p>
+        <p className="text-stat tabular-nums text-dark">{value}</p>
+        <p className="text-body-l text-dark">{label}</p>
+        <p className="text-caption text-dark-300">{sub}</p>
       </div>
     </section>
   );
@@ -263,8 +256,8 @@ function MetricCard({
 function RetentionLine({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex items-center justify-between gap-3">
-      <span className="text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">{label}</span>
-      <span className="text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">{value}</span>
+      <span className="text-caption text-dark-300">{label}</span>
+      <span className="text-body-l text-dark">{value}</span>
     </div>
   );
 }
@@ -281,17 +274,17 @@ function RevenueChart({
   return (
     <div className="flex flex-col">
       <div className="mb-3 flex gap-[18px] pl-[52px]">
-        <span className="inline-flex items-center gap-[6px] text-[12px] font-medium text-[#A3A6AB]">
-          <span className="size-[10px] rounded-[2px] bg-[#0054B4]" />
+        <span className="inline-flex items-center gap-[6px] text-label-xsm text-dark-300">
+          <span className="size-[10px] rounded-[2px] bg-primary" />
           Earnings
         </span>
-        <span className="inline-flex items-center gap-[6px] text-[12px] font-medium text-[#A3A6AB]">
-          <span className="size-[10px] rounded-[2px] bg-[#1599BC]" />
+        <span className="inline-flex items-center gap-[6px] text-label-xsm text-dark-300">
+          <span className="size-[10px] rounded-[2px] bg-secondary" />
           Sessions
         </span>
       </div>
       <div className="flex">
-        <div className="flex h-[170px] w-[44px] shrink-0 flex-col justify-between pr-2 text-right text-[11px] leading-none text-[#A3A6AB]">
+        <div className="flex h-[170px] w-[44px] shrink-0 flex-col justify-between pr-2 text-right text-caption text-dark-300">
           <span>$2400</span>
           <span>$1600</span>
           <span>$800</span>
@@ -301,7 +294,7 @@ function RevenueChart({
           {[0, 1, 2, 3].map((line) => (
             <span
               key={line}
-              className="absolute left-0 right-0 h-px bg-[#D9D9CF]"
+              className="absolute left-0 right-0 h-px bg-light-550"
               style={{ top: `${(line / 3) * 100}%` }}
             />
           ))}
@@ -315,7 +308,7 @@ function RevenueChart({
             return (
               <span
                 key={months[index]?.key ?? index}
-                className="absolute size-[6px] rounded-full bg-[#1599BC]"
+                className="absolute size-[6px] rounded-full bg-secondary"
                 style={{
                   left: `${((index + 0.5) / months.length) * 100}%`,
                   top: y,
@@ -327,7 +320,7 @@ function RevenueChart({
           <svg className="absolute inset-0 h-full w-full" viewBox="0 0 100 170" preserveAspectRatio="none" aria-hidden>
             <polyline
               fill="none"
-              stroke="#1599BC"
+              className="stroke-secondary"
               strokeWidth="1.5"
               vectorEffect="non-scaling-stroke"
               points={sessionCounts
@@ -341,10 +334,10 @@ function RevenueChart({
           </svg>
         </div>
       </div>
-      <div className="mt-[10px] flex pl-[52px]">
+      <div className="mt-2.5 flex pl-[52px]">
         <div className="flex min-w-0 flex-1 justify-around">
           {months.map((month) => (
-            <span key={month.key} className="w-[14%] max-w-[52px] text-center text-[11px] text-[#A3A6AB]">
+            <span key={month.key} className="w-[14%] max-w-[52px] text-center text-caption text-dark-300">
               {month.label}
             </span>
           ))}

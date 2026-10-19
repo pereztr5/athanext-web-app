@@ -31,7 +31,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useQueryClient } from "@tanstack/react-query";
 import { detectCoachSport } from "@/utils/coachSport";
-import { Plus, X } from "lucide-react";
+import { Plus, X } from "@/components/icons";
 import { CoachOwnProfile } from "@/components/coach-profile/CoachOwnProfile";
 import { PackageEditorDialog } from "@/components/coach-profile/PackageEditorDialog";
 import { useSportPillars } from "@/hooks/useSportPillars";
@@ -357,7 +357,7 @@ const Profile = () => {
             console.error('Error updating profile:', error);
             toast({
                 title: 'Update failed',
-                description: error instanceof Error ? error.message : 'Failed to update profile. Please try again.',
+                description: error instanceof Error ? error.message : "That didn't save. Try again",
                 variant: 'destructive',
             });
         } finally {
@@ -448,14 +448,14 @@ const Profile = () => {
             refetchCoachData();
             toast({
                 title: "Certifications updated",
-                description: "Your certifications have been saved.",
+                description: "Your certifications are saved.",
             });
             setCertDialogOpen(false);
         } catch (err) {
             console.error("Failed to save certifications", err);
             toast({
                 title: "Save failed",
-                description: "We couldn't update your certifications. Please try again.",
+                description: "That didn't save. Try again",
                 variant: "destructive",
             });
         } finally {
@@ -471,9 +471,9 @@ const Profile = () => {
         if (!coach) {
             return (
                 <div className="flex min-h-[50vh] items-center justify-center px-4">
-                    <div className="flex max-w-[420px] flex-col items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px] text-center">
-                        <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">No coach profile yet</h1>
-                        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">Create your coach profile to get started.</p>
+                    <div className="flex max-w-[420px] flex-col items-center gap-3 rounded-card border border-light-525 bg-light-300 px-[25px] py-[30px] text-center">
+                        <h1 className="text-section text-dark">No coach profile yet</h1>
+                        <p className="text-body-m text-dark-300">Create your coach profile to get started.</p>
                         <Button onClick={() => navigate("/become-a-coach")}>
                             Become a coach
                         </Button>
@@ -516,21 +516,21 @@ const Profile = () => {
             ) : null}
 
             <Dialog open={certDialogOpen} onOpenChange={setCertDialogOpen}>
-                <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+                <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
                     <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-                        <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+                        <DialogTitle className="text-section text-dark">
                             Edit certifications
                         </DialogTitle>
-                        <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                        <DialogDescription className="text-body-m text-dark-300">
                             Update the certifications that appear on your profile.
                         </DialogDescription>
                     </DialogHeader>
 
-                    <div className="h-px bg-[#EAEADF]" />
+                    <div className="h-px bg-light-525" />
 
                     <div className="flex max-h-[60vh] flex-col gap-[10px] overflow-y-auto px-[25px] py-5">
                         {certificationsDraft.length === 0 && (
-                            <div className="rounded-[8px] bg-[#F4F4EB] p-[15px] text-[14px] leading-[18px] text-[#767980]">
+                            <div className="rounded-control bg-light-400 p-[15px] text-body-m text-dark-300">
                                 Add your first certification to show your credentials.
                             </div>
                         )}
@@ -538,13 +538,13 @@ const Profile = () => {
                         {certificationsDraft.map((cert, index) => (
                             <div
                                 key={cert.id ?? `new-${index}`}
-                                className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] p-[15px]"
+                                className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-400 p-[15px]"
                             >
                                 <div className="grid gap-3 md:grid-cols-2">
                                     <div className="flex flex-col gap-1.5">
                                         <Label
                                             htmlFor={`cert-name-${index}`}
-                                            className="text-[12px] font-medium leading-[13px] text-[#767980]"
+                                            className="text-label-xsm text-dark-300"
                                         >
                                             Certification name
                                         </Label>
@@ -560,7 +560,7 @@ const Profile = () => {
                                     <div className="flex flex-col gap-1.5">
                                         <Label
                                             htmlFor={`cert-org-${index}`}
-                                            className="text-[12px] font-medium leading-[13px] text-[#767980]"
+                                            className="text-label-xsm text-dark-300"
                                         >
                                             Issuing organization
                                         </Label>
@@ -580,7 +580,7 @@ const Profile = () => {
                                         variant="ghost"
                                         size="sm"
                                         onClick={() => handleRemoveCertification(index)}
-                                        className="text-destructive hover:text-destructive"
+                                        className="text-error-700 hover:text-error-700"
                                     >
                                         <X strokeWidth={1.5} aria-hidden="true" />
                                         Remove
@@ -595,7 +595,7 @@ const Profile = () => {
                         </Button>
                     </div>
 
-                    <div className="h-px bg-[#EAEADF]" />
+                    <div className="h-px bg-light-525" />
 
                     <DialogFooter className="flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:space-x-0">
                         <Button
@@ -607,7 +607,7 @@ const Profile = () => {
                             Cancel
                         </Button>
                         <Button onClick={handleSaveCertifications} disabled={savingCerts}>
-                            {savingCerts ? "Saving..." : "Save changes"}
+                            {savingCerts ? "Saving…" : "Save changes"}
                         </Button>
                     </DialogFooter>
                 </DialogContent>

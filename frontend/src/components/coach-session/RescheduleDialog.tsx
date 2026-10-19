@@ -5,7 +5,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { coachSessionAPI } from "@/api/coachSession";
 import { scheduleAPI } from "@/api/schedule";
@@ -134,7 +134,7 @@ export const RescheduleDialog = ({
             })}
           </div>
           <div className="flex flex-col gap-1.5">
-            <span className="text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]">Open times on {short(day)}</span>
+            <span className="text-label-xsm text-dark-300">Open times on {short(day)}</span>
             {slots.length ? (
               <div className="grid grid-cols-[repeat(auto-fill,minmax(96px,1fr))] gap-2">
                 {slots.map((m) => {
@@ -161,7 +161,7 @@ export const RescheduleDialog = ({
                 })}
               </div>
             ) : (
-              <span className={cn(cap, "text-[#A3A6AB]")}>{schedule.isLoading ? "Loading open times…" : "No open times this day"}</span>
+              <span className={cap}>{schedule.isLoading ? "Loading open times…" : "No open times this day"}</span>
             )}
             <FieldError>{error}</FieldError>
           </div>

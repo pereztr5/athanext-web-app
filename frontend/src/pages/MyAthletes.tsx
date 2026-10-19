@@ -1,20 +1,22 @@
 /**
- * My Athletes (WC4): Roster and Invites tabs. Invites is the work list
- * (Needs approval / Waiting / Joined / All). Marketplace families stay on the roster only.
- * `/invites` and `/my-clients` open the Invites tab.
+ * My athletes (WC4 `c-athletes`): just the roster, with "Add athlete" as the only header button.
+ * Pending invites are one link above the list; it swaps the page to the invites view
+ * (hero, work list, no-fee explainer) with "All athletes" to come back.
+ * `?tab=invites` deep-links the invites view; `/invites` and `/my-clients` redirect there.
  */
 import { useMemo, useState } from "react";
 import { Navigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Link as LinkIcon, UserPlus, Users } from "lucide-react";
+import { ChevronLeft, ChevronRight, Link as LinkIcon, Mail, UserPlus, Users } from "@/components/icons";
 import { rosterAPI } from "@/api/roster";
 import { BookAthleteDialog } from "@/components/athletes/BookAthleteDialog";
 import { AddAthleteModal } from "@/components/athletes/AddAthleteModal";
 import { RosterTable } from "@/components/athletes/roster/RosterTable";
 import { ALL_PILLARS, RosterToolbar } from "@/components/athletes/roster/RosterToolbar";
 import { rosterCard } from "@/components/athletes/roster/styles";
-import { InvitesWorkList } from "@/pages/Invites";
-import { card, pageTitle, primaryButton, secondaryButton, segButton, segGroup, textButton } from "@/components/schedule/styles";
+import { InvitesView, usePendingInviteCount } from "@/pages/Invites";
+import { PageHeader } from "@/components/ui/page-header";
+import { card, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
 import { useRole } from "@/hooks/useRole";
@@ -41,6 +43,7 @@ const MyAthletesPage = () => {
     enabled: Boolean(coachId),
   });
 
+  const pendingInvites = usePendingInviteCount(isCoach ? coachId : undefined);
   const tab: AthletesTab = searchParams.get("tab") === "invites" ? "invites" : "roster";
   const [query, setQuery] = useState("");
   const [pillar, setPillar] = useState(ALL_PILLARS);
@@ -105,6 +108,10 @@ const MyAthletesPage = () => {
   const empty = !rows.length && !roster.isLoading;
   const onInvites = tab === "invites";
   const sortLabel = ROSTER_SORTS.find(([k]) => k === sort)?.[1] ?? "Name A–Z";
+  const openAdd = (initial: "email" | "import" = "email") => {
+    setAddTab(initial);
+    setAdding(true);
+  };
   const subtitle = onInvites
     ? "Families you invited to book you on AthaNext"
     : empty
@@ -115,84 +122,58 @@ const MyAthletesPage = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-6">
-        <header className="flex flex-wrap items-end justify-between gap-4">
-          <div className="flex min-w-0 flex-col gap-[10px]">
-            <h1 className={pageTitle}>My Athletes</h1>
-            <p className="min-h-[18px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{subtitle}</p>
-          </div>
-          <div className="flex flex-wrap items-center gap-2">
-            {onInvites ? (
-              <button type="button" className={secondaryButton} onClick={copyInviteLink} disabled={!coachId}>
-                <LinkIcon strokeWidth={1.5} aria-hidden="true" />
-                Copy invite link
-              </button>
-            ) : null}
-            <button
-              type="button"
-              className={primaryButton}
-              onClick={() => {
-                setAddTab("email");
-                setAdding(true);
-              }}
-            >
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+        <PageHeader
+          title="My athletes"
+          subtitle={subtitle || undefined}
+          actions={
+            <button type="button" className={primaryButton} onClick={() => openAdd()}>
               <UserPlus strokeWidth={1.5} aria-hidden="true" />
-              Invite families
+              Add athlete
             </button>
-          </div>
-        </header>
-
-        <div className={cn(segGroup, "w-fit")} role="tablist" aria-label="Athletes views">
-          {(
-            [
-              ["roster", "Roster"],
-              ["invites", "Invites"],
-            ] as const
-          ).map(([id, label]) => (
-            <button
-              key={id}
-              type="button"
-              role="tab"
-              aria-selected={tab === id}
-              className={cn(segButton(tab === id), "flex-none")}
-              onClick={() => setTab(id)}
-            >
-              {label}
-            </button>
-          ))}
-        </div>
+          }
+        />
 
         {onInvites ? (
-          <InvitesWorkList coachId={coachId} />
+          <>
+            <button type="button" className={cn(textButton, "self-start")} onClick={() => setTab("roster")}>
+              <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
+              All athletes
+            </button>
+            <InvitesView coachId={coachId} onImport={() => openAdd("import")} />
+          </>
         ) : empty ? (
+          <>
+          {pendingInvites ? (
+            <button type="button" className={cn(textButton, "self-start")} onClick={() => setTab("invites")}>
+              <Mail strokeWidth={1.5} aria-hidden="true" />
+              {plural(pendingInvites, "pending invite")}
+              <ChevronRight strokeWidth={1.5} aria-hidden="true" />
+            </button>
+          ) : null}
           <section className={card}>
-            <div className="flex flex-col items-center gap-[10px] px-4 py-7 text-center text-[#767980]">
-              <Users className="size-7 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-              <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Bring your athletes to AthaNext</span>
-              <p className="max-w-[44ch] text-[14px] leading-[18px]">
-                Invite the families you already coach. They join your roster and book you directly.
+            <div className="flex flex-col items-center gap-2.5 px-4 py-7 text-center text-dark-300">
+              <Users className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+              <span className="text-subtitle text-dark">Bring your athletes to AthaNext</span>
+              <p className="max-w-[44ch] text-body-m">
+                Invite the families you already coach. They book you here with no marketplace fee.
               </p>
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <button type="button" className={secondaryButton} onClick={copyInviteLink} disabled={!coachId}>
                   <LinkIcon strokeWidth={1.5} aria-hidden="true" />
                   Copy invite link
                 </button>
-                <button
-                  type="button"
-                  className={primaryButton}
-                  onClick={() => {
-                    setAddTab("email");
-                    setAdding(true);
-                  }}
-                >
+                <button type="button" className={primaryButton} onClick={() => openAdd()}>
                   <UserPlus strokeWidth={1.5} aria-hidden="true" />
                   Invite families
                 </button>
               </div>
             </div>
           </section>
+          </>
         ) : (
           <section className={rosterCard}>
+            <div className="flex flex-col gap-3">
             <RosterToolbar
               query={query}
               onQuery={setQuery}
@@ -205,10 +186,18 @@ const MyAthletesPage = () => {
                 setDir(1);
               }}
             />
+            {pendingInvites ? (
+              <button type="button" className={cn(textButton, "self-start")} onClick={() => setTab("invites")}>
+                <Mail strokeWidth={1.5} aria-hidden="true" />
+                {plural(pendingInvites, "pending invite")}
+                <ChevronRight strokeWidth={1.5} aria-hidden="true" />
+              </button>
+            ) : null}
+            </div>
 
-            {roster.isLoading ? <p className="text-[12px] leading-[14px] text-[#767980]">Loading your athletes…</p> : null}
+            {roster.isLoading ? <p className="text-caption text-dark-300">Loading your athletes…</p> : null}
             {!roster.isLoading && !list.length ? (
-              <div className="rounded-[8px] border border-dashed border-[#C1C1B8] p-[18px] text-center text-[13px] text-[#767980]">
+              <div className="rounded-control border border-dashed border-light-600 p-[18px] text-center text-body-m text-dark-300">
                 No athletes match.{" "}
                 <button type="button" className={textButton} onClick={clearFilters}>Clear filters</button>
               </div>
@@ -224,7 +213,7 @@ const MyAthletesPage = () => {
                   onSort={onSortColumn}
                   onBook={(athlete) => setBooking({ id: athlete.id, name: athlete.name })}
                 />
-                <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                <p className="text-caption text-dark-300">
                   Showing {list.length} of {rows.length} · sorted by {sortLabel.toLowerCase()}{dir < 0 ? ", reversed" : ""}
                 </p>
               </>

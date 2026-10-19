@@ -4,7 +4,7 @@
  * again, so the 24 hours start over.
  */
 import { useEffect, useMemo, useState } from "react";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { bookingRequestsAPI, type BookingRequest } from "@/api/bookingRequests";
@@ -92,7 +92,7 @@ export const SuggestTimesDialog = ({
         />
         <ModalBody>
           {schedule.isLoading ? (
-            <p className="text-[14px] text-[#767980]">Loading your open times…</p>
+            <p className="text-body-m text-dark-300">Loading your open times…</p>
           ) : options.length ? (
             <div className="grid grid-cols-2 gap-2.5 sm:grid-cols-4">
               {options.map((s) => {
@@ -110,10 +110,10 @@ export const SuggestTimesDialog = ({
               })}
             </div>
           ) : (
-            <p className="text-[14px] text-[#767980]">No open times in the next two weeks. Add open slots with Create session first.</p>
+            <p className="text-body-m text-dark-300">No open times in the next two weeks. Add open slots with Create session first.</p>
           )}
           <Field title={`Message to ${first}`}>
-            <textarea className={cn(input, "h-auto py-2 leading-[18px]")} rows={3} value={message} maxLength={1000} onChange={(e) => setMessage(e.target.value)} />
+            <textarea className={cn(input, "h-auto py-2 text-paragraph")} rows={3} value={message} maxLength={1000} onChange={(e) => setMessage(e.target.value)} />
           </Field>
           <FieldError>{error}</FieldError>
         </ModalBody>

@@ -2,14 +2,14 @@
  * Session feedback (ATH-82), as in the Working Copy check-in: a session card, who was present
  * (everyone starts as present), a 0 to 10 score only the coach sees, one summary for every
  * family who came and, on a group, optional notes for each athlete sent with it. Nobody came:
- * a no-show with an optional message, still charged. After sending, the coach moves on to the
- * next session in the feedback-due queue.
+ * a no-show with an optional message, still charged. After the first send, Session completed
+ * offers a note for each athlete who came, then Done continues to the next session that is due.
  * Open with ?slotId=<session>; add &notes=1 to go straight to the notes for athletes.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarX, Check, ChevronLeft, ChevronRight, Plus, Send, X } from "lucide-react";
+import { CalendarX, Check, ChevronLeft, ChevronRight, Plus, Send, X } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { feedbackAPI, type FeedbackAthlete } from "@/api/feedback";
 import { AthleteNotes } from "@/components/feedback/AthleteNotes";
@@ -28,7 +28,7 @@ import {
   summaryStarters,
   textarea,
 } from "@/components/feedback/helpers";
-import { card, dialogContent, iconButton, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { choice, card, dialogContent, iconButton, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -37,7 +37,7 @@ import { ROUTES } from "@/routes";
 import { formatClock, formatDayISO, sessionStart } from "@/utils/schedule";
 import { getZonedISODate } from "@/utils/dateHelpers";
 
-const roundButton = cn(iconButton, "size-[30px] flex-none rounded-full bg-[#F7F7F0]");
+const roundButton = cn(iconButton, "size-control-sm flex-none bg-light-300");
 const feedbackLink = (id: string) => `${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${id}`;
 
 const SessionFeedbackPage = () => {
@@ -67,7 +67,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
   const [score, setScore] = useState(0);
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [stage, setStage] = useState<"form" | "notes">(startOnNotes ? "notes" : "form");
+  const [stage, setStage] = useState<"form" | "notes" | "done">(startOnNotes ? "notes" : "form");
   const [noteFor, setNoteFor] = useState<FeedbackAthlete | null>(null);
   const [noteText, setNoteText] = useState("");
 
@@ -122,6 +122,16 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
     }
   };
 
+  const continueAfter = () => {
+    const next = due.find((d) => d.id !== slotId);
+    if (next) {
+      navigate(feedbackLink(next.id), { replace: true });
+      toast({ title: `Next: ${next.title}, ${formatDayISO(next.date, { weekday: "short", month: "short", day: "numeric" })}` });
+    } else {
+      navigate(ROUTES.MY_SESSIONS);
+    }
+  };
+
   const send = useMutation({
     mutationFn: () => feedbackAPI.submit(slotId, [...absent], noShow ? null : score, summary, changedNotes()),
     onSuccess: (result) => {
@@ -135,14 +145,10 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
         goNext(`Marked as no-show${summary.trim() ? `. Message sent to ${group ? "families" : recipient}` : ""}`);
         return;
       }
-      goNext(
-        group
-          ? `Feedback sent to ${families(came.length)}${withNotes.length ? ` with ${withNotes.length} personal ${withNotes.length === 1 ? "note" : "notes"}` : ""}`
-          : `Feedback sent to ${recipient}`
-      );
+      setStage("done");
     },
     onError: (error: unknown) =>
-      toast({ title: "Couldn't send feedback", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" }),
+      toast({ title: "Feedback didn't send", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
   });
 
   const saveNote = useMutation({
@@ -153,21 +159,21 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
       refresh();
     },
     onError: (error: unknown) =>
-      toast({ title: "Couldn't save the note", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" }),
+      toast({ title: "Note didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
   });
 
   if (screenQuery.isError) {
     return (
-      <div className="mx-auto max-w-[640px] px-4 py-10">
-        <p className="text-[14px] text-[#972B2B]">Couldn't open this session. It may not be yours, or it was removed.</p>
+      <div className="mx-auto max-w-wrapper-focused px-4 py-10">
+        <p className="text-body-m text-error-700">Couldn't open this session. It may not be yours, or it was removed.</p>
       </div>
     );
   }
   if (!screen) return <p className={cn(meta, "px-4 py-10 text-center")}>Loading…</p>;
 
-  const wrap = "mx-auto flex w-full max-w-[640px] flex-col gap-3.5";
+  const wrap = "mx-auto flex w-full max-w-wrapper-focused flex-col gap-4";
 
-  if (stage === "notes") {
+  if (stage === "notes" || stage === "done") {
     const start = sessionStart(screen);
     const present = athletes.filter((a) => a.attendance === "present" || (!a.attendance && !absent.has(a.athleteId)));
     const family = (a: FeedbackAthlete) => {
@@ -177,14 +183,24 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
     return (
       <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
         <div className={wrap}>
-          <SessionPageHeader
-            title="Notes for athletes"
-            subtitle={`${group ? screen.sessionName : "1-on-1"} · ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`}
-            onBack={leave}
-            backLabel="Back"
-          />
+          {stage === "done" ? (
+            <div className="flex flex-col items-center gap-2 py-2 text-center">
+              <span className="flex size-12 items-center justify-center rounded-full border border-success-300 bg-success-50 text-success-700">
+                <Check className="size-6" strokeWidth={1.5} aria-hidden="true" />
+              </span>
+              <h1 className="text-section text-dark">Session completed</h1>
+              <p className="text-body-m text-dark-300">Feedback sent to {group ? families(present.length) : recipient}.</p>
+            </div>
+          ) : (
+            <SessionPageHeader
+              title="Notes for athletes"
+              subtitle={`${group ? screen.sessionName : "1-on-1"} · ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`}
+              onBack={leave}
+              backLabel="Back"
+            />
+          )}
           <div className="flex flex-col gap-1">
-            <h2 className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Add a note for anyone?</h2>
+            <h2 className="text-subtitle text-dark">Add a note for anyone?</h2>
             <span className={caption}>Optional. Only that athlete's family sees it.</span>
           </div>
           <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
@@ -198,20 +214,20 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
                     setNoteFor(a);
                   }}
                   className={cn(
-                    "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-[16px] border py-2 pl-2.5 pr-3 text-left transition-colors",
-                    a.note ? "border-[#BFDDC6] bg-[#CBE7D1]" : "border-[#EAEADF] bg-[#F7F7F0] hover:border-[#99BBE1]"
+                    "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-control border py-2 pl-2.5 pr-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                    a.note ? "border-success-300 bg-success-50" : "border-light-525 bg-light-300 hover:bg-light-200"
                   )}
                 >
                   <FeedbackAvatar name={a.name} imageUrl={a.imageUrl} />
                   <span className="flex min-w-0 flex-col gap-1">
-                    <b className="truncate text-[15px] font-medium">{shortName(a.name)}</b>
+                    <b className="truncate text-label-sm">{shortName(a.name)}</b>
                     {a.note ? (
-                      <span className="inline-flex items-center gap-[3px] text-[12px] font-semibold text-[#1E7431]">
+                      <span className="inline-flex items-center gap-[3px] text-label-xsm text-success-700">
                         <Check className="size-3" strokeWidth={2} aria-hidden="true" />
                         Note sent
                       </span>
                     ) : (
-                      <span className="inline-flex items-center gap-[3px] text-[12px] font-semibold text-[#0054B4]">
+                      <span className="inline-flex items-center gap-[3px] text-label-xsm text-primary">
                         <Plus className="size-3" strokeWidth={2} aria-hidden="true" />
                         Note
                       </span>
@@ -225,7 +241,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
           </div>
           <FeedbackBar>
             <span className={caption}>You can add notes later from the session page.</span>
-            <button type="button" className={secondaryButton} onClick={leave}>
+            <button type="button" className={secondaryButton} onClick={stage === "done" ? continueAfter : leave}>
               Done
             </button>
           </FeedbackBar>
@@ -233,7 +249,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
         <Dialog open={Boolean(noteFor)} onOpenChange={(open) => !open && setNoteFor(null)}>
           <DialogContent className={dialogContent}>
             <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-              <DialogTitle className="text-[22px] font-semibold tracking-[-0.05em]">Note for {noteFor ? firstName(noteFor.name) : ""}</DialogTitle>
+              <DialogTitle className="text-section">Note for {noteFor ? firstName(noteFor.name) : ""}</DialogTitle>
               <DialogDescription className={meta}>Only {noteFor ? family(noteFor) : ""} sees this.</DialogDescription>
             </DialogHeader>
             <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
@@ -298,7 +314,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
                 <ChevronLeft strokeWidth={1.5} />
               </button>
               <span className="flex min-w-[84px] flex-col items-center gap-0.5">
-                <b className="text-[14px] font-semibold text-[#1A202C]">
+                <b className="text-label-sm tabular-nums text-dark">
                   {qi + 1} of {due.length}
                 </b>
                 <span className={caption}>feedback due</span>
@@ -313,13 +329,13 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
         <SessionHero screen={screen} timeZone={timeZone} />
 
         {!screen.started ? (
-          <p className={cn(card, "text-[14px] text-[#484D56]")}>Feedback opens once the session starts.</p>
+          <p className={cn(card, "text-body-m text-dark-300")}>Feedback opens once the session starts.</p>
         ) : (
           <>
             {group ? (
               <>
                 <Question title="Who was present?">
-                  <span className="text-[14px] font-semibold text-[#0054B4]">
+                  <span className="text-label-sm tabular-nums text-primary">
                     {came.length} of {athletes.length}
                   </span>
                 </Question>
@@ -343,14 +359,14 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
                             })
                           }
                           className={cn(
-                            "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-[16px] border py-2 pl-2.5 pr-3 text-left transition-colors disabled:cursor-not-allowed",
-                            isAbsent ? "border-dashed border-[#C9C9BD] bg-transparent" : "border-[#EAEADF] bg-[#F7F7F0] hover:enabled:border-[#99BBE1]"
+                            "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-control border py-2 pl-2.5 pr-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed",
+                            isAbsent ? "border-dashed border-light-600 bg-transparent" : "border-light-525 bg-light-300 hover:enabled:bg-light-200"
                           )}
                         >
                           <FeedbackAvatar name={a.name} imageUrl={a.imageUrl} className={cn(isAbsent && "opacity-45")} />
                           <span className="flex min-w-0 flex-col gap-1">
-                            <b className={cn("truncate text-[15px] font-medium", isAbsent ? "text-[#A3A6AB]" : "text-[#1A202C]")}>{shortName(a.name)}</b>
-                            {isAbsent ? <span className="text-[11px] font-semibold text-[#906A29]">Absent</span> : null}
+                            <b className={cn("truncate text-label-sm", isAbsent ? "text-dark-200" : "text-dark")}>{shortName(a.name)}</b>
+                            {isAbsent ? <span className="text-label-xsm text-info-700">Absent</span> : null}
                           </span>
                         </button>
                       );
@@ -374,12 +390,8 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
                         disabled={locked}
                         onClick={() => setAbsent(yes ? new Set() : new Set(athletes.map((a) => a.athleteId)))}
                         className={cn(
-                          "inline-flex h-[50px] items-center justify-center gap-1.5 rounded-[14px] border text-[15px] font-medium transition-colors disabled:cursor-not-allowed [&>svg]:size-4",
-                          on
-                            ? yes
-                              ? "border-[#0054B4] bg-[#0054B4] text-white"
-                              : "border-[#906A29] bg-[#FCEFDA] text-[#906A29]"
-                            : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]"
+                          on && !yes ? "inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-control border border-info-300 bg-info-50 px-3 py-1.5 text-body-m text-info-700 transition-colors disabled:cursor-not-allowed disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200 [&>svg]:size-4" : choice(on),
+                          "h-[50px] text-label-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                         )}
                       >
                         {yes ? <Check strokeWidth={1.5} aria-hidden="true" /> : <X strokeWidth={1.5} aria-hidden="true" />}
@@ -392,12 +404,12 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
             )}
 
             {noShow ? (
-              <div className="flex items-center gap-3.5 rounded-[14px] bg-[#FCEFDA] p-4">
-                <span className="flex size-[44px] flex-none items-center justify-center rounded-full bg-[#F7F7F0] text-[#906A29]">
+              <div className="flex items-center gap-3 rounded-card border border-info-300 bg-info-50 p-4">
+                <span className="flex size-[44px] flex-none items-center justify-center rounded-full border border-info-300 bg-light-300 text-info-700">
                   <CalendarX className="size-5" strokeWidth={1.5} aria-hidden="true" />
                 </span>
                 <span className="flex flex-col gap-1">
-                  <b className="text-[14px] font-medium text-[#1A202C]">{group ? "Nobody was present" : `${first} wasn't present`}</b>
+                  <b className="text-label-sm text-info-700">{group ? "Nobody was present" : `${first} wasn't present`}</b>
                   <span className={caption}>No score needed. The session stays charged.</span>
                 </span>
               </div>

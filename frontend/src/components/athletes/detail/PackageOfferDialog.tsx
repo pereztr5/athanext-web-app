@@ -68,7 +68,7 @@ export const PackageOfferDialog = ({
         <ModalHeader title="Send a package offer" sub={`To ${to}`} />
         <ModalBody>
           {packages.isLoading ? <p className={cap}>Loading packages…</p> : null}
-          {!packages.isLoading && !list.length ? <p className={cap}>You have no packages yet. Add one on My Profile.</p> : null}
+          {!packages.isLoading && !list.length ? <p className={cap}>You have no packages yet. Add one on My profile.</p> : null}
           {list.length ? (
             <Field title="Package">
               <select className={input} value={pkg} onChange={(e) => setPkg(e.target.value)}>

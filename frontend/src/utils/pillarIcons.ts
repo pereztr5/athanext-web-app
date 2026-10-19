@@ -1,4 +1,4 @@
-import { Activity, Video, Users, Dumbbell, Pencil, MessageCircle, MapPin, Building2, Ship, Trophy, Calendar } from "lucide-react";
+import { Activity, Video, Users, Dumbbell, Pencil, MessageCircle, MapPin, Building2, Ship, Trophy, Calendar } from "@/components/icons";
 import type { Enums } from "@/integrations/supabase/types";
 import type { SPORTPILLARS } from "@/api/sport-pillars";
 

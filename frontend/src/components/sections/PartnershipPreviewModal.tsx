@@ -2,7 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Carousel, CarouselContent, CarouselItem, CarouselNext, CarouselPrevious } from "@/components/ui/carousel";
-import { CheckCircle2, Sparkles } from "lucide-react";
+import { CheckCircle2, Sparkles } from "@/components/icons";
 import { colors } from "@/config/colors";
 import { PartnershipStatus, type Partnership } from "@/api/partnerships";
 

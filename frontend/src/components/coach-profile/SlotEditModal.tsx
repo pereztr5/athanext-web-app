@@ -188,7 +188,7 @@ export function SlotEditModal({
     }
   };
 
-  const labelClass = 'text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]';
+  const labelClass = 'text-label-xsm text-dark-300';
   const dateLabel = (() => {
     if (!overrideDate) return null;
     const parsed = new Date(`${overrideDate}T00:00:00`);
@@ -198,20 +198,20 @@ export function SlotEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] sm:max-w-xl md:max-w-2xl [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark sm:max-w-xl md:max-w-2xl [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             Edit time slot
           </DialogTitle>
-          <DialogDescription className={dateLabel ? 'text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]' : 'sr-only'}>
+          <DialogDescription className={dateLabel ? 'text-body-m text-dark-300' : 'sr-only'}>
             {dateLabel ?? 'Change this slot for one date'}
           </DialogDescription>
         </DialogHeader>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
         {!slot ? (
-          <p className="px-[25px] py-5 text-[14px] leading-[18px] text-[#767980]">No slot selected.</p>
+          <p className="px-[25px] py-5 text-body-m text-dark-300">No slot selected.</p>
         ) : (
           <>
             <div className="max-h-[60vh] overflow-y-auto px-[25px] py-5">
@@ -289,7 +289,7 @@ export function SlotEditModal({
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label htmlFor="slot-end-time" className={labelClass}>End time</Label>
-                  <Input id="slot-end-time" type="time" value={endTime} disabled className="bg-[#F4F4EB]" />
+                  <Input id="slot-end-time" type="time" value={endTime} disabled className="bg-light-400" />
                 </div>
                 <div className="flex flex-col gap-1.5">
                   <Label className={labelClass}>Session type</Label>
@@ -334,7 +334,7 @@ export function SlotEditModal({
                 </div>
               </div>
 
-              <div className="mt-5 flex items-start gap-[10px] rounded-[8px] bg-[#F4F4EB] p-3">
+              <div className="mt-5 flex items-start gap-[10px] rounded-control bg-light-400 p-3">
                 <Checkbox
                   id="slotEnabled"
                   checked={isEnabled}
@@ -342,15 +342,15 @@ export function SlotEditModal({
                   className="mt-px"
                 />
                 <div className="flex flex-col gap-1">
-                  <Label className="cursor-pointer text-[14px] font-medium leading-[18px] text-[#1A202C]" htmlFor="slotEnabled">
+                  <Label className="cursor-pointer text-label-sm text-dark" htmlFor="slotEnabled">
                     Enable this slot
                   </Label>
-                  <p className="text-[12px] leading-[14px] text-[#767980]">Disabled slots stay hidden from booking until you turn them back on.</p>
+                  <p className="text-caption text-dark-300">Disabled slots stay hidden from booking until you turn them back on.</p>
                 </div>
               </div>
             </div>
 
-            <div className="h-px bg-[#EAEADF]" />
+            <div className="h-px bg-light-525" />
 
             <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
               <Button variant="outline" onClick={() => onOpenChange(false)}>

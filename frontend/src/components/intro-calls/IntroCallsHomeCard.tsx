@@ -5,7 +5,7 @@
  */
 import { useEffect, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Phone, Send, Video } from "lucide-react";
+import { Phone, Send, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { ToastAction } from "@/components/ui/toast";
 import { introCallsAPI, type IntroCall } from "@/api/introCalls";
@@ -19,8 +19,8 @@ import { isoDateInZone } from "@/utils/viewerTime";
 import { INTRO_KEYS, capText, errorText, firstName, introWhen, mText } from "./helpers";
 import { IntroSettingsDialog } from "./IntroSettingsDialog";
 
-const eyebrow = "text-[11px] font-semibold uppercase tracking-[0.06em] text-[#767980]";
-const h2 = "text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]";
+const eyebrow = "text-label-xsm text-dark-300";
+const h2 = "text-card-title text-dark";
 
 // Not a fit waits this long before it sends the thank-you, so Undo can take it back.
 const UNDO_MS = 6000;
@@ -161,7 +161,7 @@ export const IntroCallsHomeCard = () => {
   };
 
   return (
-    <section className={cn(card, "gap-[14px] px-4 py-[18px] md:px-6 md:py-[22px]")}>
+    <section className={card}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
           <span className={eyebrow}>Intro calls</span>
@@ -177,11 +177,11 @@ export const IntroCallsHomeCard = () => {
           {today.map((c) => (
             <div
               key={c.id}
-              className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-3 gap-y-[10px] border-t border-[#EAEADF] py-3 md:flex md:items-center"
+              className="grid grid-cols-[64px_minmax(0,1fr)] items-start gap-x-3 gap-y-[10px] border-t border-light-525 py-3 md:flex md:items-center"
             >
               <span className="flex w-16 flex-none flex-col">
-                <b className="text-[14px] font-bold tracking-[-0.03em]">{formatClock(new Date(c.startsAt), timeZone)}</b>
-                <small className="text-[12px] text-[#767980]">{c.minutes} min</small>
+                <b className="text-label-sm">{formatClock(new Date(c.startsAt), timeZone)}</b>
+                <small className="text-caption text-dark-300">{c.minutes} min</small>
               </span>
               <span className="flex min-w-0 grow flex-col gap-1">
                 <span className={mText}>Intro call with {c.familyName}</span>
@@ -201,7 +201,7 @@ export const IntroCallsHomeCard = () => {
       {todo.map((c) => {
         const pick = picks[c.id] ?? data.options[0]?.key ?? "";
         return (
-          <div key={c.id} className="flex flex-col gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] p-4">
+          <div key={c.id} className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-400 p-4">
             <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-2">
               <span className="flex min-w-0 flex-col gap-1">
                 <span className={mText}>How did the call with {c.familyName} go?</span>
@@ -220,14 +220,14 @@ export const IntroCallsHomeCard = () => {
                     <label
                       key={o.key}
                       className={cn(
-                        "flex cursor-pointer items-center gap-2 rounded-[8px] border px-3 py-[10px] text-[14px] text-[#1A202C]",
-                        pick === o.key ? "border-[#99BBE1] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F7F7F0]"
+                        "flex cursor-pointer items-center gap-2 rounded-control border px-3 py-[10px] text-body-m text-dark",
+                        pick === o.key ? "border-primary bg-primary-50" : "border-light-525 bg-light-300 hover:bg-light-200"
                       )}
                     >
                       <input
                         type="radio"
                         name={`intro-offer-${c.id}`}
-                        className="m-0 accent-[#0054B4]"
+                        className="m-0 accent-primary"
                         checked={pick === o.key}
                         onChange={() => setPicks((p) => ({ ...p, [c.id]: o.key }))}
                       />

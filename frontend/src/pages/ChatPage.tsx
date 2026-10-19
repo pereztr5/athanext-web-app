@@ -6,7 +6,7 @@ import {
   useState,
   type WheelEvent as ReactWheelEvent,
 } from "react";
-import { MessageCircle, Pencil, Search, Menu, ArrowLeft, Plus, Send } from "lucide-react";
+import { MessageCircle, Pencil, Search, Menu, ArrowLeft, Plus, Send } from "@/components/icons";
 import { NewChannelDialog } from "@/components/chat/NewChannelDialog";
 import { NewMessageDialog } from "@/components/chat/NewMessageDialog";
 import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
@@ -15,6 +15,8 @@ import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog
 import { SafeguardingStrip } from "@/components/chat/SafeguardingStrip";
 import { ComposerShortcuts, ConversationHeaderActions, conversationSubline, useConversationContext } from "@/components/chat/ConversationTools";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
+import { iconButton, input } from "@/components/schedule/styles";
 import {
   chatAPI,
   type ConversationWithParticipants,
@@ -859,24 +861,24 @@ const ChatPage = () => {
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5">
       <NewChannelDialog open={newChannelOpen} onClose={() => setNewChannelOpen(false)} onCreated={(id) => void handleOpenMyChannel(id)} />
       <NewMessageDialog open={newMessageOpen} onClose={() => setNewMessageOpen(false)} />
-      <div className="relative mx-auto flex h-[min(930px,calc(100vh-8.5rem))] w-full max-w-[1000px] overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
+      <div className="relative mx-auto flex h-[min(930px,calc(100vh-8.5rem))] w-full max-w-wrapper overflow-hidden rounded-card border border-light-525 bg-light-300">
         <aside
           className={cn(
-            "flex h-full flex-col border-r border-[#EAEADF] bg-[#F7F7F0] transition-transform duration-200",
+            "flex h-full flex-col border-r border-light-525 bg-light-300 transition-transform duration-200",
             isMobile
               ? "absolute inset-y-0 left-0 z-20 w-[88vw] max-w-xs"
               : "relative w-[282px] shrink-0"
           )}
           style={{ transform: isMobile && !isSidebarOpen ? "translateX(-100%)" : "translateX(0)" }}
         >
-          <div className="flex flex-col gap-5 border-b border-[#EAEADF] px-[25px] py-[30px]">
+          <div className="flex flex-col gap-5 border-b border-light-525 px-[25px] py-[30px]">
             <div className="flex items-center justify-between gap-3">
-              <h2 className="text-[20px] font-medium leading-[18px] tracking-[-1px] text-[#1A202C]">Messages</h2>
+              <h2 className="text-card-title text-dark">Messages</h2>
               {userProfile?.coach_id ? (
                 <button
                   type="button"
                   onClick={() => setNewChannelOpen(true)}
-                  className="inline-flex h-[30px] shrink-0 items-center gap-[5px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                  className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
                 >
                   <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
                   New channel
@@ -885,7 +887,7 @@ const ChatPage = () => {
                 <button
                   type="button"
                   onClick={() => setNewMessageOpen(true)}
-                  className="inline-flex size-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                  className={cn(iconButton, "shrink-0")}
                   aria-label="New message"
                 >
                   <Pencil className="size-4" strokeWidth={1.5} aria-hidden="true" />
@@ -894,13 +896,13 @@ const ChatPage = () => {
             </div>
             <label className="relative block">
               <span className="sr-only">Search messages</span>
-              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} />
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-300" strokeWidth={1.5} />
               <input
                 type="text"
                 placeholder="Search messages"
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-[38px] w-full rounded-[8px] bg-[#F1F1E6] pl-9 pr-3 text-[14px] text-[#1A202C] outline-none placeholder:text-[#A3A6AB] focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                className={cn(input, "pl-9")}
               />
             </label>
           </div>
@@ -911,26 +913,26 @@ const ChatPage = () => {
                 {Array.from({ length: 6 }).map((_, index) => (
                   <div
                     key={index}
-                    className="flex gap-3 rounded-[8px] border border-[#EAEADF] bg-[#F9F9F5] px-4 py-3 animate-pulse"
+                    className="flex gap-3 rounded-control border border-light-525 bg-light-200 px-4 py-3 animate-pulse"
                   >
-                    <div className="size-10 rounded-[8px] bg-[#EAEADF]" />
+                    <div className="size-10 rounded-full bg-light-525" />
                     <div className="flex-1 space-y-2">
-                      <div className="h-3 w-2/3 rounded-[4px] bg-[#EAEADF]" />
-                      <div className="h-3 w-1/2 rounded-[4px] bg-[#F1F1E6]" />
+                      <div className="h-3 w-2/3 rounded-pill bg-light-525" />
+                      <div className="h-3 w-1/2 rounded-pill bg-light" />
                     </div>
                   </div>
                 ))}
               </div>
             ) : isFilteredEmpty ? (
               <div className="px-6 py-10">
-                <div className="rounded-[10px] border border-dashed border-[#EAEADF] bg-[#F9F9F5] p-6 text-center">
-                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0]">
-                    <MessageCircle className="size-5 text-[#767980]" strokeWidth={1.5} />
+                <div className="rounded-card border border-dashed border-light-600 bg-light-200 p-6 text-center">
+                  <div className="mx-auto flex h-12 w-12 items-center justify-center rounded-control border border-light-525 bg-light-300">
+                    <MessageCircle className="size-5 text-dark-300" strokeWidth={1.5} />
                   </div>
-                  <p className="mt-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                  <p className="mt-4 text-label-sm text-dark">
                     {hasConversations ? "No matching conversations" : "No conversations yet"}
                   </p>
-                  <p className="mt-1 text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
+                  <p className="mt-1 text-paragraph-sm text-dark-300">
                     {hasConversations
                       ? "Try a different search or clear filters."
                       : "Start a chat from any coach profile and your messages will appear here."}
@@ -940,16 +942,16 @@ const ChatPage = () => {
                       type="button"
                       onClick={() => void loadMoreConversations()}
                       disabled={isLoadingMoreConversations}
-                      className="mt-4 inline-flex h-[30px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:opacity-60"
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "mt-4")}
                     >
-                      {isLoadingMoreConversations ? "Loading..." : "Load more conversations"}
+                      {isLoadingMoreConversations ? "Loading…" : "Load more conversations"}
                     </button>
                   )}
                   {!hasConversations && (
                     <button
                       type="button"
                       onClick={() => navigate(ROUTES.COACHES)}
-                      className="mt-4 inline-flex h-[30px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#0054B4]/90"
+                      className={cn(buttonVariants({ variant: "default", size: "sm" }), "mt-4")}
                     >
                       Browse coaches
                     </button>
@@ -970,37 +972,37 @@ const ChatPage = () => {
                         if (e.key === "Enter" || e.key === " ") handleChatSelect(chat.id);
                       }}
                       className={cn(
-                        "relative flex cursor-pointer items-center justify-between gap-[10px] border-b border-[#EAEADF] px-[25px] py-5 focus:outline-none",
-                        selectedConversationId === chat.id ? "bg-[#F9F9F5]" : "bg-[#F7F7F0] hover:bg-[#F9F9F5]"
+                        "relative flex cursor-pointer items-center justify-between gap-[10px] border-b border-light-525 px-[25px] py-5 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary",
+                        selectedConversationId === chat.id ? "bg-light-200" : "bg-light-300 hover:bg-light-200"
                       )}
                     >
                       {hasUnread ? (
-                        <span className="absolute left-[10px] top-[38px] size-[6.6px] rounded-full bg-[#0054B4]" aria-label="Unread messages" />
+                        <span className="absolute left-[10px] top-[38px] size-1.5 rounded-full bg-primary" aria-label="Unread messages" />
                       ) : null}
                       <div className="flex min-w-0 flex-1 items-center gap-[10px]">
-                        <div className="size-10 shrink-0 overflow-hidden rounded-[8px] bg-[#C1C1B8]">
+                        <div className="size-10 shrink-0 overflow-hidden rounded-full border border-light-550 bg-light">
                           {chat.otherUserImage ? (
                             <img src={chat.otherUserImage} alt="" className="size-full object-cover" />
                           ) : (
-                            <span className="flex size-full items-center justify-center text-[12px] font-medium text-[#484D56]">
+                            <span className="flex size-full items-center justify-center text-label-xsm text-dark-300">
                               {getInitials(getConversationName(chat))}
                             </span>
                           )}
                         </div>
                         <div className="min-w-0">
-                          <p className="truncate text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+                          <p className="truncate text-body-l text-dark">
                             {getConversationName(chat)}
                           </p>
-                          <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+                          <p className="truncate text-caption text-dark-300">
                             {chat.last_message_text || "Start the conversation"}
                           </p>
                         </div>
                       </div>
-                      <div className="flex shrink-0 flex-col items-end text-[12px] font-normal leading-[14px] tracking-[-0.36px]">
-                        <span className="text-[#767980]">
+                      <div className="flex shrink-0 flex-col items-end text-caption">
+                        <span className="text-dark-300">
                           {chat.last_message_at ? formatTime(chat.last_message_at) : ""}
                         </span>
-                        <span className="text-[#A3A6AB]">
+                        <span className="text-dark-300">
                           {chat.last_message_at ? formatDate(chat.last_message_at) : ""}
                         </span>
                       </div>
@@ -1013,15 +1015,15 @@ const ChatPage = () => {
                       type="button"
                       onClick={() => void loadMoreConversations()}
                       disabled={isLoadingMoreConversations}
-                      className="inline-flex h-[30px] w-full items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:opacity-60"
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "w-full")}
                     >
-                      {isLoadingMoreConversations ? "Loading..." : "Load more conversations"}
+                      {isLoadingMoreConversations ? "Loading…" : "Load more conversations"}
                     </button>
                   </div>
                 )}
                 {isSearchingConversations && (
-                  <div className="px-6 pb-4 text-center text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
-                    Searching all conversations...
+                  <div className="px-6 pb-4 text-center text-caption text-dark-300">
+                    Searching all conversations…
                   </div>
                 )}
               </>
@@ -1031,44 +1033,44 @@ const ChatPage = () => {
 
         {isMobile && isSidebarOpen && (
           <div
-            className="absolute inset-0 bg-black/20 z-10 sm:hidden"
+            className="absolute inset-0 z-10 bg-dark/20 sm:hidden"
             onClick={() => setIsSidebarOpen(false)}
           />
         )}
 
         {/* Conversation */}
-        <section className={cn("relative flex min-w-0 flex-1 flex-col bg-[#F9F9F5]", isMobile && isSidebarOpen && "hidden")}>
+        <section className={cn("relative flex min-w-0 flex-1 flex-col bg-light-200", isMobile && isSidebarOpen && "hidden")}>
           <div className="relative flex h-full flex-col">
             {isConversationsLoading && !hasConversations ? (
               <div className="flex-1 flex items-center justify-center px-10 py-12">
                 <div className="flex flex-col items-center gap-3 text-center">
-                  <div className="h-12 w-12 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
-                  <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">Loading your messages</p>
-                  <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">This only takes a moment.</p>
+                  <div className="h-12 w-12 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
+                  <p className="text-label-sm text-dark">Loading your messages</p>
+                  <p className="text-caption text-dark-300">This only takes a moment.</p>
                 </div>
               </div>
             ) : !hasConversations ? (
               <div className="flex-1 flex items-center justify-center px-10 py-12">
-                <div className="w-full max-w-xl rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-center sm:px-10 sm:pb-10">
-                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
+                <div className="w-full max-w-xl rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center sm:px-10 sm:pb-10">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-control border border-primary-300 bg-primary-50 text-primary">
                     <MessageCircle className="size-6" strokeWidth={1.5} />
                   </div>
-                  <h3 className="mt-4 text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">No conversations yet</h3>
-                  <p className="mt-2 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+                  <h3 className="mt-4 text-card-title text-dark">No conversations yet</h3>
+                  <p className="mt-2 text-body-m text-dark-300">
                     Open a coach profile and send a message to start a private chat.
                   </p>
                   <div className="mt-6 flex items-center justify-center gap-3">
                     <button
                       type="button"
                       onClick={() => navigate(ROUTES.COACHES)}
-                      className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#0054B4]/90"
+                      className={buttonVariants({ variant: "default" })}
                     >
                       Browse coaches
                     </button>
                     <button
                       type="button"
                       onClick={() => navigate(ROUTES.HOME)}
-                      className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium tracking-[-0.03em] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                      className={buttonVariants({ variant: "secondary" })}
                     >
                       Go home
                     </button>
@@ -1085,7 +1087,7 @@ const ChatPage = () => {
                         <button
                           type="button"
                           onClick={() => setIsSidebarOpen(true)}
-                          className="flex size-8 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#484D56]"
+                          className={iconButton}
                           aria-label="Open conversations"
                         >
                           <Menu className="size-4" strokeWidth={1.5} />
@@ -1093,36 +1095,36 @@ const ChatPage = () => {
                         <button
                           type="button"
                           onClick={handleBack}
-                          className="flex size-8 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#484D56]"
+                          className={iconButton}
                           aria-label="Go back"
                         >
                           <ArrowLeft className="size-4" strokeWidth={1.5} />
                         </button>
                       </>
                     )}
-                    <div className="size-[50px] shrink-0 overflow-hidden rounded-[8px] bg-[#C1C1B8]">
+                    <div className="size-[50px] shrink-0 overflow-hidden rounded-full border border-light-550 bg-light">
                       {selectedConversation?.otherUserImage ? (
                         <img src={selectedConversation.otherUserImage} alt="" className="size-full object-cover" />
                       ) : (
-                        <span className="flex size-full items-center justify-center text-[14px] font-medium text-[#484D56]">
+                        <span className="flex size-full items-center justify-center text-label-sm text-dark-300">
                           {getInitials(getConversationName(selectedConversation))}
                         </span>
                       )}
                     </div>
                     <div className="min-w-0">
-                      <p className="truncate text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C]">
+                      <p className="truncate text-body-l text-dark">
                         {getConversationName(selectedConversation)}
                       </p>
                       {selectedConversation?.is_group ? (
                         <button
                           type="button"
                           onClick={() => setIsMembersOpen(true)}
-                          className="block max-w-full truncate text-left text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB] underline-offset-2 hover:text-[#484D56] hover:underline"
+                          className="block max-w-full truncate text-left text-caption text-dark-300 underline-offset-2 hover:text-dark hover:underline"
                         >
                           {conversationHandle(selectedConversation)}
                         </button>
                       ) : (
-                        <p className="truncate text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#A3A6AB]">
+                        <p className="truncate text-caption text-dark-300">
                           {conversationSubline(conversationContext) ?? conversationHandle(selectedConversation)}
                         </p>
                       )}
@@ -1134,7 +1136,7 @@ const ChatPage = () => {
                   ) ? (
                     <button
                       type="button"
-                      className="inline-flex h-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
                       onClick={() => void handleLeaveChannel(selectedConversation.id)}
                     >
                       Leave
@@ -1144,7 +1146,7 @@ const ChatPage = () => {
                   {selectedConversation?.otherCoachId ? (
                     <button
                       type="button"
-                      className="inline-flex h-[30px] shrink-0 items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#1A202C] transition-colors hover:bg-[#EAEADF]"
+                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
                       onClick={() => navigate(`/coach/${selectedConversation.otherCoachId}`)}
                     >
                       View profile
@@ -1169,11 +1171,11 @@ const ChatPage = () => {
                           key={idx}
                           className="flex items-start gap-3"
                         >
-                          <div className="size-9 rounded-[8px] bg-[#EAEADF]" />
+                          <div className="size-9 rounded-full bg-light-525" />
                           <div className="flex-1 space-y-2">
-                            <div className="h-3 w-24 rounded-[4px] bg-[#EAEADF]" />
-                            <div className="h-3 w-4/5 rounded-[4px] bg-[#F1F1E6]" />
-                            <div className="h-3 w-2/3 rounded-[4px] bg-[#F1F1E6]" />
+                            <div className="h-3 w-24 rounded-pill bg-light-525" />
+                            <div className="h-3 w-4/5 rounded-pill bg-light" />
+                            <div className="h-3 w-2/3 rounded-pill bg-light" />
                           </div>
                         </div>
                       ))}
@@ -1219,7 +1221,7 @@ const ChatPage = () => {
                     </div>
                   )}
                   {!isMessagesLoading && messages.length === 0 && (
-                    <div className="mt-auto text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">No messages yet. Send the first one below.</div>
+                    <div className="mt-auto text-body-m text-dark-300">No messages yet. Send the first one below.</div>
                   )}
                 </div>
 
@@ -1228,18 +1230,18 @@ const ChatPage = () => {
                 ) : null}
                 {selectedConversation?.is_group &&
                 !selectedConversation.conversation_participants?.some((p) => p.user_id === user?.id) ? (
-                  <div className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] px-5 py-4">
-                    <p className="text-[14px] leading-[18px] text-[#484D56]">Join to see this channel.</p>
+                  <div className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-400 px-5 py-4">
+                    <p className="text-body-m text-dark-300">Join to see this channel.</p>
                     <button
                       type="button"
-                      className="inline-flex h-[34px] items-center justify-center self-start rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium text-[#F1F1E6]"
+                      className={cn(buttonVariants({ variant: "default" }), "self-start")}
                       onClick={() => void chatAPI.joinChannel(selectedConversation.id).then(() => fetchConversations({ silent: true }))}
                     >
                       Join channel
                     </button>
                   </div>
                 ) : (
-                <div className="flex items-center justify-between gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-5 py-[15px]">
+                <div className="flex items-center justify-between gap-3 rounded-card border border-light-525 bg-light-300 px-5 py-[15px] focus-within:border-primary">
                     <input
                       type="text"
                       placeholder={
@@ -1256,15 +1258,13 @@ const ChatPage = () => {
                           handleSend();
                         }
                       }}
-                      className="w-full bg-transparent text-[16px] font-normal leading-[18px] tracking-[-0.48px] text-[#1A202C] outline-none placeholder:text-[#A3A6AB]"
+                      className="w-full bg-transparent text-body-l text-dark outline-none placeholder:text-dark-200"
                     />
                     <button
                       type="button"
                       onClick={handleSend}
                       disabled={!messageInput.trim() || isSending}
-                      className={cn(
-                        "inline-flex h-[34px] shrink-0 items-center justify-center gap-1.5 rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium text-[#F1F1E6] disabled:cursor-not-allowed disabled:opacity-40"
-                      )}
+                      className={cn(buttonVariants({ variant: "default" }), "shrink-0 gap-1.5")}
                     >
                       <Send className="size-4" strokeWidth={1.5} aria-hidden="true" />
                       Send

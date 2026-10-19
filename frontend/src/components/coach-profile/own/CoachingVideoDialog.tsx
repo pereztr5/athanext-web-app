@@ -46,7 +46,7 @@ export const CoachingVideoDialog = ({
       toast({ title: next ? "Coaching video added" : "Coaching video removed" });
       onOpenChange(false);
     } catch (err) {
-      toast({ title: "Couldn't save the video", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+      toast({ title: "Couldn't save the video", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
     } finally {
       setSaving(false);
     }
@@ -56,8 +56,8 @@ export const CoachingVideoDialog = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className={dialogContent}>
         <DialogHeader className="space-y-1.5 px-[25px] pb-4 pt-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em]">Add a coaching video</DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] text-[#767980]">
+          <DialogTitle className="text-section">Add a coaching video</DialogTitle>
+          <DialogDescription className="text-body-m text-dark-300">
             A 30 to 90 second clip of you coaching works best.
           </DialogDescription>
         </DialogHeader>
@@ -71,7 +71,7 @@ export const CoachingVideoDialog = ({
           <label className="flex flex-col gap-1.5">
             <span className={label}>Video link</span>
             <input
-              className={cn(input, error && "ring-2 ring-[#972B2B]")}
+              className={cn(input, error && "border-error-600")}
               placeholder="youtube.com/watch?v=… or vimeo.com/…"
               value={url}
               inputMode="url"
@@ -81,11 +81,11 @@ export const CoachingVideoDialog = ({
                 setError("");
               }}
             />
-            {error ? <span className="text-[12px] text-[#972B2B]">{error}</span> : null}
+            {error ? <span className="text-caption text-error-700">{error}</span> : null}
           </label>
           <div className="flex items-center justify-end gap-2">
             {current ? (
-              <button type="button" className={cn(textButton, "mr-auto text-[#972B2B]")} disabled={saving} onClick={() => void save(null)}>
+              <button type="button" className={cn(textButton, "mr-auto text-error-700")} disabled={saving} onClick={() => void save(null)}>
                 Remove video
               </button>
             ) : null}

@@ -7,13 +7,14 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, CalendarPlus, FileText, User } from "lucide-react";
+import { CalendarDays, CalendarPlus, FileText, User } from "@/components/icons";
 import { rosterAPI } from "@/api/roster";
 import { BookAthleteDialog } from "@/components/athletes/BookAthleteDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { dialogContent, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 import { ROUTES } from "@/routes";
 import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO } from "@/utils/schedule";
@@ -43,7 +44,7 @@ export const useConversationContext = (conversationId: string | null | undefined
     },
   });
 
-const chip = "inline-flex h-[30px] items-center gap-1.5 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-3 text-[13px] font-medium text-[#1A202C] hover:bg-[#EAEADF] [&>svg]:size-4";
+const chip = cn(buttonVariants({ variant: "secondary", size: "sm" }), "gap-1.5");
 
 /** The line under the name: "Parent of Ava Patel, 13" for coaches. */
 export const conversationSubline = (ctx: ConversationContext | null | undefined) =>
@@ -121,12 +122,12 @@ export const ComposerShortcuts = ({ ctx, onFill }: { ctx: ConversationContext | 
       <Dialog open={picking} onOpenChange={(o) => { setPicking(o); if (!o) setChosen([]); }}>
         <DialogContent className={dialogContent}>
           <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-            <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Suggest times</DialogTitle>
+            <DialogTitle>Suggest times</DialogTitle>
             <DialogDescription className={meta}>Pick a few open 1-on-1 times. They go into your message.</DialogDescription>
           </DialogHeader>
           <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
             {times.isLoading ? <p className={meta}>Finding open times…</p> : null}
-            {times.data && !times.data.length ? <p className={meta}>No open 1-on-1 times. Add some in My Schedule.</p> : null}
+            {times.data && !times.data.length ? <p className={meta}>No open 1-on-1 times. Add some in My schedule.</p> : null}
             <div className="flex max-h-[300px] flex-col gap-2 overflow-y-auto">
               {(times.data ?? []).map((t) => {
                 const on = chosen.includes(t.id);
@@ -137,8 +138,8 @@ export const ComposerShortcuts = ({ ctx, onFill }: { ctx: ConversationContext | 
                     aria-pressed={on}
                     onClick={() => setChosen((c) => (on ? c.filter((x) => x !== t.id) : [...c, t.id]))}
                     className={cn(
-                      "rounded-[8px] border px-3 py-2.5 text-left text-[14px] font-medium",
-                      on ? "border-[#6698D2] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F9F9F5]"
+                      "rounded-control border px-3 py-2.5 text-left text-label-sm focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                      on ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200"
                     )}
                   >
                     {label(t.date, t.startTime)}

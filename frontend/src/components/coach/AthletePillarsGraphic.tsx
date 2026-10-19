@@ -1,4 +1,4 @@
-import { Activity, Calendar } from "lucide-react";
+import { Activity, Calendar } from "@/components/icons";
 import { useState, useEffect, useCallback, useMemo, useRef, type CSSProperties } from "react";
 import { useNavigate } from "react-router-dom";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
@@ -12,6 +12,7 @@ import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import CoachCard from "@/components/coach/CoachCard";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
+import { segButton, segGroup } from "@/components/schedule/styles";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
 import { ROUTES } from "@/routes";
@@ -379,15 +380,14 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
     if (!coach?.id) return;
     if (isCoachPersona) {
       toast({
-        title: "Coach to Coach messaging is not currently available.",
+        title: "Coach to coach messaging isn't available yet",
         variant: "default"
       });
       return;
     }
     if (!user) {
       toast({
-        title: "Authentication Required",
-        description: "Please sign in to send a message",
+        title: "Sign in to send a message",
         variant: "destructive"
       });
       navigate("/auth?mode=signin");
@@ -444,8 +444,8 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
     } catch (error) {
       console.error('Error starting conversation:', error);
       toast({
-        title: "Error",
-        description: "Failed to start conversation. Please try again.",
+        title: "Conversation didn't start",
+        description: "Try again.",
         variant: "destructive"
       });
     } finally {
@@ -508,8 +508,8 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
 
   const getSportTitle = (sport: SportKey) => {
     return sport === "soccer" 
-      ? "Our Pillars of Holistic Soccer Development"
-      : "Our Pillars of Holistic Rowing Development";
+      ? "Our pillars of holistic soccer development"
+      : "Our pillars of holistic rowing development";
   };
 
   const getSportDescription = (sport: SportKey) => {
@@ -522,17 +522,6 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
     return sport === "soccer"
       ? "Soccer is more than a sport; it's a pathway to excellence. We develop complete athletes who master the game while building character, discipline, and skills that transcend the field."
       : "Excellence in rowing comes from the perfect blend of technical mastery, physical preparation, and mental fortitude - on and off the water.";
-  };
-
-  const getRowingPillarStyle = (_index: number, variant: 'light' | 'dark'): CSSProperties => {
-    // Keep a consistent light shade for the first row and a consistent dark shade for the second row.
-    const lightShade = 'var(--rowing-shade-2)';
-    const darkShade = 'var(--rowing-shade-6)';
-    return {
-      background: variant === 'light' ? lightShade : darkShade,
-      color: variant === 'light' ? 'var(--rowing-text-light)' : 'var(--rowing-text-dark)',
-      boxShadow: variant === 'light' ? 'var(--rowing-shadow-light)' : 'var(--rowing-shadow-dark)',
-    };
   };
 
   const displayPillars: PillarDisplay[] = useMemo(() => {
@@ -587,114 +576,54 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
   const isPillarsLoading = sportPillarsLoadingBySport[selectedSport];
 
   return (
-    <section 
-      style={activeThemeStyles}
-      className={`w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-6 pb-0 ${selectedSport === "rowing" ? "" : ""}`}
+    <section
+      className="mx-auto w-full max-w-wrapper px-4 pb-0 pt-6 sm:px-6 lg:px-8"
     >
-      {/* Sport Selection Tabs */}  
-      <div className="flex justify-center mb-8">
+      {/* Sport Selection Tabs */}
+      <div className="mb-8 flex justify-center">
         <Tabs value={selectedSport} onValueChange={(value) => setSelectedSport((value as SportKey) || "soccer")} className="w-auto">
-          <TabsList className="grid w-full grid-cols-2 bg-white/80 dark:bg-slate-800/80 backdrop-blur-sm border border-gray-200 dark:border-gray-700 shadow-sm">
-            <TabsTrigger 
-              value="soccer" 
-              style={{ ['--tab-color' as any]: SOCCER_THEME.primary }}
-              className="data-[state=active]:bg-[var(--tab-color)] data-[state=active]:text-white data-[state=inactive]:text-[var(--tab-color)] data-[state=inactive]:hover:bg-muted transition-colors text-sm"
-            >
-              Soccer
-            </TabsTrigger>
-            <TabsTrigger 
-              value="rowing"
-              style={{ ['--tab-color' as any]: ROWING_BLUE_THEME.primary }}
-              className="data-[state=active]:bg-[var(--tab-color)] data-[state=active]:text-white data-[state=inactive]:text-[var(--tab-color)] data-[state=inactive]:hover:bg-muted transition-colors text-sm"
-            >
-              Rowing
-            </TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="soccer">Soccer</TabsTrigger>
+            <TabsTrigger value="rowing">Rowing</TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      <div className="text-center mb-10 animate-fade-in">
-        <h2
-          className="text-2xl sm:text-3xl lg:text-4xl font-bold mb-4"
-          style={{ color: selectedSport === "rowing" ? ROWING_BLUE_THEME.heading : SOCCER_THEME.primary }}
-        >
-          {getSportTitle(selectedSport)}
-        </h2>
-        <p className={`text-base sm:text-lg text-muted-foreground max-w-3xl mx-auto leading-relaxed ${selectedSport === "rowing" ? "" : ""}`}>
-          {getSportDescription(selectedSport)}
-        </p>
+      <div className="mb-10 flex flex-col items-center gap-4 text-center animate-fade-in">
+        <h2 className="text-page-title-phone text-dark md:text-page-title">{getSportTitle(selectedSport)}</h2>
+        <p className="mx-auto max-w-[640px] text-paragraph text-dark-300">{getSportDescription(selectedSport)}</p>
       </div>
-      
-      <div className={`grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-10 transition-opacity duration-200 ${isPillarsLoading ? "opacity-70" : "opacity-100"}`}>
+
+      <div className={`mb-10 grid grid-cols-1 gap-6 transition-opacity duration-200 md:grid-cols-2 lg:grid-cols-3 ${isPillarsLoading ? "opacity-70" : "opacity-100"}`}>
         {displayPillars.map((pillar, index) => {
           const { Icon } = pillar;
-          const isRowing = selectedSport === "rowing";
-          const iconColorStyle = isRowing
-            ? { color: pillar.variant === 'light' ? ROWING_BLUE_THEME.iconLight : ROWING_BLUE_THEME.iconDark }
-            : undefined;
-          const descriptionStyle = isRowing
-            ? { color: pillar.variant === 'light' ? ROWING_BLUE_THEME.textLight : ROWING_BLUE_THEME.textDark }
-            : undefined;
-          const iconWrapperClass = isRowing
-            ? (pillar.variant === 'light' ? 'bg-white shadow-md' : 'bg-white/20 border border-white/25 backdrop-blur-sm')
-            : (pillar.variant === 'light' ? 'bg-white shadow-soft' : 'bg-white/20 backdrop-blur-sm');
-          const headingStyle = isRowing 
-            ? { color: pillar.variant === 'light' ? ROWING_BLUE_THEME.heading : ROWING_BLUE_THEME.textDark }
-            : undefined;
           return (
-            <div
+            <button
+              type="button"
               key={pillar.id || index}
               onClick={() => {
                 setSelectedPillar(pillar.title);
               }}
-              className={`
-                relative p-6 rounded-3xl transition-all duration-300 min-h-[224px] flex flex-col
-                cursor-pointer hover:scale-105
-                ${isRowing 
-                  ? 'border border-transparent' 
-                  : (
-                    pillar.variant === 'light' 
-                      ? 'bg-athlete-card-light text-athlete-card-light-text shadow-soft hover:shadow-medium' 
-                      : 'bg-gradient-primary text-white shadow-medium hover:shadow-strong'
-                  )
-                }
-              `}
-              style={isRowing ? getRowingPillarStyle(index, pillar.variant) : (
-                !isRowing && pillar.variant === 'dark' ? { 
-                  background: 'linear-gradient(135deg, hsl(var(--athlete-card-dark-start)), hsl(var(--athlete-card-dark-end)))' 
-                } : undefined
-              )}
+              className="relative flex min-h-[224px] cursor-pointer flex-col items-center gap-3 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center text-dark transition-colors hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
-              <div className={`
-                w-12 h-12 rounded-full flex items-center justify-center mb-4 mx-auto
-                ${iconWrapperClass}
-              `}>
-                <Icon 
-                  size={22} 
-                  style={iconColorStyle}
-                />
+              <div className="mx-auto mb-1 flex size-12 items-center justify-center rounded-full border border-primary-200 bg-primary-50 text-primary">
+                <Icon className="size-6" strokeWidth={1.5} />
               </div>
-              
-              <h3 className="text-xl font-inter font-bold mb-3 text-center" style={headingStyle}>
-                {pillar.title}
-              </h3>
-              
-              <p className="text-sm text-center leading-relaxed font-inter flex-1 flex items-center justify-center"
-                style={descriptionStyle}
-              >
-                {pillar.description}
-              </p>
-            </div>
+
+              <h3 className="text-card-title text-dark">{pillar.title}</h3>
+
+              <p className="flex flex-1 items-center justify-center text-paragraph text-dark-300">{pillar.description}</p>
+            </button>
           );
         })}
       </div>
-      
-      <div className="text-center animate-fade-in mb-16 sm:mb-20">
-        <blockquote className={`text-base sm:text-lg font-medium italic max-w-4xl mx-auto text-muted-foreground leading-relaxed`}>
+
+      <div className="mb-16 text-center animate-fade-in sm:mb-20">
+        <blockquote className="mx-auto max-w-[640px] text-paragraph italic text-dark-300">
           "{getSportQuote(selectedSport)}"
         </blockquote>
       </div>
-      
+
       <Dialog
         modal={false}
         open={selectedPillar !== null}
@@ -707,85 +636,48 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
         <DialogContent
           onInteractOutside={(event) => event.preventDefault()}
           className={`max-w-4xl max-h-[85vh] flex flex-col ${
-          isMobile 
-            ? 'w-[95vw] m-2' 
+          isMobile
+            ? 'w-[95vw] m-2'
             : ''
         }`}>
           <DialogHeader className="flex-shrink-0 pb-4 pr-10 sm:pr-4">
-            <DialogTitle
-              className="text-2xl font-bold pr-4 sm:pr-0"
-              style={{ color: selectedSport === "rowing" ? ROWING_BLUE_THEME.heading : undefined }}
-            >
-              {selectedPillar} Coaches
-            </DialogTitle>
-            <DialogDescription className="text-sm text-muted-foreground mt-1">
+            <DialogTitle className="pr-4 text-section text-dark sm:pr-0">{selectedPillar} coaches</DialogTitle>
+            <DialogDescription className="mt-1 text-body-m text-dark-300">
               Browse available coaches specializing in {selectedPillar}
             </DialogDescription>
             <div className="mt-3 flex justify-center">
-              <div className="inline-flex items-center rounded-full bg-white/80 dark:bg-slate-800/80 border border-gray-200 dark:border-gray-700 shadow-sm p-1">
-                {favoritePositionOptions.map((option, index) => {
+              <div className={cn(segGroup, "inline-flex")} role="group" aria-label="Position">
+                {favoritePositionOptions.map((option) => {
                   const isActive = selectedFavoritePosition === option.value;
-                  const isSoccer = selectedSport === "soccer";
-                  const activeStyle = isSoccer
-                    ? { backgroundColor: SOCCER_THEME.primary, color: SOCCER_THEME.primaryForeground }
-                    : { backgroundColor: ROWING_BLUE_THEME.primary, color: ROWING_BLUE_THEME.primaryText };
-                  const inactiveStyle = isSoccer
-                    ? { color: SOCCER_THEME.primary }
-                    : { color: ROWING_BLUE_THEME.primary };
-
                   return (
-                    <Button
+                    <button
                       key={option.value}
                       type="button"
-                      size="sm"
+                      aria-pressed={isActive}
                       onClick={() =>
                         setSelectedFavoritePosition((prev) => (prev === option.value ? null : option.value))
                       }
-                      className={cn(
-                        "text-xs px-5 py-1.5 transition-colors",
-                        index === 0 ? "rounded-full rounded-r-none" : "rounded-full rounded-l-none",
-                        isActive ? "" : "bg-transparent hover:bg-muted"
-                      )}
-                      style={isActive ? activeStyle : inactiveStyle}
+                      className={cn(segButton(isActive), "flex-none px-5")}
                     >
                       {option.label}
-                    </Button>
+                    </button>
                   );
                 })}
               </div>
             </div>
           </DialogHeader>
-          
+
           <div className="flex-1 overflow-y-auto min-h-0 space-y-4 pr-4 pb-4 overscroll-contain">
                 {selectedPillar && getCoachesForSpecialty(selectedPillar).length === 0 ? (
-                  <div className="flex flex-col items-center justify-center py-12 px-6 text-center min-h-[300px]">
-                    <div
-                      className="w-20 h-20 rounded-full flex items-center justify-center mb-4"
-                      style={{
-                        backgroundColor: selectedSport === "rowing" ? ROWING_BLUE_THEME.badgeBackground : undefined,
-                      }}
-                    >
-                      <Calendar
-                        size={40}
-                        style={{ color: selectedSport === "rowing" ? ROWING_BLUE_THEME.badgeText : undefined }}
-                      />
-                    </div>
-                    <h3
-                      className="text-xl font-bold mb-2"
-                      style={{ color: selectedSport === "rowing" ? ROWING_BLUE_THEME.heading : undefined }}
-                    >
-                      Coaches Coming Soon!
-                    </h3>
-                    <p className="text-muted-foreground max-w-md mb-6">
-                      We're currently onboarding exceptional coaches in this specialty. 
+                  <div className="flex min-h-[300px] flex-col items-center justify-center gap-3 px-6 py-12 text-center">
+                    <Calendar className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+                    <h3 className="text-card-title text-dark">Coaches coming soon</h3>
+                    <p className="mb-3 max-w-md text-paragraph text-dark-300">
+                      We're currently onboarding exceptional coaches in this specialty.
                       Check back soon or explore our other available coaches.
                     </p>
-                    <Button 
-                      variant="outline" 
-                      style={selectedSport === "rowing" ? { borderColor: ROWING_BLUE_THEME.primary, color: ROWING_BLUE_THEME.primary } : undefined}
-                      onClick={() => navigate(ROUTES.COACHES)}
-                    >
-                      View All Coaches
+                    <Button variant="secondary" onClick={() => navigate(ROUTES.COACHES)}>
+                      View all coaches
                     </Button>
                   </div>
                 ) : (
@@ -803,37 +695,26 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
                   ))
                 )}
           </div>
-          
-          <div
-            className="flex-shrink-0 mt-4 pt-4 border-t"
-            style={{ borderColor: selectedSport === "rowing" ? ROWING_BLUE_THEME.shades[1] : undefined }}
-          >
+
+          <div className="mt-4 flex-shrink-0 border-t border-light-525 pt-4">
             <div className="flex gap-3">
-              <Button 
-                onClick={() => {
-                  closePillarModal(false);
-                  navigate(ROUTES.COACHES);
-                }}
-                className={`flex-1 ${
-                  selectedSport === "rowing" 
-                    ? "text-white" 
-                    : "text-white"
-                }`}
-                style={selectedSport === "rowing"
-                  ? { backgroundColor: ROWING_BLUE_THEME.primary, color: ROWING_BLUE_THEME.primaryText }
-                  : { backgroundColor: SOCCER_THEME.primary, color: SOCCER_THEME.primaryForeground }
-                }
-                size={isMobile ? "lg" : "default"}
-              >
-                View All Coaches
-              </Button>
-              <Button 
+              <Button
                 onClick={() => closePillarModal(true)}
-                variant="outline"
+                variant="secondary"
                 className="flex-1"
                 size={isMobile ? "lg" : "default"}
               >
                 Close
+              </Button>
+              <Button
+                onClick={() => {
+                  closePillarModal(false);
+                  navigate(ROUTES.COACHES);
+                }}
+                className="flex-1"
+                size={isMobile ? "lg" : "default"}
+              >
+                View all coaches
               </Button>
             </div>
           </div>

@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, CircleHelp, ExternalLink, Hash, Tag, type LucideIcon } from "lucide-react";
+import { ChevronDown, CircleHelp, ExternalLink, Hash, Tag, type LucideIcon } from "@/components/icons";
 import { isShopifyConfigured } from "@/api/shopify";
 import { useGearProducts } from "@/hooks/useGear";
 import { useToast } from "@/hooks/use-toast";
@@ -28,14 +28,14 @@ const Item = ({
   children: ReactNode;
 }) => (
   <div>
-    <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 px-[18px] py-4 text-left">
-      <Icon className="size-5 shrink-0 text-[#484D56]" strokeWidth={1.5} aria-hidden="true" />
+    <button type="button" onClick={onToggle} aria-expanded={open} className="flex w-full items-center gap-3 rounded-card px-[18px] py-4 text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+      <Icon className="size-5 shrink-0 text-dark-400" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex min-w-0 flex-1 flex-col gap-1">
         <span className={medium}>{title}</span>
         <span className={caption}>{sub}</span>
       </span>
       <ChevronDown
-        className={cn("size-4 shrink-0 text-[#A3A6AB] transition-transform motion-reduce:transition-none", open && "rotate-180")}
+        className={cn("size-4 shrink-0 text-dark-200 transition-transform motion-reduce:transition-none", open && "rotate-180")}
         strokeWidth={1.5}
         aria-hidden="true"
       />
@@ -84,11 +84,11 @@ export const MoreList = ({
   if (faqs.length) {
     items.push(
       <Item key="faq" icon={CircleHelp} title="Questions families ask" sub={plural(faqs.length, "answer")} open={open === "faq"} onToggle={() => toggle("faq")}>
-        <div className="flex flex-col gap-3 divide-y divide-[#EAEADF]">
+        <div className="flex flex-col gap-3 divide-y divide-light-525">
           {faqs.map((faq) => (
             <div key={faq.id} className="flex flex-col gap-1.5 pt-3 first:pt-0">
               <span className={medium}>{faq.question}</span>
-              <span className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">{faq.answer}</span>
+              <span className="text-paragraph text-dark-300">{faq.answer}</span>
             </div>
           ))}
         </div>
@@ -115,17 +115,17 @@ export const MoreList = ({
               href={deal.url}
               target="_blank"
               rel="sponsored noopener noreferrer"
-              className={cn(medium, "inline-flex min-w-0 items-center gap-1.5 hover:text-[#0054B4]")}
+              className={cn(medium, "inline-flex min-w-0 items-center gap-1.5 hover:text-primary")}
             >
               <span className="truncate">{deal.brand}</span>
-              <ExternalLink className="size-3.5 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+              <ExternalLink className="size-3.5 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
             </a>
             {deal.code ? (
               <button
                 type="button"
                 onClick={() => copy(deal.code as string)}
                 aria-label={`Copy code ${deal.code}`}
-                className="shrink-0 rounded-[4px] border border-dashed border-[#C1C1B8] px-2 py-1 font-mono text-[12px] text-[#484D56] hover:border-[#767980]"
+                className="shrink-0 rounded-pill border border-dashed border-light-600 px-2 py-1 font-mono text-caption text-dark-400 hover:border-dark-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
                 {deal.code}
               </button>
@@ -133,7 +133,7 @@ export const MoreList = ({
           </div>
         ))}
         {gear.map((product) => (
-          <Link key={product.id} to={`${ROUTES.GEAR}/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:text-[#0054B4]">
+          <Link key={product.id} to={`${ROUTES.GEAR}/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:text-primary">
             <span className={cn(medium, "truncate")}>{product.title}</span>
             <span className={cn(caption, "shrink-0")}>{formatPriceRange(product)}</span>
           </Link>
@@ -147,7 +147,7 @@ export const MoreList = ({
   return (
     <div className="flex flex-col gap-2">
       <span className={cn(lbl, "pl-0.5")}>More</span>
-      <div className="flex flex-col divide-y divide-[#EAEADF] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">{items}</div>
+      <div className="flex flex-col divide-y divide-light-525 rounded-card border border-light-525 bg-light-300">{items}</div>
     </div>
   );
 };

@@ -4,10 +4,10 @@
  */
 
 export const ManageAvailabilityTableHeader = () => {
-  const cell = "px-0 py-3 text-left text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
+  const cell = "px-0 py-3 text-left text-label-xsm text-dark-300";
   return (
     <thead>
-      <tr className="border-b border-[#EAEADF]">
+      <tr className="border-b border-light-525">
         <th className={cell}>Day</th>
         <th className={cell}>Session</th>
         <th className={cell}>Pillar</th>

@@ -6,7 +6,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Video } from "lucide-react";
+import { Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { introCallsAPI } from "@/api/introCalls";
 import { primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";

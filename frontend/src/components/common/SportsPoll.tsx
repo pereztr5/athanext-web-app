@@ -3,10 +3,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
-import { HelpCircle, CheckCircle2 } from "lucide-react";
+import { HelpCircle, CheckCircle2 } from "@/components/icons";
 import { useSportsPoll } from "@/hooks/useSportsPoll";
 import { toast } from "@/hooks/use-toast";
-import { colors } from "@/config/colors";
 import nextIcon from "../../assets/images/whats-next.png";
 import { strings } from "@/config/strings";
 
@@ -35,7 +34,7 @@ export const SportsPoll = () => {
 
     if (!selectedSport) {
       toast({
-        title: "Please select a sport",
+        title: "Select a sport",
         description: "Choose which sport you'd like to see added next.",
         variant: "destructive"
       });
@@ -49,13 +48,13 @@ export const SportsPoll = () => {
       }
       setHasVoted(true);
       toast({
-        title: "Thank you for voting!",
-        description: "Your vote has been recorded successfully.",
+        title: "Vote recorded",
+        description: "Thanks for voting.",
       });
     } catch (error) {
       toast({
         title: "Voting failed",
-        description: "Please try again later.",
+        description: "Try again later.",
         variant: "destructive"
       });
     }
@@ -63,33 +62,21 @@ export const SportsPoll = () => {
 
   if (hasVoted) {
     return (
-      <Card
-        className="group relative overflow-hidden border-2 transition-all duration-300 hover:shadow-lg h-full self-stretch flex flex-col"
-        style={{
-          borderColor: colors.pastel.purple.foreground + '80',
-          background: `linear-gradient(to bottom right, ${colors.pastel.purple.main}cc, ${colors.pastel.pink.main}80)`,
-        }}
-      >
+      <Card className="relative flex h-full flex-col self-stretch overflow-hidden">
         <CardHeader className="text-center pb-4 flex-shrink-0">
-          <div
-            className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full border"
-            style={{
-              backgroundColor: colors.status.success + '20',
-              borderColor: colors.status.success + '40',
-            }}
-          >
-            <CheckCircle2 style={{ color: colors.status.success }} className="h-6 w-6" />
+          <div className="mx-auto mb-2 flex size-12 items-center justify-center rounded-full border border-success-300 bg-success-50">
+            <CheckCircle2 className="size-6 text-success-600" strokeWidth={1.5} />
           </div>
-          <CardTitle className="text-xl font-bold text-foreground">
-            Thanks for Voting!
+          <CardTitle className="text-card-title text-dark">
+            Thanks for voting
           </CardTitle>
         </CardHeader>
         <CardContent className="text-center flex-grow flex flex-col justify-center">
-          <p className="text-muted-foreground mb-4">
+          <p className="mb-4 text-paragraph text-dark-300">
             Your vote has been recorded. We'll use this feedback to prioritize which sport to add next to {strings.brand.name}.
           </p>
-          <div className="text-sm text-muted-foreground">
-            Stay tuned for updates!
+          <div className="text-body-m text-dark-300">
+            Stay tuned for updates.
           </div>
         </CardContent>
       </Card>
@@ -97,24 +84,18 @@ export const SportsPoll = () => {
   }
 
   return (
-    <Card
-      className="group relative overflow-hidden border-2 transition-all duration-300 hover:shadow-lg hover:scale-105 hover:-translate-y-1 h-full self-stretch flex flex-col"
-      style={{
-        borderColor: colors.pastel.purple.foreground + '80',
-        background: `linear-gradient(to bottom right, ${colors.pastel.purple.main}cc, ${colors.pastel.pink.main}80)`,
-      }}
-    >
+    <Card className="relative flex h-full flex-col self-stretch overflow-hidden">
       <CardHeader className="text-center pb-4 flex-shrink-0">
-        <img src={nextIcon} alt="What's Next Icon" className="mx-auto" />
+        <img src={nextIcon} alt="What's next" className="mx-auto" />
 
-        <CardTitle className="text-2xl font-bold text-foreground">
-          What Sport Next?
+        <CardTitle className="text-section text-dark">
+          What sport next?
         </CardTitle>
       </CardHeader>
       <CardContent className="text-center flex-grow flex flex-col justify-center">
         <form onSubmit={handleSubmit} className="space-y-4">
-          <p className="text-muted-foreground mb-6">
-            Help us decide which sport to add to {strings.brand.name}!
+          <p className="mb-6 text-paragraph text-dark-300">
+            Help us decide which sport to add to {strings.brand.name}.
           </p>
 
           <RadioGroup value={selectedSport} onValueChange={setSelectedSport} className="grid grid-cols-2 sm:grid-cols-3 gap-x-3 md:gap-x-4 gap-y-3 mb-6 text-left">
@@ -123,7 +104,7 @@ export const SportsPoll = () => {
                 <RadioGroupItem value={sport.id} id={sport.id} />
                 <Label
                   htmlFor={sport.id}
-                  className="cursor-pointer text-xs sm:text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                  className="cursor-pointer text-label-sm text-dark peer-disabled:cursor-not-allowed peer-disabled:text-dark-200"
                 >
                   {sport.name}
                 </Label>
@@ -136,7 +117,7 @@ export const SportsPoll = () => {
             className="w-full mb-4"
             disabled={isLoading || !selectedSport}
           >
-            {isLoading ? "Submitting..." : "Submit Vote"}
+            {isLoading ? "Submitting…" : "Submit vote"}
           </Button>
         </form>
       </CardContent>

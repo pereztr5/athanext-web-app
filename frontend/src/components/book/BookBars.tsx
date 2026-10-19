@@ -2,7 +2,7 @@
  * Bottom bars on Book a Session (Working Copy `.mob-pay`, `.pickbar`). Widths follow the page's
  * container: medium is 821-1200px, phone is 820px and under.
  */
-import { X } from "lucide-react";
+import { X } from "@/components/icons";
 import type { BookableSession, BookingCoach } from "@/api/book";
 import { cn } from "@/lib/utils";
 import { bookableStart, money } from "@/utils/booking";
@@ -13,8 +13,8 @@ import { bookSum, dueCaption, dueText, firstName, reviewLabel, type BookingPlan 
 
 /** Phone tab bar is fixed, so these bars are too — sticky would sit behind it (or below the fold). Tablet has no tab bar. */
 const stickyBottom =
-  "z-20 border-t border-[#EAEADF] bg-[#F7F7F0] max-[820px]:fixed max-[820px]:inset-x-0 max-[820px]:bottom-[calc(61px+env(safe-area-inset-bottom))] min-[821px]:sticky min-[821px]:bottom-0 min-[821px]:-mx-5 min-[821px]:-mb-12";
-const total28 = "text-[28px] font-bold leading-[30px] tracking-[-0.05em] tabular-nums text-[#1A202C]";
+  "z-20 border-t border-light-525 bg-light-300 max-[820px]:fixed max-[820px]:inset-x-0 max-[820px]:bottom-[calc(61px+env(safe-area-inset-bottom))] min-[821px]:sticky min-[821px]:bottom-0 min-[821px]:-mx-5 min-[821px]:-mb-12";
+const total28 = "text-highlight tabular-nums text-dark";
 
 export const MobilePayBar = ({
   plan,
@@ -37,7 +37,7 @@ export const MobilePayBar = ({
       )}
     >
       <div className="flex flex-1 items-center justify-between gap-3 min-[821px]:max-w-[360px]">
-        <span className="text-[14px] font-medium leading-[18px]">{bookSum(plan, count)}</span>
+        <span className="text-label-sm">{bookSum(plan, count)}</span>
         <span className={total28}>{dueText(plan)}</span>
       </div>
       <button type="button" className={cn(primaryButton, "h-[40px] flex-none px-6 max-[820px]:h-[44px] max-[820px]:w-full")} onClick={onReview}>
@@ -76,7 +76,7 @@ export const PickBar = ({
               key={s.id}
               type="button"
               onClick={() => onRemove(s)}
-              className="inline-flex h-[30px] flex-none items-center gap-1.5 rounded-[15px] bg-[#E5EDF7] px-2.5 text-[13px] font-medium text-[#0054B4]"
+              className="inline-flex h-[30px] flex-none items-center gap-1.5 rounded-control border border-primary-300 bg-primary-100 px-2.5 text-label-sm text-primary-700"
               aria-label={`Remove ${formatDayISO(iso, { weekday: "short", month: "short", day: "numeric" })}, ${clock}`}
             >
               {many ? `${firstName(coaches[s.coachId])}, ` : ""}
@@ -88,7 +88,7 @@ export const PickBar = ({
       </div>
       <div className="flex items-center justify-between gap-4">
         <span className="flex flex-col gap-1">
-          <span className="text-[12px] leading-[16px] text-[#767980]">
+          <span className="text-paragraph-sm text-dark-300">
             {bookSum(plan, picked.length)}
             {dueCaption(plan)}
           </span>
@@ -112,9 +112,9 @@ export const PickFoot = ({
   count: number;
   onContinue: () => void;
 }) => (
-  <div className="hidden items-center justify-between gap-3 border-t border-[#EAEADF] pt-4 min-[821px]:flex">
+  <div className="hidden items-center justify-between gap-3 border-t border-light-525 pt-4 min-[821px]:flex">
     <span className="flex min-w-0 flex-col gap-1">
-      <span className="text-[14px] font-medium leading-[18px]">{count ? bookSum(plan, count) : "Tap one or more times"}</span>
+      <span className="text-label-sm">{count ? bookSum(plan, count) : "Tap one or more times"}</span>
       <span className={meta}>
         {count
           ? plan.dueNow || !plan.requests.length

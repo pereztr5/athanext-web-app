@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CalendarCheck2, RefreshCw } from "lucide-react";
+import { CalendarCheck2, RefreshCw } from "@/components/icons";
 import { calendarSyncAPI, scheduleAPI, type CoachSchedule, type NewFamilyBooking } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -15,7 +15,7 @@ import { input, label, meta, primaryButton, secondaryButton, segButton, segGroup
 const useFail = () => {
   const { toast } = useToast();
   return (err: unknown) =>
-    toast({ title: "Something went wrong", description: err instanceof Error ? err.message : "Please try again.", variant: "destructive" });
+    toast({ title: "That didn't save", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
 };
 
 export const BookingRulesSection = ({
@@ -51,7 +51,7 @@ export const BookingRulesSection = ({
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[16px] font-medium">Booking rules</h3>
+      <h3 className="text-subtitle text-dark">Booking rules</h3>
       <div className="flex flex-col gap-1.5">
         <span className={label}>Families new to you</span>
         <div className={segGroup} role="group" aria-label="Families new to you">
@@ -119,13 +119,13 @@ export const CalendarSyncSection = ({ calendar }: { calendar: CoachSchedule["cal
 
   return (
     <section className="flex flex-col gap-3">
-      <h3 className="text-[16px] font-medium">Google Calendar</h3>
+      <h3 className="text-subtitle text-dark">Google Calendar</h3>
       {calendar ? (
         <>
-          <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-            <CalendarCheck2 className="mt-[1px] size-4 flex-none text-[#1E7431]" strokeWidth={1.5} aria-hidden="true" />
+          <div className="flex items-start gap-2 rounded-control border border-light-525 bg-light px-3 py-2.5">
+            <CalendarCheck2 className="mt-[1px] size-4 flex-none text-success-700" strokeWidth={1.5} aria-hidden="true" />
             <span className="flex flex-col gap-0.5">
-              <b className="text-[14px] font-medium">Connected{calendar.accountEmail ? ` as ${calendar.accountEmail}` : ""}</b>
+              <b className="text-label-sm">Connected{calendar.accountEmail ? ` as ${calendar.accountEmail}` : ""}</b>
               <span className={meta}>
                 Busy times hide your open slots.
                 {calendar.lastSyncedAt
@@ -133,10 +133,10 @@ export const CalendarSyncSection = ({ calendar }: { calendar: CoachSchedule["cal
                   : ""}
               </span>
               {!calendar.canWrite ? (
-                <span className="text-[12px] text-[#906A29]">Connect again to add accepted bookings to your calendar.</span>
+                <span className="text-caption text-info-800">Connect again to add accepted bookings to your calendar.</span>
               ) : null}
               {calendar.syncError ? (
-                <span className="text-[12px] text-[#972B2B]">
+                <span className="text-caption text-error-700">
                   {calendar.syncError === "reconnect" ? "Google stopped the connection. Connect again." : `Last update failed: ${calendar.syncError}`}
                 </span>
               ) : null}
@@ -159,7 +159,7 @@ export const CalendarSyncSection = ({ calendar }: { calendar: CoachSchedule["cal
         </>
       ) : (
         <>
-          <p className="text-[14px] leading-[20px] text-[#484D56]">
+          <p className="text-paragraph text-dark-400">
             Connect your Google Calendar so families can't book times you're busy. AthaNext only sees when you're busy, never what the events are.
           </p>
           <button type="button" className={cn(primaryButton, "self-start")} disabled={connect.isPending} onClick={() => connect.mutate()}>

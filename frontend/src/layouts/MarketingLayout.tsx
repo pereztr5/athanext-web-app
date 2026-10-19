@@ -15,7 +15,7 @@ export const MarketingLayout = () => {
     <>
       {!isAuthPage && (
         <header
-          className="fixed w-full z-50 bg-[#F7F7F0] border-b border-[#EAEADF] h-[3.8rem] px-5 flex items-center"
+          className="fixed w-full z-50 bg-light-300 border-b border-light-525 h-[3.8rem] px-5 flex items-center"
           style={{ top: "var(--network-banner-height, 0px)" }}
         >
           <Link to="/" aria-label="AthaNext sign in" className="flex items-center">

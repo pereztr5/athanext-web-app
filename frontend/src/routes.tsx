@@ -12,7 +12,6 @@ import PartnershipSuccess from "./pages/PartnershipSuccess";
 import SoccerPillars from "./pages/SoccerPillars";
 import RowingPillars from "./pages/RowingPillars";
 import CoachProfile from "./pages/CoachProfile";
-import ChangePassword from "./pages/ChangePassword";
 import AccountSettings from "./pages/AccountSettings";
 import MySchedule from "./pages/MySchedule";
 import CreateSession from "./pages/CreateSession";
@@ -171,7 +170,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
   { path: ROUTES.HELP, element: <ProtectedRoute><Help /></ProtectedRoute> },
   { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
-  { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><ChangePassword /></ProtectedRoute> },
+  { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><Navigate to={`${ROUTES.SETTINGS}?tab=security`} replace /></ProtectedRoute> },
   { path: ROUTES.BOOK, element: <ProtectedRoute><BookSession /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE_CREATE, element: <ProtectedRoute><CreateSession /></ProtectedRoute> },

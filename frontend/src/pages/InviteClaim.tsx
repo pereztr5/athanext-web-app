@@ -9,13 +9,13 @@ import { claimErrorMessage, INVITE_TOKEN_STORAGE_KEY, type AttestationAnswer } f
 import { coachProfilePath } from "@/utils/coachSlug";
 import { ROUTES } from "@/routes";
 
-const titleClass = "text-[24px] font-semibold leading-[28px] tracking-[-0.05em] text-[#1A202C]";
-const bodyClass = "text-[16px] font-normal leading-[20px] tracking-[-0.48px] text-[#767980]";
+const titleClass = "text-section text-dark";
+const bodyClass = "text-body-l text-dark-300";
 
 const Shell = ({ children }: { children: ReactNode }) => (
   // Fill the marketing chrome so a short invite card doesn't float above a huge empty footer gap.
   <div className="flex min-h-[calc(100dvh-12rem)] items-center justify-center px-4 py-12 md:px-10">
-    <div className="mx-auto flex w-full max-w-[520px] flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-[25px] md:p-[30px]">
+    <div className="mx-auto flex w-full max-w-wrapper-focused flex-col gap-5 rounded-card border border-light-525 bg-light-300 p-[25px] md:p-[30px]">
       {children}
     </div>
   </div>
@@ -71,7 +71,7 @@ const InviteClaim = () => {
   if (isLoading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
       </div>
     );
   }
@@ -108,7 +108,7 @@ const InviteClaim = () => {
       <Shell>
         <h1 className={titleClass}>This invite link can't be used</h1>
         <p className={bodyClass}>
-          It has already been accepted or is no longer valid. If your coach added you, check My Coaches, or ask them
+          It has already been accepted or is no longer valid. If your coach added you, check My coaches, or ask them
           to send a new invite.
         </p>
         <Button asChild size="lg" className="w-fit">
@@ -135,7 +135,7 @@ const InviteClaim = () => {
       </h1>
       <p className={bodyClass}>
         As an existing client, you book {coachLabel} with no platform service fee. This invite is for{" "}
-        <span className="font-medium text-[#1A202C]">{invite.masked_email}</span>.
+        <span className="font-medium text-dark">{invite.masked_email}</span>.
       </p>
     </>
   );
@@ -192,25 +192,25 @@ const InviteClaim = () => {
     <Shell>
       {greeting}
       <div className="flex flex-col gap-3">
-        <Label className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+        <Label className="text-label-sm text-dark">
           How do you know {coachLabel}?
         </Label>
         <RadioGroup value={answer ?? ""} onValueChange={(v) => setAnswer(v as AttestationAnswer)}>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="offline" id="invite-offline" />
-            <Label htmlFor="invite-offline" className="font-normal">
+            <Label htmlFor="invite-offline" className="text-body-m text-dark">
               We already train together, outside of AthaNext
             </Label>
           </div>
           <div className="flex items-center gap-2">
             <RadioGroupItem value="platform" id="invite-platform" />
-            <Label htmlFor="invite-platform" className="font-normal">
+            <Label htmlFor="invite-platform" className="text-body-m text-dark">
               I found them through AthaNext
             </Label>
           </div>
         </RadioGroup>
       </div>
-      {error ? <p className="text-[14px] leading-[18px] text-destructive">{error}</p> : null}
+      {error ? <p className="text-body-m text-error-700">{error}</p> : null}
       <div className="flex flex-wrap gap-[10px]">
         <Button size="lg" disabled={!answer || claim.isPending} onClick={() => answer && submit(answer)}>
           {claim.isPending ? "Saving…" : "Accept invite"}

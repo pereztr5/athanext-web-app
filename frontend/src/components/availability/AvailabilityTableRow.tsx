@@ -5,8 +5,10 @@
 
 import { TableRow, TableCell } from '@/components/ui/table';
 import { CoachAvailabilitySlot, DAY_OF_WEEK_MAP, SlotBookingStatus } from '@/types/availability';
-import { Loader2, Pencil, Trash2 } from 'lucide-react';
+import { Loader2, Pencil, Trash2 } from "@/components/icons";
 import { BrandPill } from '@/components/brand';
+import { buttonVariants } from '@/components/ui/button';
+import { cn } from '@/lib/utils';
 import { formatTimeSpan, formatWholePrice } from '@/utils/sessionFormatting';
 import { formatSlotForViewer } from '@/utils/viewerTime';
 import { useViewerTimeZone } from '@/hooks/useViewerTimeZone';
@@ -102,9 +104,9 @@ export function AvailabilityTableRow({
 
   // Rows that can't be acted on read as faint text, matching the brand table.
   const isMutedRow = isCoachDisabled || (showBookAction ? Boolean(statusPill) : isEditDateLocked);
-  const textTone = isMutedRow ? "text-[#A3A6AB]" : "text-[#1A202C]";
-  const subTone = isMutedRow ? "" : "text-[#767980]";
-  const cell = "h-auto border-t border-[#EAEADF] bg-transparent px-0 py-4 pr-3 align-middle text-[14px] font-normal leading-[18px] tracking-[-0.03em]";
+  const textTone = isMutedRow ? "text-dark-200" : "text-dark";
+  const subTone = isMutedRow ? "" : "text-dark-300";
+  const cell = "h-auto border-t border-light-525 bg-transparent px-0 py-4 pr-3 align-middle text-body-m";
   const textCell = `${cell} ${textTone}`;
   const locationLabel = slot.location === "online" ? "Online" : "In person";
   const isIndividual = slot.session_type === 'individual';
@@ -118,7 +120,7 @@ export function AvailabilityTableRow({
       <TableCell className={textCell}>
         <div className="font-medium">{DAY_OF_WEEK_MAP[slot.day_of_week]}</div>
         {dateLabel && (
-          <div className={`mt-[2px] text-[12px] leading-[14px] ${subTone}`}>{dateLabel}</div>
+          <div className={`mt-[2px] text-caption ${subTone}`}>{dateLabel}</div>
         )}
       </TableCell>
       <TableCell className={`${textCell} whitespace-nowrap`}>
@@ -130,12 +132,12 @@ export function AvailabilityTableRow({
       <TableCell className={textCell}>
         {formatWholePrice(displayPrice)}
         {onBookSlot && platformFeeWaived ? (
-          <div className="mt-[2px] text-[12px] leading-[14px] text-[#1E7431]">No service fee</div>
+          <div className="mt-[2px] text-caption text-success-700">No service fee</div>
         ) : null}
       </TableCell>
       <TableCell className={`${textCell} whitespace-nowrap`}>
         {timeLabel}
-        <div className={`mt-[2px] text-[12px] leading-[14px] ${subTone}`}>
+        <div className={`mt-[2px] text-caption ${subTone}`}>
           {viewerSlot.dayShift ? `${viewerSlot.dayShift} · ` : ""}{slot.duration_minutes} min
         </div>
       </TableCell>
@@ -154,7 +156,7 @@ export function AvailabilityTableRow({
                 onClick={() => !isEditDisabled && onEdit(slot)}
                 disabled={isEditDisabled}
                 aria-label="Edit slot"
-                className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex size-4 items-center justify-center text-dark-300 hover:text-dark disabled:cursor-not-allowed disabled:text-dark-200"
               >
                 <Pencil className="size-4" strokeWidth={1.5} />
               </button>
@@ -165,7 +167,7 @@ export function AvailabilityTableRow({
                 onClick={() => !isEditDisabled && onDelete(slot)}
                 disabled={isEditDisabled}
                 aria-label="Delete slot"
-                className="inline-flex size-4 items-center justify-center text-[#767980] hover:text-[#1A202C] disabled:cursor-not-allowed disabled:opacity-40"
+                className="inline-flex size-4 items-center justify-center text-dark-300 hover:text-dark disabled:cursor-not-allowed disabled:text-dark-200"
               >
                 <Trash2 className="size-4" strokeWidth={1.5} />
               </button>
@@ -179,7 +181,7 @@ export function AvailabilityTableRow({
                   onClick={() => !disableBooking && onBookSlot?.(slot)}
                   disabled={disableBooking}
                   aria-label={isChecking ? "Checking availability" : undefined}
-                  className="inline-flex h-[30px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390] disabled:cursor-not-allowed disabled:border-[#EAEADF] disabled:bg-[#F4F4EB] disabled:text-[#767980]"
+                  className={cn(buttonVariants({ size: "sm" }), "px-4")}
                 >
                   {isChecking ? <Loader2 className="size-4 animate-spin" strokeWidth={1.5} /> : bookLabel}
                 </button>

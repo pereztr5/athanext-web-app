@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { ChevronDown, Plus, Trash2 } from "lucide-react";
+import { ChevronDown, Plus, Trash2 } from "@/components/icons";
 import { useFAQItems } from "@/hooks/useFAQItems";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
@@ -125,15 +125,15 @@ export function FAQSection({
         />
         {editable.length === 0 ? (
           <div className="space-y-3">
-            <p className="text-[13px] leading-[18px] text-[#767980]">
+            <p className="text-paragraph text-dark-300">
               Platform FAQs show by default. Add your own questions to replace them on your
               profile.
             </p>
             {displayItems.length > 0 ? (
-              <div className="flex flex-col gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] p-3">
-                <p className="text-[12px] font-medium text-[#484D56]">Currently showing</p>
+              <div className="flex flex-col gap-2 rounded-control border border-light-525 bg-light-400 p-3">
+                <p className="text-label-xsm text-dark-400">Currently showing</p>
                 {displayItems.slice(0, 5).map((faq) => (
-                  <p key={faq.id} className="text-[12px] text-[#767980]">
+                  <p key={faq.id} className="text-caption text-dark-300">
                     • {faq.question}
                   </p>
                 ))}
@@ -158,19 +158,19 @@ export function FAQSection({
             {editable.map((faq, index) => (
               <div
                 key={faq.id}
-                className="flex flex-col gap-2 rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] p-3"
+                className="flex flex-col gap-2 rounded-control border border-light-525 bg-light-400 p-3"
               >
                 <div className="flex items-start gap-2">
                   <Input
                     value={faq.question}
                     onChange={(e) => updateFaq(index, { question: e.target.value })}
                     placeholder="Question"
-                    className="border-[#EAEADF] bg-white"
+                    className="border-dark-250 bg-light"
                   />
                   <button
                     type="button"
                     onClick={() => removeFaq(index)}
-                    className="mt-1 shrink-0 rounded-[6px] p-2 text-[#767980] hover:bg-[#EAEADF] hover:text-[#1A202C]"
+                    className="mt-1 shrink-0 rounded-control p-2 text-dark-300 hover:bg-light-400 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     aria-label="Remove FAQ"
                   >
                     <Trash2 className="size-4" strokeWidth={1.5} />
@@ -180,12 +180,12 @@ export function FAQSection({
                   value={faq.answer}
                   onChange={(e) => updateFaq(index, { answer: e.target.value })}
                   placeholder="Answer"
-                  className="min-h-[64px] border-[#EAEADF] bg-white"
+                  className="min-h-[64px] border-dark-250 bg-light"
                 />
               </div>
             ))}
-            <p className="text-[12px] text-[#767980]">
-              Saved with <span className="font-medium text-[#484D56]">Save changes</span> at
+            <p className="text-caption text-dark-300">
+              Saved with <span className="font-medium text-dark-400">Save changes</span> at
               the top.
             </p>
           </div>
@@ -200,7 +200,7 @@ export function FAQSection({
         <CoachProfileCardHeader title="FAQ" />
         <div className="flex flex-col gap-[10px]" aria-busy="true" aria-label="Loading FAQs">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-[14px] w-full rounded-[4px]" />
+            <Skeleton key={i} className="h-[14px] w-full rounded-pill" />
           ))}
         </div>
       </CoachProfileCard>
@@ -213,12 +213,12 @@ export function FAQSection({
         <CoachProfileCardHeader title="FAQ" />
         <p
           className={cn(
-            "text-[14px] leading-[18px] tracking-[-0.03em]",
-            error && !usingOwned ? "text-destructive" : "text-[#A3A6AB]"
+            "text-body-m",
+            error && !usingOwned ? "text-error-700" : "text-dark-300"
           )}
         >
           {error && !usingOwned
-            ? "Couldn't load FAQs. Please try again later."
+            ? "Couldn't load FAQs. Try again later."
             : "No FAQs yet."}
         </p>
       </CoachProfileCard>
@@ -237,14 +237,14 @@ export function FAQSection({
                 type="button"
                 onClick={() => toggleFAQ(index)}
                 aria-expanded={open}
-                className="flex w-full items-center justify-between gap-2 text-left"
+                className="flex w-full items-center justify-between gap-2 rounded-control text-left focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
               >
-                <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#1A202C]">
+                <span className="text-label-sm text-dark">
                   {faq.question}
                 </span>
                 <ChevronDown
                   className={cn(
-                    "size-4 shrink-0 text-[#1A202C] transition-transform",
+                    "size-4 shrink-0 text-dark transition-transform",
                     open && "rotate-180"
                   )}
                   strokeWidth={1.5}
@@ -252,7 +252,7 @@ export function FAQSection({
                 />
               </button>
               {open && faq.answer ? (
-                <p className="mt-2 text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+                <p className="mt-2 text-paragraph-sm text-dark-300">
                   {faq.answer}
                 </p>
               ) : null}

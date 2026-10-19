@@ -5,7 +5,7 @@
 import { Fragment, type ReactNode, type TouchEvent } from "react";
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Check, ChevronLeft, ChevronRight, Clock, Info, MapPin, User, UserCheck, Users, Video, X } from "lucide-react";
+import { Check, ChevronLeft, ChevronRight, Clock, Info, MapPin, User, UserCheck, Users, Video, X } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { bookAPI, type BookableSession, type BookingCoach } from "@/api/book";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -170,14 +170,14 @@ export const TimePicker = ({
   const notices = (
     <>
       {coach.needsRequest ? (
-        <p className="flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] text-[#767980]">
+        <p className="flex items-start gap-2.5 rounded-control bg-light-400 px-3.5 py-3 text-caption text-dark-300">
           <UserCheck className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
           {first} approves new families first. Tap a time to see the details, then request it. You're only charged if {first}{" "}
           accepts.
         </p>
       ) : null}
       {lockedBy ? (
-        <p className="flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] text-[#767980]">
+        <p className="flex items-start gap-2.5 rounded-control bg-light-400 px-3.5 py-3 text-caption text-dark-300">
           <Info className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
           You have times picked with {lockedBy}. Book those first, or clear them, to pick times with {first}.
         </p>
@@ -193,9 +193,9 @@ export const TimePicker = ({
       <p className={meta}>For 1-on-1 sessions only. Group times are fixed on the schedule.</p>
     </div>
   ) : (
-    <div className="flex items-center gap-2.5 rounded-[10px] border border-dashed border-[#C1C1B8] px-3 py-2.5">
-      <Clock className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-      <span className="grow text-[14px] text-[#484D56]">Don't see a time that works?</span>
+    <div className="flex items-center gap-2.5 rounded-card border border-dashed border-light-600 px-3 py-2.5">
+      <Clock className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+      <span className="grow text-body-m text-dark-300">Don't see a time that works?</span>
       <button type="button" className={textButton} onClick={onRequestTime}>
         Request a time
       </button>
@@ -217,7 +217,7 @@ export const TimePicker = ({
         >
           <button
             type="button"
-            className={cn(iconButton, "size-11 shrink-0 bg-[#F7F7F0]")}
+            className={cn(iconButton, "size-11 shrink-0 bg-light-300")}
             aria-label="Previous open day"
             disabled={weekStart <= todayISO && openDays[0] === selectedDay}
             onClick={() => stepOpenDay(-1)}
@@ -240,17 +240,17 @@ export const TimePicker = ({
                     setOpenId(null);
                   }}
                   className={cn(
-                    "flex flex-col items-center gap-0.5 rounded-[10px] border py-1.5",
-                    on ? "border-[#0054B4] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F7F7F0]",
-                    !hasOpen && "opacity-40"
+                    "flex flex-col items-center gap-0.5 rounded-card border py-1.5",
+                    on ? "border-primary bg-primary-50" : "border-light-525 bg-light-300",
+                    !hasOpen && "border-light-525 bg-light-400 text-dark-200"
                   )}
                 >
-                  <small className={cn("text-[9px] font-semibold uppercase", on ? "text-[#0054B4]" : "text-[#767980]")}>
+                  <small className={cn("text-label-xsm", on ? "text-primary" : "text-dark-300")}>
                     {formatDayISO(d, { month: "short" })}
                   </small>
-                  <b className="text-[15px] font-bold leading-[16px]">{formatDayISO(d, { day: "numeric" })}</b>
-                  <em className={cn("text-[9px] font-medium not-italic", on ? "text-[#0054B4]" : "text-[#767980]")}>
-                    {formatDayISO(d, { weekday: "short" }).toUpperCase()}
+                  <b className="text-subtitle">{formatDayISO(d, { day: "numeric" })}</b>
+                  <em className={cn("text-label-xsm not-italic", on ? "text-primary" : "text-dark-300")}>
+                    {formatDayISO(d, { weekday: "short" })}
                   </em>
                 </button>
               );
@@ -258,7 +258,7 @@ export const TimePicker = ({
           </div>
           <button
             type="button"
-            className={cn(iconButton, "size-11 shrink-0 bg-[#F7F7F0]")}
+            className={cn(iconButton, "size-11 shrink-0 bg-light-300")}
             aria-label="Next open day"
             disabled={weekStart >= lastStart && openDays[openDays.length - 1] === selectedDay}
             onClick={() => stepOpenDay(1)}
@@ -286,7 +286,7 @@ export const TimePicker = ({
             }}
             onTouchEnd={(e) => onSwipe(timesTouch, e, "x", () => stepOpenDay(1), () => stepOpenDay(-1))}
           >
-            <h3 className="text-[15px] font-medium text-[#1A202C]">
+            <h3 className="text-label-sm text-dark">
               {formatDayISO(selectedDay, { weekday: "long" })} · {plural(openCount, "open time")}
             </h3>
             <div className="flex flex-col gap-2">
@@ -299,10 +299,10 @@ export const TimePicker = ({
                   return (
                     <div
                       key={s.id}
-                      className="flex items-center gap-3 rounded-[12px] border border-dashed border-[#EAEADF] px-3.5 py-3 text-[#A3A6AB]"
+                      className="flex items-center gap-3 rounded-card border border-dashed border-light-525 px-3.5 py-3 text-dark-200"
                     >
-                      <b className="text-[18px] font-semibold tabular-nums">{formatClock(start, timeZone)}</b>
-                      <span className="grow text-[13px]">{s.myStatus === "requested" ? "Requested" : "Booked"}</span>
+                      <b className="text-card-title tabular-nums">{formatClock(start, timeZone)}</b>
+                      <span className="grow text-body-m">{s.myStatus === "requested" ? "Requested" : "Booked"}</span>
                     </div>
                   );
                 }
@@ -316,12 +316,12 @@ export const TimePicker = ({
                       disabled={Boolean(lockedBy)}
                       onClick={() => tap(s)}
                       className={cn(
-                        "flex w-full items-center gap-3 rounded-[12px] border px-3.5 py-3 text-left",
-                        on ? "border-[#0054B4] bg-[#E5EDF7]" : group ? "border-[#A9D4E0] bg-[#E7F4F8]" : "border-[#EAEADF] bg-[#F7F7F0]"
+                        "flex w-full items-center gap-3 rounded-card border px-3.5 py-3 text-left",
+                        on ? "border-primary bg-primary-50" : group ? "border-secondary-300 bg-secondary-50" : "border-light-525 bg-light-300"
                       )}
                     >
                       <span className="flex min-w-0 flex-1 flex-col gap-1">
-                        <b className="text-[18px] font-semibold tabular-nums text-[#1A202C]">{formatClock(start, timeZone)}</b>
+                        <b className="text-card-title tabular-nums text-dark">{formatClock(start, timeZone)}</b>
                         <span className="flex flex-wrap items-center gap-1.5">
                           <BrandPill tone={group ? "teal" : "blue"}>{group ? "Group" : "1-on-1"}</BrandPill>
                           <span className={meta}>
@@ -329,14 +329,14 @@ export const TimePicker = ({
                             {group ? ` · ${s.capacity - s.bookedCount} left` : ""}
                           </span>
                         </span>
-                        <span className="text-[13px] font-medium text-[#1A202C]">
+                        <span className="text-label-sm text-dark">
                           {credit ? "1 credit" : money(s.price + (credit ? 0 : fee))}
                         </span>
                       </span>
                       <span
                         className={cn(
                           "flex size-6 shrink-0 items-center justify-center rounded-full border",
-                          on ? "border-[#0054B4] bg-[#0054B4] text-white" : "border-[#C1C1B8] text-transparent"
+                          on ? "border-primary bg-primary text-light" : "border-light-600 text-transparent"
                         )}
                         aria-hidden="true"
                       >
@@ -366,7 +366,7 @@ export const TimePicker = ({
             </div>
           </div>
         ) : (
-          <p className="text-[14px] text-[#767980]">No open times these 7 days. Try the next week, or request a different time below.</p>
+          <p className="text-body-m text-dark-300">No open times these 7 days. Try the next week, or request a different time below.</p>
         )}
         {requestBlock}
         {footer}
@@ -380,13 +380,13 @@ export const TimePicker = ({
 
       {hasGroups ? (
         <div className="flex flex-wrap items-center justify-between gap-2">
-          <span className="flex items-center gap-3 text-[12px] text-[#767980]">
+          <span className="flex items-center gap-3 text-caption text-dark-300">
             <span className="flex items-center gap-1">
-              <i className="size-[8px] rounded-full bg-[#117A96]" aria-hidden="true" />
+              <i className="size-[8px] rounded-full bg-secondary-600" aria-hidden="true" />
               Group
             </span>
             <span className="flex items-center gap-1">
-              <i className="size-[8px] rounded-full bg-[#0054B4]" aria-hidden="true" />
+              <i className="size-[8px] rounded-full bg-primary" aria-hidden="true" />
               1-on-1
             </span>
           </span>
@@ -401,11 +401,11 @@ export const TimePicker = ({
       ) : null}
 
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.04em] text-[#1A202C]">Pick days and times</h2>
+        <h2 className="text-card-title text-dark">Pick days and times</h2>
         <span className="flex items-center gap-2">
           <button
             type="button"
-            className={cn(iconButton, "size-[30px] bg-[#F7F7F0]")}
+            className={cn(iconButton, "size-[30px] bg-light-300")}
             aria-label="Previous week"
             disabled={weekStart <= todayISO}
             onClick={() => shiftWeek(-1)}
@@ -417,7 +417,7 @@ export const TimePicker = ({
           </span>
           <button
             type="button"
-            className={cn(iconButton, "size-[30px] bg-[#F7F7F0]")}
+            className={cn(iconButton, "size-[30px] bg-light-300")}
             aria-label="Next week"
             disabled={weekStart >= lastStart}
             onClick={() => shiftWeek(1)}
@@ -449,13 +449,13 @@ export const TimePicker = ({
               <small className={dayTileWeekday(on)}>{formatDayISO(d, { weekday: "short" })}</small>
               <b className={dayTileNumber}>{formatDayISO(d, { day: "numeric" })}</b>
               {pickedCount ? (
-                <em className={cn("min-w-4 rounded-[8px] px-1 text-center text-[10px] font-bold not-italic leading-[14px]", on ? "bg-[#F1F1E6] text-[#0054B4]" : "bg-[#0054B4] text-[#F1F1E6]")}>
+                <em className={cn("min-w-4 rounded-control px-1 text-center text-label-xsm not-italic", on ? "bg-light text-primary" : "bg-primary text-light")}>
                   {pickedCount}
                 </em>
               ) : (
                 <span className="flex h-[5px] gap-[3px]" aria-hidden="true">
-                  {list.some((s) => !s.myStatus && s.sessionType === "group") ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#9FD9EA]" : "bg-[#117A96]")} /> : null}
-                  {list.some((s) => !s.myStatus && s.sessionType === "individual") ? <i className={cn("size-[5px] rounded-full", on ? "bg-[#F1F1E6]" : "bg-[#0054B4]")} /> : null}
+                  {list.some((s) => !s.myStatus && s.sessionType === "group") ? <i className={cn("size-[5px] rounded-full", on ? "bg-secondary-200" : "bg-secondary-600")} /> : null}
+                  {list.some((s) => !s.myStatus && s.sessionType === "individual") ? <i className={cn("size-[5px] rounded-full", on ? "bg-light" : "bg-primary")} /> : null}
                 </span>
               )}
             </button>
@@ -463,13 +463,13 @@ export const TimePicker = ({
         })}
       </div>
 
-      <div className="h-px bg-[#EAEADF]" />
+      <div className="h-px bg-light-525" />
 
       {query.isLoading ? (
         <p className={meta}>Loading times…</p>
       ) : selectedDay ? (
         <div className="flex flex-col gap-3">
-          <h3 className="text-[16px] font-medium">{formatDayISO(selectedDay, { weekday: "long", month: "long", day: "numeric" })}</h3>
+          <h3 className="text-subtitle">{formatDayISO(selectedDay, { weekday: "long", month: "long", day: "numeric" })}</h3>
           <div className="grid grid-cols-2 gap-2.5 md:grid-cols-4">
             {items.map((s, i) => {
               const start = bookableStart(s);
@@ -477,10 +477,10 @@ export const TimePicker = ({
                 return (
                   <span
                     key={s.id}
-                    className="flex h-[58px] flex-col items-center justify-center gap-0.5 rounded-[12px] border border-dashed border-[#EAEADF] text-[16px] font-semibold tabular-nums text-[#A3A6AB]"
+                    className="flex h-[58px] flex-col items-center justify-center gap-0.5 rounded-card border border-dashed border-light-525 text-subtitle tabular-nums text-dark-200"
                   >
                     {formatClock(start, timeZone)}
-                    <small className="text-[11px] font-medium">{s.myStatus === "requested" ? "Requested" : "Booked"}</small>
+                    <small className="text-label-xsm">{s.myStatus === "requested" ? "Requested" : "Booked"}</small>
                   </span>
                 );
               }
@@ -495,7 +495,7 @@ export const TimePicker = ({
                     aria-expanded={showDetails && !on ? open : undefined}
                     disabled={Boolean(lockedBy)}
                     onClick={() => tap(s)}
-                    className={cn(timeTile(on, group), "h-[58px]", open && (group ? "border-2 border-[#117A96]" : "border-2 border-[#0054B4]"))}
+                    className={cn(timeTile(on, group), "h-[58px]", open && (group ? "border-2 border-secondary-600" : "border-2 border-primary"))}
                   >
                     {formatClock(start, timeZone)}
                     <small className={timeTileNote(on, group)}>
@@ -546,7 +546,7 @@ export const TimePicker = ({
           ) : null}
         </div>
       ) : (
-        <p className="text-[14px] text-[#767980]">
+        <p className="text-body-m text-dark-300">
           No {format === "group" ? "group sessions" : format === "individual" ? "1-on-1 times" : "open times"} these 7 days. Try the next week
           {format !== "all" ? ", switch to All" : ""}, or request a time below.
         </p>
@@ -595,9 +595,9 @@ const SessionDetails = ({
   const ages = session.details.ages ? `Ages ${session.details.ages}, any level` : "Any level";
   const row = (Icon: typeof Clock, a: string, b: string) => (
     <div className="flex items-start gap-2.5">
-      <Icon className="mt-[2px] size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+      <Icon className="mt-[2px] size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
       <span className="flex flex-col gap-1">
-        <b className="text-[14px] font-medium">{a}</b>
+        <b className="text-label-sm">{a}</b>
         <span className={meta}>{b}</span>
       </span>
     </div>
@@ -607,8 +607,8 @@ const SessionDetails = ({
       role="region"
       aria-label="Session details"
       className={cn(
-        "relative col-span-full mt-0.5 flex flex-col gap-3 rounded-[14px] border-2 p-4 [--i2:var(--i2)]",
-        group ? "border-[#117A96] bg-[#F4FAFC]" : "border-[#0054B4] bg-[#F7F7F0]"
+        "relative col-span-full mt-0.5 flex flex-col gap-3 rounded-card border-2 p-4 [--i2:var(--i2)]",
+        group ? "border-secondary-600 bg-secondary-50" : "border-primary bg-light-300"
       )}
       style={{ ["--i2" as string]: col % 2, ["--i4" as string]: col % 4 }}
     >
@@ -616,13 +616,13 @@ const SessionDetails = ({
         aria-hidden="true"
         className={cn(
           "absolute -top-[9px] size-3.5 rotate-45 border-l-2 border-t-2 bg-inherit",
-          group ? "border-[#117A96]" : "border-[#0054B4]",
+          group ? "border-secondary-600" : "border-primary",
           "left-[calc((var(--i2)+0.5)*50%-7px)] md:left-[calc((var(--i4)+0.5)*25%-7px)]"
         )}
       />
       <div className="flex items-start justify-between gap-3">
         <span className="flex flex-col gap-1.5">
-          <b className="text-[16px] font-semibold">{group ? session.sessionName : `1-on-1 ${(topic ?? "session").toLowerCase()}`}</b>
+          <b className="text-subtitle">{group ? session.sessionName : `1-on-1 ${(topic ?? "session").toLowerCase()}`}</b>
           <span className="flex flex-wrap gap-1.5">
             {group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="neutral">1-on-1</BrandPill>}
             {coach.needsRequest ? <BrandPill tone="amber">Request to book</BrandPill> : null}
@@ -632,7 +632,7 @@ const SessionDetails = ({
           <X strokeWidth={1.5} />
         </button>
       </div>
-      <div className="flex flex-col gap-2.5 rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] p-3">
+      <div className="flex flex-col gap-2.5 rounded-control border border-light-525 bg-light-300 p-3">
         {row(Clock, formatInstantSpan(start, end, timeZone), `${session.durationMinutes} minutes`)}
         {row(
           online ? Video : MapPin,
@@ -648,18 +648,18 @@ const SessionDetails = ({
           : row(User, `Just ${who} and ${first}`, ages)}
       </div>
       {about ? (
-        <ul className="list-disc pl-5 text-[14px] leading-[20px] text-[#484D56]">
+        <ul className="list-disc pl-5 text-paragraph text-dark-300">
           {about.map((x) => (
             <li key={x}>{x}</li>
           ))}
         </ul>
       ) : (
-        <p className="text-[14px] leading-[20px] text-[#484D56]">{copy.session}</p>
+        <p className="text-paragraph text-dark-300">{copy.session}</p>
       )}
       <span className={meta}>Bring: {(session.details.bring ?? copy.bring).toLowerCase()}</span>
       <div className="flex items-center justify-between gap-3">
         <span className="flex flex-col gap-1">
-          <b className="text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{credit ? "1 credit" : money(session.price + fee)}</b>
+          <b className="text-highlight">{credit ? "1 credit" : money(session.price + fee)}</b>
           <span className={meta}>
             {group ? "Per athlete. " : ""}
             {fee ? `Includes ${money(fee)} platform fee. ` : ""}

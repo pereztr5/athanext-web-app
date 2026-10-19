@@ -9,8 +9,8 @@ export const INTRO_KEYS = {
   home: ["coach-intro-calls"] as const,
 };
 
-export const mText = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
-export const capText = "text-[12px] leading-[18px] text-[#767980]";
+export const mText = "text-label-sm text-dark";
+export const capText = "text-caption text-dark-300";
 
 export const firstName = (name: string | null | undefined) => (name ?? "").trim().split(/\s+/)[0] ?? "";
 

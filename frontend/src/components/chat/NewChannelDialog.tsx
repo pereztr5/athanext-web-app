@@ -29,7 +29,7 @@ export const NewChannelDialog = ({ open, onClose, onCreated }: { open: boolean; 
     <Dialog open={open} onOpenChange={(o) => !o && close()}>
       <DialogContent className={dialogContent}>
         <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">New channel</DialogTitle>
+          <DialogTitle>New channel</DialogTitle>
           <DialogDescription className={meta}>A group chat for a team or group. Families join it from your profile.</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">

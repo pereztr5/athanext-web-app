@@ -1,7 +1,8 @@
 import { useMemo } from "react";
 import { Link } from "react-router-dom";
 import { format, parseISO, startOfWeek, endOfWeek, isWithinInterval } from "date-fns";
-import { Calendar } from "lucide-react";
+import { Calendar } from "@/components/icons";
+import { buttonVariants } from "@/components/ui/button";
 import { useCoachAvailabilityWithOccurrences } from "@/hooks/useCoachAvailabilityWithOccurrences";
 import { ROUTES } from "@/routes";
 import { CoachProfileCard } from "./CoachProfileCard";
@@ -101,37 +102,37 @@ export function AvailabilitySummaryCard({ coachId, sessionTypes }: AvailabilityS
   return (
     <CoachProfileCard>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
-          <Calendar className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+        <h2 className="flex items-center gap-2 text-card-title text-dark">
+          <Calendar className="size-5 flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
           Availability
         </h2>
         <Link
           to={ROUTES.SCHEDULE}
-          className="inline-flex h-[34px] items-center justify-center rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390]"
+          className={buttonVariants({ variant: "default" })}
         >
-          Open My Schedule
+          Open my schedule
         </Link>
       </div>
 
-      <div className="flex flex-col gap-[5px] rounded-[8px] bg-[#F4F4EB] p-[10px]">
-        <span className="text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]">Selected period</span>
-        <span className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+      <div className="flex flex-col gap-[5px] rounded-control bg-light-400 p-[10px]">
+        <span className="text-caption text-dark-300">Selected period</span>
+        <span className="text-label-sm text-dark">
           {isLoading ? "Loading…" : summary.periodLabel}
         </span>
       </div>
 
       <div className="flex flex-col">
         {[
-          ["Open slots this week", isLoading ? "—" : String(summary.openSlots)],
-          ["Booked", isLoading ? "—" : String(summary.booked)],
+          ["Open slots this week", isLoading ? "…" : String(summary.openSlots)],
+          ["Booked", isLoading ? "…" : String(summary.booked)],
           ["Session types offered", formatSessionTypes(sessionTypes)],
         ].map(([label, value]) => (
           <div
             key={label}
-            className="flex items-center justify-between gap-4 border-t border-[#EAEADF] py-3 first:border-t-0 first:pt-0 last:pb-0"
+            className="flex items-center justify-between gap-4 border-t border-light-525 py-3 first:border-t-0 first:pt-0 last:pb-0"
           >
-            <span className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#767980]">{label}</span>
-            <span className="text-right text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{value}</span>
+            <span className="text-body-m text-dark-300">{label}</span>
+            <span className="text-right text-label-sm text-dark">{value}</span>
           </div>
         ))}
       </div>

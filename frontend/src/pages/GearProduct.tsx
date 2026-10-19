@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { AlertCircle, ArrowLeft, Loader2, Minus, Plus, ShoppingBag } from "lucide-react";
+import { AlertCircle, ArrowLeft, Loader2, Minus, Plus, ShoppingBag } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { BrandPill } from "@/components/brand";
 import { GearLoading, GearNotice, GearPageShell } from "@/components/gear/GearPageShell";
@@ -20,7 +20,7 @@ import {
 } from "@/utils/gear";
 
 const qtyButtonClass =
-  "inline-flex size-[34px] items-center justify-center text-[#484D56] transition-colors hover:text-[#1A202C] disabled:pointer-events-none disabled:opacity-50";
+  "inline-flex size-[34px] items-center justify-center text-dark-300 transition-colors hover:text-dark disabled:pointer-events-none disabled:text-dark-200";
 
 const GearProduct = () => {
   const { handle } = useParams<{ handle: string }>();
@@ -47,7 +47,7 @@ const GearProduct = () => {
   const backLink = (
     <Link
       to={ROUTES.GEAR}
-      className="inline-flex items-center gap-[5px] text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#767980] hover:text-[#1A202C]"
+      className="inline-flex items-center gap-[5px] text-label-sm text-dark-300 hover:text-dark"
     >
       <ArrowLeft className="size-4" strokeWidth={1.5} />
       All gear
@@ -112,7 +112,7 @@ const GearProduct = () => {
     return (
       <div className="grid grid-cols-1 gap-6 md:grid-cols-2 md:gap-10">
         <div className="flex min-w-0 flex-col gap-[10px]">
-          <div className="aspect-square overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#FCFCFA]">
+          <div className="aspect-square overflow-hidden rounded-card border border-light-525 bg-light-100">
             {mainImage ? (
               <img src={mainImage.url} alt={mainImage.altText || product.title} className="size-full object-contain" />
             ) : null}
@@ -127,8 +127,8 @@ const GearProduct = () => {
                   aria-pressed={index === imageIndex}
                   onClick={() => setImageIndex(index)}
                   className={cn(
-                    "size-16 shrink-0 overflow-hidden rounded-[6px] border bg-[#FCFCFA]",
-                    index === imageIndex ? "border-[#0054B4]" : "border-[#EAEADF]"
+                    "size-16 shrink-0 overflow-hidden rounded-control border bg-light-100",
+                    index === imageIndex ? "border-primary" : "border-light-525"
                   )}
                 >
                   <img src={image.url} alt="" className="size-full object-contain" />
@@ -141,11 +141,11 @@ const GearProduct = () => {
         <div className="flex min-w-0 flex-col gap-5">
           <div className="flex flex-col gap-[10px]">
             <div className="flex flex-wrap items-center gap-[6px]">
-              <BrandPill tone="blue">{product.vendor}</BrandPill>
-              {product.productType ? <BrandPill tone="neutral">{product.productType}</BrandPill> : null}
+              <BrandPill tone="neutral">{product.vendor}</BrandPill>
+              {product.productType ? <BrandPill tone="teal">{product.productType}</BrandPill> : null}
             </div>
-            <h2 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">{product.title}</h2>
-            <p className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+            <h2 className="text-section text-dark">{product.title}</h2>
+            <p className="text-card-title text-dark">
               {variant ? formatMoney(variant.price) : formatPriceRange(product)}
             </p>
           </div>
@@ -153,9 +153,9 @@ const GearProduct = () => {
           {showOptions &&
             product.options.map((option) => (
               <div key={option.name} className="flex flex-col gap-[10px]">
-                <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">
+                <p className="text-label-sm text-dark-300">
                   {option.name}
-                  {selected[option.name] ? <span className="font-normal text-[#767980]"> · {selected[option.name]}</span> : null}
+                  {selected[option.name] ? <span className="text-body-m text-dark-300"> · {selected[option.name]}</span> : null}
                 </p>
                 <div className="flex flex-wrap gap-2" role="radiogroup" aria-label={option.name}>
                   {option.optionValues.map(({ name: value }) => {
@@ -169,11 +169,11 @@ const GearProduct = () => {
                         aria-checked={isSelected}
                         onClick={() => setSelected((prev) => ({ ...prev, [option.name]: value }))}
                         className={cn(
-                          "min-w-[44px] rounded-[8px] border px-3 py-2 text-[14px] font-medium leading-[18px] tracking-[-0.42px] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]",
+                          "min-w-[44px] rounded-control border px-3 py-2 text-label-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
                           isSelected
-                            ? "border-[#0054B4] bg-[#E5EDF7] text-[#0054B4]"
-                            : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] hover:bg-[#EAEADF]",
-                          !available && "text-[#A3A6AB] line-through"
+                            ? "border-primary bg-primary-50 text-primary"
+                            : "border-light-525 bg-light-300 text-dark hover:bg-light-525",
+                          !available && "text-dark-200 line-through"
                         )}
                       >
                         {value}
@@ -185,8 +185,8 @@ const GearProduct = () => {
             ))}
 
           <div className="flex flex-col gap-[10px]">
-            <p className="text-[14px] font-medium leading-[18px] tracking-[-0.42px] text-[#484D56]">Quantity</p>
-            <div className="inline-flex w-fit items-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0]">
+            <p className="text-label-sm text-dark-300">Quantity</p>
+            <div className="inline-flex w-fit items-center rounded-control border border-light-525 bg-light-300">
               <button
                 type="button"
                 aria-label="Decrease quantity"
@@ -196,7 +196,7 @@ const GearProduct = () => {
               >
                 <Minus className="size-4" strokeWidth={1.5} />
               </button>
-              <span className="min-w-[28px] text-center text-[14px] font-medium leading-[18px] text-[#1A202C]" aria-live="polite">
+              <span className="min-w-[28px] text-center text-label-sm text-dark" aria-live="polite">
                 {quantity}
               </span>
               <button
@@ -217,7 +217,7 @@ const GearProduct = () => {
           </Button>
 
           {product.description ? (
-            <p className="whitespace-pre-line text-[14px] leading-[20px] tracking-[-0.03em] text-[#484D56]">
+            <p className="whitespace-pre-line text-paragraph text-dark-300">
               {product.description}
             </p>
           ) : null}

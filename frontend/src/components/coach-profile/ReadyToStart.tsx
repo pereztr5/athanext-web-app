@@ -15,7 +15,7 @@ export function ReadyToStart({ onFreeConsultation }: ReadyToStartProps) {
     <CoachProfileCard>
       <div className="flex flex-col gap-[10px]">
         <CoachProfileCardHeader title="Ready to start" />
-        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+        <p className="text-body-m text-dark-300">
           Book your first session and get a training plan built around your goals.
         </p>
       </div>

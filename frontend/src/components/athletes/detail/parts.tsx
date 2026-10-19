@@ -3,16 +3,16 @@
  */
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@/components/icons";
 import type { AthleteSession } from "@/api/roster";
 import { formatDayISO } from "@/utils/schedule";
 import { zoned } from "./helpers";
 
 /** Working Copy `.dt.sm`. */
 export const DateTile = ({ day }: { day: string }) => (
-  <span className="flex size-[44px] flex-none flex-col items-center justify-center rounded-[8px] bg-[#F4F4EB] text-center text-[#1A202C]">
-    <small className="text-[10px] font-medium uppercase leading-[12px] tracking-[0.05em]">{formatDayISO(day, { weekday: "short" })}</small>
-    <b className="text-[16px] font-bold leading-[18px] tracking-[-0.03em]">{formatDayISO(day, { day: "numeric" })}</b>
+  <span className="flex size-[44px] flex-none flex-col items-center justify-center rounded-control border border-light-525 bg-light-400 text-center text-dark">
+    <small className="text-label-xsm">{formatDayISO(day, { weekday: "short" })}</small>
+    <b className="text-subtitle">{formatDayISO(day, { day: "numeric" })}</b>
   </span>
 );
 
@@ -33,13 +33,13 @@ export const SessionRow = ({
     <>
       <DateTile day={day} />
       <span className="flex min-w-0 grow flex-col gap-0.5">
-        <span className="text-[14px] font-medium leading-[18px]">{session.kind === "group" ? session.name : session.pillar || session.name}</span>
+        <span className="text-label-sm">{session.kind === "group" ? session.name : session.pillar || session.name}</span>
         {children}
       </span>
-      {right ?? <ChevronRight className="size-4 flex-none text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />}
+      {right ?? <ChevronRight className="size-4 flex-none text-dark-200" strokeWidth={1.5} aria-hidden="true" />}
     </>
   );
-  const row = "flex w-full items-center gap-3 border-b border-[#EAEADF] py-2.5 text-left";
+  const row = "flex w-full items-center gap-3 border-b border-light-525 py-2.5 text-left";
   return right ? (
     <div className={row}>{inner}</div>
   ) : (

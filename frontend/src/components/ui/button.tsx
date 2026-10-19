@@ -4,28 +4,38 @@ import { cva, type VariantProps } from "class-variance-authority"
 
 import { cn } from "@/lib/utils"
 
+// AthaNext Design System Button. One primary per view, last in a group.
+// Disabled uses the light-400 / light-525 / dark-200 recipe, never opacity.
+const filledDisabled = "disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200"
+
 const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-[8px] text-[14px] font-medium leading-[18px] tracking-[-0.03em] ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
+  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control border border-transparent font-medium tracking-[-0.03em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
   {
     variants: {
       variant: {
-        default: "border border-[#6698D2] bg-primary text-primary-foreground hover:bg-[#004390]",
-        destructive:
-          "bg-destructive text-destructive-foreground hover:bg-destructive/90",
-        outline:
-          "border border-[#EAEADF] bg-[#F4F4EB] text-foreground hover:bg-[#EAEADF] hover:text-foreground",
-        secondary:
-          "border border-[#EAEADF] bg-[#F4F4EB] text-foreground hover:bg-[#EAEADF]",
-        ghost: "text-foreground hover:bg-accent hover:text-accent-foreground",
-        link: "text-primary underline-offset-4 hover:underline",
+        default: `border-primary-300 bg-primary text-light hover:bg-primary-600 ${filledDisabled}`,
+        secondary: `border-light-525 bg-light-400 text-dark hover:border-light-600 ${filledDisabled}`,
+        // Older name for secondary, kept so existing call sites read the same.
+        outline: `border-light-525 bg-light-400 text-dark hover:border-light-600 ${filledDisabled}`,
+        // Teal: only for group, sport or category actions such as joining a group session.
+        tertiary: `border-secondary-600 bg-secondary-700 text-light hover:bg-secondary-600 ${filledDisabled}`,
+        destructive: `border-error-300 bg-error-50 text-error-700 hover:border-error-600 ${filledDisabled}`,
+        success: `border-success-300 bg-success-50 text-success-700 hover:border-success-600 ${filledDisabled}`,
+        ghost: `text-dark hover:bg-light-400 ${filledDisabled}`,
+        link: "h-auto border-0 p-0 text-primary hover:text-primary-600 disabled:text-dark-200",
+        text: "h-auto border-0 p-0 text-primary hover:text-primary-600 disabled:text-dark-200",
+        back: "h-auto gap-1 border-0 p-0 text-label-sm text-dark-300 hover:text-dark disabled:text-dark-200",
       },
       size: {
-        default: "h-[34px] px-4",
-        sm: "h-[30px] px-3",
-        lg: "h-10 px-5 text-[16px]",
-        icon: "size-[34px]",
+        default: "h-control px-4 text-label",
+        sm: "h-control-sm px-3 text-label-sm",
+        lg: "h-input px-5 text-label",
+        icon: "size-control",
       },
     },
+    compoundVariants: [
+      { variant: ["link", "text", "back"], size: ["default", "sm", "lg"], className: "h-auto px-0" },
+    ],
     defaultVariants: {
       variant: "default",
       size: "default",

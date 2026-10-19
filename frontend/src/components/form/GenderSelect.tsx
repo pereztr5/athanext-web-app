@@ -31,9 +31,9 @@ const GENDER_OPTIONS: { value: GenderValue; label: string }[] = [
 ];
 
 const SIZE_CLASSES: Record<"sm" | "md" | "lg", string> = {
-  sm: "h-[34px] text-[14px]",
-  md: "h-[38px] text-[14px]",
-  lg: "h-10 text-[16px]",
+  sm: "h-control text-body-m",
+  md: "h-input text-body-m",
+  lg: "h-10 text-body-l",
 };
 
 /**
@@ -59,17 +59,17 @@ export const GenderSelect = ({
     <div>
       {showLabel && (
         <Label
-          className="mb-1.5 block text-[12px] font-medium leading-[14px] tracking-[-0.03em] text-[#767980]"
+          className="mb-1.5 block text-label-xsm text-dark-300"
           htmlFor={id}
         >
           {label}
-          {required && <span className="ml-1 text-destructive">*</span>}
+          {required && <span className="ml-1 text-error-700">*</span>}
         </Label>
       )}
       <Select value={value || undefined} onValueChange={onChange} disabled={disabled}>
         <SelectTrigger
           id={id}
-          className={cn("tracking-[-0.03em]", sizeClass, className)}
+          className={cn(sizeClass, className)}
           aria-invalid={Boolean(error)}
         >
           <SelectValue placeholder={placeholder} />
@@ -83,7 +83,7 @@ export const GenderSelect = ({
         </SelectContent>
       </Select>
       {error && (
-        <p className="mt-1.5 text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{error}</p>
+        <p className="mt-1.5 text-caption text-error-700">{error}</p>
       )}
     </div>
   );

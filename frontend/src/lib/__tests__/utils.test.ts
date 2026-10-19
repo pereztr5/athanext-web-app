@@ -3,8 +3,8 @@ import { cn } from "@/lib/utils";
 
 describe("cn", () => {
   it("keeps custom font sizes next to a text colour", () => {
-    expect(cn("text-body-m", "text-[#1A202C]")).toBe("text-body-m text-[#1A202C]");
-    expect(cn("text-subtitle text-[#767980]")).toBe("text-subtitle text-[#767980]");
+    expect(cn("text-body-m", "text-dark")).toBe("text-body-m text-dark");
+    expect(cn("text-subtitle text-dark-300")).toBe("text-subtitle text-dark-300");
   });
 
   it("still lets a later font size win", () => {

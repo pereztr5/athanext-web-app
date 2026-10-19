@@ -21,11 +21,12 @@ const fetchFees = async (admin: ReturnType<typeof createClient>): Promise<FeeCon
     .select("key,value")
     .in("key", ["platform_fees", "stripe_fees", "stripe_fee_fixed"]);
   data?.forEach((row) => {
-    const v = Number.parseFloat(row.value);
+    const v = Number.parseFloat(String(row.value ?? ""));
     if (!Number.isFinite(v)) return;
-    if (row.key === "platform_fees") platformFeePerc = v;
-    if (row.key === "stripe_fees") stripeFeePerc = v;
-    if (row.key === "stripe_fee_fixed") stripeFeeFixed = v;
+    const key = String(row.key ?? "");
+    if (key === "platform_fees") platformFeePerc = v;
+    if (key === "stripe_fees") stripeFeePerc = v;
+    if (key === "stripe_fee_fixed") stripeFeeFixed = v;
   });
   return { platformFeePerc, stripeFeePerc, stripeFeeFixed };
 };
@@ -79,7 +80,7 @@ serve(async (req) => {
       return json({ canceled: true, cancel_at_period_end: true });
     }
 
-    const fees = await fetchFees(admin);
+    const fees = await fetchFees(admin as ReturnType<typeof createClient>);
     const { package_id, coach_id, org_package_id } = body as {
       package_id?: string;
       coach_id?: string;
@@ -160,6 +161,44 @@ serve(async (req) => {
       return json({ error: "Package not found" }, 404);
     }
 
+    // Camps are one registration. Reconcile copies sessions_total onto the purchase and
+    // treats 0 as 1, and package_purchases requires sessions_total > 0. Metadata therefore
+    // sends 1. The camp purchase trigger sets sessions_remaining to 0, which is what
+    // booking spends, so the family does not get a session credit. The purchase row still
+    // counts toward capacity and the coach is still paid the list price.
+    const isCamp = packageData.kind === "camp";
+    if (isCamp) {
+      if (packageData.is_active === false) {
+        return json({ error: "This camp is not open for registration" }, 400);
+      }
+      const endsOn = typeof packageData.camp_ends_on === "string" ? packageData.camp_ends_on.slice(0, 10) : null;
+      const today = new Date().toISOString().slice(0, 10);
+      if (endsOn && endsOn < today) {
+        return json({ error: "This camp has ended" }, 400);
+      }
+      if (packageData.camp_capacity != null) {
+        const capacity = Number(packageData.camp_capacity);
+        if (!Number.isFinite(capacity)) {
+          return json({ error: "Could not check how many spots are left. Try again." }, 500);
+        }
+        const { count, error: countError } = await admin
+          .from("package_purchases")
+          .select("id", { count: "exact", head: true })
+          .eq("package_id", packageData.id)
+          .in("status", ["active", "expired", "completed"]);
+        if (countError) {
+          console.error("Camp capacity check failed", countError);
+          return json({ error: "Could not check how many spots are left. Try again." }, 500);
+        }
+        if ((count ?? 0) >= capacity) {
+          return json({ error: "This camp is full" }, 409);
+        }
+      }
+    }
+
+    const campWhen = [packageData.camp_starts_on, packageData.camp_ends_on].filter(Boolean).join(" to ");
+    const campLine = [packageData.camp_location, campWhen].filter(Boolean).join(" · ");
+
     // Same referral waiver as booking: confirmed coach-client pair for an athlete the caller owns.
     let platformPerc = fees.platformFeePerc;
     const { data: athleteRows } = await supabaseClient.from("athlete_profiles").select("id").eq("user_id", user.id).limit(20);
@@ -209,7 +248,9 @@ serve(async (req) => {
             unit_amount: unitAmount,
             product_data: {
               name: `${packageData.package_name} - ${packageData.coaches.name}`,
-              description: `${packageData.session_count} sessions × ${packageData.duration_minutes} min | Valid for ${packageData.validity_days} days`,
+              description: isCamp
+                ? campLine || "One registration. This does not add session credits."
+                : `${packageData.session_count} sessions × ${packageData.duration_minutes} min | Valid for ${packageData.validity_days} days`,
             },
           },
           quantity: 1,
@@ -222,8 +263,9 @@ serve(async (req) => {
         package_id: packageData.id,
         coach_id: packageData.coach_id,
         user_id: user.id,
-        sessions_total: packageData.session_count.toString(),
-        sessions_remaining: packageData.session_count.toString(),
+        sessions_total: isCamp ? "1" : packageData.session_count.toString(),
+        sessions_remaining: isCamp ? "0" : packageData.session_count.toString(),
+        camp: isCamp ? "1" : "0",
         expiry_date: expiryDate.toISOString(),
         type: "package_purchase",
         list_price: String(listPrice),

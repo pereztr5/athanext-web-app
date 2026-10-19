@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Plus, X } from "lucide-react";
+import { Plus, X } from "@/components/icons";
 import {
   Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
@@ -79,12 +79,12 @@ export const AddClientsModal = ({ open, onClose, coachId }: AddClientsModalProps
         </DialogHeader>
 
         {results ? (
-          <ul className="flex flex-col divide-y rounded-[8px] border border-[#EAEADF]">
+          <ul className="flex flex-col divide-y rounded-control border border-light-525">
             {results.map((r) => (
               <li key={r.email} className="flex items-center justify-between gap-3 p-3">
                 <div className="min-w-0">
-                  <p className="truncate text-[14px] font-medium text-[#1A202C]">{r.email}</p>
-                  <p className="text-[12px] text-[#767980]">
+                  <p className="truncate text-label-sm text-dark">{r.email}</p>
+                  <p className="text-caption text-dark-300">
                     {RESULT_LABELS[r.status] ?? r.status}
                     {r.emailed ? " · emailed" : ""}
                   </p>
@@ -138,7 +138,7 @@ export const AddClientsModal = ({ open, onClose, coachId }: AddClientsModalProps
               <Plus className="size-4" /> Add another
             </Button>
             {hasInvalidRow ? (
-              <p className="text-[12px] text-destructive">Each client needs a name and a valid email.</p>
+              <p className="text-caption text-error-700">Each client needs a name and a valid email.</p>
             ) : null}
           </div>
         )}

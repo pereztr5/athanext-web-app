@@ -75,8 +75,19 @@ const orgPackage = (p: Row): OrgPackage => ({
   groupPrices: p.group_prices ? (p.group_prices as unknown[]).map(Number) : undefined,
 });
 
-// Functions added in 20261010130000_academy_packages; not in the generated types yet.
-const rpc = (name: string, args?: Record<string, unknown>) => supabase.rpc(name as never, args as never) as unknown as Promise<{ data: unknown; error: Error | null }>;
+// Functions added after the generated types; not in frontend/src/integrations/supabase/types.ts yet.
+const rpc = (name: string, args?: Record<string, unknown>) =>
+  supabase.rpc(name as never, args as never) as unknown as Promise<{ data: unknown; error: { code?: string; message: string } | null }>;
+
+const missingRpc = (error: { code?: string; message: string }) =>
+  error.code === "PGRST202" || error.code === "42883" || /could not find the function|schema cache/i.test(error.message);
+
+export interface OrgRemovalRequest {
+  id: string;
+  coachId: string;
+  reason: string | null;
+  createdAt: string;
+}
 
 export interface OrganizationInvite {
   kind: "join" | "rate";
@@ -269,8 +280,41 @@ export const organizationsAPI = {
     if (error) throw error;
   },
 
-  async removeCoach(coachId: string) {
-    const { error } = await supabase.rpc("remove_organization_coach", { p_coach_id: coachId });
+  /**
+   * Open removal requests for the owner's org.
+   * Until types are regenerated after the migration is applied.
+   * A missing function (42883 / PGRST202) means the migration is not applied yet.
+   */
+  async listRemovals(): Promise<OrgRemovalRequest[]> {
+    const { data, error } = await rpc("get_my_org_coach_removals");
+    if (error) {
+      if (missingRpc(error)) return [];
+      throw error;
+    }
+    return ((data as Row[]) ?? []).map((row) => ({
+      id: row.id,
+      coachId: row.coach_id,
+      reason: row.reason ?? null,
+      createdAt: row.created_at,
+    }));
+  },
+
+  /** Saves the request, then emails AthaNext support. Does not remove the coach. */
+  async requestRemoval(coachId: string, reason: string): Promise<{ id: string; emailed: boolean }> {
+    const { data, error } = await supabase.functions.invoke<{ id?: string; emailed?: boolean; error?: string }>(
+      "org-coach-removal",
+      { body: { coach_id: coachId, reason } },
+    );
+    if (error) {
+      const message = await (error as { context?: Response }).context?.json?.().then((b: Row) => b?.error).catch(() => null);
+      throw new Error(message || error.message);
+    }
+    if (!data?.id) throw new Error(data?.error || "Couldn't send the request");
+    return { id: data.id, emailed: Boolean(data.emailed) };
+  },
+
+  async cancelRemoval(coachId: string) {
+    const { error } = await rpc("cancel_org_coach_removal", { p_coach_id: coachId });
     if (error) throw error;
   },
 

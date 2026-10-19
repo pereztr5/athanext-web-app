@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { cn } from "@/lib/utils";
+import { choice } from "@/components/schedule/styles";
 
 const SESSION_TYPE_CHOICES = [
   { value: "virtual", label: "Virtual" },
@@ -98,7 +99,7 @@ export function QuickInfo({
         <CoachProfileCardHeader title="Quick info" />
         <div className="flex flex-col gap-4">
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-[#767980]">Response time (hours)</Label>
+            <Label className="text-caption text-dark-300">Response time (hours)</Label>
             <Input
               type="number"
               min={1}
@@ -107,11 +108,11 @@ export function QuickInfo({
               onChange={(e) =>
                 onFieldChange("response_time_hours", Math.max(1, Number(e.target.value) || 1))
               }
-              className="border-[#EAEADF] bg-[#F4F4EB]"
+              className="border-dark-250 bg-light"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-[#767980]">Session types</Label>
+            <Label className="text-caption text-dark-300">Session types</Label>
             <div className="flex flex-wrap gap-2">
               {SESSION_TYPE_CHOICES.map((opt) => {
                 const active = (sessionTypes || []).some(
@@ -122,12 +123,8 @@ export function QuickInfo({
                     key={opt.value}
                     type="button"
                     onClick={() => toggleSessionType(opt.value)}
-                    className={cn(
-                      "h-8 rounded-[8px] border px-3 text-[13px] font-medium",
-                      active
-                        ? "border-[#6698D2] bg-[#0054B4] text-[#F1F1E6]"
-                        : "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C]"
-                    )}
+                    aria-pressed={active}
+                    className={cn(choice(active), "h-8 min-h-8")}
                   >
                     {opt.label}
                   </button>
@@ -136,7 +133,7 @@ export function QuickInfo({
             </div>
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-[#767980]">Languages (comma-separated)</Label>
+            <Label className="text-caption text-dark-300">Languages (comma-separated)</Label>
             <Input
               value={languagesDraft}
               onChange={(e) => {
@@ -149,22 +146,22 @@ export function QuickInfo({
                 setLanguagesDraft(parsed.join(", "));
                 onFieldChange("languages", parsed);
               }}
-              className="border-[#EAEADF] bg-[#F4F4EB]"
+              className="border-dark-250 bg-light"
               placeholder="English, Spanish"
             />
           </div>
           <div className="space-y-1.5">
-            <Label className="text-[12px] text-[#767980]">Cancellation policy</Label>
+            <Label className="text-caption text-dark-300">Cancellation policy</Label>
             <Textarea
               value={cancellationPolicy || ""}
               onChange={(e) => onFieldChange("cancellation_policy", e.target.value)}
-              className="min-h-[72px] border-[#EAEADF] bg-[#F4F4EB]"
+              className="min-h-[72px] border-dark-250 bg-light"
               placeholder="Flexible cancellation up to 24 hours before session"
             />
           </div>
-          <p className="text-[12px] text-[#767980]">
+          <p className="text-caption text-dark-300">
             Location follows your zip code on the profile header. Save with{" "}
-            <span className="font-medium text-[#484D56]">Save changes</span> at the top.
+            <span className="font-medium text-dark-400">Save changes</span> at the top.
           </p>
         </div>
       </CoachProfileCard>
@@ -174,17 +171,17 @@ export function QuickInfo({
   return (
     <CoachProfileCard>
       <CoachProfileCardHeader title="Quick info" />
-      <dl className="flex flex-col gap-[10px] text-[14px] leading-[18px] tracking-[-0.03em]">
+      <dl className="flex flex-col gap-[10px] text-body-m">
         {rows.map(([label, value]) => (
           <div key={label} className="flex items-start justify-between gap-3">
-            <dt className="shrink-0 font-medium text-[#484D56]">{label}</dt>
-            <dd className="text-right font-normal text-[#767980]">{value}</dd>
+            <dt className="shrink-0 text-dark-300">{label}</dt>
+            <dd className="text-right text-label-sm text-dark">{value}</dd>
           </div>
         ))}
       </dl>
       {cancellationPolicy && (
-        <div className="rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] p-[10px]">
-          <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980]">
+        <div className="rounded-control border border-light-525 bg-light-400 p-[10px]">
+          <p className="text-paragraph-sm text-dark-300">
             {cancellationPolicy}
           </p>
         </div>

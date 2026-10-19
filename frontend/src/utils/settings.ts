@@ -9,7 +9,7 @@ export const splitName = (full: string | null | undefined) => {
 
 export const joinName = (first: string, last: string) => [first.trim(), last.trim()].filter(Boolean).join(" ");
 
-/** 0 to 4: length 8+, a number, a symbol, length 12+. */
+/** 0 to 4: length 8+, a number, a symbol, length 12+. Account settings uses usePasswordValidation instead. */
 export const passwordStrength = (value: string) => {
   let score = 0;
   if (value.length >= 8) score++;
@@ -28,13 +28,45 @@ export const passwordStrength = (value: string) => {
 
 export type NotificationChannel = "email" | "app";
 
-export const COACH_NOTIFICATIONS: [kind: string, title: string, detail: string][] = [
-  ["booking", "Booking requests", "New requests and changes"],
-  ["message", "Messages", "From families and athletes"],
-  ["payment", "Payments", "Invoices paid and payouts sent"],
-  ["reminder", "Session reminders", "1 hour before each session"],
-  ["review", "Reviews", "New reviews on your profile"],
-  ["tips", "Marketplace tips", "Ideas to grow your profile"],
+/** A row on Account settings > Notifications. Only channels that are actually sent get a switch. */
+export type NotificationItem = {
+  kind: string;
+  title: string;
+  detail: string;
+  channels: readonly NotificationChannel[];
+};
+
+export const COACH_NOTIFICATIONS: NotificationItem[] = [
+  {
+    kind: "booking",
+    title: "Booking requests and bookings",
+    detail: "Requests in the app, and an email when a booking is confirmed",
+    channels: ["email", "app"],
+  },
+  {
+    kind: "message",
+    title: "Messages",
+    detail: "From families and athletes",
+    channels: ["email", "app"],
+  },
+  {
+    kind: "notes",
+    title: "Feedback due",
+    detail: "Sessions from the last week that still need feedback",
+    channels: ["app"],
+  },
+  {
+    kind: "review",
+    title: "Reviews",
+    detail: "New reviews on your profile",
+    channels: ["app"],
+  },
+  {
+    kind: "reminder",
+    title: "Session reminders",
+    detail: "On your notifications list 24 hours before",
+    channels: ["app"],
+  },
 ];
 
 /** Missing keys mean on; matches notification_allowed() in the database. */
@@ -45,11 +77,31 @@ export const notificationOn = (prefs: unknown, kind: string, channel: Notificati
 
 export const DEACTIVATE_WORD = "DEACTIVATE";
 
-export const ATHLETE_NOTIFICATIONS: [kind: string, title: string, detail: string][] = [
-  ["booking", "Bookings", "Confirmations and changes"],
-  ["message", "Messages", "From coaches and group channels"],
-  ["reminder", "Session reminders", "24 hours and 1 hour before"],
-  ["notes", "Session notes", "When a coach shares notes"],
+export const ATHLETE_NOTIFICATIONS: NotificationItem[] = [
+  {
+    kind: "booking",
+    title: "Bookings",
+    detail: "An email when a booking is confirmed, and a note when a coach accepts a request",
+    channels: ["email", "app"],
+  },
+  {
+    kind: "message",
+    title: "Messages",
+    detail: "From coaches and group channels",
+    channels: ["email", "app"],
+  },
+  {
+    kind: "notes",
+    title: "Session notes",
+    detail: "When a coach shares feedback",
+    channels: ["app"],
+  },
+  {
+    kind: "reminder",
+    title: "Session reminders",
+    detail: "On your notifications list 24 hours before",
+    channels: ["app"],
+  },
 ];
 
 export const DELETE_WORD = "DELETE";

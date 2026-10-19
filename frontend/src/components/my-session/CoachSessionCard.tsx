@@ -4,9 +4,9 @@
  */
 import type { ReactNode } from "react";
 import { Children, useState } from "react";
-import { Clock, Info, MapPin, User, Users, Video } from "lucide-react";
+import { Clock, Info, MapPin, User, Users, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
-import { primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import type { UISession } from "@/types/my-sessions";
 import { formatDayISO } from "@/utils/schedule";
@@ -36,34 +36,32 @@ const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
 export const SessionDateTile = ({ day, size = "lg" }: { day: string; size?: "sm" | "lg" }) => (
   <span
     className={cn(
-      "flex flex-none flex-col items-center justify-center gap-1 rounded-[8px] border border-[#EAEADF] bg-[#FDFDFC]",
+      "flex flex-none flex-col items-center justify-center gap-1 rounded-control border border-light-525 bg-light-50",
       size === "lg" ? "h-[72px] w-[56px]" : "h-[54px] w-[44px]",
     )}
     aria-label={formatDayISO(day, { weekday: "long", month: "long", day: "numeric" })}
   >
     <small
       className={cn(
-        "font-semibold uppercase tracking-[-0.03em] text-[#0054B4]",
-        size === "lg" ? "text-[12px] leading-[13px]" : "text-[10px] leading-[11px]",
+        "text-label-xsm text-primary",
       )}
     >
       {formatDayISO(day, { month: "short" })}
     </small>
     <b
       className={cn(
-        "font-bold tracking-[-0.05em] text-[#1A202C]",
-        size === "lg" ? "text-[24px] leading-6" : "text-[18px] leading-[18px]",
+        "tabular-nums text-dark",
+        size === "lg" ? "text-section" : "text-subtitle",
       )}
     >
       {formatDayISO(day, { day: "numeric" })}
     </b>
     <em
       className={cn(
-        "font-medium not-italic tracking-[-0.03em] text-[#767980]",
-        size === "lg" ? "text-[12px] leading-[13px]" : "text-[10px] leading-[11px]",
+        "text-label-xsm not-italic text-dark-300",
       )}
     >
-      {formatDayISO(day, { weekday: "short" }).toUpperCase()}
+      {formatDayISO(day, { weekday: "short" })}
     </em>
   </span>
 );
@@ -108,16 +106,8 @@ export const CoachSessionCard = ({
   const daysOut = Math.round(
     (Date.parse(`${dayISO}T12:00:00Z`) - Date.parse(`${todayISO}T12:00:00Z`)) / 864e5,
   );
-  const soon =
-    kind === "up"
-      ? startMs > 0 && startMs <= 3 * 36e5
-        ? startsIn(session.start, now)
-        : daysOut === 1
-          ? "Tomorrow"
-          : daysOut > 1 && daysOut <= 3
-            ? `In ${daysOut} days`
-            : ""
-      : "";
+  // Calendar days, not elapsed hours: the pill shows only when the session is 3 days out or less.
+  const startsLabel = kind === "up" && startMs > 0 && daysOut <= 3 ? startsIn(session.start, now) : "";
 
   const athleteTitle =
     athletes[0]?.name ||
@@ -135,7 +125,7 @@ export const CoachSessionCard = ({
     total <= 0
       ? "No athletes yet"
       : group
-        ? `${total} of ${capacity ?? "—"} athletes`
+        ? capacity ? `${total} of ${capacity} athletes` : `${total} ${total === 1 ? "athlete" : "athletes"}`
         : `1 athlete`;
 
   const statusPill =
@@ -147,8 +137,8 @@ export const CoachSessionCard = ({
       ) : (
         <BrandPill tone="green">Feedback sent</BrandPill>
       )
-    ) : soon ? (
-      <BrandPill tone={startMs > 0 && startMs <= 3 * 36e5 ? "amber" : "neutral"}>{soon}</BrandPill>
+    ) : startsLabel ? (
+      <BrandPill tone="amber">{startsLabel}</BrandPill>
     ) : null;
 
   const faces = athletes.slice(0, 5);
@@ -157,40 +147,41 @@ export const CoachSessionCard = ({
   const tz = timeZoneAbbr ? ` ${timeZoneAbbr}` : "";
   const dateLine = `${formatDayISO(dayISO, { weekday: "short", month: "short", day: "numeric" })} · ${time}${tz}`;
 
+  const viewPrimary = kind === "up" || (kind === "past" && !due);
   const viewBtn = (
-    <button type="button" className={cn(secondaryButton, "h-9 px-3 text-[13px]")} onClick={onViewDetails}>
+    <button type="button" className={cn(viewPrimary ? primaryButton : secondaryButton, smallButton)} onClick={onViewDetails}>
       View details
     </button>
   );
   const acts =
     kind === "now" ? (
       <>
-        {viewBtn}
         {onCheckIn ? (
-          <button type="button" className={cn(primaryButton, "h-9 px-3 text-[13px]")} onClick={onCheckIn}>
+          <button type="button" className={cn(primaryButton, smallButton)} onClick={onCheckIn}>
             Check in
           </button>
         ) : null}
+        {viewBtn}
       </>
     ) : kind === "past" ? (
       <>
-        {viewBtn}
         {total > 0 && onFeedback ? (
           <button
             type="button"
-            className={cn(due ? primaryButton : secondaryButton, "h-9 px-3 text-[13px]")}
+            className={cn(due ? primaryButton : secondaryButton, smallButton)}
             onClick={onFeedback}
           >
             {due ? "Add feedback" : "Edit feedback"}
           </button>
         ) : null}
+        {viewBtn}
       </>
     ) : (
       viewBtn
     );
 
   return (
-    <div className="flex flex-wrap items-stretch gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-4 md:flex-nowrap md:gap-4">
+    <div className="flex flex-wrap items-stretch gap-3 rounded-card border border-light-525 bg-light-300 p-4 md:flex-nowrap md:gap-4">
       <SessionDateTile day={dayISO} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap gap-1.5">
@@ -201,8 +192,8 @@ export const CoachSessionCard = ({
           {pillar ? <BrandPill tone="neutral">{pillar}</BrandPill> : null}
           {statusPill}
         </div>
-        <span className="text-[16px] font-semibold leading-5 tracking-[-0.05em] text-[#1A202C]">{title}</span>
-        <span className="flex flex-wrap gap-x-3.5 gap-y-1 text-[12px] leading-4 tracking-[-0.03em] text-[#767980]">
+        <span className="text-subtitle text-dark">{title}</span>
+        <span className="flex flex-wrap gap-x-3.5 gap-y-1 text-caption text-dark-300">
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3 flex-none" strokeWidth={1.5} aria-hidden="true" />
             {dateLine}
@@ -225,7 +216,7 @@ export const CoachSessionCard = ({
                   role="listitem"
                   title={a.name}
                   className={cn(
-                    "flex size-7 items-center justify-center overflow-hidden rounded-full border-2 border-[#F7F7F0] bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]",
+                    "flex size-7 items-center justify-center overflow-hidden rounded-full border-2 border-light-300 bg-primary-50 text-label-xsm text-primary",
                     i > 0 && "-ml-1.5",
                   )}
                 >
@@ -234,7 +225,7 @@ export const CoachSessionCard = ({
               ))}
               {extra > 0 ? (
                 <span
-                  className="-ml-1.5 flex size-7 items-center justify-center rounded-full border-2 border-[#F7F7F0] bg-[#EAEADF] text-[10px] font-semibold text-[#484D56]"
+                  className="-ml-1.5 flex size-7 items-center justify-center rounded-full border-2 border-light-300 bg-light-525 text-label-xsm text-dark-400"
                   title={`+${extra} more`}
                 >
                   +{extra}
@@ -242,15 +233,15 @@ export const CoachSessionCard = ({
               ) : null}
             </div>
           ) : null}
-          <span className="text-[12px] text-[#767980]">{whoTxt}</span>
+          <span className="text-caption text-dark-300">{whoTxt}</span>
         </div>
       </div>
       <div className="flex w-full flex-col gap-2.5 md:w-auto md:items-end md:justify-between">
         <div className="flex items-baseline gap-1 md:flex-col md:items-end md:gap-0">
-          <b className="text-[18px] font-semibold tracking-[-0.05em] text-[#1A202C]">
+          <b className="text-card-title tabular-nums text-dark">
             ${Math.round(Number(session.rate) || 0)}
           </b>
-          <span className="text-[12px] text-[#767980]">per athlete</span>
+          <span className="text-caption text-dark-300">per athlete</span>
         </div>
         <div className="flex flex-wrap gap-2 md:justify-end [&_button]:flex-1 md:[&_button]:flex-none">{acts}</div>
       </div>
@@ -281,7 +272,7 @@ export const CoachSessionList = ({
           ) : null}
         </>
       ) : (
-        <div className="flex items-center gap-2 rounded-[12px] border border-dashed border-[#EAEADF] p-4 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+        <div className="flex items-center gap-2 rounded-card border border-dashed border-light-600 p-4 text-body-m text-dark-300">
           <Info className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
           <span>{empty}</span>
         </div>
@@ -290,19 +281,36 @@ export const CoachSessionList = ({
   );
 };
 
-/** @deprecated Prefer CoachSessionList + tags on My Sessions. */
+const SECTION_TONE = {
+  blue: "border-primary-300 bg-primary-50 text-primary",
+  teal: "border-secondary-300 bg-secondary-50 text-secondary-700",
+  neutral: "border-light-525 bg-light-400 text-dark-300",
+} as const;
+
+/** One stacked list on coach My sessions: icon, title, count, then cards or an empty line. */
 export const CoachSessionSection = ({
+  icon,
+  tone,
   title,
+  count,
   empty,
   children,
 }: {
-  kind?: CoachCardKind;
+  icon: ReactNode;
+  tone: keyof typeof SECTION_TONE;
   title: string;
+  count: number;
   empty: string;
   children: ReactNode;
 }) => (
   <section className="flex flex-col gap-3">
-    <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">{title}</h2>
+    <div className="flex items-center gap-2.5">
+      <span className={cn("flex size-8 flex-none items-center justify-center rounded-control border [&>svg]:size-4", SECTION_TONE[tone])}>
+        {icon}
+      </span>
+      <h2 className="text-card-title text-dark">{title}</h2>
+      <BrandPill tone="neutral">{count}</BrandPill>
+    </div>
     <CoachSessionList empty={empty}>{children}</CoachSessionList>
   </section>
 );

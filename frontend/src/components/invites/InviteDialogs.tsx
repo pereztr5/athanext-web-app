@@ -24,7 +24,7 @@ const Sheet = ({
   <Dialog open={open} onOpenChange={(o) => !o && onClose()}>
     <DialogContent className={cn(dialogContent, "max-w-[460px]")}>
       <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-        <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">{title}</DialogTitle>
+        <DialogTitle className="text-section">{title}</DialogTitle>
         <DialogDescription className={description ? meta : "sr-only"}>{description ?? title}</DialogDescription>
       </DialogHeader>
       {children ? <div className="flex flex-col gap-3 px-5 pb-2 sm:px-[25px]">{children}</div> : null}
@@ -79,7 +79,7 @@ export const FixEmailDialog = ({
         <input
           type="email"
           autoComplete="off"
-          className={cn(input, error && "ring-2 ring-[#FDB5B5]")}
+          className={cn(input, error && "border-error-600 outline outline-1 -outline-offset-1 outline-error-600")}
           value={email}
           aria-invalid={Boolean(error)}
           onChange={(e) => {
@@ -88,7 +88,7 @@ export const FixEmailDialog = ({
           }}
           onKeyDown={(e) => e.key === "Enter" && save()}
         />
-        {error ? <span className="text-[12px] leading-[16px] text-[#972B2B]">{error}</span> : null}
+        {error ? <span className="text-paragraph-sm text-error-700">{error}</span> : null}
       </label>
       <p className={meta}>Saving sends a new invite.</p>
     </Sheet>
@@ -140,7 +140,7 @@ export const WhyFeeDialog = ({
       </>
     }
   >
-    <p className="text-[14px] leading-[18px] text-[#484D56]">
+    <p className="text-body-m text-dark-400">
       {parent} booked you on the marketplace before you invited them{since ? ` (${since})` : ""}, so they joined as a
       marketplace client. Sessions with them carry the standard marketplace fee.
     </p>

@@ -5,7 +5,7 @@
 import { useEffect, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useQueryClient } from "@tanstack/react-query";
-import { CreditCard } from "lucide-react";
+import { CreditCard } from "@/components/icons";
 import { coachBillingAPI } from "@/api/coachBilling";
 import { meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { Card, sub } from "@/components/settings/CoachSettings";
@@ -53,15 +53,15 @@ export const CoachPlanCard = () => {
   const price = billing.priceMonthly;
 
   return (
-    <Card icon={<CreditCard className="size-5 text-[#767980]" strokeWidth={1.5} />} title="Coach plan">
+    <Card icon={<CreditCard className="size-5 text-dark-300" strokeWidth={1.5} />} title="Coach plan">
       {!billing.ready ? <p className={meta}>Loading…</p> : null}
 
       {billing.ready && billing.subscribed ? (
         <>
           <p className={sub}>
-            You&apos;re on the AthaNext coach plan at <b className="font-medium text-[#1A202C]">${price}/month</b>.
+            You&apos;re on the AthaNext coach plan at <b className="font-medium text-dark">${price}/month</b>.
             {billing.subscriptionStatus ? (
-              <span className="text-[#767980]"> Status: {billing.subscriptionStatus}.</span>
+              <span className="text-dark-300"> Status: {billing.subscriptionStatus}.</span>
             ) : null}
           </p>
           <button

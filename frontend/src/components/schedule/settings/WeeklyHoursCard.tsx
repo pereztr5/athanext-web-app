@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Clock, Plus, X } from "lucide-react";
+import { Clock, Plus, X } from "@/components/icons";
 import { scheduleAPI, type ScheduleSeries } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -72,7 +72,7 @@ const spanLabel = (from: number, to: number): string => {
   return `${start} to ${y}`.replace(/:00/g, "");
 };
 
-/** Short hours line for My Schedule (WC4 `AN.hoursLine`). */
+/** Short hours line for My schedule (WC4 `AN.hoursLine`). */
 export const hoursLineFromSeries = (series: ScheduleSeries[]): string => {
   const days = seriesToDays(series);
   const on = DAYS3.map((name, i) => ({ name, ranges: days[i + 1] || [] })).filter((x) => x.ranges.length);
@@ -191,24 +191,24 @@ export const WeeklyHoursCard = ({
         Open 1-on-1 slots that repeat every week. Saving replaces your current repeating open times.
       </p>
       {loading ? (
-        <div className="h-[34px] animate-pulse rounded-[8px] bg-[#F1F1E6]" />
+        <div className="h-[34px] animate-pulse rounded-control bg-light" />
       ) : (
         <>
-          <p className="text-[14px] text-[#484D56]">{summary}</p>
+          <p className="text-body-m text-dark-400">{summary}</p>
           <div className="flex flex-col gap-2">
             {WEEKDAY_NAMES.map((name, i) => {
               const d = i + 1;
               const rs = days[d] || [];
               const open = editing === d;
               return (
-                <div key={name} className="rounded-[10px] border border-[#EAEADF] bg-[#F4F4EB] px-3 py-3">
+                <div key={name} className="rounded-card border border-light-525 bg-light-400 px-3 py-3">
                   <div className="flex items-center justify-between gap-2">
                     <button
                       type="button"
                       className="flex min-w-0 flex-1 items-center justify-between gap-2 text-left"
                       onClick={() => setEditing(open ? null : d)}
                     >
-                      <span className="text-[14px] font-medium text-[#1A202C]">{name}</span>
+                      <span className="text-label-sm text-dark">{name}</span>
                       <span className={caption}>
                         {rs.length
                           ? rs.map(([a, b]) => `${formatMinutes(a)}–${formatMinutes(b)}`).join(", ")
@@ -224,8 +224,8 @@ export const WeeklyHoursCard = ({
                     </button>
                   </div>
                   {open ? (
-                    <div className="mt-3 flex flex-col gap-2 border-t border-[#EAEADF] pt-3">
-                      {rs.length === 0 ? <p className="text-[13px] text-[#767980]">Not available this day.</p> : null}
+                    <div className="mt-3 flex flex-col gap-2 border-t border-light-525 pt-3">
+                      {rs.length === 0 ? <p className="text-body-m text-dark-300">Not available this day.</p> : null}
                       {rs.map(([a, b], idx) => (
                         <div key={idx} className="flex flex-wrap items-center gap-2">
                           <select
@@ -244,7 +244,7 @@ export const WeeklyHoursCard = ({
                           </select>
                           <span className={caption}>to</span>
                           <select
-                            className={cn(input, "w-[120px]", b <= a && "ring-2 ring-[#FDB5B5]")}
+                            className={cn(input, "w-[120px]", b <= a && "border-error-600 outline outline-1 -outline-offset-1 outline-error-600")}
                             value={b}
                             aria-label="Until"
                             onChange={(e) => {
@@ -259,7 +259,7 @@ export const WeeklyHoursCard = ({
                           </select>
                           <button
                             type="button"
-                            className="inline-flex size-[30px] items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#EAEADF]"
+                            className="inline-flex size-[30px] items-center justify-center rounded-control text-dark-300 hover:bg-light-525"
                             aria-label="Remove"
                             onClick={() => setRanges(d, rs.filter((_, j) => j !== idx))}
                           >

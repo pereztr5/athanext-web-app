@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { ChevronRight } from "lucide-react";
+import { ChevronRight } from "@/components/icons";
 import { rosterAPI, type OpenInvite } from "@/api/roster";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import {
@@ -64,11 +64,11 @@ export const RosterInvites = ({ invites }: { invites: OpenInvite[] }) => {
         {invites.length ? invites.map((invite) => {
           const status = INVITE_STATUS[invite.status];
           return (
-            <div key={invite.id} className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-[10px] border-b border-[#EAEADF] py-3 text-[14px] last:border-b-0 md:gap-4">
+            <div key={invite.id} className="grid grid-cols-[34px_minmax(0,1fr)_auto] items-center gap-2.5 border-b border-light-525 py-3 text-body-m last:border-b-0 md:gap-4">
               <span className={avatar} aria-hidden="true">{initials(invite.parent)}</span>
               <div className="flex min-w-0 flex-col gap-1">
                 <span className="truncate font-medium">{invite.parent}</span>
-                <span className="text-[12px] leading-[14px] text-[#767980]">{inviteLine(invite)}</span>
+                <span className="text-caption text-dark-300">{inviteLine(invite)}</span>
               </div>
               <button
                 type="button"
@@ -80,7 +80,7 @@ export const RosterInvites = ({ invites }: { invites: OpenInvite[] }) => {
               </button>
             </div>
           );
-        }) : <p className="text-[14px] text-[#767980]">No open invites.</p>}
+        }) : <p className="text-body-m text-dark-300">No open invites.</p>}
       </div>
       <Link to={INVITES_PATH} className={cn(textButton, "self-start")}>
         All invites and history
@@ -123,26 +123,26 @@ const FixEmailDialog = ({ invite, onClose, onSaved }: { invite: OpenInvite | nul
           setTouched(false);
         }}
       >
-        <DialogHeader className="gap-1.5 border-b border-[#EAEADF] px-4 py-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[20px] font-semibold leading-[24px] tracking-[-0.05em] sm:text-[24px] sm:leading-[30px]">Fix email address</DialogTitle>
+        <DialogHeader className="gap-1.5 border-b border-light-525 px-4 py-5 pr-14 text-left sm:px-[25px]">
+          <DialogTitle className="text-card-title sm:text-section">Fix email address</DialogTitle>
           <DialogDescription className={meta}>The invite to {invite?.parent} bounced</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 px-4 py-5 sm:px-[25px]">
           <label className="flex flex-col gap-1.5">
             <span className={label}>Parent email</span>
             <input
-              className={cn(input, touched && bad && "ring-[1.5px] ring-[#C93939]")}
+              className={cn(input, touched && bad && "ring-[1.5px] ring-error-600")}
               type="email"
               inputMode="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               onBlur={() => setTouched(true)}
             />
-            {touched && bad ? <span className="text-[12px] text-[#972B2B]">Enter a valid email</span> : null}
+            {touched && bad ? <span className="text-caption text-error-700">Enter a valid email</span> : null}
           </label>
-          <p className="text-[12px] leading-[14px] text-[#767980]">Saving sends a new invite.</p>
+          <p className="text-caption text-dark-300">Saving sends a new invite.</p>
         </div>
-        <div className="flex justify-end gap-[10px] border-t border-[#EAEADF] px-4 py-4 sm:px-[25px]">
+        <div className="flex justify-end gap-2.5 border-t border-light-525 px-4 py-4 sm:px-[25px]">
           <button type="button" className={secondaryButton} onClick={onClose}>Cancel</button>
           <button
             type="button"

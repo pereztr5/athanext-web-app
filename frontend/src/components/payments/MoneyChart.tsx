@@ -38,19 +38,19 @@ export const MoneyChart = ({ days, type }: { days: { day: string; amount: number
     <div ref={wrap} className="relative" onMouseLeave={() => setHover(null)}>
       <svg
         viewBox={`0 0 ${W} ${H}`}
-        className="block h-auto w-full [&_text]:fill-[#767980] [&_text]:text-[11px]"
+        className="block h-auto w-full [&_text]:fill-dark-300 [&_text]:text-caption"
         role="img"
         aria-label="Money in by day. Hover or tap a day to see the amount."
       >
         {ticks.map((t) => (
           <g key={t}>
-            <line x1={PL} x2={W} y1={y(t)} y2={y(t)} stroke="#EAEADF" />
+            <line x1={PL} x2={W} y1={y(t)} y2={y(t)} className="stroke-light-525" />
             <text x={PL - 8} y={y(t) + 4} textAnchor="end">
               ${t.toLocaleString("en-US")}
             </text>
           </g>
         ))}
-        {hover !== null ? <line x1={cx(hover)} x2={cx(hover)} y1={PT} y2={base} stroke="#C1C1B8" strokeDasharray="3 3" /> : null}
+        {hover !== null ? <line x1={cx(hover)} x2={cx(hover)} y1={PT} y2={base} className="stroke-light-600" strokeDasharray="3 3" /> : null}
         {type === "bar"
           ? days.map((d, i) => (
               <rect
@@ -60,15 +60,15 @@ export const MoneyChart = ({ days, type }: { days: { day: string; amount: number
                 width={Math.max(bw - gap, 1.5)}
                 height={Math.max(base - y(d.amount), 0)}
                 rx={Math.min(3, bw / 4)}
-                fill={i === n || i === hover ? "#0054B4" : "#99BBE1"}
+                className={i === n || i === hover ? "fill-primary" : "fill-primary-200"}
               />
             ))
           : (
             <>
-              <polygon points={`${cx(0).toFixed(1)},${base} ${pts} ${cx(n).toFixed(1)},${base}`} fill="#E5EDF7" />
-              <polyline points={pts} fill="none" stroke="#0054B4" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
-              <circle cx={cx(n)} cy={y(days[n].amount)} r="4" fill="#0054B4" />
-              {hover !== null ? <circle cx={cx(hover)} cy={y(days[hover].amount)} r="5" fill="#0054B4" stroke="#F7F7F0" strokeWidth="2" /> : null}
+              <polygon points={`${cx(0).toFixed(1)},${base} ${pts} ${cx(n).toFixed(1)},${base}`} className="fill-primary-50" />
+              <polyline points={pts} fill="none" className="stroke-primary" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+              <circle cx={cx(n)} cy={y(days[n].amount)} r="4" className="fill-primary" />
+              {hover !== null ? <circle cx={cx(hover)} cy={y(days[hover].amount)} r="5" className="fill-primary stroke-light-300" strokeWidth="2" /> : null}
             </>
           )}
         {labelled.map((i) => (
@@ -94,13 +94,13 @@ export const MoneyChart = ({ days, type }: { days: { day: string; amount: number
       {tip && hover !== null ? (
         <div
           className={cn(
-            "pointer-events-none absolute z-[3] flex flex-col gap-0.5 whitespace-nowrap rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] px-[10px] py-1.5 shadow-[0_0_15px_rgba(0,0,0,0.05)]",
+            "pointer-events-none absolute z-[3] flex flex-col gap-0.5 whitespace-nowrap rounded-control border border-light-525 bg-light-300 px-2.5 py-1.5 shadow-overlay",
             "-translate-x-1/2 -translate-y-full"
           )}
           style={{ left: Math.min(Math.max(cx(hover) * scale, 60), width - 60), top: Math.max(y(tip.amount) * scale - 10, 40) }}
         >
-          <b className="text-[14px] font-semibold tracking-[-0.03em]">{money(tip.amount)}</b>
-          <span className="text-[12px] text-[#767980]">{label(tip.day, { weekday: "short", month: "short", day: "numeric" })}</span>
+          <b className="text-label-sm">{money(tip.amount)}</b>
+          <span className="text-caption text-dark-300">{label(tip.day, { weekday: "short", month: "short", day: "numeric" })}</span>
         </div>
       ) : null}
     </div>

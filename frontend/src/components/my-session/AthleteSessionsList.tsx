@@ -4,10 +4,11 @@
  */
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, CalendarPlus, ChevronRight, Clock, MapPin, Search, User, Users, Video } from "lucide-react";
+import { Calendar, CalendarPlus, ChevronRight, Clock, MapPin, Search, User, Users, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { SessionDateTile } from "@/components/my-session/CoachSessionCard";
-import { card, input, meta, pageTitle, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
+import { card, input, meta, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import type { UISession } from "@/types/my-sessions";
@@ -28,7 +29,7 @@ const groupLabel = (iso: string, today: string, timeZone: string, upcoming: bool
   return formatDayISO(day, { month: "long" });
 };
 
-/** Card title: group name or pillar — coach is not in the title (WC4 #25). */
+/** Card title: group name or pillar; coach is not in the title (WC4 #25). */
 export const sessionListTitle = (s: UISession) => {
   if (s.type === "group" && s.title) return s.title;
   return s.pillarSlot || (s.type === "group" ? "Group session" : "1-on-1");
@@ -89,7 +90,7 @@ const AthleteSessionCard = ({
       type="button"
       onClick={() => onOpen(session)}
       className={cn(
-        "flex w-full flex-wrap items-stretch gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-3.5 text-left hover:border-[#C1C1B8] md:flex-nowrap md:gap-3.5",
+        "flex w-full flex-wrap items-stretch gap-3 rounded-card border border-light-525 bg-light-300 p-3.5 text-left hover:border-light-600 md:flex-nowrap md:gap-3.5",
         canceled && "opacity-60",
       )}
     >
@@ -109,8 +110,8 @@ const AthleteSessionCard = ({
           ) : null}
           {!canceled && !requested && !offered && !past && soon ? <BrandPill tone="amber">{soon}</BrandPill> : null}
         </span>
-        <span className="truncate text-[16px] font-semibold leading-5 tracking-[-0.05em] text-[#1A202C]">{title}</span>
-        <span className="flex flex-col gap-1 text-[12px] leading-4 tracking-[-0.03em] text-[#767980]">
+        <span className="truncate text-subtitle text-dark">{title}</span>
+        <span className="flex flex-col gap-1 text-caption text-dark-300">
           <span className="inline-flex items-center gap-1">
             <Clock className="size-3 flex-none" strokeWidth={1.5} aria-hidden="true" />
             {dateLine}
@@ -125,8 +126,8 @@ const AthleteSessionCard = ({
           </span>
         </span>
         {session.coachName ? (
-          <span className="flex items-center gap-2 pt-0.5 text-[12px] text-[#484D56]">
-            <span className="flex size-6 items-center justify-center rounded-full bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]">
+          <span className="flex items-center gap-2 pt-0.5 text-caption text-dark-400">
+            <span className="flex size-6 items-center justify-center rounded-full bg-primary-50 text-label-xsm text-primary">
               {coachInitials(session.coachName)}
             </span>
             {session.coachName}
@@ -135,9 +136,9 @@ const AthleteSessionCard = ({
       </span>
       <span className="flex w-full shrink-0 items-center justify-end gap-2 self-center md:w-auto">
         {actionLabel ? (
-          <span className={cn(secondaryButton, "pointer-events-none h-9 px-3 text-[13px]")}>{actionLabel}</span>
+          <span className={cn(secondaryButton, "pointer-events-none h-9 px-3 text-body-m")}>{actionLabel}</span>
         ) : (
-          <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+          <ChevronRight className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         )}
       </span>
     </button>
@@ -205,19 +206,17 @@ export const AthleteSessionsList = ({
   ];
 
   return (
-    <div className="flex flex-col gap-5">
-      <header className="flex flex-wrap items-start justify-between gap-3">
-        <div className="flex flex-col gap-2.5">
-          <h1 className={pageTitle}>My Sessions</h1>
-          <p className="text-[14px] leading-[18px] text-[#767980]">
-            Everything booked on {isParent ? `${athleteFirst}'s` : "your"} account.
-          </p>
-        </div>
-        <Link to={ROUTES.BOOK} className={primaryButton}>
-          <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
-          Book a session
-        </Link>
-      </header>
+    <div className="flex flex-col gap-4 md:gap-6">
+      <PageHeader
+        title="My sessions"
+        subtitle={`Everything booked on ${isParent ? `${athleteFirst}'s` : "your"} account.`}
+        actions={
+          <Link to={ROUTES.BOOK} className={primaryButton}>
+            <CalendarPlus strokeWidth={1.5} aria-hidden="true" />
+            Book a session
+          </Link>
+        }
+      />
 
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className={cn(segGroup, "w-fit flex-wrap")} role="tablist" aria-label="Session lists">
@@ -240,7 +239,7 @@ export const AthleteSessionsList = ({
         <div className="flex flex-1 flex-wrap items-center gap-2 md:justify-end">
           <label className="relative min-w-[220px] flex-1 md:max-w-[280px]">
             <span className="sr-only">Search sessions</span>
-            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+            <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
             <input
               className={cn(input, "pl-9")}
               placeholder="Search coaches, pillars, places"
@@ -271,7 +270,7 @@ export const AthleteSessionsList = ({
         <div className="flex flex-col gap-1">
           {groups.map(([g, rows]) => (
             <div key={g} className="flex flex-col">
-              <span className="px-1 pb-1.5 pt-3 text-[12px] font-medium text-[#767980] first:pt-0">{g}</span>
+              <span className="px-1 pb-1.5 pt-3 text-label-xsm text-dark-300 first:pt-0">{g}</span>
               <div className="flex flex-col gap-2">
                 {rows.map((s) => (
                   <AthleteSessionCard key={s.bookingId || s.id} session={s} timeZone={timeZone} onOpen={onOpen} />
@@ -291,8 +290,8 @@ export const AthleteSessionsList = ({
         </div>
       ) : (
         <section className={cn(card, "items-center py-10 text-center")}>
-          <Calendar className="size-8 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-          <span className="text-[16px] font-medium">{q ? "No sessions match" : "Nothing here yet"}</span>
+          <Calendar className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+          <span className="text-subtitle">{q ? "No sessions match" : "Nothing here yet"}</span>
           <p className={meta}>{q ? "Try a different search." : "Sessions you book show up here."}</p>
           {!q && tab === "up" ? (
             <Link to={ROUTES.BOOK} className={primaryButton}>

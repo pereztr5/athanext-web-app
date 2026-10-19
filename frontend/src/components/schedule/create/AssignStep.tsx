@@ -6,7 +6,7 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Search } from "lucide-react";
+import { ChevronLeft, ChevronRight, Search } from "@/components/icons";
 import { rosterAPI } from "@/api/roster";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
 import { ToastAction } from "@/components/ui/toast";
@@ -112,7 +112,7 @@ export const AssignStep = ({
         {when.replace(" at ", " · ")} · {money(session.price)}
       </span>
       <label className="relative flex items-center">
-        <Search className="pointer-events-none absolute left-3 size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <Search className="pointer-events-none absolute left-3 size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <input
           className={cn(input, "pl-9")}
           value={query}
@@ -132,12 +132,12 @@ export const AssignStep = ({
               key={a.id}
               type="button"
               disabled={book.isPending}
-              className="flex w-full items-center gap-3 rounded-[10px] px-2 py-2.5 text-left text-[#767980] hover:bg-[#F4F4EB] disabled:opacity-60 [&>svg]:size-4 [&>svg]:flex-none"
+              className="flex w-full items-center gap-3 rounded-control px-2 py-2.5 text-left text-dark-300 hover:bg-light-400 disabled:cursor-not-allowed disabled:bg-transparent [&>svg]:size-4 [&>svg]:flex-none"
               onClick={() => book.mutate({ id: a.id, name: a.name, credits: a.credits })}
             >
               <Avatar name={a.name} imageUrl={a.imageUrl} size={36} />
               <span className="flex min-w-0 grow flex-col gap-0.5">
-                <b className="truncate text-[15px] font-medium leading-[18px] text-[#1A202C]">{a.name}</b>
+                <b className="truncate text-label-sm text-dark">{a.name}</b>
                 <span className={meta}>{a.credits ? `Uses 1 of ${plural(a.credits, "credit")}` : "Payment link sent"}</span>
               </span>
               <ChevronRight strokeWidth={1.5} aria-hidden="true" />

@@ -1,85 +1,85 @@
 import { cn } from "@/lib/utils";
+import { buttonVariants } from "@/components/ui/button";
 
-/** Shared class strings for My Schedule (ATH-71), from the brand kit used across the app. */
-export const primaryButton =
-  "inline-flex h-[34px] items-center justify-center gap-[6px] rounded-[8px] border border-[#6698D2] bg-[#0054B4] px-4 text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#F1F1E6] transition-colors hover:bg-[#004390] disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:size-4";
-export const secondaryButton =
-  "inline-flex h-[34px] items-center justify-center gap-[6px] rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] px-4 text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] transition-colors hover:border-[#C1C1B8] disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:size-4";
-export const dangerButton =
-  "inline-flex h-[34px] items-center justify-center gap-[6px] rounded-[8px] border border-[#FDB5B5] bg-[#FEDADA] px-4 text-[16px] font-medium leading-[18px] tracking-[-0.03em] text-[#972B2B] transition-colors hover:bg-[#FDB5B5] disabled:cursor-not-allowed disabled:opacity-50";
-/** Small button size (Working Copy `.btn.sm`): add with cn() after a button class. */
-export const smallButton = "h-[30px] px-3 text-[14px]";
+/** Shared class strings used across the app, built on the AthaNext Design System primitives. */
+export const primaryButton = buttonVariants({ variant: "default" });
+export const secondaryButton = buttonVariants({ variant: "secondary" });
+export const dangerButton = buttonVariants({ variant: "destructive" });
+/** Small button size (`btn-sm`): add with cn() after a button class. */
+export const smallButton = "h-control-sm px-3 text-label-sm";
 export const textButton =
-  "inline-flex items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] hover:underline disabled:opacity-50 [&>svg]:size-4";
+  "inline-flex items-center gap-1 text-label-sm text-primary hover:text-primary-600 disabled:text-dark-200 [&>svg]:size-4";
 export const dangerTextButton =
-  "inline-flex items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#972B2B] hover:underline disabled:opacity-50 [&>svg]:size-4";
+  "inline-flex items-center gap-1 text-label-sm text-error-700 hover:text-error-600 disabled:text-dark-200 [&>svg]:size-4";
 export const iconButton =
-  "inline-flex size-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:bg-[#EAEADF] disabled:cursor-not-allowed disabled:opacity-40 [&>svg]:size-4";
+  "inline-flex size-control items-center justify-center rounded-control border border-light-525 bg-light-400 text-dark transition-colors hover:border-light-600 disabled:cursor-not-allowed disabled:bg-light-400 disabled:text-dark-200 [&>svg]:size-4";
 
+/** Card: light-300, light-525 hairline, radius-card. Padding 30/25/25, phone 22/18/20. No shadow. */
 export const card =
-  "flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]";
+  "flex flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]";
 
-/** Page title (Working Copy `.h1`): 32px, 26px on phone. */
-export const pageTitle = "text-[26px] font-bold leading-[26px] tracking-[-0.05em] text-[#1A202C] md:text-[32px] md:leading-[28px]";
-export const label = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
-export const meta = "text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]";
-export const body = "text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]";
+/** Page title: t-page-title, t-page-title-phone on phone. */
+export const pageTitle = "text-page-title-phone text-dark md:text-page-title";
+export const label = "text-label-xsm text-dark-300";
+export const meta = "text-caption text-dark-300";
+export const body = "text-body-m text-dark";
 export const input =
-  "h-[38px] w-full rounded-[8px] border-0 bg-[#F1F1E6] px-3 text-[14px] text-[#1A202C] placeholder:text-[#A3A6AB] focus:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]";
+  "h-input w-full rounded-control border border-dark-250 bg-light px-3 text-body-m text-dark placeholder:text-dark-200 hover:border-dark-300 focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary";
 
+/** Modal surface: the only in-page element with a shadow. */
 export const modalSurface =
-  "bg-[#F7F7F0] border border-[#EAEADF] rounded-[10px] sm:rounded-[10px] shadow-[0_0_15px_rgba(0,0,0,0.05)] font-sans text-[#1A202C] tracking-[-0.03em]";
+  "bg-light-300 border border-light-525 rounded-card sm:rounded-card shadow-overlay font-sans text-dark tracking-[-0.03em]";
 export const closeButtonOverride =
-  "[&>button]:text-[#767980] [&>button]:opacity-100 [&>button:hover]:text-[#1A202C] [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]";
+  "[&>button]:text-dark [&>button]:opacity-100 [&>button:hover]:bg-light-400 [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[15px] [&>button_svg]:stroke-[1.5]";
 export const dialogContent = cn(
   "max-h-[90vh] w-[calc(100vw-32px)] max-w-[520px] gap-0 overflow-y-auto p-0",
   modalSurface,
   closeButtonOverride
 );
 
-/** Segmented control button. */
+/** Segmented control: light track, selected chip light-50 with a light-550 border. */
 export const segButton = (on: boolean) =>
   cn(
-    "inline-flex h-[32px] flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[8px] border px-[10px] text-[14px] font-medium leading-[18px] tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] [&>svg]:size-4",
-    on ? "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C]" : "border-transparent text-[#767980] hover:text-[#1A202C]"
+    "inline-flex h-7 flex-1 shrink-0 items-center justify-center gap-1.5 whitespace-nowrap rounded-[6px] border px-2.5 text-label-sm transition-colors [&>svg]:size-4",
+    on ? "border-light-550 bg-light-50 text-dark" : "border-transparent text-dark-300 hover:text-dark"
   );
-export const segGroup = "flex gap-1 rounded-[8px] bg-[#F1F1E6] p-[3px]";
+export const segGroup = "flex gap-1 rounded-control bg-light p-[3px]";
 
-/** Choice tile (times, places, athletes). */
+/** Choice row/tile: the one selected style for choices (primary-50 fill, 1px primary border). */
 export const choice = (on: boolean) =>
   cn(
-    "inline-flex min-h-[38px] items-center justify-center gap-1.5 rounded-[8px] border px-3 py-1.5 text-[14px] font-medium leading-[18px] tracking-[-0.03em] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] disabled:cursor-not-allowed disabled:opacity-50 [&>svg]:size-4",
-    on ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]" : "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] hover:bg-[#EAEADF]"
+    "inline-flex min-h-[40px] items-center justify-center gap-1.5 rounded-control border px-3 py-1.5 text-body-m transition-colors disabled:cursor-not-allowed disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200 [&>svg]:size-4",
+    on ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200"
   );
 
-/** Day tile in week strips (Working Copy `.dayc`): solid blue when picked. */
+/** Day tile in week strips: solid blue when picked. */
 export const dayTile = (on: boolean) =>
   cn(
-    "flex flex-col items-center gap-0.5 rounded-[12px] border pb-2 pt-2.5 transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] disabled:cursor-default disabled:border-dashed disabled:bg-transparent disabled:opacity-45",
-    on ? "border-[#0054B4] bg-[#0054B4] text-[#F1F1E6]" : "border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] hover:enabled:border-[#6698D2]"
+    "flex flex-col items-center gap-0.5 rounded-card border pb-2 pt-2.5 transition-colors disabled:cursor-default disabled:border-dashed disabled:border-light-600 disabled:bg-transparent disabled:text-dark-200",
+    on ? "border-primary bg-primary text-light" : "border-light-525 bg-light-400 text-dark hover:enabled:border-primary-300"
   );
-export const dayTileWeekday = (on: boolean) => cn("text-[12px] leading-[14px]", on ? "text-[#D6E3F5]" : "text-[#767980]");
-export const dayTileNumber = "text-[17px] font-semibold leading-[22px] md:text-[18px]";
+export const dayTileWeekday = (on: boolean) => cn("text-caption", on ? "text-primary-100" : "text-dark-300");
+export const dayTileNumber = "text-card-title";
 
-/** Time tile (Working Copy `.tp`): solid blue when picked, dashed when taken. */
+/** Time tile: solid blue when picked, dashed when taken. */
 export const timeTile = (on: boolean, group = false) =>
   cn(
-    "flex flex-col items-center justify-center gap-0.5 rounded-[12px] border text-[16px] font-semibold tabular-nums transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] disabled:cursor-default disabled:border-dashed disabled:bg-transparent disabled:text-[#A3A6AB]",
+    "flex flex-col items-center justify-center gap-0.5 rounded-card border text-subtitle tabular-nums transition-colors disabled:cursor-default disabled:border-dashed disabled:border-light-600 disabled:bg-transparent disabled:text-dark-200",
     on
-      ? "border-[#0054B4] bg-[#0054B4] text-[#F1F1E6]"
+      ? "border-primary bg-primary text-light"
       : group
-        ? "border-[#A9D4E0] bg-[#E7F4F8] text-[#1A202C] hover:enabled:border-[#6698D2]"
-        : "border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] hover:enabled:border-[#6698D2]"
+        ? "border-secondary-300 bg-secondary-50 text-dark hover:enabled:border-primary-300"
+        : "border-light-525 bg-light-300 text-dark hover:enabled:border-primary-300"
   );
 export const timeTileNote = (on: boolean, group = false) =>
-  cn("inline-flex items-center gap-1 text-[11px] font-medium [&>svg]:size-3", on ? "text-[#D6E3F5]" : group ? "text-[#117A96]" : "text-[#767980]");
+  cn("inline-flex items-center gap-1 text-label-xsm [&>svg]:size-3", on ? "text-primary-100" : group ? "text-secondary-700" : "text-dark-300");
 
 /** Left accent and tint per calendar item kind. */
 export const ITEM_TONE: Record<string, string> = {
-  booked: "border-l-[#0054B4] bg-[#E5EDF7]",
-  group: "border-l-[#117A96] bg-[#E7F4F8]",
-  request: "border-l-[#F0B144] bg-[#FCEFDA]",
-  offered: "border-dashed border-l-[#6698D2] bg-[#F9F9F5]",
-  open: "border-dashed border-l-[#C1C1B8] bg-[#F9F9F5]",
-  busy: "border-l-[#A3A6AB] bg-[#F1F1E6]",
+  booked: "border-primary-300 border-l-primary bg-primary-50",
+  group: "border-secondary-300 border-l-secondary-600 bg-secondary-50",
+  request: "border-info-300 border-l-info-600 bg-info-100",
+  offered: "border-dashed border-l-primary-300 bg-light-200",
+  open: "border-dashed border-l-light-600 bg-light-200",
+  busy: "border-l-dark-200 bg-light",
 };

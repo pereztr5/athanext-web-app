@@ -4,7 +4,7 @@ import { MarketingLayout } from "./MarketingLayout";
 
 // Dual-chrome routes (/coaches, /coach/:id): app shell for signed-in users,
 // marketing chrome for visitors. While auth is still resolving, marketing
-// chrome — that is today's behavior for signed-in users on these pages.
+// chrome, which is today's behavior for signed-in users on these pages.
 export const ChromeSwitch = () => {
   const { isAuthenticated, ready } = useRole();
   return ready && isAuthenticated ? <AppLayout /> : <MarketingLayout />;

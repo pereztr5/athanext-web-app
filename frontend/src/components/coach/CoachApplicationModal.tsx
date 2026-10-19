@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 import { useCoachApplication } from "@/hooks/useCoachApplication";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import { strings } from "@/config/strings";
 
 interface CoachApplicationModalProps {
@@ -55,7 +55,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
     
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(formData.email)) {
-      newErrors.email = "Please enter a valid email";
+      newErrors.email = "Enter a valid email";
     }
 
     const phoneRegex = /^\+?[1-9]\d{1,14}$/;
@@ -64,7 +64,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
     }
 
     if (!formData.sport.trim()) {
-      newErrors.sport = "Please specify your sport";
+      newErrors.sport = "Add your sport";
     }
 
     const yearsExp = parseInt(formData.years_experience);
@@ -73,17 +73,17 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
     }
 
     if (!formData.certifications.trim() || formData.certifications.length < 10) {
-      newErrors.certifications = "Please provide certification details (min 10 characters)";
+      newErrors.certifications = "Add certification details (10 characters or more)";
     }
 
     if (!formData.why_join.trim() || formData.why_join.length < 50) {
-      newErrors.why_join = "Please write at least 50 characters";
+      newErrors.why_join = "Write at least 50 characters";
     } else if (formData.why_join.length > 500) {
       newErrors.why_join = "Maximum 500 characters allowed";
     }
 
     if (formData.website_url && !/^https?:\/\/.+/.test(formData.website_url)) {
-      newErrors.website_url = "Please enter a valid URL";
+      newErrors.website_url = "Enter a valid URL";
     }
 
     if (formData.instagram_handle && !/^[a-zA-Z0-9._]{1,30}$/.test(formData.instagram_handle)) {
@@ -91,7 +91,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
     }
 
     if (formData.linkedin_url && !/^https?:\/\/(www\.)?linkedin\.com\/.+/.test(formData.linkedin_url)) {
-      newErrors.linkedin_url = "Please enter a valid LinkedIn URL";
+      newErrors.linkedin_url = "Enter a valid LinkedIn URL";
     }
 
     if (!formData.insurance_confirmation) {
@@ -139,7 +139,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-2xl font-bold">{strings.coach.applyToBecomeCoach}</DialogTitle>
+          <DialogTitle className="text-section">{strings.coach.applyToBecomeCoach}</DialogTitle>
           <DialogDescription>
             {strings.coach.applicationDescription}
           </DialogDescription>
@@ -147,7 +147,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
 
         <form onSubmit={handleSubmit} className="space-y-6">
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{strings.coach.personalInformation}</h3>
+            <h3 className="text-subtitle">{strings.coach.personalInformation}</h3>
             
             <div className="space-y-2">
               <Label htmlFor="full_name">{strings.form.labels.fullName} *</Label>
@@ -157,7 +157,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("full_name", e.target.value)}
                 placeholder="John Doe"
               />
-              {errors.full_name && <p className="text-sm text-destructive">{errors.full_name}</p>}
+              {errors.full_name && <p className="text-body-m text-error-700">{errors.full_name}</p>}
             </div>
 
             <div className="space-y-2">
@@ -169,7 +169,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("email", e.target.value)}
                 placeholder="john@example.com"
               />
-              {errors.email && <p className="text-sm text-destructive">{errors.email}</p>}
+              {errors.email && <p className="text-body-m text-error-700">{errors.email}</p>}
             </div>
 
             <div className="space-y-2">
@@ -181,12 +181,12 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("phone_number", e.target.value)}
                 placeholder="+1234567890"
               />
-              {errors.phone_number && <p className="text-sm text-destructive">{errors.phone_number}</p>}
+              {errors.phone_number && <p className="text-body-m text-error-700">{errors.phone_number}</p>}
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{strings.coach.professionalBackground}</h3>
+            <h3 className="text-subtitle">{strings.coach.professionalBackground}</h3>
             
             <div className="space-y-2">
               <Label htmlFor="sport">{strings.coach.sportsYouCoach} *</Label>
@@ -196,7 +196,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("sport", e.target.value)}
                 placeholder="e.g., Soccer, Rowing, Basketball"
               />
-              {errors.sport && <p className="text-sm text-destructive">{errors.sport}</p>}
+              {errors.sport && <p className="text-body-m text-error-700">{errors.sport}</p>}
             </div>
 
             <div className="space-y-2">
@@ -209,7 +209,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("years_experience", e.target.value)}
                 placeholder="5"
               />
-              {errors.years_experience && <p className="text-sm text-destructive">{errors.years_experience}</p>}
+              {errors.years_experience && <p className="text-body-m text-error-700">{errors.years_experience}</p>}
             </div>
 
             <div className="space-y-2">
@@ -228,15 +228,15 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 id="certifications"
                 value={formData.certifications}
                 onChange={(e) => handleChange("certifications", e.target.value)}
-                placeholder="List your coaching certifications, licenses, and credentials..."
+                placeholder="List your coaching certifications, licenses, and credentials…"
                 rows={3}
               />
-              {errors.certifications && <p className="text-sm text-destructive">{errors.certifications}</p>}
+              {errors.certifications && <p className="text-body-m text-error-700">{errors.certifications}</p>}
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{strings.coach.onlinePresence}</h3>
+            <h3 className="text-subtitle">{strings.coach.onlinePresence}</h3>
             
             <div className="space-y-2">
               <Label htmlFor="website_url">{strings.coach.websiteUrl}</Label>
@@ -247,7 +247,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("website_url", e.target.value)}
                 placeholder="https://yourwebsite.com"
               />
-              {errors.website_url && <p className="text-sm text-destructive">{errors.website_url}</p>}
+              {errors.website_url && <p className="text-body-m text-error-700">{errors.website_url}</p>}
             </div>
 
             <div className="space-y-2">
@@ -258,7 +258,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("instagram_handle", e.target.value)}
                 placeholder="yourhandle"
               />
-              {errors.instagram_handle && <p className="text-sm text-destructive">{errors.instagram_handle}</p>}
+              {errors.instagram_handle && <p className="text-body-m text-error-700">{errors.instagram_handle}</p>}
             </div>
 
             <div className="space-y-2">
@@ -270,12 +270,12 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 onChange={(e) => handleChange("linkedin_url", e.target.value)}
                 placeholder="https://linkedin.com/in/yourprofile"
               />
-              {errors.linkedin_url && <p className="text-sm text-destructive">{errors.linkedin_url}</p>}
+              {errors.linkedin_url && <p className="text-body-m text-error-700">{errors.linkedin_url}</p>}
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{strings.coach.applicationStatement}</h3>
+            <h3 className="text-subtitle">{strings.coach.applicationStatement}</h3>
             
             <div className="space-y-2">
               <Label htmlFor="why_join">{strings.coach.whyJoinMyKonnect}</Label>
@@ -283,19 +283,19 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                 id="why_join"
                 value={formData.why_join}
                 onChange={(e) => handleChange("why_join", e.target.value)}
-                placeholder="Share your motivation for joining our coaching network..."
+                placeholder="Share your motivation for joining our coaching network…"
                 rows={4}
                 maxLength={500}
               />
-              <p className="text-xs text-muted-foreground">
+              <p className="text-caption text-dark-300">
                 {formData.why_join.length}/500 characters
               </p>
-              {errors.why_join && <p className="text-sm text-destructive">{errors.why_join}</p>}
+              {errors.why_join && <p className="text-body-m text-error-700">{errors.why_join}</p>}
             </div>
           </div>
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{strings.coach.requiredConfirmations}</h3>
+            <h3 className="text-subtitle">{strings.coach.requiredConfirmations}</h3>
 
             <div className="flex items-start space-x-3">
               <Checkbox
@@ -308,7 +308,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
                   {strings.coach.confirmProfessionalInsurance} *
                 </Label>
                 {errors.insurance_confirmation && (
-                  <p className="text-sm text-destructive">{errors.insurance_confirmation}</p>
+                  <p className="text-body-m text-error-700">{errors.insurance_confirmation}</p>
                 )}
               </div>
             </div>

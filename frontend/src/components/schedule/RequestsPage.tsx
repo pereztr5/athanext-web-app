@@ -1,5 +1,5 @@
 /**
- * Booking requests (ATH-71, ATH-85, Working Copy): a full page under My Schedule
+ * Booking requests (ATH-71, ATH-85, Working Copy): a full page under My schedule
  * (/schedule?requests=1). Each card: who asked and for whom, hours left, what and when, the
  * family's note, then Decline (reason and message), Other time (1-on-1) or Message (group),
  * and Accept. Times the coach suggested wait under "Waiting for the family".
@@ -7,7 +7,8 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Clock, Inbox, User, Users } from "lucide-react";
+import { Clock, Inbox, User, Users } from "@/components/icons";
+import { PageHeader } from "@/components/ui/page-header";
 import { BrandPill } from "@/components/brand";
 import { bookingRequestsAPI, type BookingRequest } from "@/api/bookingRequests";
 import { DeclineDialog } from "@/components/coach-session/DeclineDialog";
@@ -18,7 +19,7 @@ import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, plural } from "@/utils/schedule";
 import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
-import { card, pageTitle, primaryButton, secondaryButton, smallButton } from "./styles";
+import { card, primaryButton, secondaryButton, smallButton } from "./styles";
 import { SuggestTimesDialog } from "./views/SuggestTimesDialog";
 
 // Supabase errors are plain objects with a message, not Error instances.
@@ -66,26 +67,26 @@ const RequestCard = ({
   const forWho = `${request.parentName ? `for ${first}` : first}${age ? `, ${age}` : ""}`;
 
   return (
-    <div className="flex flex-col gap-2.5 rounded-[12px] border border-[#EAEADF] bg-[#F7F7F0] p-4">
+    <div className="flex flex-col gap-2.5 rounded-card border border-light-525 bg-light-300 p-4">
       <div className="flex items-start justify-between gap-3">
         <span className="flex min-w-0 items-center gap-2.5">
           <Avatar name={request.parentName || request.athleteName} imageUrl={request.parentName ? null : request.athletePhoto} size={36} />
           <span className="flex min-w-0 flex-col gap-0.5">
-            <b className="truncate text-[15px] font-semibold leading-[18px] text-[#1A202C]">{request.parentName || request.athleteName}</b>
-            <span className="text-[12px] leading-[14px] text-[#767980]">
+            <b className="truncate text-label-sm text-dark">{request.parentName || request.athleteName}</b>
+            <span className="text-caption text-dark-300">
               {forWho} · {request.familyBadge || "New family"}
             </span>
           </span>
         </span>
         {hours !== null ? (
-          <span className={cn("inline-flex flex-none items-center gap-1 whitespace-nowrap text-[12px] text-[#767980] [&>svg]:size-[13px]", hours <= 6 && "font-semibold text-[#B4231B]")}>
+          <span className={cn("inline-flex flex-none items-center gap-1 whitespace-nowrap text-caption text-dark-300 [&>svg]:size-[13px]", hours <= 6 && "font-medium text-error-700")}>
             <Clock strokeWidth={1.5} aria-hidden="true" />
             {hours ? `${hours} h` : "Expiring"}
           </span>
         ) : null}
       </div>
 
-      <div className="flex flex-wrap items-center gap-2 text-[14px]">
+      <div className="flex flex-wrap items-center gap-2 text-body-m">
         {group ? (
           <BrandPill tone="teal">
             <Users strokeWidth={1.5} aria-hidden="true" />
@@ -97,14 +98,14 @@ const RequestCard = ({
             1-on-1
           </BrandPill>
         )}
-        <b className="text-[14px] font-semibold text-[#1A202C]">{request.sessionName}</b>
-        <span className="text-[#484D56]">
+        <b className="text-label-sm text-dark">{request.sessionName}</b>
+        <span className="text-dark-400">
           {formatDateInZone(start, timeZone, { weekday: "short", month: "short", day: "numeric" })} · {formatClock(start, timeZone)}
         </span>
-        {group ? <span className="text-[12px] text-[#767980]">{request.taken} of {request.capacity} spots taken</span> : null}
+        {group ? <span className="text-caption text-dark-300">{request.taken} of {request.capacity} spots taken</span> : null}
       </div>
 
-      {request.notes ? <p className="text-[13px] italic leading-[16px] text-[#767980]">“{request.notes}”</p> : null}
+      {request.notes ? <p className="text-paragraph italic text-dark-300">“{request.notes}”</p> : null}
 
       <div className="flex gap-2">
         <button type="button" className={cn(secondaryButton, smallButton)} disabled={busy} onClick={onDecline}>
@@ -173,24 +174,15 @@ export const RequestsPage = ({
   };
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
-      <button
-        type="button"
-        className="-mb-2 inline-flex items-center gap-1 self-start text-[14px] font-medium text-[#767980] hover:text-[#1A202C] [&>svg]:size-4"
-        onClick={onBack}
-      >
-        <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
-        My Schedule
-      </button>
-      <header className="flex flex-col gap-[10px]">
-        <h1 className={pageTitle}>Booking requests</h1>
-        <p className="text-[14px] leading-[18px] text-[#767980]">
-          New families ask first. Accept within 24 hours or the time opens again.
-        </p>
-      </header>
+    <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+      <PageHeader
+        title="Booking requests"
+        subtitle="New families ask first. Accept within 24 hours or the time opens again."
+        back={{ label: "My schedule", onClick: onBack }}
+      />
 
       {loading ? (
-        <p className="text-[14px] text-[#767980]">Loading…</p>
+        <p className="text-body-m text-dark-300">Loading…</p>
       ) : requests.length ? (
         <div className="flex flex-col gap-2.5">
           {requests.map((request) => (
@@ -209,22 +201,22 @@ export const RequestsPage = ({
         </div>
       ) : (
         <section className={card}>
-          <div className="flex flex-col items-center gap-2.5 px-4 py-7 text-center text-[#767980]">
-            <Inbox className="size-7 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-            <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">You are all caught up</span>
-            <p className="max-w-[44ch] text-[14px]">New booking requests show up here.</p>
+          <div className="flex flex-col items-center gap-2.5 px-4 py-7 text-center text-dark-300">
+            <Inbox className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+            <span className="text-subtitle text-dark">You are all caught up</span>
+            <p className="max-w-[44ch] text-paragraph">New booking requests show up here.</p>
           </div>
         </section>
       )}
 
       {waiting.data?.length ? (
         <section className="flex flex-col gap-2 pt-2">
-          <h2 className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Waiting for the family</h2>
-          <ul className="flex flex-col divide-y divide-[#EAEADF]">
+          <h2 className="text-subtitle text-dark">Waiting for the family</h2>
+          <ul className="flex flex-col divide-y divide-light-525">
             {waiting.data.map((item) => (
               <li key={item.occurrenceId} className="flex flex-col gap-0.5 py-2">
-                <b className="text-[14px] font-medium">{item.athleteName}</b>
-                <span className="text-[12px] leading-[14px] text-[#767980]">
+                <b className="text-label-sm">{item.athleteName}</b>
+                <span className="text-caption text-dark-300">
                   You suggested {formatDateInZone(new Date(item.start), timeZone, { weekday: "short", month: "short", day: "numeric" })},{" "}
                   {formatInstantSpan(new Date(item.start), new Date(item.end), timeZone)} · {money(item.price)}
                 </span>
@@ -244,7 +236,7 @@ export const RequestsPage = ({
           toast({ title: "Request declined", description: "The slot is open again." });
           changed();
         }}
-        onError={(err) => toast({ title: "Couldn't decline the request", description: errorText(err, "Please try again."), variant: "destructive" })}
+        onError={(err) => toast({ title: "Couldn't decline the request", description: errorText(err, "Try again."), variant: "destructive" })}
       />
       <SuggestTimesDialog
         request={suggesting}

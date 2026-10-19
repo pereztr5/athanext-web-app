@@ -1,6 +1,6 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Loader2, Users } from "lucide-react";
+import { Loader2, Users } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { chatAPI } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";

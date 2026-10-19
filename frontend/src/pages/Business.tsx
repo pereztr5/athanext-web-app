@@ -1,15 +1,16 @@
 /**
  * Business (Working Copy `c-account`): the 5th phone tab for coaches. The profile card with
- * View and Edit profile, then Payments (money owed, next payout, overdue) and My Organization.
+ * View and Edit profile, then Payments (money owed, next payout, overdue) and My organization.
  */
 import type { ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, ChevronRight, CreditCard, Eye, Pencil, Star } from "lucide-react";
+import { Building2, ChevronRight, CreditCard, Eye, Pencil, Star } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { payoutsAPI } from "@/api/payouts";
-import { card, pageTitle, secondaryButton } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
+import { card, secondaryButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useCoachPayMode } from "@/hooks/useCoachPayMode";
@@ -32,14 +33,14 @@ type CoachRow = {
 };
 
 const Row = ({ to, icon, title, sub, right }: { to: string; icon: ReactNode; title: string; sub?: string; right?: ReactNode }) => (
-  <Link to={to} className="flex w-full items-center gap-3 p-[14px] text-left transition-colors first:rounded-t-[10px] last:rounded-b-[10px] hover:bg-[#F4F4EB] [&+&]:border-t [&+&]:border-[#EAEADF]">
-    <span className="inline-flex size-9 flex-none items-center justify-center rounded-[8px] bg-[#F1F1E6] text-[#484D56] [&>svg]:size-5">{icon}</span>
+  <Link to={to} className="flex w-full items-center gap-3 p-3.5 text-left transition-colors first:rounded-t-card last:rounded-b-card hover:bg-light-200 focus-visible:outline focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-primary [&+&]:border-t [&+&]:border-light-525">
+    <span className="inline-flex size-9 flex-none items-center justify-center rounded-control border border-light-525 bg-light text-dark-400 [&>svg]:size-5">{icon}</span>
     <span className="flex min-w-0 grow flex-col gap-1">
-      <span className="text-[14px] font-medium">{title}</span>
-      {sub ? <span className="text-[12px] leading-[14px] text-[#767980]">{sub}</span> : null}
+      <span className="text-label-sm">{title}</span>
+      {sub ? <span className="text-caption text-dark-300">{sub}</span> : null}
     </span>
     {right}
-    <ChevronRight className="size-4 flex-none text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
+    <ChevronRight className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
   </Link>
 );
 
@@ -76,26 +77,26 @@ const BusinessPage = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[640px] flex-col gap-[14px]">
-        <h1 className={pageTitle}>Business</h1>
+      <div className="mx-auto flex w-full max-w-wrapper-focused flex-col gap-4 md:gap-6">
+        <PageHeader title="Business" />
         <section className={cn(card, "gap-4")}>
           <div className="flex items-center gap-3">
-            <span className="flex size-14 flex-none items-center justify-center overflow-hidden rounded-full bg-[#E5EDF7] text-[18px] font-medium text-[#0054B4]">
+            <span className="flex size-14 flex-none items-center justify-center overflow-hidden rounded-full border border-primary-200 bg-primary-50 text-subtitle text-primary">
               {photo ? <img src={photo} alt="" className="size-full object-cover" /> : getInitials(name)}
             </span>
             <div className="flex min-w-0 flex-col gap-1.5">
-              <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{name}</span>
+              <span className="text-subtitle">{name}</span>
               {[me.position, place].filter(Boolean).length ? (
-                <span className="text-[12px] leading-[14px] text-[#767980]">{[me.position, place].filter(Boolean).join(" · ")}</span>
+                <span className="text-caption text-dark-300">{[me.position, place].filter(Boolean).join(" · ")}</span>
               ) : null}
               {me.total_reviews && Number(me.rating) > 0 ? (
                 <span className="flex items-center gap-1">
-                  <Star className="size-4 fill-[#E7DF3E] text-[#B9B232]" strokeWidth={1.5} aria-hidden="true" />
-                  <b className="text-[14px] font-semibold">{Number(me.rating ?? 0).toFixed(1)}</b>
-                  <span className="text-[12px] text-[#767980]">· {plural(me.total_reviews, "review")}</span>
+                  <Star className="size-4 fill-rating text-rating-600" strokeWidth={1.5} aria-hidden="true" />
+                  <b className="text-label-sm">{Number(me.rating ?? 0).toFixed(1)}</b>
+                  <span className="text-caption text-dark-300">· {plural(me.total_reviews, "review")}</span>
                 </span>
               ) : (
-                <span className="text-[12px] leading-[14px] text-[#767980]">No reviews yet</span>
+                <span className="text-caption text-dark-300">No reviews yet</span>
               )}
             </div>
           </div>
@@ -110,7 +111,7 @@ const BusinessPage = () => {
             </Link>
           </div>
         </section>
-        <div className="flex flex-col rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]">
+        <div className="flex flex-col rounded-card border border-light-525 bg-light-300">
           <Row
             to={ROUTES.PAYMENTS}
             icon={<CreditCard strokeWidth={1.5} />}
@@ -121,8 +122,8 @@ const BusinessPage = () => {
           <Row
             to={org ? ROUTES.MY_ORGANIZATION : ROUTES.CONTACT_US}
             icon={<Building2 strokeWidth={1.5} />}
-            title="My Organization"
-            sub={org ? `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}` : "Set up an academy with other coaches"}
+            title="My organization"
+            sub={org ? `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}` : "By invitation from AthaNext"}
           />
         </div>
       </div>

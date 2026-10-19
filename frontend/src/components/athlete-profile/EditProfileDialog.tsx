@@ -14,7 +14,7 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
 import Cropper, { type Area } from "react-easy-crop";
 import { useToast } from "@/hooks/use-toast";
 import imageCompression from 'browser-image-compression';
@@ -98,15 +98,15 @@ const {
 } = ATHLETE_IMAGE_LIMITS;
 
 const FieldError = ({ message }: { message?: string }) =>
-  message ? <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-destructive">{message}</p> : null;
+  message ? <p className="text-caption text-error-700">{message}</p> : null;
 
-const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
-const hintClass = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
+const labelClass = "text-label-sm text-dark";
+const hintClass = "text-caption text-dark-300";
 const fieldClass = "grid gap-2";
 const overlayPanelClass =
-  "w-full space-y-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] p-[25px] text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)]";
-const overlayTitleClass = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
-const rangeClass = "w-full accent-[#0054B4]";
+  "w-full space-y-5 rounded-card border border-light-525 bg-light-300 p-[25px] text-dark shadow-overlay";
+const overlayTitleClass = "text-section text-dark";
+const rangeClass = "w-full accent-primary";
 
 const hydrateProfile = (profile: AthleteProfileFormData | null): AthleteProfileFormData => {
   if (!profile) return { ...emptyProfile };
@@ -992,7 +992,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               <h3 className={overlayTitleClass}>Crop profile photo</h3>
               <div
                 ref={profileCropContainerRef}
-                className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-[8px] overflow-hidden bg-[#F4F4EB]"
+                className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-control overflow-hidden bg-light-400"
               >
                 {profileObjectUrl && profileCropSize && (
                   <Cropper
@@ -1046,7 +1046,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               <div className="flex flex-col lg:flex-row gap-4">
                 <div
                   ref={coverCropContainerRef}
-                  className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-[8px] overflow-hidden"
+                  className="relative w-full h-[200px] sm:h-[250px] lg:h-[300px] rounded-control overflow-hidden"
                   style={{ backgroundColor: coverBgColor }}
                 >
                   {coverObjectUrl && coverCropSize && (
@@ -1070,7 +1070,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                 <div className="w-full lg:w-56 shrink-0 space-y-2">
                   <p className={labelClass}>Preview</p>
                   <div
-                    className="w-full aspect-[3/1] rounded-[8px] overflow-hidden border border-[#EAEADF]"
+                    className="w-full aspect-[3/1] rounded-control overflow-hidden border border-light-525"
                     style={{ backgroundColor: coverBgColor }}
                   >
                     {coverPreviewUrl ? (
@@ -1090,7 +1090,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                         key={color}
                         type="button"
                         onClick={() => setCoverBgColor(color)}
-                        className={`size-6 rounded-full border border-[#EAEADF] transition-transform ${coverBgColor === color ? "ring-2 ring-[#6698D2] ring-offset-1 ring-offset-[#F7F7F0] scale-110" : "hover:scale-105"}`}
+                        className={`size-6 rounded-full border border-light-525 transition-transform ${coverBgColor === color ? "outline outline-2 outline-offset-2 outline-primary scale-110" : "hover:scale-105"}`}
                         style={{ backgroundColor: color }}
                         aria-label={`Select ${color} background`}
                       />
@@ -1139,7 +1139,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
           {/* <Button
             variant="ghost"
             size="icon"
-            className="absolute right-4 top-4 text-muted-foreground hover:text-foreground"
+            className="absolute right-4 top-4 text-dark-300 hover:text-dark"
             aria-label="Close"
           > */}
             {/* <X className="h-4 w-4" /> */}
@@ -1147,13 +1147,13 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
         </DialogClose>
         <DialogHeader className="pr-8 text-left">
           <DialogTitle>Edit profile</DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             Update how coaches and teammates see your profile.
           </DialogDescription>
         </DialogHeader>
 
         {errors.form && (
-          <div role="alert" className="rounded-[8px] border border-destructive/30 bg-destructive/10 px-3 py-2 text-[14px] leading-[18px] tracking-[-0.03em] text-destructive">
+          <div role="alert" className="rounded-control border border-error-300 bg-error-50 px-3 py-2 text-body-m text-error-700">
             {errors.form}
           </div>
         )}
@@ -1165,13 +1165,13 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               <button
                 type="button"
                 aria-label="Upload profile photo"
-                className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-[#EAEADF] bg-[#E5EDF7] transition-opacity hover:opacity-80"
+                className="flex size-20 shrink-0 items-center justify-center overflow-hidden rounded-full border border-light-525 bg-primary-50 transition-opacity hover:opacity-80"
                 onClick={() => profileImageInputRef.current?.click()}
               >
                 {formData?.profileImageUrl && typeof formData.profileImageUrl === 'string' ? (
                   <img src={formData.profileImageUrl} alt="Profile" className="h-full w-full object-cover" />
                 ) : (
-                  <span className="text-[24px] font-medium tracking-[-0.05em] text-[#0054B4]">
+                  <span className="text-section text-primary">
                     {formData?.initials || "NA"}
                   </span>
                 )}
@@ -1196,7 +1196,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
                     type="button"
                     variant="ghost"
                     size="sm"
-                    className="h-auto w-fit px-2 py-1 text-[12px] text-[#767980] hover:text-[#1A202C]"
+                    className="h-auto w-fit px-2 py-1 text-caption text-dark-300 hover:text-dark"
                     onClick={() => setFormData((prev) => ({ ...prev, profileImageUrl: null }))}
                   >
                     Remove photo
@@ -1338,7 +1338,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               onChange={(e) => handleInputChange("graduationYear", e.target.value)}
               aria-invalid={Boolean(errors?.graduationYear)}
               disabled={isCurrentlyStudying}
-              className={isCurrentlyStudying ? "cursor-not-allowed bg-[#F4F4EB]" : ""}
+              className={isCurrentlyStudying ? "cursor-not-allowed bg-light-400" : ""}
             />
             <FieldError message={errors?.graduationYear} />
             
@@ -1350,7 +1350,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               />
               <label
                 htmlFor="currentlyStudying"
-                className="text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C] peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                className="text-body-m text-dark peer-disabled:cursor-not-allowed peer-disabled:text-dark-200"
               >
                 I am currently studying
               </label>
@@ -1387,7 +1387,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
               rows={4}
               aria-invalid={Boolean(errors?.tags)}
             />
-            <p className="text-xs text-muted-foreground">
+            <p className="text-caption text-dark-300">
               Highlight skills or affiliations. {MAX_TAGS - (Array.isArray(formData?.tags) ? formData.tags.length : 0)} slots left.
             </p>
             <FieldError message={errors?.tags} />

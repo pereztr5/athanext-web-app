@@ -11,13 +11,13 @@ export const FeeLines = ({
   <>
     {platformFees > 0 ? (
       <div className="flex justify-between gap-3">
-        <span className="text-[#767980]">Platform fee</span>
+        <span className="text-dark-300">Platform fee</span>
         <span className="tabular-nums">{money(platformFees)}</span>
       </div>
     ) : null}
     {processingFees > 0 ? (
       <div className="flex justify-between gap-3">
-        <span className="text-[#767980]">Payment processing fee</span>
+        <span className="text-dark-300">Payment processing fee</span>
         <span className="tabular-nums">{money(processingFees)}</span>
       </div>
     ) : null}

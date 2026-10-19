@@ -74,9 +74,9 @@ export const EditableField: React.FC<EditableFieldProps> = ({
         if (label) {
             return (
                 <div className="flex flex-col gap-1.5">
-                    <label htmlFor={inputId} className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">
+                    <label htmlFor={inputId} className="text-label-sm text-dark">
                         {label}
-                        {required && <span className="ml-1 text-destructive">*</span>}
+                        {required && <span className="ml-1 text-error-700">*</span>}
                     </label>
                     {inputElement}
                 </div>

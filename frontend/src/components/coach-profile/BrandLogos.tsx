@@ -3,7 +3,7 @@ import type { Brand } from "@/utils/brands";
 /** Wrapped row of organization / partner logos (name as fallback) for the coach profile. */
 export function BrandLogos({ brands }: { brands: Pick<Brand, "id" | "name" | "logo_url">[] }) {
   if (brands.length === 0) {
-    return <p className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#484D56]">—</p>;
+    return <p className="text-caption text-dark-300">None yet</p>;
   }
 
   return (
@@ -20,7 +20,7 @@ export function BrandLogos({ brands }: { brands: Pick<Brand, "id" | "name" | "lo
         ) : (
           <span
             key={brand.id}
-            className="text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#484D56]"
+            className="text-label-xsm text-dark-400"
           >
             {brand.name}
           </span>

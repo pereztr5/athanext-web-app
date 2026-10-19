@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check, Loader2 } from "lucide-react";
+import { Check, Loader2 } from "@/components/icons";
 import { chatAPI } from "@/api";
 import { secondaryButton, smallButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
@@ -25,7 +25,7 @@ export const GroupChatRows = ({ coachId, channels }: { coachId: string; channels
       queryClient.invalidateQueries({ queryKey: ["coach-channel", coachId] });
       toast({ title: "Joined", description: "You'll find it in Messages." });
     },
-    onError: () => toast({ title: "Couldn't join", description: "Please try again.", variant: "destructive" }),
+    onError: () => toast({ title: "Couldn't join", description: "Try again.", variant: "destructive" }),
   });
 
   return (
@@ -33,8 +33,8 @@ export const GroupChatRows = ({ coachId, channels }: { coachId: string; channels
       {channels.map((channel) => (
         <div key={channel.conversationId} className="flex items-center justify-between gap-3">
           <span className="flex min-w-0 flex-col gap-1">
-            <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">#{channel.title || "group-chat"}</span>
-            <span className="truncate text-[12px] leading-[14px] text-[#767980]">
+            <span className="truncate text-label-sm text-dark">#{channel.title || "group-chat"}</span>
+            <span className="truncate text-caption text-dark-300">
               {[`${channel.memberCount} ${channel.memberCount === 1 ? "family" : "families"}`, channel.description ?? ""].filter(Boolean).join(" · ")}
             </span>
           </span>

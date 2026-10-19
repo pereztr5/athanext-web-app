@@ -168,8 +168,8 @@ export const PackageInProgressDialog = ({
                   key={v}
                   type="button"
                   className={cn(
-                    "rounded-[8px] border px-3 py-2.5 text-left text-[14px]",
-                    outside === v ? "border-[#0054B4] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F4F4EB]"
+                    "rounded-control border px-3 py-2.5 text-left text-body-m",
+                    outside === v ? "border-primary bg-primary-50" : "border-light-525 bg-light-400"
                   )}
                   onClick={() => setOutside(v)}
                 >
@@ -178,10 +178,10 @@ export const PackageInProgressDialog = ({
               ))}
             </div>
             {!isClient ? (
-              <p className={cap}>Marketplace families buy packages in the app — Still owed is only for families you invited.</p>
+              <p className={cap}>Marketplace families buy packages in the app. Still owed is only for families you invited.</p>
             ) : null}
           </Field>
-          <p className="rounded-[8px] bg-[#F4F4EB] px-3 py-2.5 text-[13px] leading-[18px] text-[#484D56]">
+          <p className="rounded-control border border-light-525 bg-light-400 px-3 py-2.5 text-body-m text-dark-400">
             {left} of {total} sessions left. Their next {left} booking{left === 1 ? "" : "s"} use this package before
             anything is charged.
           </p>

@@ -7,7 +7,7 @@
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, Mail, MessageCircle, Phone, Plus } from "lucide-react";
+import { ChevronLeft, Mail, MessageCircle, Phone, Plus } from "@/components/icons";
 import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { invoicesAPI } from "@/api/invoices";
 import { rosterAPI } from "@/api/roster";
@@ -55,7 +55,7 @@ const AthleteDetailPage = () => {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["coach-athlete", id] });
   const fail = (error: unknown) =>
-    toast({ title: "Something went wrong", description: error instanceof Error ? error.message : "Please try again.", variant: "destructive" });
+    toast({ title: "That didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" });
 
   const save = useMutation({
     mutationFn: (value: string) => rosterAPI.saveNote(id, value),
@@ -86,9 +86,9 @@ const AthleteDetailPage = () => {
   if (detail.isError || !detail.data) {
     return (
       <div className="px-4 py-8 md:px-5">
-        <p className="text-[16px] font-medium">Athlete not found</p>
+        <p className="text-subtitle">Athlete not found</p>
         <p className={cn(meta, "mt-1")}>They may have left your roster.</p>
-        <Link to={ROUTES.ATHLETES} className={cn(secondaryButton, "mt-4")}>Back to My Athletes</Link>
+        <Link to={ROUTES.ATHLETES} className={cn(secondaryButton, "mt-4")}>Back to My athletes</Link>
       </div>
     );
   }
@@ -141,38 +141,38 @@ const AthleteDetailPage = () => {
     "Nothing due"
   );
 
-  const stat = "flex min-w-0 flex-col gap-1 p-3 md:px-[18px] md:py-[14px]";
-  const statValue = "text-[16px] font-bold tracking-[-0.02em] md:text-[20px]";
+  const stat = "flex min-w-0 flex-col gap-1 p-3 md:px-[18px] md:py-3.5";
+  const statValue = "text-subtitle md:text-card-title";
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1040px] flex-col gap-4">
-        <Link to={ROUTES.ATHLETES} className={cn(textButton, "-mb-1.5 self-start text-[#767980]")}>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+        <Link to={ROUTES.ATHLETES} className={cn(textButton, "-mb-1.5 self-start text-dark-300 hover:text-dark")}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
-          My Athletes
+          My athletes
         </Link>
         <header className="flex items-center gap-4">
           <div className="flex min-w-0 grow items-center gap-4">
             {athlete.imageUrl ? (
-              <img src={athlete.imageUrl} alt="" className="size-[52px] flex-none rounded-full bg-[#C1C1B8] object-cover md:size-[60px]" />
+              <img src={athlete.imageUrl} alt="" className="size-[52px] flex-none rounded-full bg-light-600 object-cover md:size-[60px]" />
             ) : (
               <span
-                className="flex size-[52px] flex-none items-center justify-center rounded-full bg-[#E5EDF7] text-[18px] font-medium tracking-[-0.03em] text-[#0054B4] md:size-[60px]"
+                className="flex size-[52px] flex-none items-center justify-center rounded-full border border-primary-200 bg-primary-50 text-subtitle text-primary md:size-[60px]"
                 aria-hidden="true"
               >
                 {initialsOf(athlete.name)}
               </span>
             )}
             <div className="flex min-w-0 flex-col gap-1">
-              <h1 className="text-[24px] font-bold leading-[1.15] tracking-[-0.05em] text-[#1A202C] md:text-[32px] md:leading-[1.1]">{athlete.name}</h1>
-              <span className="text-[14px] text-[#767980]">{line || "Athlete"}</span>
+              <h1 className="text-page-title-phone text-dark md:text-page-title">{athlete.name}</h1>
+              <span className="text-body-m text-dark-300">{line || "Athlete"}</span>
             </div>
           </div>
           <div className="hidden gap-2 md:flex">{actions}</div>
         </header>
         <div className="grid grid-cols-[1.3fr_1fr] gap-2 md:hidden [&>*]:w-full">{actions}</div>
 
-        <div className="grid grid-cols-3 divide-x divide-[#EAEADF] rounded-[12px] border border-[#EAEADF] bg-[#F7F7F0]">
+        <div className="grid grid-cols-3 divide-x divide-light-525 rounded-card border border-light-525 bg-light-300">
           <div className={stat}>
             <span className={cap}>Next session</span>
             <b className={statValue}>
@@ -239,7 +239,7 @@ const AthleteDetailPage = () => {
                     return (
                       <SessionRow key={s.id} session={s} timeZone={timeZone}>
                         {s.summary ? (
-                          <span className="line-clamp-2 text-[13px] leading-[1.35] text-[#484D56]">{s.summary}</span>
+                          <span className="line-clamp-2 text-body-m text-dark-400">{s.summary}</span>
                         ) : (
                           <span className={cap}>{clock}</span>
                         )}
@@ -273,14 +273,14 @@ const AthleteDetailPage = () => {
               {packageProgress ? (
                 <div className="flex flex-col gap-2.5">
                   <div className="flex items-baseline justify-between gap-2">
-                    <b className="text-[16px] font-semibold tracking-[-0.03em]">{packageProgress.name}</b>
-                    <span className="text-[14px] font-medium">
+                    <b className="text-subtitle">{packageProgress.name}</b>
+                    <span className="text-label-sm">
                       {packageProgress.remaining} of {packageProgress.total} left
                     </span>
                   </div>
-                  <div className="h-1.5 overflow-hidden rounded-full bg-[#EAEADF]">
+                  <div className="h-1.5 overflow-hidden rounded-full bg-light-525">
                     <div
-                      className="h-full rounded-full bg-[#0054B4]"
+                      className="h-full rounded-full bg-primary"
                       style={{
                         width: `${Math.min(100, Math.round(((packageProgress.total - packageProgress.remaining) / Math.max(packageProgress.total, 1)) * 100))}%`,
                       }}
@@ -329,25 +329,25 @@ const AthleteDetailPage = () => {
               <span className={h3}>{minor ? "Family" : "Contact"}</span>
               <div className="flex items-center gap-2.5">
                 <span
-                  className="flex size-9 flex-none items-center justify-center rounded-full bg-[#F1F1E6] text-[12px] font-medium tracking-[-0.03em] text-[#484D56]"
+                  className="flex size-9 flex-none items-center justify-center rounded-full bg-light text-label-xsm text-dark-400"
                   aria-hidden="true"
                 >
                   {initialsOf(contactName)}
                 </span>
                 <span className="flex min-w-0 flex-col gap-0.5">
-                  <span className="text-[14px] font-medium">{contactName}</span>
+                  <span className="text-label-sm">{contactName}</span>
                   <span className={cap}>{minor ? `${relation || "Parent"} · gets every message about ${first}` : "Manages their own account"}</span>
                 </span>
               </div>
               {athlete.email ? (
-                <span className="flex items-center gap-2 text-[14px] text-[#484D56]">
-                  <Mail className="size-[15px] flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                <span className="flex items-center gap-2 text-body-m text-dark-400">
+                  <Mail className="size-[15px] flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                   <span className="min-w-0 break-words">{athlete.email}</span>
                 </span>
               ) : null}
               {athlete.phone ? (
-                <span className="flex items-center gap-2 text-[14px] text-[#484D56]">
-                  <Phone className="size-[15px] flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                <span className="flex items-center gap-2 text-body-m text-dark-400">
+                  <Phone className="size-[15px] flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                   {athlete.phone}
                 </span>
               ) : null}
@@ -360,7 +360,7 @@ const AthleteDetailPage = () => {
               </div>
               <div className="flex flex-col gap-1">
                 <span className={cap}>Season goal</span>
-                <span className="text-[14px]">{goal || "No goal set yet"}</span>
+                <span className="text-body-m">{goal || "No goal set yet"}</span>
               </div>
               <label className="flex flex-col gap-1">
                 <span className={cap}>Private note · only you see this</span>

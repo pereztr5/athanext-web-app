@@ -1,4 +1,4 @@
-import { BadgeCheck } from "lucide-react";
+import { BadgeCheck } from "@/components/icons";
 
 interface CoachVerificationBadgeProps {
   className?: string;
@@ -6,6 +6,6 @@ interface CoachVerificationBadgeProps {
 
 export const CoachVerificationBadge = ({ className = "" }: CoachVerificationBadgeProps) => {
   return (
-    <BadgeCheck className={`h-6 w-6 text-white fill-primary ${className}`} />
+    <BadgeCheck className={`h-6 w-6 text-light fill-primary ${className}`} />
   );
 };

@@ -6,7 +6,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Info, Plus, UserCheck, X } from "lucide-react";
+import { Info, Plus, UserCheck, X } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { BrandPill } from "@/components/brand";
 import { bookAPI, type BookableSession, type BookingCoach } from "@/api/book";
@@ -154,30 +154,30 @@ export const ReviewDialog = ({
     const span = formatInstantSpan(start, bookableEnd(s), timeZone).replace(/ to /g, "–");
     const where = s.location === "online" ? "Video call" : s.place || coach?.locations[0] || "In person";
     return (
-      <div key={s.id} className="flex items-center gap-3 rounded-[12px] border border-[#EAEADF] p-3">
+      <div key={s.id} className="flex items-center gap-3 rounded-card border border-light-525 p-3">
         <span
           className={cn(
-            "flex h-[48px] w-[44px] flex-none flex-col items-center justify-center rounded-[10px]",
-            request ? "border border-dashed border-[#906A29] bg-[#F7F7F0] text-[#906A29]" : "bg-[#0054B4] text-[#F1F1E6]"
+            "flex h-[48px] w-[44px] flex-none flex-col items-center justify-center rounded-card",
+            request ? "border border-dashed border-info-700 bg-light-300 text-info-700" : "bg-primary text-light"
           )}
         >
-          <small className="text-[10px] font-medium uppercase leading-[12px] tracking-[0.05em] opacity-85">{formatDayISO(d, { weekday: "short" })}</small>
-          <b className="text-[18px] font-bold leading-[20px] tracking-[-0.03em]">{formatDayISO(d, { day: "numeric" })}</b>
+          <small className="text-label-xsm">{formatDayISO(d, { weekday: "short" })}</small>
+          <b className="text-card-title">{formatDayISO(d, { day: "numeric" })}</b>
         </span>
         <span className="flex min-w-0 flex-1 flex-col gap-1">
           <span className="flex flex-wrap items-center gap-2">
-            <b className="text-[14px] font-medium leading-[18px]">
+            <b className="text-label-sm">
               {group ? `${s.sessionName} with ${firstName(s.coachId)}` : `${s.pillar || pillar || coach?.specialties[0] || "1-on-1"} with ${firstName(s.coachId)}`}
             </b>
-            {group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="neutral">1-on-1</BrandPill>}
+            {group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="blue">1-on-1</BrandPill>}
           </span>
           <span className={meta}>
             {formatDayISO(d, { month: "short", day: "numeric" })}, {span} · {where}
           </span>
         </span>
-        <span className="flex-none text-[14px] font-medium tabular-nums">
+        <span className="flex-none text-label-sm tabular-nums">
           {request ? (
-            <span className="text-[#A3A6AB]">{money(s.price)}</span>
+            <span className="text-dark-200">{money(s.price)}</span>
           ) : plan.covered.has(s.id) ? (
             <BrandPill tone="green">Credit</BrandPill>
           ) : (
@@ -186,7 +186,7 @@ export const ReviewDialog = ({
         </span>
         <button
           type="button"
-          className="inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F1F1E6] hover:text-[#1A202C] [&>svg]:size-4"
+          className="inline-flex size-[30px] flex-none items-center justify-center rounded-control text-dark-300 hover:bg-light hover:text-dark [&>svg]:size-4"
           aria-label="Remove"
           onClick={() => onRemove(s)}
         >
@@ -237,7 +237,7 @@ export const ReviewDialog = ({
         {!picked.length ? (
           <>
             <div className={sheetBody}>
-              <p className="text-[14px] text-[#767980]">Nothing in your booking yet.</p>
+              <p className="text-body-m text-dark-300">Nothing in your booking yet.</p>
             </div>
             <div className={sheetFooter}>
               <button type="button" className={cn(primaryButton, "h-[48px] w-full")} onClick={() => onOpenChange(false)}>
@@ -263,7 +263,7 @@ export const ReviewDialog = ({
 
               <button
                 type="button"
-                className="flex h-[44px] w-full flex-none items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#C1C1B8] text-[15px] font-medium text-[#0054B4] hover:bg-[#F4F4EB]"
+                className="flex h-[44px] w-full flex-none items-center justify-center gap-1.5 rounded-control border border-dashed border-light-600 text-label-sm text-primary hover:bg-light-400"
                 onClick={() => onOpenChange(false)}
               >
                 <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
@@ -273,7 +273,7 @@ export const ReviewDialog = ({
               {plan.availableCredits > 0 ? (
                 <label className="flex items-center justify-between gap-3">
                   <span className="flex flex-col gap-1">
-                    <b className="text-[14px] font-medium leading-[18px]">Use package credits</b>
+                    <b className="text-label-sm">Use package credits</b>
                     <span className={meta}>Applied before payment</span>
                   </span>
                   <Switch checked={useCredits} onCheckedChange={onUseCreditsChange} aria-label="Use package credits" />
@@ -281,26 +281,26 @@ export const ReviewDialog = ({
               ) : null}
 
               {now.length ? (
-                <div className="flex flex-none flex-col gap-2.5 rounded-[8px] bg-[#F4F4EB] px-4 py-3.5 text-[14px] leading-[18px]">
+                <div className="flex flex-none flex-col gap-2.5 rounded-control bg-light-400 px-4 py-3.5 text-body-m">
                   {plan.subtotal || plan.covered.size || !plan.direct.length ? (
                     <>
                       <div className="flex justify-between gap-3">
-                        <span className="text-[#767980]">{plan.direct.length ? "Paid in AthaNext" : plan.instant.length > 1 ? "Sessions" : "Session"}</span>
+                        <span className="text-dark-300">{plan.direct.length ? "Paid in AthaNext" : plan.instant.length > 1 ? "Sessions" : "Session"}</span>
                         <span className="tabular-nums">{money(plan.subtotal)}</span>
                       </div>
                       <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
-                      <div className="h-px bg-[#EAEADF]" />
+                      <div className="h-px bg-light-525" />
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-[16px] font-medium tracking-[-0.05em]">{requests.length || plan.direct.length ? "Due now" : "Total"}</span>
+                        <span className="text-subtitle">{requests.length || plan.direct.length ? "Due now" : "Total"}</span>
                         <span className={stat28}>{money(plan.dueNow)}</span>
                       </div>
                     </>
                   ) : null}
                   {plan.direct.length ? (
                     <>
-                      {plan.subtotal || plan.covered.size ? <div className="h-px bg-[#EAEADF]" /> : null}
+                      {plan.subtotal || plan.covered.size ? <div className="h-px bg-light-525" /> : null}
                       <div className="flex items-baseline justify-between gap-3">
-                        <span className="text-[16px] font-medium tracking-[-0.05em]">Pay {directName} directly</span>
+                        <span className="text-subtitle">Pay {directName} directly</span>
                         <span className={stat28}>{money(plan.payDirect)}</span>
                       </div>
                       <span className={meta}>
@@ -315,7 +315,7 @@ export const ReviewDialog = ({
               ) : null}
 
               {error ? (
-                <p role="alert" className="rounded-[8px] bg-[#FEDADA] px-3 py-2 text-[14px] text-[#972B2B]">
+                <p role="alert" className="rounded-control border border-error-300 bg-error-50 px-3 py-2 text-body-m text-error-700">
                   {error}
                 </p>
               ) : null}
@@ -356,7 +356,7 @@ export const ReviewDialog = ({
                 {charged || offlineAvail ? (
                   <div className="flex w-full flex-wrap items-center justify-between gap-2">
                     {charged && !offline ? (
-                      <button type="button" className={cn(textButton, "text-[#767980]")} onClick={() => setChoosing(true)}>
+                      <button type="button" className={cn(textButton, "text-dark-300")} onClick={() => setChoosing(true)}>
                         Change payment method
                       </button>
                     ) : (
@@ -364,7 +364,7 @@ export const ReviewDialog = ({
                     )}
                     {offlineAvail ? (
                       <span className="flex flex-col items-end gap-1">
-                        <button type="button" className={cn(textButton, "text-[#767980]")} onClick={() => setOffline((v) => !v)}>
+                        <button type="button" className={cn(textButton, "text-dark-300")} onClick={() => setOffline((v) => !v)}>
                           {offline ? "Pay by card instead" : `Pay ${offlineName} directly instead`}
                         </button>
                         {offline ? (
@@ -453,9 +453,9 @@ export const RequestTimeDialog = ({
       <DialogContent className={sheetContent}>
         <DialogHeader className={sheetHeader}>
           <DialogTitle className={sheetTitle}>Request another time with {first}</DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             1-on-1 · {pillar ?? shown?.specialties[0] ?? "session"} · {minutes} min{price ? ` · ${money(price)}` : ""}
-            <span className="mt-1.5 block text-[12px] text-[#767980]">
+            <span className="mt-1.5 block text-caption text-dark-300">
               Requests are for 1-on-1 sessions only. Group times are fixed on the schedule.
             </span>
           </DialogDescription>
@@ -490,7 +490,7 @@ export const RequestTimeDialog = ({
           </label>
           <InfoBox icon={Info}>Nothing is charged until {first} accepts. You get a message either way, usually within a day.</InfoBox>
           {error ? (
-            <p role="alert" className="rounded-[8px] bg-[#FCEFDA] px-3 py-2 text-[14px] text-[#906A29]">
+            <p role="alert" className="rounded-control border border-info-300 bg-info-50 px-3 py-2 text-body-m text-info-700">
               {error}
             </p>
           ) : null}

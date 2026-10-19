@@ -1,11 +1,11 @@
 /**
- * Coach Home (ATH-76, Working Copy 4): today and this week first, in one 760px column.
+ * Coach Home (ATH-76, Working Copy 4): today and this week first, in one wrapper column.
  * Money strip, intro calls, Today, This week, and a Plan next week card from Thursday to Sunday.
  */
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { CalendarDays, Check, ChevronRight, CircleCheck, Inbox, MessageSquareText, Pencil, Plus, Rocket, TrendingDown, TrendingUp, User, Users } from "lucide-react";
+import { CalendarCheck, CalendarDays, Check, ChevronRight, CircleCheck, Inbox, MessageSquareText, Pencil, Plus, Rocket, TrendingDown, TrendingUp, User, Users } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { payoutsAPI } from "@/api/payouts";
@@ -13,11 +13,15 @@ import { periodTotals } from "@/utils/home";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
 import { rosterAPI } from "@/api/roster";
-import { card, pageTitle, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
+import { Banner } from "@/components/ui/banner";
+import { PageHeader } from "@/components/ui/page-header";
+import { card, primaryButton, secondaryButton, segButton, segGroup, smallButton, textButton } from "@/components/schedule/styles";
 import { invoicesAPI } from "@/api/invoices";
 import { useToast } from "@/hooks/use-toast";
 import { IntroCallsHomeCard } from "@/components/intro-calls";
 import { PaymentsToConfirm } from "@/components/home/PaymentsToConfirm";
+import { WeekOffDialog } from "@/components/home/WeekOffDialog";
+import { CreateSessionSheet } from "@/components/schedule/CreateSessionSheet";
 import { useAuth } from "@/contexts/AuthContext";
 import { useCoachBillingAccess } from "@/hooks/useCoachBillingAccess";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -63,8 +67,8 @@ const Sparkline = ({ values }: { values: number[] }) => {
     .join(" ");
   return (
     <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden="true" className="flex-none">
-      <polygon points={`0,${H} ${pts} ${W},${H}`} fill="#E5EDF7" />
-      <polyline points={pts} fill="none" stroke="#0054B4" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+      <polygon points={`0,${H} ${pts} ${W},${H}`} className="fill-primary-50" />
+      <polyline points={pts} fill="none" className="stroke-primary" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
     </svg>
   );
 };
@@ -80,12 +84,11 @@ const paidText = (s: ScheduleSession) => {
 };
 
 // Working Copy type scale for Home.
-const eyebrow = "text-[11px] font-semibold uppercase tracking-[0.06em] text-[#767980]";
-const h2 = "text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]";
-const h3 = "text-[16px] font-medium leading-[18px] tracking-[-0.05em]";
-const cap = "text-[12px] leading-[14px] text-[#767980]";
-const ctxbar = "flex items-center gap-[10px] rounded-[10px] py-2 pl-3 pr-2 text-[13px] text-[#484D56] [&_b]:font-semibold [&_b]:text-[#1A202C]";
-const dayCard = cn(card, "gap-4 px-4 py-[18px] md:px-6 md:py-[22px]");
+const eyebrow = "text-label-xsm text-dark-300";
+const h2 = "text-card-title text-dark";
+const h3 = "text-subtitle";
+const cap = "text-caption text-dark-300";
+const dayCard = card;
 
 export const CoachHome = () => {
   const { userName, userProfile } = useAuth();
@@ -104,6 +107,14 @@ export const CoachHome = () => {
   const [range, setRange] = useState(7);
   const nextMonday = weekStartISO(addDaysISO(todayISO, 7));
   const [reminding, setReminding] = useState(false);
+  const [createOpen, setCreateOpen] = useState(false);
+  const [weekOffOpen, setWeekOffOpen] = useState(false);
+  const coachId = userProfile?.coach_id ?? null;
+  const checkKey = coachId ? `athanext-week-off:${coachId}:${nextMonday}` : null;
+  const [checkDismissed, setCheckDismissed] = useState(false);
+  useEffect(() => {
+    setCheckDismissed(checkKey ? window.localStorage.getItem(checkKey) === "1" : false);
+  }, [checkKey]);
 
   const weekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(todayISO, i)), [todayISO]);
   const scheduleQuery = useQuery({
@@ -168,13 +179,22 @@ export const CoachHome = () => {
 
   const booked = days.reduce((n, d) => n + d.items.filter((i) => i.kind === "booked" || i.kind === "group").length, 0);
   const open = days.reduce((n, d) => n + d.items.filter((i) => i.kind === "open").length, 0);
-  const createSession = () => navigate(`${ROUTES.SCHEDULE}?create=1`);
+  const createSession = () => setCreateOpen(true);
   const openDay = (date: string) => navigate(`${ROUTES.SCHEDULE}?day=${date}`);
   const titleOf = (s: ScheduleSession) => (s.sessionType === "group" ? s.sessionName : bookedAthletes(s)[0]?.athleteName ?? "Open slot");
   const hasBio = Boolean((me as { bio?: string | null } | undefined)?.bio);
 
   // Plan next week card: Thursday (4) through Sunday (0).
+  // Sunday check-in: Saturday and Sunday, until the coach answers for that next week.
   const weekday = new Date(`${todayISO}T12:00:00`).getDay();
+  const showCheckIn = (weekday === 6 || weekday === 0) && !checkDismissed;
+  const nextWeekDates = useMemo(() => Array.from({ length: 7 }, (_, i) => addDaysISO(nextMonday, i)), [nextMonday]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const nextWeekDays = useMemo(() => layout(nextWeekDates), [nextWeekDates, scheduleQuery.data, timeZone]);
+  const dismissCheckIn = () => {
+    if (checkKey) window.localStorage.setItem(checkKey, "1");
+    setCheckDismissed(true);
+  };
   const showPlanCard = [4, 5, 6, 0].includes(weekday);
   const nextWeekEnd = addDaysISO(nextMonday, 6);
   const nextWeekSessions = (scheduleQuery.data?.sessions ?? []).filter((s) => {
@@ -201,32 +221,30 @@ export const CoachHome = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[760px] flex-col gap-5">
-        <header className="flex flex-wrap items-center justify-between gap-3">
-          <div className="flex flex-col gap-1">
-            <h1 className={pageTitle}>
-              {greeting}, {firstName}
-            </h1>
-            <p className="text-[14px] text-[#767980]">{formatDayISO(todayISO, { weekday: "long", month: "long", day: "numeric" })}</p>
-          </div>
-          <div className="grid w-full grid-cols-2 gap-2 md:flex md:w-auto">
-            <button type="button" className={primaryButton} onClick={createSession}>
-              <Plus strokeWidth={1.5} aria-hidden="true" />
-              Create session
-            </button>
-            <Link to={`${ROUTES.PROFILE}?mode=edit`} className={secondaryButton}>
-              <Pencil strokeWidth={1.5} aria-hidden="true" />
-              Edit profile
-            </Link>
-          </div>
-        </header>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+        <PageHeader
+          title={`${greeting}, ${firstName}`}
+          subtitle={formatDayISO(todayISO, { weekday: "long", month: "long", day: "numeric" })}
+          actions={
+            <>
+              <Link to={`${ROUTES.PROFILE}?mode=edit`} className={secondaryButton}>
+                <Pencil strokeWidth={1.5} aria-hidden="true" />
+                Edit profile
+              </Link>
+              <button type="button" className={primaryButton} onClick={createSession}>
+                <Plus strokeWidth={1.5} aria-hidden="true" />
+                Create session
+              </button>
+            </>
+          }
+        />
 
         {billing.locked ? (
-          <section className={cn(card, "border-[#FDB5B5] bg-[#FEECEC]")}>
+          <section className={cn(card, "border-error-300 bg-error-50")}>
             <div className="flex flex-col gap-3 px-1 py-1">
               <div className="flex flex-col gap-1">
-                <span className={cn(h3, "text-[#972B2B]")}>Subscribe to keep coaching</span>
-                <p className="text-[14px] text-[#484D56]">
+                <span className={cn(h3, "text-error-700")}>Subscribe to keep coaching</span>
+                <p className="text-body-m text-dark">
                   Your free 30 days ended. Coach tools are locked until you subscribe at ${billing.priceMonthly}/month.
                   Families can still see your profile and book you.
                 </p>
@@ -240,11 +258,11 @@ export const CoachHome = () => {
 
         {billing.trialActive && !billing.subscribed ? (
           <section className={card} aria-label="Coach plan">
-            <div className="flex flex-col gap-[10px]">
+            <div className="flex flex-col gap-2.5">
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div className="flex flex-col gap-1">
                   <span className={eyebrow}>Coach plan</span>
-                  <span className={cn(h3, "text-[#1A202C]")}>
+                  <span className={cn(h3, "text-dark")}>
                     {billing.daysLeft === 1 ? "1 day left free" : `${billing.daysLeft} days left free`}
                   </span>
                   <p className={cap}>
@@ -255,7 +273,7 @@ export const CoachHome = () => {
                   Plan details
                 </Link>
               </div>
-              <div className="flex flex-col gap-[10px]">
+              <div className="flex flex-col gap-2.5">
                 {(
                   [
                     ["Complete your profile", `${ROUTES.PROFILE}?mode=edit`, hasBio],
@@ -269,17 +287,17 @@ export const CoachHome = () => {
                     ],
                   ] as [string, string, boolean][]
                 ).map(([text, to, done], i) => (
-                  <Link key={`${to}-${text}`} to={to} className="flex items-center gap-3 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px] text-[#1A202C] hover:bg-[#EAEADF]">
+                  <Link key={`${to}-${text}`} to={to} className="flex items-center gap-3 rounded-control border border-light-525 bg-light-400 px-4 py-3 text-dark hover:bg-light-525 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                     <span
                       className={cn(
-                        "flex size-5 flex-none items-center justify-center rounded-full text-[12px] font-semibold",
-                        done ? "bg-[#CBE7D1] text-[#1E7431]" : "border border-dashed border-[#C1C1B8]"
+                        "flex size-5 flex-none items-center justify-center rounded-full text-label-xsm",
+                        done ? "border border-success-300 bg-success-100 text-success-700" : "border border-dashed border-light-600"
                       )}
                     >
                       {done ? <Check className="size-3" strokeWidth={2.5} aria-hidden="true" /> : i + 1}
                     </span>
-                    <span className="grow text-[14px] font-medium">{text}</span>
-                    <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                    <span className="grow text-label-sm">{text}</span>
+                    <ChevronRight className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                   </Link>
                 ))}
               </div>
@@ -289,11 +307,11 @@ export const CoachHome = () => {
 
         {isEmpty && !billing.trialActive ? (
           <section className={card}>
-            <div className="flex flex-col items-center gap-[10px] px-4 py-7 text-center text-[#767980]">
-              <Rocket className="size-7 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-              <span className={cn(h3, "text-[#1A202C]")}>Let's get your first booking</span>
-              <p className="max-w-[44ch] text-[14px]">Three steps and families can find and book you.</p>
-              <div className="flex w-full max-w-[420px] flex-col gap-[10px] text-left">
+            <div className="flex flex-col items-center gap-2.5 px-4 py-7 text-center text-dark-300">
+              <Rocket className="size-6 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+              <span className={cn(h3, "text-dark")}>Let's get your first booking</span>
+              <p className="max-w-[44ch] text-body-m">Three steps and families can find and book you.</p>
+              <div className="flex w-full max-w-[420px] flex-col gap-2.5 text-left">
                 {(
                   [
                     ["Complete your profile", ROUTES.PROFILE, hasBio],
@@ -301,17 +319,17 @@ export const CoachHome = () => {
                     ["Invite the families you already coach", `${ROUTES.ATHLETES}?tab=invites`, false],
                   ] as [string, string, boolean][]
                 ).map(([text, to, done], i) => (
-                  <Link key={to} to={to} className="flex items-center gap-3 rounded-[8px] bg-[#F4F4EB] px-4 py-[14px] text-[#1A202C] hover:bg-[#EAEADF]">
+                  <Link key={to} to={to} className="flex items-center gap-3 rounded-control border border-light-525 bg-light-400 px-4 py-3 text-dark hover:bg-light-525 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
                     <span
                       className={cn(
-                        "flex size-5 flex-none items-center justify-center rounded-full text-[12px] font-semibold",
-                        done ? "bg-[#CBE7D1] text-[#1E7431]" : "border border-dashed border-[#C1C1B8]"
+                        "flex size-5 flex-none items-center justify-center rounded-full text-label-xsm",
+                        done ? "border border-success-300 bg-success-100 text-success-700" : "border border-dashed border-light-600"
                       )}
                     >
                       {done ? <Check className="size-3" strokeWidth={2.5} aria-hidden="true" /> : i + 1}
                     </span>
-                    <span className="grow text-[14px] font-medium">{text}</span>
-                    <ChevronRight className="size-4 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                    <span className="grow text-label-sm">{text}</span>
+                    <ChevronRight className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                   </Link>
                 ))}
               </div>
@@ -324,14 +342,14 @@ export const CoachHome = () => {
             {!billing.locked ? <PaymentsToConfirm /> : null}
             {/* Legacy booking-only coaches hid the money strip (ATH-86); WC4 keeps card on. */}
             {!paysDirect ? (
-              <section aria-label="Money" className="flex flex-col gap-3 rounded-[12px] border border-[#EAEADF] bg-[#F7F7F0] px-[14px] pb-[14px] pt-3 md:px-5 md:pb-4">
+              <section aria-label="Money" className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-300 px-4 pb-4 pt-3 md:px-5">
                 <div className="flex items-center justify-between gap-3">
                   <div className={cn(segGroup, "flex-1 md:inline-flex md:flex-none")} role="group" aria-label="Period">
                     {RANGES.map(([d, label]) => (
                       <button
                         key={d}
                         type="button"
-                        className={cn(segButton(range === d), "h-7 px-1 text-[13px] md:flex-none md:px-[10px]")}
+                        className={cn(segButton(range === d), "h-7 px-1 md:flex-none md:px-2.5")}
                         aria-pressed={range === d}
                         onClick={() => setRange(d)}
                       >
@@ -339,30 +357,30 @@ export const CoachHome = () => {
                       </button>
                     ))}
                   </div>
-                  <Link to={ROUTES.PAYMENTS} className={cn(textButton, "text-[13px]")}>
-                    My Business
+                  <Link to={ROUTES.PAYMENTS} className={textButton}>
+                    Business
                     <ChevronRight strokeWidth={1.5} aria-hidden="true" />
                   </Link>
                 </div>
                 <div className="flex flex-wrap items-center gap-x-4 gap-y-3 md:gap-7">
                   <div className="flex flex-auto flex-col gap-0.5 md:flex-none">
-                    <span className={eyebrow}>Earned · {rangeLabel}</span>
+                    <span className={eyebrow}>Earned {rangeLabel}</span>
                     <span className="flex items-baseline gap-2">
-                      <b className="text-[26px] font-bold leading-[30px] tracking-[-0.04em] tabular-nums">{totals ? money(totals.current) : "…"}</b>
+                      <b className="text-section tabular-nums">{totals ? money(totals.current) : "…"}</b>
                       {totals?.change != null ? (
-                        <span className={cn("inline-flex items-center gap-[3px] text-[12px] font-semibold", totals.change >= 0 ? "text-[#1E7431]" : "text-[#972B2B]")}>
-                          {totals.change >= 0 ? <TrendingUp className="size-[13px]" strokeWidth={1.5} /> : <TrendingDown className="size-[13px]" strokeWidth={1.5} />}
+                        <span className={cn("inline-flex items-center gap-[3px] text-label-xsm", totals.change >= 0 ? "text-success-700" : "text-error-700")}>
+                          {totals.change >= 0 ? <TrendingUp className="size-3" strokeWidth={2} /> : <TrendingDown className="size-3" strokeWidth={2} />}
                           {Math.abs(totals.change)}%
                         </span>
                       ) : null}
                     </span>
                   </div>
                   {sparkValues.length ? <Sparkline values={sparkValues} /> : null}
-                  <div className="flex flex-[1_1_40%] flex-col gap-0.5 border-t border-[#EAEADF] pt-[10px] md:flex-none md:border-0 md:pt-0">
+                  <div className="flex flex-[1_1_40%] flex-col gap-0.5 border-t border-light-525 pt-2.5 md:flex-none md:border-0 md:pt-0">
                     <span className={eyebrow}>Still owed</span>
-                    <b className="text-[17px] font-semibold tabular-nums">{earningsQuery.data ? money(earningsQuery.data.owed) : "…"}</b>
+                    <b className="text-subtitle tabular-nums">{earningsQuery.data ? money(earningsQuery.data.owed) : "…"}</b>
                     {earningsQuery.data?.overdueCount ? (
-                      <button type="button" className="self-start text-[12px] font-medium text-[#972B2B] hover:underline" disabled={reminding} onClick={remindOverdue}>
+                      <button type="button" className="self-start text-label-xsm text-error-700 hover:underline disabled:text-dark-200" disabled={reminding} onClick={remindOverdue}>
                         {earningsQuery.data.overdueCount} overdue · remind
                       </button>
                     ) : (
@@ -370,9 +388,9 @@ export const CoachHome = () => {
                     )}
                   </div>
                   {nextPayout ? (
-                    <div className="flex flex-[1_1_40%] flex-col gap-0.5 border-t border-[#EAEADF] pt-[10px] md:flex-none md:border-0 md:pt-0">
+                    <div className="flex flex-[1_1_40%] flex-col gap-0.5 border-t border-light-525 pt-2.5 md:flex-none md:border-0 md:pt-0">
                       <span className={eyebrow}>Next payout</span>
-                      <b className="text-[17px] font-semibold tabular-nums">{money(nextPayout.amount)}</b>
+                      <b className="text-subtitle tabular-nums">{money(nextPayout.amount)}</b>
                       <span className={cap}>{formatDayISO(nextPayout.arrival.slice(0, 10), { weekday: "short", month: "short", day: "numeric" })}</span>
                     </div>
                   ) : null}
@@ -384,12 +402,12 @@ export const CoachHome = () => {
               <section className={cn(card, "flex-row items-center gap-4 max-md:flex-col max-md:items-stretch")}>
                 {nextPlanned ? (
                   <>
-                    <span className="flex size-11 flex-none items-center justify-center rounded-full bg-[#CBE7D1] text-[#1E7431]">
+                    <span className="flex size-11 flex-none items-center justify-center rounded-full border border-success-300 bg-success-100 text-success-700">
                       <Check className="size-5" strokeWidth={2} aria-hidden="true" />
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                       <span className={h3}>Next week is planned</span>
-                      <span className="text-[14px] text-[#767980]">
+                      <span className="text-body-m text-dark-300">
                         {plural(nextWeekSessions.length, "session")} · {plural(nextSpots, "spot")} · {nextBooked} booked so far
                       </span>
                     </div>
@@ -399,7 +417,7 @@ export const CoachHome = () => {
                   </>
                 ) : (
                   <>
-                    <span className="flex size-11 flex-none items-center justify-center rounded-full bg-[#E5EDF7] text-[#0054B4]">
+                    <span className="flex size-11 flex-none items-center justify-center rounded-full border border-primary-200 bg-primary-50 text-primary">
                       <CalendarDays className="size-5" strokeWidth={1.5} aria-hidden="true" />
                     </span>
                     <div className="flex min-w-0 flex-1 flex-col gap-1.5">
@@ -410,7 +428,7 @@ export const CoachHome = () => {
                           {formatDayISO(nextWeekEnd, { month: "short", day: "numeric" })}
                         </BrandPill>
                       </div>
-                      <span className="text-[14px] text-[#767980]">
+                      <span className="text-body-m text-dark-300">
                         {nextDrafts.length
                           ? `${plural(nextDrafts.length, "session")} planned but not shared yet.`
                           : `${nextLive.length ? `${plural(nextLive.length, "session")} ${nextLive.length === 1 ? "is" : "are"} already live for next week. ` : ""}${
@@ -444,22 +462,24 @@ export const CoachHome = () => {
               </div>
 
               {feedbackDue.length ? (
-                <div className={cn(ctxbar, "bg-[#FCEFDA]")}>
-                  <MessageSquareText className="size-4 flex-none text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="grow">
-                    <b>
-                      {plural(feedbackDue.length, "session")} {feedbackDue.length === 1 ? "needs" : "need"} feedback.
-                    </b>{" "}
-                    Families get it by email.
-                  </span>
-                  <Link to={`${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${feedbackDue[0].id}`} className={textButton}>
-                    Add feedback
-                  </Link>
-                </div>
+                <Banner
+                  tone="info"
+                  icon={<MessageSquareText strokeWidth={1.5} aria-hidden="true" />}
+                  action={
+                    <Link to={`${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${feedbackDue[0].id}`} className={textButton}>
+                      Add feedback
+                    </Link>
+                  }
+                >
+                  <b className="font-medium">
+                    {plural(feedbackDue.length, "session")} {feedbackDue.length === 1 ? "needs" : "need"} feedback.
+                  </b>{" "}
+                  Families get it by email.
+                </Banner>
               ) : null}
 
               {scheduleQuery.isLoading ? (
-                <p className="text-[14px] text-[#767980]">Loading…</p>
+                <p className="text-body-m text-dark-300">Loading…</p>
               ) : todaySessions.length ? (
                 <div>
                   {todaySessions.map((s, index) => {
@@ -476,19 +496,19 @@ export const CoachHome = () => {
                       <div
                         key={s.id}
                         className={cn(
-                          "grid grid-cols-[62px_minmax(0,1fr)] gap-[10px] border-t border-[#EAEADF] py-4 md:grid-cols-[84px_minmax(0,1fr)] md:gap-[14px]",
-                          isNext && "-mx-4 border-transparent bg-[#E5EDF7] px-4 py-[14px] md:-mx-6 md:px-6 md:py-4",
+                          "grid grid-cols-[62px_minmax(0,1fr)] gap-3 border-t border-light-525 py-4 md:grid-cols-[84px_minmax(0,1fr)] md:gap-4",
+                          isNext && "-mx-[18px] border-transparent bg-primary-50 px-[18px] md:-mx-[25px] md:px-[25px]",
                           afterNext && "border-transparent"
                         )}
                       >
                         <div className="flex flex-col gap-0.5">
-                          <b className={cn("text-[16px] font-semibold", done && "text-[#767980]")}>{formatClock(start, timeZone)}</b>
+                          <b className={cn("text-subtitle tabular-nums", done && "text-dark-300")}>{formatClock(start, timeZone)}</b>
                           <span className={cap}>{s.durationMinutes} min</span>
                           {done || live || isNext ? (
                             <span
                               className={cn(
-                                "mt-1 self-start rounded-[6px] px-1.5 py-px text-[11px] font-semibold",
-                                done ? "bg-[#F4F4EB] text-[#767980]" : "bg-[#0054B4] text-[#F1F1E6]"
+                                "mt-1 self-start rounded-pill border px-1.5 py-px text-label-xsm",
+                                done ? "border-light-525 bg-light-400 text-dark-300" : "border-primary bg-primary text-light"
                               )}
                             >
                               {done ? "Done" : live ? "Now" : "Next"}
@@ -498,7 +518,7 @@ export const CoachHome = () => {
                         <div className="flex min-w-0 flex-col gap-2">
                           <div className="flex items-start justify-between gap-3">
                             <Link to={`/sessions/${s.id}`} className="flex min-w-0 flex-col gap-1 text-left">
-                              <span className={cn(h3, done ? "text-[#767980]" : "text-[#1A202C]")}>{titleOf(s)}</span>
+                              <span className={cn(h3, done ? "text-dark-300" : "text-dark")}>{titleOf(s)}</span>
                               <span className={cap}>{s.location === "online" ? "Video call" : s.place || "In person"}</span>
                             </Link>
                             {group ? (
@@ -519,7 +539,7 @@ export const CoachHome = () => {
                                 <span
                                   key={a.id}
                                   className={cn(
-                                    "flex size-[26px] items-center justify-center rounded-full border-2 border-[#F7F7F0] bg-[#E5EDF7] text-[10px] font-semibold text-[#0054B4]",
+                                    "flex size-[26px] items-center justify-center rounded-full border-2 border-light-300 bg-primary-50 text-label-xsm text-primary",
                                     k > 0 && "-ml-1.5"
                                   )}
                                 >
@@ -527,13 +547,13 @@ export const CoachHome = () => {
                                 </span>
                               ))}
                               {athletes.length > 4 ? (
-                                <span className="-ml-1.5 flex size-[26px] items-center justify-center rounded-full border-2 border-[#F7F7F0] bg-[#F4F4EB] text-[10px] font-semibold text-[#484D56]">
+                                <span className="-ml-1.5 flex size-[26px] items-center justify-center rounded-full border-2 border-light-300 bg-light-400 text-label-xsm text-dark-400">
                                   +{athletes.length - 4}
                                 </span>
                               ) : null}
                             </span>
-                            <span className="inline-flex items-center gap-1 text-[12px] text-[#1E7431]">
-                              <CircleCheck className="size-[13px]" strokeWidth={1.5} aria-hidden="true" />
+                            <span className="inline-flex items-center gap-1 text-caption text-success-700">
+                              <CircleCheck className="size-3" strokeWidth={2} aria-hidden="true" />
                               {paidText(s)}
                             </span>
                           </div>
@@ -565,7 +585,7 @@ export const CoachHome = () => {
                   })}
                 </div>
               ) : (
-                <p className="text-[14px] text-[#767980]">
+                <p className="text-body-m text-dark-300">
                   {upcoming
                     ? `Next up: ${titleOf(upcoming)}, ${formatDayISO(upcoming.date, { weekday: "short", month: "short", day: "numeric" })} at ${formatClock(sessionStart(upcoming), timeZone)}.`
                     : "Nothing booked yet."}
@@ -581,11 +601,11 @@ export const CoachHome = () => {
                     {plural(booked, "session")} booked, {plural(open, "slot")} open
                   </h2>
                 </div>
-                <span className="flex items-center gap-[10px]">
+                <span className="flex items-center gap-2.5">
                   {requests ? (
                     <Link
                       to={`${ROUTES.SCHEDULE}?requests=1`}
-                      className="inline-flex h-[30px] items-center gap-1.5 rounded-[15px] bg-[#FCEFDA] px-3 text-[13px] font-semibold text-[#906A29]"
+                      className="inline-flex h-control-sm items-center gap-1.5 rounded-control border border-info-300 bg-info-100 px-3 text-label-sm text-info-800 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                     >
                       <Inbox className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                       {plural(requests, "request")}
@@ -597,6 +617,32 @@ export const CoachHome = () => {
                   </Link>
                 </span>
               </div>
+
+              {showCheckIn ? (
+                <Banner
+                  tone="info"
+                  icon={<CalendarCheck strokeWidth={1.5} aria-hidden="true" />}
+                  action={
+                    <span className="flex items-center gap-3">
+                      <button
+                        type="button"
+                        className={textButton}
+                        onClick={() => {
+                          dismissCheckIn();
+                          toast({ title: "All set. Your usual hours stay open next week" });
+                        }}
+                      >
+                        All good
+                      </button>
+                      <button type="button" className={textButton} onClick={() => setWeekOffOpen(true)}>
+                        Add days off
+                      </button>
+                    </span>
+                  }
+                >
+                  <b className="font-medium">Sunday check-in:</b> any time off next week?
+                </Banner>
+              ) : null}
 
               <div className="grid grid-cols-7 gap-1 md:gap-2">
                 {days.map((d) => {
@@ -612,39 +658,39 @@ export const CoachHome = () => {
                       type="button"
                       onClick={() => openDay(d.date)}
                       className={cn(
-                        "flex min-h-[104px] min-w-0 flex-col items-center gap-1.5 rounded-[12px] border px-0.5 py-1.5 text-center transition-colors hover:border-[#6698D2] md:min-h-[140px] md:items-start md:p-[10px] md:text-left",
-                        off ? "border-dashed border-[#EAEADF] bg-transparent opacity-60" : "border-[#EAEADF] bg-[#F1F1E6]",
-                        isToday && "border-[#0054B4] shadow-[0_0_0_1px_#0054B4]"
+                        "flex min-h-[104px] min-w-0 flex-col items-center gap-1.5 rounded-card border px-0.5 py-1.5 text-center transition-colors hover:border-primary-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:min-h-[140px] md:items-start md:p-2.5 md:text-left",
+                        off ? "border-dashed border-light-525 bg-transparent opacity-60" : "border-light-525 bg-light",
+                        isToday && "border-primary outline outline-1 -outline-offset-2 outline-primary"
                       )}
                       aria-label={`${formatDayISO(d.date, { weekday: "long", month: "long", day: "numeric" })}: ${plural(sessions.length, "session")} booked, ${openCount} open`}
                     >
                       <span className={cap}>{formatDayISO(d.date, { weekday: "short" })}</span>
-                      <b className="text-[16px] font-semibold leading-[22px] md:text-[20px]">{formatDayISO(d.date, { day: "numeric" })}</b>
+                      <b className="text-subtitle tabular-nums md:text-card-title">{formatDayISO(d.date, { day: "numeric" })}</b>
                       <span className="flex flex-wrap justify-center gap-[3px] md:justify-start" aria-hidden="true">
                         {sessions.map((i) => (
-                          <i key={i.key} className={cn("block h-2 w-2 rounded-[2px] md:w-[14px]", i.kind === "group" ? "bg-[#117A96]" : "bg-[#0054B4]")} />
+                          <i key={i.key} className={cn("block h-2 w-2 rounded-[2px] md:w-[14px]", i.kind === "group" ? "bg-secondary-600" : "bg-primary")} />
                         ))}
                         {Array.from({ length: openCount }, (_, k) => (
-                          <i key={`o${k}`} className="block h-2 w-2 rounded-[2px] border-[1.5px] border-dashed border-[#0054B4] md:w-[14px]" />
+                          <i key={`o${k}`} className="block h-2 w-2 rounded-[2px] border-[1.5px] border-dashed border-primary md:w-[14px]" />
                         ))}
-                        {off ? <em className="text-[12px] not-italic text-[#A3A6AB]">Off</em> : null}
+                        {off ? <em className="text-caption not-italic text-dark-300">Off</em> : null}
                       </span>
-                      <span className="text-[10px] leading-[13px] text-[#484D56] md:text-[12px] md:leading-4">
+                      <span className="text-caption text-dark-300">
                         {sessions.length} booked
                         {openCount ? (
                           <>
                             <br />
-                            <b className="text-[10px] font-semibold text-[#0054B4] md:text-[12px]">{openCount} open</b>
+                            <b className="font-medium text-primary">{openCount} open</b>
                           </>
                         ) : null}
                       </span>
                       {groups.map((g) => (
-                        <span key={g.key} className="hidden max-w-full truncate rounded-[6px] bg-[#E7F4F8] px-1.5 py-0.5 text-[11px] text-[#117A96] md:block">
+                        <span key={g.key} className="hidden max-w-full truncate rounded-pill border border-secondary-300 bg-secondary-100 px-1.5 py-0.5 text-label-xsm text-secondary-700 md:block">
                           {g.session!.sessionName.replace(" group", "").replace(" small", "")} {bookedAthletes(g.session!).length}/{g.session!.capacity}
                         </span>
                       ))}
                       {dayRequests ? (
-                        <span className="hidden rounded-[6px] bg-[#FCEFDA] px-1.5 py-0.5 text-[11px] text-[#906A29] md:block">{plural(dayRequests, "request")}</span>
+                        <span className="hidden rounded-pill border border-info-300 bg-info-100 px-1.5 py-0.5 text-label-xsm text-info-800 md:block">{plural(dayRequests, "request")}</span>
                       ) : null}
                     </button>
                   );
@@ -654,6 +700,17 @@ export const CoachHome = () => {
           </>
         ) : null}
       </div>
+      <CreateSessionSheet open={createOpen} onOpenChange={setCreateOpen} />
+      <WeekOffDialog
+        open={weekOffOpen}
+        onOpenChange={setWeekOffOpen}
+        monday={nextMonday}
+        days={nextWeekDays}
+        onSaved={() => {
+          dismissCheckIn();
+          void scheduleQuery.refetch();
+        }}
+      />
     </div>
   );
 };

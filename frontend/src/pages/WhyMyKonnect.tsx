@@ -23,7 +23,7 @@ import {
   TrendingUp,
   Trophy,
   AlertCircle
-} from "lucide-react";
+} from "@/components/icons";
 
 const MAX_VISIBLE_FAQS = 7;
 

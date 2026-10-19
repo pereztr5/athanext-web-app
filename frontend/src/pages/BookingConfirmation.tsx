@@ -5,12 +5,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { AlertCircle } from "lucide-react";
+import { AlertCircle } from "@/components/icons";
 import { bookAPI } from "@/api/book";
 import { fetchBookingReceipt } from "@/api/receipts";
 import BookingReceipt from "@/components/receipts/BookingReceipt";
 import { buildReceiptModel, calendarEvents, receiptText } from "@/components/receipts/receiptModel";
-import { pageTitle, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
 import { useBookingFees } from "@/hooks/useBookingFees";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -72,9 +73,8 @@ const BookingConfirmation = () => {
   if (!sessionId && !bookingIds.length) {
     return (
       <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-        <div className="mx-auto flex max-w-[700px] flex-col gap-4">
-          <h1 className={pageTitle}>Receipt not found</h1>
-          <p className="text-[14px] text-[#767980]">This page opens after you book.</p>
+        <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4">
+          <PageHeader title="Receipt not found" subtitle="This page opens after you book." />
           <Link to={ROUTES.BOOK} className={cn(secondaryButton, "self-start")}>
             Back to booking
           </Link>
@@ -86,14 +86,14 @@ const BookingConfirmation = () => {
   if (receipt.isError) {
     return (
       <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-        <div className="mx-auto flex max-w-[700px] flex-col gap-4">
-          <h1 className={pageTitle}>Couldn't load this receipt</h1>
-          <p className="flex items-center gap-2 text-[14px] text-[#972B2B]">
+        <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4">
+          <PageHeader title="Couldn't load this receipt" />
+          <p className="flex items-center gap-2 text-body-m text-error-700">
             <AlertCircle className="size-4 flex-none" strokeWidth={1.5} />
             {receipt.error instanceof Error ? receipt.error.message : "Try again in a moment."}
           </p>
           <Link to={ROUTES.MY_SESSIONS} className={cn(secondaryButton, "self-start")}>
-            View in My Sessions
+            View in My sessions
           </Link>
         </div>
       </div>
@@ -111,25 +111,25 @@ const BookingConfirmation = () => {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[700px] flex-col gap-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col gap-2.5">
-            <h1 className={pageTitle}>{title}</h1>
-            <p className="text-[14px] leading-[18px] text-[#767980]">{sub}</p>
-          </div>
-          <div className="flex flex-none flex-wrap gap-2">
-            <Link to={ROUTES.BOOK} className={secondaryButton}>
-              Book more
-            </Link>
-            <Link to={ROUTES.MY_SESSIONS} className={primaryButton}>
-              View in My Sessions
-            </Link>
-          </div>
-        </header>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
+        <PageHeader
+          title={title}
+          subtitle={sub}
+          actions={
+            <>
+              <Link to={ROUTES.BOOK} className={secondaryButton}>
+                Book more
+              </Link>
+              <Link to={ROUTES.MY_SESSIONS} className={primaryButton}>
+                View in My sessions
+              </Link>
+            </>
+          }
+        />
         {model ? (
           <BookingReceipt model={model} supportEmail={SUPPORT} onAddToCalendar={addToCalendar} onEmail={emailReceipt} />
         ) : (
-          <div className="h-64 animate-pulse rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0]" />
+          <div className="h-64 w-full max-w-[700px] animate-pulse rounded-card border border-light-525 bg-light-300" />
         )}
       </div>
     </div>
@@ -149,26 +149,26 @@ const RequestSent = ({ sessionId }: { sessionId: string }) => {
     checking: ["Sending your request…", "One moment while we confirm your card."],
     held: ["Request sent", "Nothing is charged until the coach accepts. Times are held for 24 hours and you get a message either way."],
     full: ["That time just filled up", "Your card was not charged and the hold is released. Pick another time."],
-    error: ["We couldn't confirm your request", "Your card was not charged. Check My Sessions, or try again."],
+    error: ["We couldn't confirm your request", "Your card was not charged. Check My sessions, or try again."],
   }[state];
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[700px] flex-col gap-6">
-        <header className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex flex-col gap-2.5">
-            <h1 className={pageTitle}>{copy[0]}</h1>
-            <p className="text-[14px] leading-[18px] text-[#767980]">{copy[1]}</p>
-          </div>
-          {state !== "checking" ? (
-            <button
-              type="button"
-              className={primaryButton}
-              onClick={() => navigate(state === "full" ? ROUTES.BOOK : ROUTES.MY_SESSIONS)}
-            >
-              {state === "full" ? "Pick another time" : "View in My Sessions"}
-            </button>
-          ) : null}
-        </header>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
+        <PageHeader
+          title={copy[0]}
+          subtitle={copy[1]}
+          actions={
+            state !== "checking" ? (
+              <button
+                type="button"
+                className={primaryButton}
+                onClick={() => navigate(state === "full" ? ROUTES.BOOK : ROUTES.MY_SESSIONS)}
+              >
+                {state === "full" ? "Pick another time" : "View in My sessions"}
+              </button>
+            ) : undefined
+          }
+        />
       </div>
     </div>
   );
@@ -194,20 +194,20 @@ const PendingRequestsStep = () => {
   };
   return (
     <div className="px-4 pt-6 md:px-5">
-      <div className="mx-auto flex w-full max-w-[700px] flex-col gap-3 rounded-[10px] border border-[#F0B144] bg-[#FCEFDA] p-5">
-        <b className="text-[16px] font-medium text-[#1A202C]">One more step: your requests</b>
-        <p className="text-[14px] leading-[20px] text-[#484D56]">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-3 rounded-card border border-info-300 bg-info-50 p-5">
+        <b className="text-subtitle text-dark">One more step: your requests</b>
+        <p className="text-paragraph text-info-700">
           {pending.occurrenceIds.length === 1 ? "1 time" : `${pending.occurrenceIds.length} times`} with {pending.coachNames.join(" and ")} need the
           coach to accept. Hold your card now; it's charged only if they accept.
         </p>
-        {error ? <p className="text-[14px] text-[#972B2B]">{error}</p> : null}
+        {error ? <p className="text-body-m text-error-700">{error}</p> : null}
         <div className="flex flex-wrap gap-2">
           <button type="button" className={primaryButton} disabled={opening} onClick={go}>
             {opening ? "Opening…" : "Hold card and send requests"}
           </button>
           <button
             type="button"
-            className="inline-flex h-[34px] items-center px-2 text-[14px] font-medium text-[#767980] hover:underline"
+            className={cn(textButton, "text-dark-300")}
             onClick={() => {
               clearPendingRequests();
               setPending(null);

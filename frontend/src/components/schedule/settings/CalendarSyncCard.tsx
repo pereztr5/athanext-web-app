@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { RefreshCw } from "lucide-react";
+import { RefreshCw } from "@/components/icons";
 import { calendarSyncAPI, type CalendarConnection } from "@/api/schedule";
 import { BrandPill } from "@/components/brand";
 import { useToast } from "@/hooks/use-toast";
@@ -38,7 +38,7 @@ export const CalendarSyncCard = ({ calendar, loading }: { calendar: CalendarConn
       <CardHeading icon={RefreshCw} title="Calendar sync" />
       <div className="flex items-center justify-between gap-3">
         <div className="flex min-w-0 flex-col gap-1">
-          <span className="flex flex-wrap items-center gap-2 font-medium">
+          <span className="flex flex-wrap items-center gap-2 text-label-sm text-dark">
             Google Calendar
             {needsReconnect ? <BrandPill tone="amber">Connect again</BrandPill> : null}
           </span>
@@ -52,16 +52,16 @@ export const CalendarSyncCard = ({ calendar, loading }: { calendar: CalendarConn
         />
       </div>
       {needsReconnect ? (
-        <p className="-mt-2 text-[12px] leading-[16px] text-[#906A29]">
+        <p className="-mt-2 text-paragraph-sm text-info-800">
           {calendar.syncError === "reconnect"
             ? "Google stopped the connection."
             : "Connect again so your AthaNext sessions are added to your calendar."}{" "}
-          <button type="button" className={cn(textButton, "text-[12px]")} disabled={connect.isPending} onClick={() => connect.mutate()}>
+          <button type="button" className={cn(textButton, "text-label-xsm")} disabled={connect.isPending} onClick={() => connect.mutate()}>
             Connect again
           </button>
         </p>
       ) : calendar?.syncError ? (
-        <p className="-mt-2 text-[12px] leading-[16px] text-[#972B2B]">Last update failed: {calendar.syncError}</p>
+        <p className="-mt-2 text-paragraph-sm text-error-700">Last update failed: {calendar.syncError}</p>
       ) : null}
       <p className={caption}>
         Busy times in your Google Calendar hide any open slots they overlap, so families can't book them. Your AthaNext sessions are added to your

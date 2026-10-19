@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Check, ShieldCheck } from "lucide-react";
+import { Check, ShieldCheck } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import "@/styles/richText.css";
 import { CoachProfileCard } from "../CoachProfileCard";
@@ -40,7 +40,7 @@ export const AboutCard = ({
       {levels.length ? (
         <TagRow label="Levels">
           {levels.map((level) => (
-            <BrandPill key={level} className="border border-[#D9D9CF] bg-[#F1F1E6] text-[#1A202C]">
+            <BrandPill key={level} className="border border-light-550 bg-light text-dark">
               {level}
             </BrandPill>
           ))}
@@ -58,7 +58,7 @@ export const AboutCard = ({
     </div>
     {bioHtml ? (
       <div
-        className="rich-text-content text-[16px] leading-[22px] tracking-[-0.03em] text-[#1A202C]"
+        className="rich-text-content text-body-l text-dark"
         dangerouslySetInnerHTML={{ __html: bioHtml }}
       />
     ) : null}
@@ -67,8 +67,8 @@ export const AboutCard = ({
         {credentials.map((name) => {
           const Icon = /background/i.test(name) ? ShieldCheck : Check;
           return (
-            <span key={name} className="inline-flex items-center gap-1.5 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#484D56]">
-              <Icon className="size-4 shrink-0 text-[#1E7431]" strokeWidth={1.75} aria-hidden="true" />
+            <span key={name} className="inline-flex items-center gap-1.5 text-label-sm text-dark-400">
+              <Icon className="size-4 shrink-0 text-success-700" strokeWidth={1.5} aria-hidden="true" />
               {name}
             </span>
           );

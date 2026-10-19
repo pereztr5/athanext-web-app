@@ -18,13 +18,13 @@ export const RatingBreakdown = ({ averageRating, totalReviews, distribution }: R
   return (
     <div className="grid grid-cols-[auto_minmax(0,1fr)] items-center gap-6">
       <div className="flex flex-col gap-2">
-        <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{scoreLabel}</span>
+        <span className="text-stat tabular-nums text-dark">{scoreLabel}</span>
         <span className="flex gap-[2px]" role="img" aria-label={`Rated ${scoreLabel} out of 5`}>
           {[1, 2, 3, 4, 5].map((star) => (
             <BrandStar key={star} size={12} filled={star <= filledStars} />
           ))}
         </span>
-        <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+        <span className="text-caption text-dark-300">
           {totalReviews} {totalReviews === 1 ? "review" : "reviews"}
         </span>
       </div>
@@ -35,17 +35,17 @@ export const RatingBreakdown = ({ averageRating, totalReviews, distribution }: R
           const percentage = totalReviews > 0 ? Math.min(100, (count / totalReviews) * 100) : 0;
           return (
             <div key={stars} className="flex items-center gap-[10px]">
-              <span className="w-[44px] shrink-0 text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]">
+              <span className="w-[44px] shrink-0 text-label-xsm text-dark-300">
                 {stars} {stars === 1 ? "star" : "stars"}
               </span>
               <span
-                className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-[10px] bg-[#D9D9CF]"
+                className="h-[5px] min-w-0 flex-1 overflow-hidden rounded-card bg-light-550"
                 role="img"
                 aria-label={`${count} of ${totalReviews} reviews gave ${stars} ${stars === 1 ? "star" : "stars"}`}
               >
-                <span className="block h-full rounded-[10px] bg-[#0054B4]" style={{ width: `${percentage}%` }} />
+                <span className="block h-full rounded-card bg-primary" style={{ width: `${percentage}%` }} />
               </span>
-              <span className="w-5 shrink-0 text-right text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+              <span className="w-5 shrink-0 text-right text-caption text-dark-300">
                 {count}
               </span>
             </div>

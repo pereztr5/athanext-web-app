@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
-import { Loader2, Send } from "lucide-react";
+import { Loader2, Send } from "@/components/icons";
 import type { ContactFormData } from "@/types/contact";
 
 /**
@@ -83,11 +84,11 @@ export const ContactForm = ({
   const allErrors = { ...localErrors, ...errors };
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-12 bg-bg-blue-50 p-6 rounded-lg align-middle flex flex-col align-center justify-center">
-      {/* Full Name */}
-      <div className="space-y-2">
-        <Label htmlFor="fullName" className="text-slate-900 font-medium">
-          Full Name <span className="text-red-500">*</span>
+    <form onSubmit={handleSubmit} className="flex flex-col justify-center gap-5">
+      {/* Full name */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="fullName" className="text-label-xsm text-dark-300">
+          Full name <span className="text-error-700">*</span>
         </Label>
         <Input
           id="fullName"
@@ -96,20 +97,20 @@ export const ContactForm = ({
           value={formData.fullName}
           onChange={handleChange}
           placeholder="Enter your full name"
-          className={allErrors.fullName ? "border-red-500 focus:ring-red-500" : ""}
+          className={allErrors.fullName ? "border-error-600" : ""}
           disabled={isSubmitting}
           required
           maxLength={100}
         />
         {allErrors.fullName && (
-          <p className="text-xs text-red-500 mt-1">{allErrors.fullName}</p>
+          <p className="text-caption text-error-700">{allErrors.fullName}</p>
         )}
       </div>
 
-      {/* Email Address */}
-      <div className="space-y-2">
-        <Label htmlFor="email" className="text-slate-900 font-medium">
-          Email Address <span className="text-red-500">*</span>
+      {/* Email address */}
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="email" className="text-label-xsm text-dark-300">
+          Email address <span className="text-error-700">*</span>
         </Label>
         <Input
           id="email"
@@ -118,20 +119,20 @@ export const ContactForm = ({
           value={formData.email}
           onChange={handleChange}
           placeholder="your.email@example.com"
-          className={allErrors.email ? "border-red-500 focus:ring-red-500" : ""}
+          className={allErrors.email ? "border-error-600" : ""}
           disabled={isSubmitting}
           required
           maxLength={255}
         />
         {allErrors.email && (
-          <p className="text-xs text-red-500 mt-1">{allErrors.email}</p>
+          <p className="text-caption text-error-700">{allErrors.email}</p>
         )}
       </div>
 
       {/* Subject */}
-      <div className="space-y-2">
-        <Label htmlFor="subject" className="text-slate-900 font-medium">
-          Subject <span className="text-red-500">*</span>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="subject" className="text-label-xsm text-dark-300">
+          Subject <span className="text-error-700">*</span>
         </Label>
         <Input
           id="subject"
@@ -140,28 +141,28 @@ export const ContactForm = ({
           value={formData.subject}
           onChange={handleChange}
           placeholder="What is this regarding?"
-          className={allErrors.subject ? "border-red-500 focus:ring-red-500" : ""}
+          className={allErrors.subject ? "border-error-600" : ""}
           disabled={isSubmitting}
           required
           maxLength={200}
         />
         {allErrors.subject && (
-          <p className="text-xs text-red-500 mt-1">{allErrors.subject}</p>
+          <p className="text-caption text-error-700">{allErrors.subject}</p>
         )}
       </div>
 
       {/* Message */}
-      <div className="space-y-2">
-        <Label htmlFor="message" className="text-slate-900 font-medium">
-          Message <span className="text-red-500">*</span>
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="message" className="text-label-xsm text-dark-300">
+          Message <span className="text-error-700">*</span>
         </Label>
         <Textarea
           id="message"
           name="message"
           value={formData.message}
           onChange={handleChange}
-          placeholder="Tell us how we can help you..."
-          className={`min-h-[150px] resize-y ${allErrors.message ? "border-red-500 focus:ring-red-500" : ""}`}
+          placeholder="Tell us how we can help"
+          className={cn("min-h-[150px] resize-y", allErrors.message && "border-error-600")}
           disabled={isSubmitting}
           required
           maxLength={2000}
@@ -169,30 +170,31 @@ export const ContactForm = ({
         <div className="flex justify-between items-center">
           <div>
             {allErrors.message && (
-              <p className="text-xs text-red-500">{allErrors.message}</p>
+              <p className="text-caption text-error-700">{allErrors.message}</p>
             )}
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-caption tabular-nums text-dark-300">
             {formData.message.length}/2000
           </p>
         </div>
       </div>
 
-      {/* Submit Button */}
+      {/* Submit button */}
       <Button
         type="submit"
         disabled={isSubmitting}
-        className="w-full bg-blue-500 hover:bg-blue-600 text-white rounded-full h-12 text-base font-semibold"
+        size="lg"
+        className="w-full"
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" />
-            Sending...
+            <Loader2 className="animate-spin" strokeWidth={1.5} />
+            Sending…
           </>
         ) : (
           <>
-            <Send className="mr-2 h-5 w-5" />
-            Send Message
+            <Send strokeWidth={1.5} />
+            Send message
           </>
         )}
       </Button>

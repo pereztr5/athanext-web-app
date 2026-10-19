@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { AlertCircle, CheckCircle2, Info } from "lucide-react";
+import { AlertCircle, CheckCircle2, Info } from "@/components/icons";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
@@ -74,24 +74,24 @@ export function FreeConsultationInfoDialog({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-[520px] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-[#1A202C] [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-w-[520px] gap-0 overflow-hidden p-0 font-sans text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">
+          <DialogTitle className="text-section text-dark">
             Book a free 15-minute consultation
           </DialogTitle>
-          <DialogDescription className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+          <DialogDescription className="text-body-m text-dark-300">
             A short call to meet the coach and talk through your goals.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
-        <div className="flex flex-col gap-[10px] px-[25px] py-5">
-          <div className="flex items-start gap-[10px] rounded-[8px] border border-[#CCDDF0] bg-[#E5EDF7] p-[15px]">
-            <Info className="mt-px size-4 shrink-0 text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+        <div className="flex flex-col gap-2.5 px-[25px] py-5">
+          <div className="flex items-start gap-2.5 rounded-control border border-primary-300 bg-primary-50 p-[15px]">
+            <Info className="mt-px size-4 shrink-0 text-primary" strokeWidth={1.5} aria-hidden="true" />
             <div className="flex flex-col gap-1.5">
-              <p className="text-[14px] font-medium leading-[18px] text-[#0054B4]">How free consultations work</p>
-              <ul className="flex list-disc flex-col gap-1 pl-4 text-[14px] leading-[18px] text-[#484D56]">
+              <p className="text-label-sm text-primary">How free consultations work</p>
+              <ul className="flex list-disc flex-col gap-1 pl-4 text-body-m text-dark-400">
                 <li>2 free consultations in total on AthaNext</li>
                 <li>1 free consultation per coach</li>
                 <li>15 minutes each</li>
@@ -102,33 +102,33 @@ export function FreeConsultationInfoDialog({
           {!loading && user && (
             <div
               className={cn(
-                "flex items-start gap-[10px] rounded-[8px] border p-[15px]",
-                canBook ? "border-[#CBE7D1] bg-[#CBE7D1]/40" : "border-[#F3E4C6] bg-[#FDF7EC]"
+                "flex items-start gap-2.5 rounded-control border p-[15px]",
+                canBook ? "border-success-300 bg-success-50" : "border-info-300 bg-info-50"
               )}
             >
               {canBook ? (
-                <CheckCircle2 className="mt-px size-4 shrink-0 text-[#1E7431]" strokeWidth={1.5} aria-hidden="true" />
+                <CheckCircle2 className="mt-px size-4 shrink-0 text-success-700" strokeWidth={1.5} aria-hidden="true" />
               ) : (
-                <AlertCircle className="mt-px size-4 shrink-0 text-[#906A29]" strokeWidth={1.5} aria-hidden="true" />
+                <AlertCircle className="mt-px size-4 shrink-0 text-info-700" strokeWidth={1.5} aria-hidden="true" />
               )}
               <div className="flex flex-col gap-1">
-                <p className={cn("text-[14px] font-medium leading-[18px]", canBook ? "text-[#1E7431]" : "text-[#906A29]")}>
+                <p className={cn("text-label-sm", canBook ? "text-success-700" : "text-info-700")}>
                   {canBook ? "You're eligible" : "Limit reached"}
                 </p>
-                <p className="text-[14px] leading-[18px] text-[#484D56]">{statusMessage}</p>
+                <p className="text-body-m text-dark-400">{statusMessage}</p>
               </div>
             </div>
           )}
 
-          <div className="rounded-[8px] bg-[#F4F4EB] p-[15px]">
-            <p className="text-[14px] leading-[18px] text-[#767980]">{nextStepMessage}</p>
+          <div className="rounded-control border border-light-525 bg-light-400 p-[15px]">
+            <p className="text-body-m text-dark-300">{nextStepMessage}</p>
           </div>
         </div>
 
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
 
-        <DialogFooter className="flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:space-x-0">
-          <Button variant="outline" onClick={onClose} className="w-full sm:w-auto">
+        <DialogFooter className="flex-col-reverse gap-2.5 px-[25px] py-5 sm:flex-row sm:space-x-0">
+          <Button variant="secondary" onClick={onClose} className="w-full sm:w-auto">
             Cancel
           </Button>
           {user && canBook ? (

@@ -13,6 +13,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { buttonVariants } from '@/components/ui/button';
 import type { ReactNode } from 'react';
 
 interface DeleteConfirmationDialogProps {
@@ -32,21 +33,21 @@ export const DeleteConfirmationDialog = ({
 }: DeleteConfirmationDialogProps) => {
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-[480px] gap-0 p-0 font-sans tracking-[-0.03em] text-[#1A202C]">
+      <AlertDialogContent className="max-w-[480px] gap-0 p-0 font-sans text-dark">
         <AlertDialogHeader className="space-y-2.5 px-[25px] pb-5 pt-[30px] text-left">
-          <AlertDialogTitle className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">
+          <AlertDialogTitle className="text-card-title text-dark">
             {title}
           </AlertDialogTitle>
           <AlertDialogDescription asChild>
-            <div className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">{description}</div>
+            <div className="text-paragraph text-dark-300">{description}</div>
           </AlertDialogDescription>
         </AlertDialogHeader>
-        <div className="h-px bg-[#EAEADF]" />
+        <div className="h-px bg-light-525" />
         <AlertDialogFooter className="gap-[10px] px-[25px] py-5 sm:space-x-0">
           <AlertDialogCancel className="mt-0 sm:mt-0">Cancel</AlertDialogCancel>
           <AlertDialogAction
             onClick={onConfirm}
-            className="border-transparent bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            className={buttonVariants({ variant: "destructive" })}
           >
             Delete
           </AlertDialogAction>

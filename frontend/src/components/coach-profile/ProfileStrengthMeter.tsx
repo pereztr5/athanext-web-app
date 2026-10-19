@@ -38,12 +38,12 @@ export function ProfileStrengthMeter({
   const content = (
     <>
       <div className="flex items-center justify-between gap-3">
-        <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Profile strength</h2>
+        <h2 className="text-card-title text-dark">Profile strength</h2>
         {onEdit ? (
           <button
             type="button"
             onClick={onEdit}
-            className="shrink-0 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] hover:text-[#004390]"
+            className="shrink-0 text-label-sm text-primary hover:text-primary-600"
           >
             Edit profile
           </button>
@@ -51,14 +51,14 @@ export function ProfileStrengthMeter({
       </div>
 
       <div className="flex flex-col gap-[6px]">
-        <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">{completion}%</span>
-        <span className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">
+        <span className="text-stat tabular-nums text-dark">{completion}%</span>
+        <span className="text-caption text-dark-300">
           {completedFields} of {totalFields} fields complete
         </span>
       </div>
 
       <div
-        className="h-[5px] w-full overflow-hidden rounded-[10px] bg-[#D9D9CF]"
+        className="h-[5px] w-full overflow-hidden rounded-card bg-light-550"
         role="progressbar"
         aria-label="Profile strength"
         aria-valuemin={0}
@@ -66,14 +66,14 @@ export function ProfileStrengthMeter({
         aria-valuenow={completion}
       >
         <div
-          className="h-full rounded-[10px] bg-[#0054B4] transition-[width] duration-300"
+          className="h-full rounded-card bg-primary transition-[width] duration-300"
           style={{ width: `${Math.max(0, Math.min(100, completion))}%` }}
         />
       </div>
 
       {fieldsLeft > 0 ? (
-        <div className="flex flex-col gap-[10px] rounded-[8px] bg-[#F4F4EB] p-3">
-          <span className="text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]">
+        <div className="flex flex-col gap-[10px] rounded-control bg-light-400 p-3">
+          <span className="text-label-xsm text-dark-300">
             {fieldsLeft} {fieldsLeft === 1 ? "field" : "fields"} left. Complete profiles get booked more
           </span>
           <div className="flex flex-wrap gap-[6px]">

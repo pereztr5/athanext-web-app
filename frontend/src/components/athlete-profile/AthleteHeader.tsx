@@ -3,7 +3,7 @@ import { BrandPill } from "@/components/brand";
 import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import { Carousel } from "@/components/coach-profile";
 import { CoachVerificationBadge } from "@/components/coach/CoachVerificationBadge";
-import { Calendar, MapPin, MessageCircle } from "lucide-react";
+import { Calendar, MapPin, MessageCircle } from "@/components/icons";
 import footballCover from "@/assets/images/footballs.png";
 
 interface AthleteHeaderProps {
@@ -27,7 +27,7 @@ interface AthleteHeaderProps {
   onMessage: () => void;
 }
 
-const metaClass = "flex items-center gap-1.5 text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
+const metaClass = "flex items-center gap-1.5 text-body-m text-dark-300";
 
 export const AthleteHeader = ({
   athlete,
@@ -43,21 +43,21 @@ export const AthleteHeader = ({
     .toUpperCase();
 
   return (
-    <section className="flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]">
+    <section className="flex w-full min-w-0 flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]">
       <Carousel photos={photos} altTextPrefix={athlete.name} />
       <div className="flex flex-col items-start gap-5 sm:flex-row">
         <div
           aria-hidden="true"
-          className="flex size-20 shrink-0 items-center justify-center rounded-full border border-[#EAEADF] bg-[#E5EDF7] text-[24px] font-medium tracking-[-0.05em] text-[#0054B4]"
+          className="flex size-20 shrink-0 items-center justify-center rounded-full border border-light-525 bg-primary-50 text-section text-primary"
         >
           {initials}
         </div>
         <div className="flex min-w-0 flex-1 flex-col gap-[10px]">
           <div className="flex flex-wrap items-center gap-2">
-            <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C]">{athlete.name}</h1>
+            <h1 className="text-page-title-phone md:text-page-title text-dark">{athlete.name}</h1>
             <CoachVerificationBadge className="size-5" />
           </div>
-          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
+          <p className="text-body-m text-dark-300">
             {[athlete.position, athlete.school].filter(Boolean).join(", ")}
           </p>
           {athlete.tags.length > 0 && (
@@ -90,7 +90,7 @@ export const AthleteHeader = ({
         </div>
       </div>
       {/* Placeholder until copy is finalized */}
-      {/* <p className="rounded-[8px] bg-[#F4F4EB] p-4 text-[14px] text-[#484D56]">{athlete.summary}</p> */}
+      {/* <p className="rounded-control bg-light-400 p-4 text-paragraph text-dark-300">{athlete.summary}</p> */}
     </section>
   );
 };

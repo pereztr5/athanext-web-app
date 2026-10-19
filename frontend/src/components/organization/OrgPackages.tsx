@@ -4,7 +4,7 @@
  */
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { Check } from "lucide-react";
+import { Check } from "@/components/icons";
 import { orgPackagesAPI, type OrgPackage } from "@/api/organizations";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { ToastAction } from "@/components/ui/toast";
@@ -20,11 +20,34 @@ export type PackageCoach = { id: string; name: string; price: number; photo?: st
 const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 const Chip = ({ coach }: { coach: PackageCoach }) => (
-  <span className="inline-flex h-7 items-center gap-1.5 rounded-[14px] border border-[#EAEADF] bg-[#F7F7F0] pl-1 pr-[10px] text-[12px] font-medium">
-    <span className="flex size-5 items-center justify-center overflow-hidden rounded-full bg-[#F1F1E6] text-[9px] text-[#484D56]">
+  <span className="inline-flex h-7 items-center gap-1.5 rounded-control border border-light-525 bg-light-300 pl-1 pr-2.5 text-label-xsm">
+    <span className="flex size-5 items-center justify-center overflow-hidden rounded-full bg-light text-label-xsm text-dark-400">
       {coach.photo ? <img src={coach.photo} alt="" className="size-full object-cover" /> : getInitials(coach.name)}
     </span>
     {coach.name}
+  </span>
+);
+
+/** The coaches after the first one, as overlapping faces. */
+const AvatarStack = ({ coaches }: { coaches: PackageCoach[] }) => (
+  <span className="inline-flex items-center" aria-label={coaches.map((c) => c.name).join(", ")}>
+    {coaches.slice(0, 4).map((coach, index) => (
+      <span
+        key={coach.id}
+        title={coach.name}
+        className={cn(
+          "flex size-7 items-center justify-center overflow-hidden rounded-full border-2 border-light-550 bg-primary-50 text-label-xsm text-primary",
+          index > 0 && "-ml-2",
+        )}
+      >
+        {coach.photo ? <img src={coach.photo} alt="" className="size-full object-cover" /> : getInitials(coach.name)}
+      </span>
+    ))}
+    {coaches.length > 4 ? (
+      <span className="-ml-2 flex size-7 items-center justify-center rounded-full border-2 border-light-550 bg-light-525 text-label-xsm text-dark-400">
+        +{coaches.length - 4}
+      </span>
+    ) : null}
   </span>
 );
 
@@ -48,35 +71,37 @@ export const OrgPackageCard = ({
   const who = coaches.filter((c) => pkg.coachIds.includes(c.id));
   const line = savingLine(k);
   return (
-    <div className="flex flex-col gap-[10px] rounded-[10px] border border-[#EAEADF] bg-[#F1F1E6] p-4">
+    <div className="flex flex-col gap-2.5 rounded-card border border-light-525 bg-light p-4">
       <div className="flex items-start justify-between gap-3">
         <span className="flex min-w-0 flex-col gap-1.5">
-          <span className="text-[14px] font-medium">{pkg.name}</span>
-          <span className="text-[12px] leading-[14px] text-[#767980]">
+          <span className="text-label-sm">{pkg.name}</span>
+          <span className="text-caption text-dark-300">
             {dollars(k.per)} a session · {pkg.renewsMonthly ? "renews monthly" : `valid ${pkg.validityDays} days`}
             {pkg.kind === "group" ? " · group sessions" : ""}
           </span>
         </span>
         <span className="flex min-w-0 flex-col items-end gap-0.5">
-          <span className="flex-none text-[28px] font-bold leading-[30px] tracking-[-0.05em]">{dollars(due)}</span>
+          <span className="flex-none text-highlight">{dollars(due)}</span>
           {due !== pkg.price ? (
-            <span className="text-[11px] leading-[13px] text-[#767980]">list {dollars(pkg.price)} + fees</span>
+            <span className="text-caption text-dark-300">list {dollars(pkg.price)} + fees</span>
           ) : null}
         </span>
       </div>
       {pkg.kind === "group" ? (
-        <span className="text-[12px] leading-[14px] text-[#767980]">
-          Works with group sessions from {who.length > 3 ? "any academy coach" : who.map((c) => c.name.split(" ")[0]).join(", ")}
+        <span className="flex flex-wrap items-center gap-2 text-caption text-dark-300">
+          <span>
+            Works with group sessions from {who.length > 3 ? "any academy coach" : who.map((c) => c.name.split(" ")[0]).join(", ")}
+          </span>
+          {who.length > 1 ? <AvatarStack coaches={who.slice(1)} /> : null}
         </span>
       ) : (
-        <div className="flex flex-wrap gap-1.5">
-          {who.map((c) => (
-            <Chip key={c.id} coach={c} />
-          ))}
+        <div className="flex flex-wrap items-center gap-1.5">
+          {who[0] ? <Chip coach={who[0]} /> : null}
+          {who.length > 1 ? <AvatarStack coaches={who.slice(1)} /> : null}
         </div>
       )}
       <div className="flex items-center justify-between gap-3">
-        <span className="text-[12px] font-medium leading-[14px] text-[#1E7431]">{line}</span>
+        <span className="text-label-xsm text-success-700">{line}</span>
         <button type="button" className={cn(primaryButton, smallButton)} disabled={buying} onClick={onBuy}>
           {buying ? "Opening…" : "Buy"}
         </button>
@@ -95,35 +120,35 @@ const toForm = (pkg: OrgPackage | null, coaches: PackageCoach[]): Form =>
 const Check2 = ({ k, count, kind }: { k: PackageSaving; count: number; kind: OrgPackage["kind"] }) => {
   const bad = k.rows.filter((r) => r.save < 0);
   return (
-    <div className={cn("flex flex-col gap-2 rounded-[8px] border px-[14px] py-3", bad.length ? "border-[#FCEFDA] bg-[#FDF7EC]" : "border-[#EAEADF] bg-[#F1F1E6]")}>
-      <span className="text-[14px] font-medium">
+    <div className={cn("flex flex-col gap-2 rounded-control border px-3 py-3", bad.length ? "border-info-300 bg-info-50" : "border-light-525 bg-light")}>
+      <span className="text-label-sm">
         {dollars(k.per)} a session.{" "}
         {bad.length ? (
-          <span className="text-[#906A29]">
+          <span className="text-info-700">
             {kind === "group"
               ? "Some group sessions cost less on their own."
               : `${bad.map((r) => r.name.split(" ")[0]).join(" and ")} ${bad.length === 1 ? "costs" : "cost"} less as single sessions.`}
           </span>
         ) : (
-          <span className="text-[#1E7431]">{savingLine(k) || "No savings to show yet"}.</span>
+          <span className="text-success-700">{savingLine(k) || "No savings to show yet"}.</span>
         )}
       </span>
       {k.rows.length ? (
         <div className="flex flex-col">
           {k.rows.map((r) => (
-            <div key={r.key} className="flex items-center gap-[10px] border-t border-[#EAEADF] py-1.5 text-[14px]">
+            <div key={r.key} className="flex items-center gap-2.5 border-t border-light-525 py-1.5 text-body-m">
               <span className="flex-1">{r.name}</span>
-              <span className="text-[12px] text-[#767980]">
+              <span className="text-caption text-dark-300">
                 {count} single {dollars(r.single)}
               </span>
-              <b className={cn("font-medium", r.save < 0 ? "text-[#906A29]" : "text-[#1E7431]")}>{r.save < 0 ? `${dollars(-r.save)} more` : `saves ${dollars(r.save)}`}</b>
+              <b className={cn("font-medium", r.save < 0 ? "text-info-700" : "text-success-700")}>{r.save < 0 ? `${dollars(-r.save)} more` : `saves ${dollars(r.save)}`}</b>
             </div>
           ))}
         </div>
       ) : (
-        <span className="text-[12px] leading-[14px] text-[#767980]">No upcoming group sessions to compare with yet.</span>
+        <span className="text-caption text-dark-300">No upcoming group sessions to compare with yet.</span>
       )}
-      <span className="text-[12px] leading-[14px] text-[#767980]">
+      <span className="text-caption text-dark-300">
         {bad.length
           ? `Families would pay more with this package. Lower the price${kind === "group" ? "" : ` or remove ${bad.map((r) => r.name.split(" ")[0]).join(" and ")}`}.`
           : "Families see the saving worked out from these numbers."}
@@ -208,8 +233,8 @@ export const OrgPackageDialog = ({
     <label className="flex flex-col gap-1.5">
       <span className={label}>{text}</span>
       {prefix ? (
-        <span className="flex items-center rounded-[8px] bg-[#F1F1E6]">
-          <span className="pl-3 text-[14px] text-[#767980]">{prefix}</span>
+        <span className="flex items-center rounded-control bg-light">
+          <span className="pl-3 text-body-m text-dark-300">{prefix}</span>
           <input className={cn(input, "bg-transparent pl-1")} type={type} min={1} value={f[key]} onChange={(e) => setF({ ...f, [key]: e.target.value })} />
         </span>
       ) : (
@@ -221,8 +246,8 @@ export const OrgPackageDialog = ({
   return (
     <Dialog open={open} onOpenChange={(o) => (o ? null : onClose())}>
       <DialogContent className={cn(dialogContent, "max-w-[560px]")}>
-        <DialogHeader className="border-b border-[#EAEADF] px-5 pb-4 pt-5 text-left">
-          <DialogTitle className="text-[20px] font-semibold tracking-[-0.04em]">{pkg ? "Edit academy package" : "New academy package"}</DialogTitle>
+        <DialogHeader className="border-b border-light-525 px-5 pb-4 pt-5 text-left">
+          <DialogTitle className="text-card-title">{pkg ? "Edit academy package" : "New academy package"}</DialogTitle>
         </DialogHeader>
         <div className="flex flex-col gap-4 px-5 py-4">
           {field("name", "Name", "text")}
@@ -234,7 +259,7 @@ export const OrgPackageDialog = ({
             {f.kind === "group" ? (
               <label className="flex flex-col gap-1.5">
                 <span className={label}>Valid for</span>
-                <span className={cn(input, "flex items-center text-[#484D56]")}>Renews monthly</span>
+                <span className={cn(input, "flex items-center text-dark-400")}>Renews monthly</span>
               </label>
             ) : (
               field("valid", "Valid for (days)", "number")
@@ -260,8 +285,8 @@ export const OrgPackageDialog = ({
                     aria-pressed={on}
                     onClick={() => setF({ ...f, coachIds: on ? f.coachIds.filter((x) => x !== c.id) : [...f.coachIds, c.id] })}
                     className={cn(
-                      "inline-flex h-[30px] items-center gap-1.5 rounded-[8px] border px-3 text-[14px] font-medium",
-                      on ? "border-[#1A202C] bg-[#F7F7F0]" : "border-[#EAEADF] bg-[#F4F4EB]"
+                      "inline-flex h-[30px] items-center gap-1.5 rounded-control border px-3 text-label-sm",
+                      on ? "border-dark bg-light-300" : "border-light-525 bg-light-400"
                     )}
                   >
                     {on ? <Check className="size-4" strokeWidth={1.5} aria-hidden="true" /> : null}
@@ -273,9 +298,9 @@ export const OrgPackageDialog = ({
           </div>
           <Check2 k={k} count={draft.sessionCount} kind={f.kind} />
         </div>
-        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-[#EAEADF] px-5 py-4">
+        <div className="flex flex-wrap items-center justify-end gap-2 border-t border-light-525 px-5 py-4">
           {pkg ? (
-            <button type="button" className="mr-auto text-[14px] font-medium text-[#972B2B]" disabled={remove.isPending} onClick={() => remove.mutate()}>
+            <button type="button" className="mr-auto text-label-sm text-error-700" disabled={remove.isPending} onClick={() => remove.mutate()}>
               Remove
             </button>
           ) : null}

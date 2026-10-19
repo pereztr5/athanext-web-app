@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarImage } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Building2, CircleHelp, LogOut, Settings, Store, User } from "lucide-react";
+import { Building2, CircleHelp, LogOut, Settings, Store, User } from "@/components/icons";
 import { openLegalDoc } from "@/components/legal/LegalOverlay";
 import { useRole } from "@/hooks/useRole";
 import { useMyOrganization } from "@/hooks/useOrganizations";
@@ -118,7 +118,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             duration: 6000,
             title: `New message from ${senderName}`,
             description: (
-              <div className="mt-2 space-y-3 text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
+              <div className="mt-2 space-y-3 text-paragraph text-dark">
                 <p className="line-clamp-3">
                   {newMessage.body || 'You have a new message waiting.'}
                 </p>
@@ -349,16 +349,16 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 
   const avatarNode = useMemo(
     () => (
-      <Avatar className={cn("relative h-full w-full overflow-hidden rounded-full", isCoach ? "bg-[#E5EDF7]" : "bg-[#F1F1E6]")}>
+      <Avatar className={cn("relative h-full w-full overflow-hidden rounded-full", isCoach ? "bg-primary-50" : "bg-light")}>
         {shouldShowSkeleton ? (
-          <Skeleton className="h-full w-full rounded-full bg-[#EAEADF]" />
+          <Skeleton className="h-full w-full rounded-full bg-light-525" />
         ) : displayAvatarUrl ? (
           <AvatarImage loading="eager" src={displayAvatarUrl} alt={displayName} className="object-cover" />
         ) : (
           <AvatarFallback
             className={cn(
-              "flex h-full w-full items-center justify-center rounded-full text-[12px] font-medium tracking-[-0.03em]",
-              isCoach ? "bg-[#E5EDF7] text-[#0054B4]" : "bg-[#F1F1E6] text-[#484D56]"
+              "flex h-full w-full items-center justify-center rounded-full text-label-xsm",
+              isCoach ? "bg-primary-50 text-primary" : "bg-light text-dark-400"
             )}
           >
             {initials}
@@ -371,9 +371,10 @@ export const UserMenu: React.FC<UserMenuProps> = ({
 
   const sidebarVariant = variant === "sidebar";
   // Working Copy `.menu button`: 14px medium ink, 9px 10px padding, 8px radius.
+  // Design system Menu item: 34px, 16px icon, t-body-m, light-400 on hover.
   const itemClass =
-    "cursor-pointer gap-2 rounded-[8px] px-[10px] py-[9px] text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] focus:bg-[#F9F9F5] focus:text-[#1A202C] [&>svg]:size-4";
-  const divider = "my-1 h-px bg-[#EAEADF]";
+    "flex h-control cursor-pointer items-center gap-2 rounded-control px-2.5 text-body-m text-dark outline-none focus:bg-light-400 data-[highlighted]:bg-light-400 [&>svg]:size-4 [&>svg]:text-dark-300"
+  const divider = "my-1 h-px bg-light-525";
 
   return (
     <DropdownMenu>
@@ -382,12 +383,12 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <button
             type="button"
             aria-label="Account menu"
-            className="flex w-full items-center gap-[10px] rounded-[8px] px-[5px] py-1.5 text-left transition-colors hover:bg-[#F9F9F5] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+            className="flex w-full items-center gap-2.5 rounded-control px-2.5 py-1.5 text-left transition-colors hover:bg-light-400"
           >
             <span className="relative size-8 shrink-0">{avatarNode}</span>
             <span className="flex min-w-0 flex-col">
-              <b className="truncate text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{label?.name ?? displayName}</b>
-              {label?.sub ? <span className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{label.sub}</span> : null}
+              <b className="truncate text-label-sm text-dark">{label?.name ?? displayName}</b>
+              {label?.sub ? <span className="truncate text-caption text-dark-300">{label.sub}</span> : null}
             </span>
           </button>
         ) : variant === "header" ? (
@@ -398,15 +399,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <button
             type="button"
             aria-label="Account menu"
-            className="relative ml-1.5 inline-flex size-[30px] shrink-0 items-center justify-center rounded-full focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+            className="relative ml-1.5 inline-flex size-[30px] shrink-0 items-center justify-center rounded-full"
           >
             <span className="relative size-[30px] overflow-hidden rounded-full">{avatarNode}</span>
-            <i className="absolute -bottom-px -right-px size-[10px] rounded-full border-2 border-[#F1F1E6] bg-[#22A04B]" aria-hidden="true" />
+            <i className="absolute -bottom-px -right-px size-[10px] rounded-full border-2 border-light bg-success" aria-hidden="true" />
           </button>
         )}
       </DropdownMenuTrigger>
       <DropdownMenuContent
-        className="flex w-[220px] flex-col rounded-[10px] border-[#EAEADF] bg-[#F7F7F0] p-1.5 shadow-[0_0_15px_rgba(0,0,0,0.05),0_12px_30px_-12px_rgba(16,19,26,0.18)]"
+        className="flex w-[220px] flex-col rounded-card border-light-525 bg-light-300 p-1.5 shadow-overlay"
         align={sidebarVariant ? "start" : "end"}
         side={sidebarVariant ? "top" : "bottom"}
         sideOffset={8}
@@ -415,17 +416,17 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         <DropdownMenuLabel className="flex items-center gap-[10px] px-[10px] pb-[10px] pt-2 font-normal">
           <span className="relative size-8 shrink-0">{avatarNode}</span>
           <span className="flex min-w-0 flex-col gap-1">
-            {displayName ? <span className="truncate text-[14px] font-medium leading-[18px] text-[#1A202C]">{displayName}</span> : null}
-            <span className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{displayEmail}</span>
+            {displayName ? <span className="truncate text-label-sm text-dark">{displayName}</span> : null}
+            <span className="truncate text-caption text-dark-300">{displayEmail}</span>
           </span>
         </DropdownMenuLabel>
-        <div className="mb-1 h-px bg-[#EAEADF]" />
+        <div className="mb-1 h-px bg-light-525" />
         {isCoach ? (
           // Phone only: the public pages live in the desktop sidebar.
           <div className="flex flex-col md:hidden">
             <DropdownMenuItem onClick={() => navigate(ROUTES.PROFILE)} className={itemClass}>
               <Store strokeWidth={1.5} />
-              <span>My Profile</span>
+              <span>My profile</span>
             </DropdownMenuItem>
             {myOrg ? (
               <DropdownMenuItem onClick={() => navigate(ROUTES.MY_ORGANIZATION)} className={itemClass}>
@@ -444,7 +445,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         ) : null}
         <DropdownMenuItem onClick={() => navigate(ROUTES.SETTINGS)} className={itemClass}>
           <Settings strokeWidth={1.5} />
-          <span>Account Settings</span>
+          <span>Account settings</span>
         </DropdownMenuItem>
         <DropdownMenuItem onClick={() => navigate(ROUTES.HELP)} className={itemClass}>
           <CircleHelp strokeWidth={1.5} />
@@ -462,13 +463,13 @@ export const UserMenu: React.FC<UserMenuProps> = ({
           <span>Sign out</span>
         </DropdownMenuItem>
         <div className="px-2 pb-2 pt-1">
-          <p className="px-2 text-[11px] leading-[14px] text-[#A3A6AB]">
-            <button type="button" className="hover:text-[#767980] hover:underline" onClick={() => openLegalDoc("terms")}>
-              Terms of Service
+          <p className="px-2 text-caption text-dark-300">
+            <button type="button" className="hover:text-dark hover:underline" onClick={() => openLegalDoc("terms")}>
+              Terms of service
             </button>
             {" · "}
-            <button type="button" className="hover:text-[#767980] hover:underline" onClick={() => openLegalDoc("privacy")}>
-              Privacy Policy
+            <button type="button" className="hover:text-dark hover:underline" onClick={() => openLegalDoc("privacy")}>
+              Privacy policy
             </button>
           </p>
         </div>

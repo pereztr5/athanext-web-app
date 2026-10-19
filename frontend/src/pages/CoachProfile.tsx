@@ -7,7 +7,7 @@ import { GearAndDealsCard } from "@/components/coach-profile/GearAndDealsCard";
 import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
 import { useCoachBrands } from "@/hooks/useBrands";
 import { useCoachPackages } from "@/hooks/useCoachPackages";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "@/components/icons";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { BookSessionButton } from "@/components/coach/BookSessionFlow";
@@ -181,7 +181,7 @@ const CoachProfile = () => {
     if (!coach?.id) return;
     if (personaType === "coach") {
       toast({
-        title: "Coach-to-coach messaging isn't available yet.",
+        title: "Coach-to-coach messaging isn't available yet",
       });
       return;
     }
@@ -246,8 +246,8 @@ const CoachProfile = () => {
     } catch (err) {
       console.error("Failed to start chat", err);
       toast({
-        title: "Unable to open chat",
-        description: "Please try again later.",
+        title: "Chat didn't open",
+        description: "Try again.",
         variant: "destructive",
       });
     } finally {
@@ -258,23 +258,23 @@ const CoachProfile = () => {
   if (loading) {
     return (
       <div className="min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-16 pt-[3.8rem] md:px-10">
-        <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6 pt-6" aria-busy="true" aria-label="Loading coach profile">
-          <Skeleton className="h-4 w-28 rounded-[4px]" />
+        <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6 pt-6" aria-busy="true" aria-label="Loading coach profile">
+          <Skeleton className="h-4 w-28 rounded-pill" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px]">
-            <Skeleton className="h-[165px] rounded-[10px]" />
-            <Skeleton className="h-[165px] rounded-[10px]" />
-            <Skeleton className="h-[165px] rounded-[10px]" />
-            <Skeleton className="h-[165px] rounded-[10px]" />
+            <Skeleton className="h-[165px] rounded-card" />
+            <Skeleton className="h-[165px] rounded-card" />
+            <Skeleton className="h-[165px] rounded-card" />
+            <Skeleton className="h-[165px] rounded-card" />
           </div>
-          <Skeleton className="h-[260px] rounded-[10px]" />
+          <Skeleton className="h-[260px] rounded-card" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
             <div className="flex flex-col gap-6">
-              <Skeleton className="h-[200px] rounded-[10px]" />
-              <Skeleton className="h-[160px] rounded-[10px]" />
+              <Skeleton className="h-[200px] rounded-card" />
+              <Skeleton className="h-[160px] rounded-card" />
             </div>
             <div className="flex flex-col gap-6">
-              <Skeleton className="h-[180px] rounded-[10px]" />
-              <Skeleton className="h-[160px] rounded-[10px]" />
+              <Skeleton className="h-[180px] rounded-card" />
+              <Skeleton className="h-[160px] rounded-card" />
             </div>
           </div>
         </div>
@@ -285,9 +285,9 @@ const CoachProfile = () => {
   if (!coach) {
     return (
       <div className="flex min-h-screen w-full items-center justify-center bg-app-background px-4">
-        <div className="flex max-w-[420px] flex-col items-center gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] py-[30px] text-center">
-          <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">Coach not found</h1>
-          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+        <div className="flex max-w-[420px] flex-col items-center gap-3 rounded-card border border-light-525 bg-light-300 px-[25px] py-[30px] text-center">
+          <h1 className="text-section text-dark">Coach not found</h1>
+          <p className="text-body-m text-dark-300">
             This profile may have been removed or the link is wrong.
           </p>
           <Button variant="outline" onClick={() => navigate(ROUTES.COACHES)}>
@@ -335,12 +335,12 @@ const CoachProfile = () => {
 
   return (
     <div className="mt-[3.8rem] min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
         <Link
           to={ROUTES.COACHES}
-          className="inline-flex w-fit items-center gap-1 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980] hover:text-[#1A202C]"
+          className="inline-flex w-fit items-center gap-1 text-label-sm text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
-          <ArrowLeft className="size-[15px]" strokeWidth={1.5} aria-hidden="true" />
+          <ArrowLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
           All coaches
         </Link>
 

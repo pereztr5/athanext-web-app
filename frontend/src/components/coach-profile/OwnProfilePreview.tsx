@@ -1,9 +1,9 @@
 /**
- * My Profile when not editing (Working Copy c-profile, `AN.simpleProfile`): one 720px column with
+ * My Profile when not editing (Working Copy c-profile, `AN.simpleProfile`): one column filling the page wrapper, with
  * who (completeness strip, hero, Edit and Share, facts), About, Sessions and pricing, Reviews and More.
  */
 import { Link } from "react-router-dom";
-import { BadgeCheck, Check, Eye, Pencil, Plus, Share2 } from "lucide-react";
+import { BadgeCheck, Check, Eye, Pencil, Plus, Share2 } from "@/components/icons";
 import type { CoachProfileExtras, ProfileService } from "@/api/coachProfile";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { BrandPill } from "@/components/brand";
@@ -26,7 +26,7 @@ import { Avatar, Stars } from "./own/parts";
 import { agesLine, caption, coachesLine, money, plural, repliesLabel, sectionTitle, sp2Card } from "./own/shared";
 
 const tagRow = "grid grid-cols-[72px_minmax(0,1fr)] items-start gap-[10px]";
-const tagLabel = "pt-1 text-[12px] font-medium leading-[13px] text-[#767980]";
+const tagLabel = "pt-1 text-label-xsm text-dark-300";
 
 export const OwnProfilePreview = ({
   coach,
@@ -91,7 +91,7 @@ export const OwnProfilePreview = ({
   const scrollToReviews = () => document.getElementById("own-reviews")?.scrollIntoView({ behavior: "smooth", block: "start" });
 
   return (
-    <div className="mx-auto flex w-full max-w-[720px] flex-col gap-4">
+    <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4">
       <div className="mb-1 flex flex-wrap items-center justify-between gap-[10px]">
         <BrandPill tone="sunk">
           <Eye strokeWidth={1.5} aria-hidden="true" />
@@ -108,15 +108,15 @@ export const OwnProfilePreview = ({
           <Avatar name={coach.name} src={coach.profile_image_url || coach.image_url} size={76} className="max-md:!size-16" />
           <div className="flex min-w-0 flex-col gap-2">
             <span className="flex items-center gap-1.5">
-              <h1 className="text-[22px] font-bold leading-[24px] tracking-[-0.05em] text-[#1A202C] md:text-[26px] md:leading-[28px]">{coach.name}</h1>
-              {coach.is_verified ? <BadgeCheck className="size-5 shrink-0 fill-[#0054B4] text-[#F7F7F0]" aria-label="Verified" /> : null}
+              <h1 className="text-page-title-phone text-dark">{coach.name}</h1>
+              {coach.is_verified ? <BadgeCheck className="size-5 shrink-0 text-primary" strokeWidth={1.5} aria-label="Verified" /> : null}
             </span>
             <span className={caption}>
               {[role, locationLabel].filter(Boolean).join(" · ")}
               {organization ? (
                 <>
                   {" · "}
-                  <Link to={organization.to} className="font-medium text-[#0054B4] hover:underline">
+                  <Link to={organization.to} className="font-medium text-primary hover:underline">
                     {organization.name}
                   </Link>
                 </>
@@ -125,7 +125,7 @@ export const OwnProfilePreview = ({
             {showRating ? (
               <span className="flex items-center gap-1.5">
                 <Stars value={averageRating} />
-                <b className="text-[14px] font-medium">{averageRating.toFixed(1)}</b>
+                <b className="text-label-sm text-dark">{averageRating.toFixed(1)}</b>
                 <button type="button" className={cn(caption, "hover:underline")} onClick={scrollToReviews}>
                   {plural(totalReviews, "review")}
                 </button>
@@ -151,18 +151,18 @@ export const OwnProfilePreview = ({
         </div>
         <CoachIntroCallCard coachId={coach.id} mode="own" coachFirstName={first} />
         {facts.length ? (
-          <div className="grid grid-cols-2 gap-y-[14px] border-t border-[#EAEADF] pt-4 md:grid-cols-4 md:gap-y-0">
+          <div className="grid grid-cols-2 gap-y-[14px] border-t border-light-525 pt-4 md:grid-cols-4 md:gap-y-0">
             {facts.map(([label, value], i) => (
               <div
                 key={label}
                 className={cn(
                   "flex min-w-0 flex-col gap-1.5 pr-[10px]",
-                  i > 0 && "border-l border-[#EAEADF] pl-[14px]",
+                  i > 0 && "border-l border-light-525 pl-[14px]",
                   i === 2 && "max-md:border-l-0 max-md:pl-0"
                 )}
               >
                 <span className={caption}>{label}</span>
-                <span className="break-words text-[14px] font-medium leading-[18px] text-[#1A202C]">{value}</span>
+                <span className="break-words text-label-sm text-dark">{value}</span>
               </div>
             ))}
           </div>
@@ -188,7 +188,7 @@ export const OwnProfilePreview = ({
               <span className={tagLabel}>Levels</span>
               <div className="flex flex-wrap gap-1.5">
                 {levels.map((l) => (
-                  <BrandPill key={l} className="border border-[#D9D9CF] bg-[#F1F1E6] text-[#1A202C]">
+                  <BrandPill key={l} className="border border-light-550 bg-light text-dark">
                     {l}
                   </BrandPill>
                 ))}
@@ -210,7 +210,7 @@ export const OwnProfilePreview = ({
         </div>
         {bioHtml ? (
           <div
-            className="rich-text-content text-[16px] leading-[22px] tracking-[-0.03em] text-[#1A202C]"
+            className="rich-text-content text-body-l text-dark"
             dangerouslySetInnerHTML={{ __html: bioHtml }}
           />
         ) : (
@@ -224,8 +224,8 @@ export const OwnProfilePreview = ({
             {creds
               .filter((name) => name.trim().toLowerCase() !== "background check")
               .map((name, i) => (
-              <span key={`${name}-${i}`} className="inline-flex items-center gap-1.5 text-[14px] font-medium text-[#484D56]">
-                <Check className="size-4 text-[#1E7431]" strokeWidth={2} aria-hidden="true" />
+              <span key={`${name}-${i}`} className="inline-flex items-center gap-1.5 text-label-sm text-dark-400">
+                <Check className="size-4 text-success-700" strokeWidth={2} aria-hidden="true" />
                 {name}
               </span>
             ))}

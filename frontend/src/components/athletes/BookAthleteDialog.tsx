@@ -7,7 +7,7 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Calendar, ChevronLeft, Plus, Ticket, User, Users, X } from "lucide-react";
+import { Calendar, ChevronLeft, Plus, Ticket, User, Users, X } from "@/components/icons";
 import { rosterAPI } from "@/api/roster";
 import { scheduleAPI } from "@/api/schedule";
 import { BrandPill } from "@/components/brand";
@@ -161,7 +161,7 @@ export const BookAthleteDialog = ({
   const loading = options.isLoading || send.isPending;
   const verb = pay === "link" ? "Send" : "Book";
   const payLine = (
-    <div className="flex items-center gap-2 rounded-[10px] bg-[#F4F4EB] px-3 py-2.5 text-[13px] leading-[17px] text-[#484D56]">
+    <div className="flex items-center gap-2 rounded-control border border-light-525 bg-light-400 px-3 py-2.5 text-body-m text-dark-400">
       <Ticket className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
       <span className="min-w-0 flex-1">
         {options.isLoading
@@ -189,15 +189,15 @@ export const BookAthleteDialog = ({
       <DialogContent className={cn(dialogContent, step === "pick" && "max-w-[640px]")}>
         <DialogHeader className="flex flex-col gap-1.5 space-y-0 px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
           {step !== "quick" ? (
-            <button type="button" className={cn(textButton, "self-start text-[#767980]")} onClick={() => setStep(step === "review" ? "pick" : "quick")}>
+            <button type="button" className={cn(textButton, "self-start text-dark-300")} onClick={() => setStep(step === "review" ? "pick" : "quick")}>
               <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
               Back
             </button>
           ) : null}
           {header.kicker ? (
-            <span className="text-[11px] font-semibold uppercase tracking-[0.05em] text-[#0054B4]">{header.kicker}</span>
+            <span className="text-label-xsm text-primary">{header.kicker}</span>
           ) : null}
-          <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">{header.title}</DialogTitle>
+          <DialogTitle className="text-section">{header.title}</DialogTitle>
           <DialogDescription className="sr-only">Pick a time and how it's paid.</DialogDescription>
         </DialogHeader>
 
@@ -214,14 +214,14 @@ export const BookAthleteDialog = ({
           <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
             {step === "quick" ? (
               <>
-                <div className="flex items-center gap-3 rounded-[12px] border border-[#EAEADF] bg-[#F1F1E6] px-3 py-2.5">
+                <div className="flex items-center gap-3 rounded-card border border-light-525 bg-light px-3 py-2.5">
                   {athlete?.imageUrl ? (
                     <img src={athlete.imageUrl} alt="" className="size-9 flex-none rounded-full object-cover" />
                   ) : (
-                    <span className="flex size-9 flex-none items-center justify-center rounded-full bg-[#E5EDF7] text-[13px] font-semibold text-[#0054B4]">{initialsOf(name)}</span>
+                    <span className="flex size-9 flex-none items-center justify-center rounded-full bg-primary-50 text-label-sm text-primary">{initialsOf(name)}</span>
                   )}
                   <span className="flex min-w-0 flex-col gap-0.5">
-                    <b className="truncate text-[14px] font-medium">{athlete?.name ?? name}</b>
+                    <b className="truncate text-label-sm">{athlete?.name ?? name}</b>
                     <span className={meta}>
                       {ctx.credits ? `${plural(ctx.credits, "credit")} left` : "No package"}
                       {athlete?.next ? ` · next session ${formatDayISO(viewerDay(athlete.next, timeZone), { weekday: "short", month: "short", day: "numeric" })}` : ""}
@@ -232,7 +232,7 @@ export const BookAthleteDialog = ({
                 <span className={label}>Suggested times</span>
                 {times.isLoading ? <p className={meta}>Finding open times…</p> : null}
                 {times.data && !suggestions.length ? (
-                  <p className="text-[14px] leading-[18px] text-[#767980]">No open times in the booking window. Pick another time below.</p>
+                  <p className="text-body-m text-dark-300">No open times in the booking window. Pick another time below.</p>
                 ) : null}
                 {suggestions.length ? (
                   <div className="flex flex-col gap-2" role="radiogroup" aria-label="Suggested times">
@@ -246,15 +246,15 @@ export const BookAthleteDialog = ({
                           aria-checked={on}
                           onClick={() => setSelected(i)}
                           className={cn(
-                            "flex w-full items-center gap-2.5 rounded-[12px] border px-3.5 py-3 text-left transition-colors",
-                            on ? "border-[#0054B4] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F7F7F0] hover:border-[#6698D2]",
+                            "flex w-full items-center gap-2.5 rounded-control border px-3.5 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                            on ? "border-primary bg-primary-50" : "border-light-525 bg-light-300 hover:border-primary-300",
                           )}
                         >
                           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-                            <b className="text-[15px] font-semibold leading-[19px]">{whenLabel(s.slot, timeZone)}</b>
+                            <b className="text-label-sm">{whenLabel(s.slot, timeZone)}</b>
                             <span className={meta}>{s.why} · {lengthMinutes(s.slot)} min</span>
                           </span>
-                          <span className={cn("size-5 flex-none rounded-full", on ? "border-[6px] border-[#0054B4] bg-white" : "border-[1.5px] border-[#A3A6AB]")} />
+                          <span className={cn("size-5 flex-none rounded-full", on ? "border-[6px] border-primary bg-light-50" : "border-[1.5px] border-dark-250")} />
                         </button>
                       );
                     })}
@@ -289,14 +289,14 @@ export const BookAthleteDialog = ({
                     const end = new Date(startsAt(t).getTime() + lengthMinutes(t) * 60_000);
                     const credit = pay === "credit" && i < ctx.credits;
                     return (
-                      <div key={t.id} className="flex items-center gap-3 rounded-[12px] border border-[#EAEADF] p-3">
-                        <span className="flex h-12 w-11 flex-none flex-col items-center justify-center rounded-[10px] bg-[#0054B4] text-[#F1F1E6]">
-                          <small className="text-[10px] uppercase opacity-85">{formatDayISO(d, { weekday: "short" })}</small>
-                          <b className="text-[18px] font-bold leading-[20px]">{formatDayISO(d, { day: "numeric" })}</b>
+                      <div key={t.id} className="flex items-center gap-3 rounded-card border border-light-525 p-3">
+                        <span className="flex h-12 w-11 flex-none flex-col items-center justify-center rounded-card bg-primary text-light">
+                          <small className="text-caption text-primary-100">{formatDayISO(d, { weekday: "short" })}</small>
+                          <b className="text-subtitle">{formatDayISO(d, { day: "numeric" })}</b>
                         </span>
                         <div className="flex min-w-0 flex-1 flex-col gap-1">
                           <span className="flex flex-wrap items-center gap-2">
-                            <span className="text-[14px] font-medium">{t.kind === "group" ? t.title ?? "Group session" : "Individual session"}</span>
+                            <span className="text-label-sm">{t.kind === "group" ? t.title ?? "Group session" : "Individual session"}</span>
                             {t.kind === "group" ? (
                               <BrandPill tone="teal"><Users aria-hidden="true" />Group</BrandPill>
                             ) : (
@@ -307,10 +307,10 @@ export const BookAthleteDialog = ({
                             {formatDayISO(d, { month: "short", day: "numeric" })}, {clock(t, timeZone)} – {formatClock(end, timeZone)} · {placeLabel(t.place)}
                           </span>
                         </div>
-                        <span className="text-[14px] font-medium tabular-nums">{credit ? <BrandPill tone="green">Credit</BrandPill> : money(t.price)}</span>
+                        <span className="text-label-sm tabular-nums">{credit ? <BrandPill tone="green">Credit</BrandPill> : money(t.price)}</span>
                         <button
                           type="button"
-                          className="inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F4F4EB] hover:text-[#1A202C]"
+                          className="inline-flex size-[30px] flex-none items-center justify-center rounded-control text-dark-300 hover:bg-light-400 hover:text-dark"
                           aria-label="Remove"
                           onClick={() => toggle(t)}
                         >
@@ -322,7 +322,7 @@ export const BookAthleteDialog = ({
                 </div>
                 <button
                   type="button"
-                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-[12px] border border-dashed border-[#C1C1B8] text-[15px] font-medium text-[#0054B4]"
+                  className="flex h-11 w-full items-center justify-center gap-1.5 rounded-control border border-dashed border-light-600 text-label-sm text-primary"
                   onClick={() => setStep("pick")}
                 >
                   <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />

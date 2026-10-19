@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
+import { Loader2 } from "@/components/icons";
+import { PageHeader } from "@/components/ui/page-header";
 
 import { Button } from "@/components/ui/button";
 import { BrandPill } from "@/components/brand";
@@ -27,8 +28,8 @@ import { suggestPathwayTags } from "@/constants/pathwayTags";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { isValidE164 } from "@/utils/phone";
 
-const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
-const optionalClass = "font-normal text-[#A3A6AB]";
+const labelClass = "text-label-sm text-dark";
+const optionalClass = "font-normal text-dark-200";
 const fieldClass = "grid gap-2";
 
 const CreateAthleteProfile = () => {
@@ -153,18 +154,16 @@ const CreateAthleteProfile = () => {
 
   return (
     <div className="px-4 pb-16 pt-6 md:px-10">
-      <div className="mx-auto flex w-full max-w-[800px] flex-col gap-6">
-        <div className="flex flex-col gap-[10px]">
-          <BrandPill tone="blue" className="w-fit">New athlete profile</BrandPill>
-          <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C]">Create your profile</h1>
-          <p className="text-[16px] leading-[20px] tracking-[-0.03em] text-[#767980]">
-            Share the basics so coaches can get to know you. You can add more details and photos later.
-          </p>
-        </div>
+      <div className="mx-auto flex w-full max-w-wrapper-focused flex-col gap-6">
+        <PageHeader
+          title="Create your profile"
+          titleSuffix={<BrandPill tone="blue">New athlete profile</BrandPill>}
+          subtitle="Share the basics so coaches can get to know you. You can add more details and photos later."
+        />
 
-        <div className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]">
+        <div className="rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]">
           <form className="flex flex-col gap-5" onSubmit={handleSubmit}>
-            <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">About you</h2>
+            <h2 className="text-card-title text-dark">About you</h2>
             <div className="grid grid-cols-1 gap-5 md:grid-cols-2">
               <div className={fieldClass}>
                 <Label htmlFor="fullName" className={labelClass}>Full name</Label>
@@ -292,7 +291,7 @@ const CreateAthleteProfile = () => {
               />
             </div>
 
-            <div className="h-px w-full bg-[#EAEADF]" />
+            <div className="h-px w-full bg-light-525" />
 
             <div className="flex flex-col-reverse gap-[10px] sm:flex-row sm:justify-end">
               <Button

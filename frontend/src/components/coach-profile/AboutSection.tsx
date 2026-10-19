@@ -27,11 +27,11 @@ export function AboutSection({ coachName, bio, isEditMode = false, onBioChange }
         />
       ) : formattedBio ? (
         <div
-          className="rich-text-content text-[14px] font-normal leading-[18px] tracking-[-0.03em] text-[#484D56]"
+          className="rich-text-content text-body-m text-dark-400"
           dangerouslySetInnerHTML={{ __html: formattedBio }}
         />
       ) : (
-        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">No biography added yet.</p>
+        <p className="text-body-m text-dark-300">No biography added yet.</p>
       )}
     </CoachProfileCard>
   );

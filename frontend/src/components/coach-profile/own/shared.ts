@@ -8,8 +8,8 @@ export const money = (dollars: number) => `$${Math.round(dollars).toLocaleString
 export const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 /** Working Copy `.sp2-h`. */
-export const sectionTitle = "text-[20px] font-medium leading-[22px] tracking-[-0.05em] text-[#1A202C]";
-export const caption = "text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]";
+export const sectionTitle = "text-card-title text-dark";
+export const caption = "text-caption text-dark-300";
 /** Working Copy `.sp2-card`: the shared card with 18px gaps. */
 export const sp2Card = "gap-[18px]";
 
@@ -103,6 +103,7 @@ export const shortDate = (value?: string | null) => {
 /** Working Copy `.chip`: toggle chip with a check when on. */
 export const chip = (on: boolean) =>
   cn(
-    "inline-flex h-[30px] items-center gap-1.5 whitespace-nowrap rounded-[8px] border px-3 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C] transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] [&>svg]:size-4",
-    on ? "border-[#1A202C] bg-[#F7F7F0]" : "border-[#EAEADF] bg-[#F4F4EB] hover:border-[#C1C1B8]"
+    "inline-flex h-control-sm items-center gap-1.5 whitespace-nowrap rounded-control border px-3 text-label-sm text-dark transition-colors [&>svg]:size-4",
+    // The one selected style for choices: primary-50 fill, 1px primary border.
+    on ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-400 hover:border-light-600"
   );

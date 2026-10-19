@@ -1,6 +1,6 @@
 /** Home card: offline payments pending until the coach confirms receipt (WC4). */
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Banknote, Bell } from "lucide-react";
+import { Banknote, Bell } from "@/components/icons";
 import { Link } from "react-router-dom";
 import { offlinePayAPI } from "@/api/offlinePay";
 import { BrandPill } from "@/components/brand";
@@ -39,15 +39,15 @@ export const PaymentsToConfirm = () => {
   return (
     <section className={cn(card, "gap-4")} aria-label="Payments to confirm">
       <div className="flex items-start justify-between gap-3">
-        <h2 className="flex items-center gap-2 text-[20px] font-medium leading-[22px] tracking-[-1px] text-[#1A202C]">
-          <Banknote className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+        <h2 className="flex items-center gap-2 text-card-title text-dark">
+          <Banknote className="size-5 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
           Payments to confirm
         </h2>
         <span className={meta}>Paid to you directly</span>
       </div>
       <div className="flex flex-col gap-1">
-        <b className="text-[28px] font-bold leading-[30px] tracking-[-0.04em] tabular-nums">{money(total)}</b>
-        <span className="text-[14px] text-[#484D56]">
+        <b className="text-highlight tabular-nums">{money(total)}</b>
+        <span className="text-body-m text-dark-400">
           {plural(list.length, "payment")} pending
           {late ? `, ${late} from ${late === 1 ? "a session" : "sessions"} that already happened` : ""}
         </span>
@@ -56,9 +56,9 @@ export const PaymentsToConfirm = () => {
         {list.map((p) => {
           const forAthlete = p.payerName !== p.athleteName;
           return (
-            <div key={p.bookingId} className="flex flex-wrap items-center justify-between gap-3 rounded-[8px] bg-[#F4F4EB] px-3 py-2.5">
+            <div key={p.bookingId} className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-light-525 bg-light-400 px-3 py-2.5">
               <Link to={`/sessions/${p.occurrenceId}`} className="flex min-w-0 grow flex-col gap-0.5 text-left hover:underline">
-                <span className="truncate text-[14px] font-medium text-[#1A202C]">
+                <span className="truncate text-label-sm text-dark">
                   {p.payerName}
                   {forAthlete ? ` for ${p.athleteName.split(" ")[0]}` : ""}
                 </span>
@@ -68,11 +68,11 @@ export const PaymentsToConfirm = () => {
                 </span>
               </Link>
               <span className="flex flex-wrap items-center gap-2">
-                <span className="text-[14px] font-medium tabular-nums">{money(p.amount)}</span>
+                <span className="text-label-sm tabular-nums">{money(p.amount)}</span>
                 <BrandPill tone="amber">Pending</BrandPill>
                 <button
                   type="button"
-                  className={cn(secondaryButton, "h-8 px-3 text-[13px]")}
+                  className={cn(secondaryButton, "h-8 px-3 text-body-m")}
                   disabled={confirm.isPending}
                   onClick={() => confirm.mutate(p.bookingId)}
                 >

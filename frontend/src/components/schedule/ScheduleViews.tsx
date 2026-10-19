@@ -1,9 +1,9 @@
 /**
- * My Schedule views (ATH-71, Working Copy 4): Day (date-tile strip + chips), Week (Create-session
+ * My schedule views (ATH-71, Working Copy 4): Day (date-tile strip + chips), Week (Create-session
  * grid on web and phone), Month (grid). Open slots are dashed blue, busy times striped.
  * Booking requests open the session dialog (Accept lives there and on Requests).
  */
-import { ChevronDown, ChevronUp, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, Plus } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import {
   addDaysISO,
@@ -13,7 +13,7 @@ import {
   type ScheduleDay,
 } from "@/utils/schedule";
 import { dateTile, dateTileMonth, dateTileNumber, dateTileWeekday } from "./plan/parts";
-import { secondaryButton, smallButton, textButton } from "./styles";
+import { dangerTextButton, secondaryButton, smallButton, textButton } from "./styles";
 import { WeekChip, WeekDayColumn, WeekDayGrid } from "./WeekDayGrid";
 import { striped } from "./views/styles";
 import type { ScheduleSession } from "@/api/schedule";
@@ -84,7 +84,7 @@ export const WeekAgenda = ({
       {past.length ? (
         <button
           type="button"
-          className="flex w-full items-center gap-2 rounded-[10px] border border-dashed border-[#C1C1B8] bg-transparent px-3.5 py-3 text-left text-[14px] text-[#767980]"
+          className="flex w-full items-center gap-2 rounded-card border border-dashed border-light-600 bg-transparent px-3.5 py-3 text-left text-body-m text-dark-300"
           aria-expanded={showEarlier}
           onClick={onToggleEarlier}
         >
@@ -105,7 +105,7 @@ export const WeekAgenda = ({
           return (
             <div key={day.date} className="flex flex-col gap-2">
               {isWeekStart ? (
-                <p className="px-0.5 pt-2 text-[12px] font-medium tracking-[-0.03em] text-[#767980]">
+                <p className="px-0.5 pt-2 text-label-xsm text-dark-300">
                   Week of {formatDayISO(day.date, { month: "short", day: "numeric" })}
                 </p>
               ) : null}
@@ -139,6 +139,7 @@ export const DayView = ({
   handlers,
   onSelect,
   onAdd,
+  onClearDay,
   onRestoreDay,
 }: {
   days: ScheduleDay[];
@@ -148,6 +149,7 @@ export const DayView = ({
   handlers: ScheduleViewHandlers;
   onSelect: (date: string) => void;
   onAdd: (date: string) => void;
+  onClearDay: (date: string) => void;
   onRestoreDay: (date: string) => void;
 }) => {
   const day = days.find((d) => d.date === selected) ?? days[0];
@@ -164,13 +166,13 @@ export const DayView = ({
               aria-pressed={on}
               aria-label={formatDayISO(d.date, { weekday: "long", month: "long", day: "numeric" })}
               onClick={() => onSelect(d.date)}
-              className={cn("rounded-[8px]", past && "opacity-55")}
+              className={cn("rounded-control", past && "opacity-55")}
             >
               <span
                 className={cn(
                   dateTile,
-                  on && "border-[#0054B4] shadow-[inset_0_0_0_1px_#0054B4]",
-                  d.date === todayISO && !on && "border-[#6698D2]",
+                  on && "border-primary outline outline-1 -outline-offset-2 outline-primary",
+                  d.date === todayISO && !on && "border-primary-300",
                 )}
               >
                 <small className={dateTileMonth}>{formatDayISO(d.date, { month: "short" })}</small>
@@ -183,26 +185,30 @@ export const DayView = ({
       </div>
 
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+        <h3 className="text-subtitle text-dark">
           {formatDayISO(day.date, { weekday: "long", month: "long", day: "numeric" })}
         </h3>
         {day.date >= todayISO ? (
           <span className="flex items-center gap-1.5">
             <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => onAdd(day.date)}>
               <Plus strokeWidth={1.5} aria-hidden="true" />
-              Add session
+              Add
             </button>
             {day.dayOff ? (
               <button type="button" className={cn(textButton, "px-2")} onClick={() => onRestoreDay(day.date)}>
                 Undo day off
               </button>
-            ) : null}
+            ) : (
+              <button type="button" className={cn(dangerTextButton, "px-2")} onClick={() => onClearDay(day.date)}>
+                Clear day
+              </button>
+            )}
           </span>
         ) : null}
       </div>
 
       {day.dayOff && !day.items.length ? (
-        <div className="rounded-[8px] border border-dashed border-[#C1C1B8] p-[18px] text-center text-[13px] text-[#767980]">
+        <div className="rounded-card border border-dashed border-light-600 p-[18px] text-center text-body-m text-dark-300">
           Day off{day.dayOff.note ? ` · ${day.dayOff.note}` : ""}.
         </div>
       ) : day.items.length ? (
@@ -212,8 +218,8 @@ export const DayView = ({
           ))}
         </div>
       ) : (
-        <p className="text-[14px] leading-[18px] text-[#767980]">
-          Nothing on this day yet. Tap Add session to create one.
+        <p className="text-body-m text-dark-300">
+          Nothing on this day yet. Tap Add to create a session or open times.
         </p>
       )}
     </div>
@@ -234,7 +240,7 @@ export const MonthView = ({
 }) => (
   <div className="grid grid-cols-7 gap-1 md:gap-1.5">
     {["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"].map((w) => (
-      <span key={w} className="text-center text-[11px] text-[#767980] md:px-1.5 md:text-left md:text-[12px]">
+      <span key={w} className="text-center text-caption text-dark-300 md:px-1.5 md:text-left">
         {w}
       </span>
     ))}
@@ -250,18 +256,18 @@ export const MonthView = ({
           type="button"
           onClick={() => onOpenDay(date)}
           className={cn(
-            "flex min-h-[50px] min-w-0 flex-col items-center gap-[3px] rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-1 py-[5px] text-left transition-colors hover:border-[#0054B4] md:min-h-[88px] md:items-start md:gap-1 md:p-2",
-            today && "border-[#0054B4] shadow-[inset_0_0_0_1px_#0054B4]",
+            "flex min-h-[50px] min-w-0 flex-col items-center gap-[3px] rounded-card border border-light-525 bg-light-300 px-1 py-[5px] text-left transition-colors hover:border-primary md:min-h-[88px] md:items-start md:gap-1 md:p-2",
+            today && "border-primary outline outline-1 -outline-offset-2 outline-primary",
             date < todayISO && "opacity-55",
             day?.dayOff && striped
           )}
           aria-label={formatDayISO(date, { weekday: "long", month: "long", day: "numeric" })}
         >
-          <b className={cn("text-[14px] font-semibold leading-[17px]", today ? "text-[#0054B4]" : "text-[#1A202C]")}>
+          <b className={cn("text-label-sm", today ? "text-primary" : "text-dark")}>
             {formatDayISO(date, { day: "numeric" })}
           </b>
           {day?.dayOff ? (
-            <em className="text-[10px] font-semibold not-italic text-[#906A29] md:text-[11px]">
+            <em className="text-label-xsm not-italic text-info-800">
               <span className="md:hidden">Off</span>
               <span className="hidden md:inline">Day off</span>
             </em>
@@ -273,15 +279,15 @@ export const MonthView = ({
                     key={item.key}
                     className={cn(
                       "size-[6px] rounded-full",
-                      item.kind === "group" ? "bg-[#117A96]" : item.kind === "request" ? "bg-[#C26E12]" : "bg-[#0054B4]"
+                      item.kind === "group" ? "bg-secondary-600" : item.kind === "request" ? "bg-info-600" : "bg-primary"
                     )}
                   />
                 ))}
               </span>
               {sessions.length ? (
-                <small className="hidden w-full truncate text-[11px] leading-[13px] text-[#767980] md:block">{plural(sessions.length, "session")}</small>
+                <small className="hidden w-full truncate text-caption text-dark-300 md:block">{plural(sessions.length, "session")}</small>
               ) : null}
-              {open ? <small className="hidden w-full truncate text-[11px] leading-[13px] text-[#0054B4] md:block">{open} open</small> : null}
+              {open ? <small className="hidden w-full truncate text-caption text-primary md:block">{open} open</small> : null}
             </>
           )}
         </button>

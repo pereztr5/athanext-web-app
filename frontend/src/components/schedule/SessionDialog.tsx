@@ -1,11 +1,11 @@
 /**
- * Tapping a session in My Schedule (ATH-71).
+ * Tapping a session in My schedule (ATH-71).
  * Open and offered slots: share them, remove one week, change every week or stop repeating.
  * Groups open the group sheet. Booked 1-on-1s and requests go straight to the session page.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
-import { CircleCheck, MapPin, Repeat, Video, X } from "lucide-react";
+import { CircleCheck, MapPin, Repeat, Video, X } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { scheduleAPI, type ScheduleRules, type ScheduleSeries, type ScheduleSession } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
@@ -89,8 +89,8 @@ export const SessionDialog = ({
   };
   const fail = (error: unknown) =>
     toast({
-      title: "Something went wrong",
-      description: error instanceof Error ? error.message : "Please try again.",
+      title: "That didn't save",
+      description: error instanceof Error ? error.message : "Try again.",
       variant: "destructive",
     });
 
@@ -154,17 +154,17 @@ export const SessionDialog = ({
     <Dialog open onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={dialogContent}>
         <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-          <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">{title}</DialogTitle>
+          <DialogTitle className="text-section">{title}</DialogTitle>
           <DialogDescription className={meta}>
             {when} · {where}
           </DialogDescription>
         </DialogHeader>
 
         <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">
-          <div className="flex items-start gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-            <CircleCheck className="mt-[1px] size-4 flex-none text-[#1E7431]" strokeWidth={1.5} aria-hidden="true" />
+          <div className="flex items-start gap-2 rounded-control border border-light-525 bg-light px-3 py-2.5">
+            <CircleCheck className="mt-[1px] size-4 flex-none text-success-700" strokeWidth={1.5} aria-hidden="true" />
             <span className="flex flex-col gap-0.5">
-              <b className="text-[14px] font-medium">
+              <b className="text-label-sm">
                 {`1-on-1 · ${session.durationMinutes} min · ${money(session.price)}`}
               </b>
               <span className={meta}>
@@ -192,9 +192,9 @@ export const SessionDialog = ({
           ) : null}
 
           {repeating && !changing ? (
-            <div className="flex items-center gap-2 rounded-[8px] bg-[#F1F1E6] px-3 py-2.5">
-              <Repeat className="size-4 flex-none text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-              <span className="grow text-[14px]">
+            <div className="flex items-center gap-2 rounded-control border border-light-525 bg-light px-3 py-2.5">
+              <Repeat className="size-4 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+              <span className="grow text-body-m">
                 Repeats every {weekday} at {formatClock(start, timeZone)}
                 {repeating.endsOn ? ` until ${formatDayISO(repeating.endsOn, { month: "short", day: "numeric" })}` : ""}
               </span>
@@ -205,8 +205,8 @@ export const SessionDialog = ({
           ) : null}
 
           {repeating && changing ? (
-            <div className="flex flex-col gap-3 rounded-[8px] border border-[#EAEADF] p-3">
-              <b className="text-[14px] font-medium">Every {weekday}</b>
+            <div className="flex flex-col gap-3 rounded-card border border-light-525 p-3">
+              <b className="text-label-sm">Every {weekday}</b>
               <span className={meta}>Changes this for every week from now on. Booked sessions stay as they are.</span>
               <label className="flex flex-col gap-1.5">
                 <span className={label}>Start time</span>

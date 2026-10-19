@@ -144,7 +144,7 @@ export function CoachOwnProfile({
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto w-full max-w-[1000px]">
+      <div className="mx-auto w-full max-w-wrapper">
         {editing ? (
           <OwnProfileEditor
             coach={c}

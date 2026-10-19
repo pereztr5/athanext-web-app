@@ -1,13 +1,13 @@
 import logo from "@/assets/AthaNext-Logo.svg";
 import { BrandPill } from "@/components/brand";
 import { strings } from "@/config/strings";
-import { CalendarPlus, Mail } from "lucide-react";
+import { CalendarPlus, Mail } from "@/components/icons";
 import { secondaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { formatMoney, type ReceiptModel } from "./receiptModel";
 
-const labelClass = "text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#767980]";
-const valueClass = "text-[14px] leading-[18px] tracking-[-0.03em]";
+const labelClass = "text-label-xsm text-dark-300";
+const valueClass = "text-body-m";
 
 const BookingReceipt = ({
   model,
@@ -20,28 +20,28 @@ const BookingReceipt = ({
   onAddToCalendar?: () => void;
   onEmail?: () => void;
 }) => (
-  <section className="mx-auto flex w-full max-w-[700px] flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[18px] pb-5 pt-[22px] font-sans tracking-[-0.03em] text-[#1A202C] md:px-[25px] md:pb-[25px] md:pt-[30px]">
+  <section className="flex w-full max-w-[700px] flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] font-sans text-dark md:px-[25px] md:pb-[25px] md:pt-[30px]">
     <div className="flex items-start justify-between gap-4">
       <img src={logo} alt={strings.brand.name} className="h-7 w-auto" />
       <div className="flex flex-col items-end gap-1.5 text-right">
-        <span className="text-[20px] font-medium leading-[18px] tracking-[-0.05em]">{model.isReceipt ? "Receipt" : "Confirmation"}</span>
-        <span className="text-[12px] leading-[14px] text-[#767980]">
+        <span className="text-card-title">{model.isReceipt ? "Receipt" : "Confirmation"}</span>
+        <span className="text-caption text-dark-300">
           {model.issuedLabel ? `Issued ${model.issuedLabel}` : "Issued"}
           {model.number ? ` · #${model.number}` : ""}
         </span>
       </div>
     </div>
 
-    <div className="h-px bg-[#EAEADF]" />
+    <div className="h-px bg-light-525" />
 
     {model.lines.map((line, i) => (
       <div key={line.id}>
-        {i ? <div className="mb-5 h-px bg-[#EAEADF]" /> : null}
+        {i ? <div className="mb-5 h-px bg-light-525" /> : null}
         <div className="flex flex-col gap-3.5">
-          <span className="text-[12px] font-medium leading-[13px] text-[#A3A6AB]">Session</span>
+          <span className="text-label-xsm text-dark-300">Session</span>
           <div className="flex flex-wrap items-center gap-2">
-            <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{line.title}</span>
-            {line.group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="neutral">1-on-1</BrandPill>}
+            <span className="text-subtitle">{line.title}</span>
+            {line.group ? <BrandPill tone="teal">Group</BrandPill> : <BrandPill tone="blue">1-on-1</BrandPill>}
             {line.request ? <BrandPill tone="amber">Request sent, not charged</BrandPill> : null}
           </div>
           <div className="grid grid-cols-2 gap-x-6 gap-y-3.5 md:grid-cols-3">
@@ -62,36 +62,36 @@ const BookingReceipt = ({
       </div>
     ))}
 
-    <div className="flex flex-col gap-3 rounded-[8px] bg-[#F4F4EB] px-5 py-4">
+    <div className="flex flex-col gap-3 rounded-control bg-light-400 px-5 py-4">
       {model.isReceipt || model.sessions || model.credits ? (
         <>
           {model.direct.length && !model.sessions && !model.credits ? null : (
             <div className={`flex justify-between ${valueClass}`}>
-              <span className="text-[#484D56]">Sessions</span>
+              <span className="text-dark-300">Sessions</span>
               <span className="tabular-nums">{formatMoney(model.sessions)}</span>
             </div>
           )}
           {model.credits ? (
             <div className={`flex justify-between ${valueClass}`}>
-              <span className="text-[#484D56]">Package credits used</span>
+              <span className="text-dark-300">Package credits used</span>
               <span className="tabular-nums">{model.credits}</span>
             </div>
           ) : null}
           {model.fees ? (
             <div className={`flex justify-between ${valueClass}`}>
-              <span className="text-[#484D56]">Platform fee</span>
+              <span className="text-dark-300">Platform fee</span>
               <span className="tabular-nums">{formatMoney(model.fees)}</span>
             </div>
           ) : null}
           {model.isReceipt || model.credits ? (
             <>
-              <div className="h-px bg-[#EAEADF]" />
+              <div className="h-px bg-light-525" />
               <div className="flex items-baseline justify-between">
-                <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">Total paid</span>
-                <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em] tabular-nums">{formatMoney(model.total)}</span>
+                <span className="text-subtitle">Total paid</span>
+                <span className="text-highlight tabular-nums">{formatMoney(model.total)}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
-                <span className="text-[12px] leading-[14px] text-[#767980]">
+                <span className="text-caption text-dark-300">
                   {model.total ? "Card, through Stripe" : "Covered by package credits"}
                 </span>
                 <BrandPill tone="green">{model.pending ? "Payment pending" : "Paid"}</BrandPill>
@@ -102,12 +102,12 @@ const BookingReceipt = ({
       ) : null}
       {model.direct.map((d) => (
         <div key={d.coachId} className="flex flex-col gap-1.5">
-          {model.isReceipt || model.credits ? <div className="h-px bg-[#EAEADF]" /> : null}
+          {model.isReceipt || model.credits ? <div className="h-px bg-light-525" /> : null}
           <div className="flex items-baseline justify-between">
-            <span className="text-[16px] font-medium tracking-[-0.05em]">Pay {d.firstName} directly</span>
-            <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em] tabular-nums">{formatMoney(d.amount)}</span>
+            <span className="text-subtitle">Pay {d.firstName} directly</span>
+            <span className="text-highlight tabular-nums">{formatMoney(d.amount)}</span>
           </div>
-          <span className="text-[12px] leading-[14px] text-[#767980]">{d.note || "Not charged in AthaNext"}</span>
+          <span className="text-caption text-dark-300">{d.note || "Not charged in AthaNext"}</span>
         </div>
       ))}
     </div>
@@ -129,7 +129,7 @@ const BookingReceipt = ({
       </div>
     ) : null}
 
-    <p className="text-center text-[12px] leading-[14px] text-[#767980]">
+    <p className="text-center text-caption text-dark-300">
       Thanks for booking with {strings.brand.name}.
       {supportEmail ? ` Questions go to ${supportEmail}` : ""}
     </p>

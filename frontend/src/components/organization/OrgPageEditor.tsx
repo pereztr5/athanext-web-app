@@ -6,7 +6,7 @@
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronDown, ChevronUp, ImageIcon, Plus } from "lucide-react";
+import { ChevronDown, ChevronUp, ImageIcon, Plus } from "@/components/icons";
 import { orgPackagesAPI, organizationsAPI, type OrgPackage } from "@/api/organizations";
 import { OrgPackageDialog, type PackageCoach } from "@/components/organization/OrgPackages";
 import { card, input, label, meta, primaryButton, secondaryButton, smallButton } from "@/components/schedule/styles";
@@ -42,10 +42,10 @@ const move = <T,>(list: T[], i: number, d: number) => {
 
 const OrderButtons = ({ i, n, onMove, what }: { i: number; n: number; onMove: (d: number) => void; what: string }) => (
   <span className="flex shrink-0 flex-col">
-    <button type="button" className="inline-flex size-5 items-center justify-center text-[#767980] disabled:opacity-30" aria-label={`Move ${what} up`} disabled={i === 0} onClick={() => onMove(-1)}>
+    <button type="button" className="inline-flex size-5 items-center justify-center text-dark-300 hover:text-dark disabled:text-dark-200" aria-label={`Move ${what} up`} disabled={i === 0} onClick={() => onMove(-1)}>
       <ChevronUp className="size-4" strokeWidth={1.5} />
     </button>
-    <button type="button" className="inline-flex size-5 items-center justify-center text-[#767980] disabled:opacity-30" aria-label={`Move ${what} down`} disabled={i === n - 1} onClick={() => onMove(1)}>
+    <button type="button" className="inline-flex size-5 items-center justify-center text-dark-300 hover:text-dark disabled:text-dark-200" aria-label={`Move ${what} down`} disabled={i === n - 1} onClick={() => onMove(1)}>
       <ChevronDown className="size-4" strokeWidth={1.5} />
     </button>
   </span>
@@ -54,17 +54,17 @@ const OrderButtons = ({ i, n, onMove, what }: { i: number; n: number; onMove: (d
 /** Org logo (Working Copy `.og-logo`): 64px, 12px radius, ink with light initials. */
 export const OrgLogo = ({ name, url, size = 64 }: { name: string; url: string | null; size?: number }) =>
   url ? (
-    <img src={url} alt="" style={{ width: size, height: size }} className={cn("shrink-0 bg-[#F9F9F5] object-contain", size >= 64 ? "rounded-[12px]" : "rounded-[10px]")} />
+    <img src={url} alt="" style={{ width: size, height: size }} className="shrink-0 rounded-card border border-light-525 bg-light-200 object-contain" />
   ) : (
     <span
       style={{ width: size, height: size, fontSize: Math.round(size / 3.2) }}
-      className={cn("flex shrink-0 items-center justify-center bg-[#1A202C] font-bold tracking-[-0.05em] text-[#F1F1E6]", size >= 64 ? "rounded-[12px]" : "rounded-[10px]")}
+      className="flex shrink-0 items-center justify-center rounded-card bg-dark font-medium tracking-[-0.05em] text-light"
     >
       {initials(name)}
     </span>
   );
 
-const h3 = "text-[20px] font-medium leading-[18px] tracking-[-0.05em]";
+const h3 = "text-card-title";
 const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
 /** Prototype switch: 36x20 track, 16px knob. */
@@ -75,9 +75,9 @@ const MiniSwitch = ({ on, onChange, label: aria }: { on: boolean; onChange: (on:
     aria-checked={on}
     aria-label={aria}
     onClick={() => onChange(!on)}
-    className={cn("flex h-5 w-9 flex-none items-center rounded-[10px] p-0.5 transition-colors", on ? "justify-end bg-[#0054B4]" : "justify-start bg-[#D9D9CF]")}
+    className={cn("flex h-5 w-9 flex-none items-center rounded-full p-0.5 transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary", on ? "justify-end bg-primary" : "justify-start bg-light-550")}
   >
-    <span className="size-4 rounded-full bg-[#FDFDFC]" />
+    <span className="size-4 rounded-full bg-light-50" />
   </button>
 );
 
@@ -142,7 +142,7 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
   const packages = packagesQuery.data ?? [];
 
   return (
-    <div className="flex max-w-[760px] flex-col gap-5">
+    <div className="flex w-full flex-col gap-4 md:gap-6">
       <section className={cn(card, "gap-4")}>
         <h2 className={h3}>Basics</h2>
         <div className="flex flex-wrap items-center gap-4">
@@ -166,7 +166,7 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
         <label className="flex flex-col gap-1.5">
           <span className={label}>Short description</span>
           <textarea
-            className={cn(input, "h-auto resize-none py-2.5 leading-[18px]")}
+            className={cn(input, "h-auto resize-none py-2.5")}
             rows={3}
             maxLength={ABOUT_MAX}
             placeholder="Two or three sentences families see under your name"
@@ -188,12 +188,12 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
           {draft.coaches.map((c, i) => {
             const coach = org.coaches.find((x) => x.coachId === c.coachId);
             return (
-              <div key={c.coachId} className="flex items-center gap-3 border-t border-[#EAEADF] py-[14px] first:border-t-0">
+              <div key={c.coachId} className="flex items-center gap-3 border-t border-light-525 py-[14px] first:border-t-0">
                 <OrderButtons i={i} n={draft.coaches.length} what={coachName(c.coachId)} onMove={(d) => set({ coaches: move(draft.coaches, i, d) })} />
-                <span className="flex size-7 flex-none items-center justify-center overflow-hidden rounded-full bg-[#F1F1E6] text-[12px] font-medium text-[#484D56]">
+                <span className="flex size-7 flex-none items-center justify-center overflow-hidden rounded-full bg-light text-label-xsm text-dark-400">
                   {coach?.photo ? <img src={coach.photo} alt="" className="size-full object-cover" /> : initials(coachName(c.coachId))}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[14px] font-medium">{coachName(c.coachId)}</span>
+                <span className="min-w-0 flex-1 truncate text-label-sm">{coachName(c.coachId)}</span>
                 <MiniSwitch
                   on={c.shown}
                   label={`Show ${coachName(c.coachId)} on the page`}
@@ -221,16 +221,16 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
             packages.map((p) => {
               const k = packageSaving(p, packageCoaches, []);
               return (
-                <div key={p.id} className="flex items-center gap-3 border-t border-[#EAEADF] py-[14px] first:border-t-0">
+                <div key={p.id} className="flex items-center gap-3 border-t border-light-525 py-[14px] first:border-t-0">
                   <div className="flex min-w-0 grow flex-col gap-1">
-                    <span className="text-[14px] font-medium">{p.name}</span>
-                    <span className="text-[12px] leading-[14px] text-[#767980]">
+                    <span className="text-label-sm">{p.name}</span>
+                    <span className="text-caption text-dark-300">
                       {p.sessionCount} {p.kind === "group" ? "group sessions" : "sessions"} · {dollars(k.per)} each ·{" "}
                       {p.renewsMonthly ? "renews monthly" : `valid ${p.validityDays} days`} ·{" "}
                       {p.kind === "group" ? "any academy coach" : packageCoaches.filter((c) => p.coachIds.includes(c.id)).map((c) => c.name.split(" ")[0]).join(", ")}
                     </span>
                   </div>
-                  <b className="text-[14px] font-medium">{dollars(p.price)}</b>
+                  <b className="text-label-sm">{dollars(p.price)}</b>
                   <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setEditing(p)}>
                     Edit
                   </button>
@@ -238,12 +238,12 @@ export const OrgPageEditor = ({ org }: { org: MyOrganization }) => {
               );
             })
           ) : (
-            <p className="text-[14px] text-[#767980]">{packagesQuery.isLoading ? "Loading…" : "No academy packages yet."}</p>
+            <p className="text-body-m text-dark-300">{packagesQuery.isLoading ? "Loading…" : "No academy packages yet."}</p>
           )}
         </div>
       </section>
 
-      <div className="sticky bottom-16 z-10 flex items-center justify-end gap-2 bg-[#F1F1E6] py-3 md:bottom-0">
+      <div className="sticky bottom-16 z-10 flex items-center justify-end gap-2 bg-light py-3 md:bottom-0">
         <span className={cn(meta, "mr-auto")}>Only you can edit this page</span>
         <button type="button" className={secondaryButton} disabled={!dirty || save.isPending} onClick={() => setDraft(saved)}>
           Cancel

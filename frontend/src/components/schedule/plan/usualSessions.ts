@@ -5,6 +5,7 @@
 import type { ScheduleSession } from "@/api/schedule";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { addDaysISO, minutesInZone, sessionStart } from "@/utils/schedule";
+import { sessionTagOf } from "./SessionTag";
 
 export type UsualSession = {
   title: string;
@@ -16,6 +17,8 @@ export type UsualSession = {
   pillar: string;
   /** Real 1-on-1 open slot, not a one-spot group. */
   isOneOnOne: boolean;
+  /** Age group or level, when this usual session is a group. */
+  tag?: string;
 };
 
 const keyOf = (u: UsualSession) =>
@@ -89,6 +92,7 @@ export const buildUsualList = ({
         capacity: isOne ? 1 : s.capacity,
         pillar: s.pillar || "On-field training",
         isOneOnOne: isOne,
+        tag: sessionTagOf(s.details) || undefined,
       });
     });
 

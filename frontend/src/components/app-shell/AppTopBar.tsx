@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { Bell, CalendarPlus, MessageCircle, Plus } from "lucide-react";
+import { Bell, CalendarPlus, MessageCircle, Plus } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import {
   Popover,
@@ -12,6 +12,7 @@ import { UserMenu } from "@/components/common/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { primaryButton, smallButton } from "@/components/schedule/styles";
+import { CreateSessionSheet } from "@/components/schedule/CreateSessionSheet";
 import { AthaNextLogo } from "@/assets";
 import { ROUTES } from "@/routes";
 import { chatAPI } from "@/api/chat";
@@ -42,9 +43,9 @@ export const AppTopBar = () => {
   const { pathname } = useLocation();
   const { isCoach, isAthleteLike } = useRole();
   const hides = (list: string[]) => list.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(`${p}/`)));
-  const action = isCoach
-    ? hides(COACH_ACTION_HIDDEN) ? null : { label: "Create session", to: `${ROUTES.SCHEDULE}?create=1`, Icon: Plus }
-    : isAthleteLike && !hides(ATHLETE_ACTION_HIDDEN) ? { label: "Book", to: ROUTES.BOOK, Icon: CalendarPlus } : null;
+  const showCreate = isCoach && !hides(COACH_ACTION_HIDDEN);
+  const action = !isCoach && isAthleteLike && !hides(ATHLETE_ACTION_HIDDEN) ? { label: "Book", to: ROUTES.BOOK, Icon: CalendarPlus } : null;
+  const [createOpen, setCreateOpen] = useState(false);
   const { hasNewMessage, user, profileReady, setHasNewMessage } = useAuth();
   const queryClient = useQueryClient();
   const timeZone = useViewerTimeZone();
@@ -78,14 +79,19 @@ export const AppTopBar = () => {
 
   return (
     <header
-      className="sticky z-40 bg-[#F1F1E6] px-4 pb-1.5 pt-3 md:px-6 md:pt-3.5"
+      className="sticky z-40 bg-light px-4 pb-1.5 pt-3 md:px-6 md:pt-3.5"
       style={{ top: "var(--network-banner-height, 0px)" }}
     >
       <div className="flex w-full items-center justify-end gap-1.5">
         <Link to={ROUTES.DASHBOARD} aria-label="AthaNext home" className="mr-auto inline-flex md:hidden">
           <img src={AthaNextLogo} alt="AthaNext" className="h-5 w-[88px] object-contain object-left" />
         </Link>
-        {action ? (
+        {showCreate ? (
+          <button type="button" className={cn(primaryButton, smallButton, "hidden md:inline-flex")} onClick={() => setCreateOpen(true)}>
+            <Plus strokeWidth={1.5} aria-hidden="true" />
+            Create session
+          </button>
+        ) : action ? (
           <Link to={action.to} className={cn(primaryButton, smallButton, "hidden md:inline-flex")}>
             <action.Icon strokeWidth={1.5} aria-hidden="true" />
             {action.label}
@@ -94,11 +100,11 @@ export const AppTopBar = () => {
         <Link
           to={ROUTES.CHAT}
           aria-label={unread ? `Messages, ${unread} unread` : "Messages"}
-          className="relative inline-flex size-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F4F4EB] text-[#1A202C] transition-colors hover:border-[#C1C1B8]"
+          className="relative inline-flex size-control items-center justify-center rounded-control border border-light-525 bg-light-400 text-dark transition-colors hover:border-light-600"
         >
           <MessageCircle className="size-5" strokeWidth={1.5} />
           {unread ? (
-            <span className="absolute -right-1.5 -top-1.5 rounded-[4px] bg-[#0054B4] px-[5px] py-px text-[12px] font-medium leading-[13px] text-[#F1F1E6]">
+            <span className="absolute -right-1.5 -top-1.5 rounded-pill border border-primary bg-primary px-[5px] py-px text-label-xsm text-light">
               {unread > 9 ? "9+" : unread}
             </span>
           ) : null}
@@ -115,11 +121,11 @@ export const AppTopBar = () => {
             <button
               type="button"
               aria-label={hasUnread ? "Notifications, new items" : "Notifications"}
-              className="relative inline-flex size-[34px] items-center justify-center rounded-[8px] text-[#1A202C] transition-colors hover:bg-[#F4F4EB]"
+              className="relative inline-flex size-control items-center justify-center rounded-control text-dark transition-colors hover:bg-light-400"
             >
               <Bell className="size-5" strokeWidth={1.5} />
               {hasUnread || hasNewMessage ? (
-                <span className="absolute right-[7px] top-1.5 size-[7px] rounded-full bg-[#0054B4] shadow-[0_0_0_1.5px_#F1F1E6]" />
+                <span className="absolute right-[7px] top-1.5 size-[7px] rounded-full bg-primary outline outline-[1.5px] outline-light" />
               ) : null}
             </button>
           </PopoverTrigger>
@@ -127,14 +133,14 @@ export const AppTopBar = () => {
             align="end"
             sideOffset={8}
             collisionPadding={8}
-            className="w-[calc(100vw-16px)] rounded-[10px] border-[#EAEADF] bg-[#F7F7F0] p-2 shadow-[0_0_15px_rgba(0,0,0,0.05),0_12px_30px_-12px_rgba(16,19,26,0.18)] sm:w-[330px]"
+            className="w-[calc(100vw-16px)] rounded-card border-light-525 bg-light-300 p-1.5 shadow-overlay sm:w-[330px]"
           >
             <div className="flex items-center justify-between px-[10px] pb-2 pt-1.5">
-              <p className="text-[14px] font-medium leading-[18px] text-[#1A202C]">Notifications</p>
+              <p className="text-label-sm text-dark">Notifications</p>
               {hasUnread ? (
                 <button
                   type="button"
-                  className="text-[12px] font-medium text-[#0054B4] hover:text-[#004390]"
+                  className="text-label-xsm text-primary hover:text-primary-600"
                   onClick={() => {
                     void notificationsAPI
                       .markSeen()
@@ -152,26 +158,26 @@ export const AppTopBar = () => {
                   <button
                     key={n.id}
                     type="button"
-                    className="flex w-full items-start gap-[10px] rounded-[8px] p-[10px] text-left hover:bg-[#F9F9F5]"
+                    className="flex w-full items-start gap-2.5 rounded-control p-2.5 text-left hover:bg-light-400"
                     onClick={() => {
                       setOpen(false);
                       navigate(n.link);
                     }}
                   >
                     <span
-                      className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", n.unread ? "bg-[#0054B4]" : "bg-transparent")}
+                      className={cn("mt-1.5 size-1.5 shrink-0 rounded-full", n.unread ? "bg-primary" : "bg-transparent")}
                       aria-hidden="true"
                     />
-                    <p className="min-w-0 flex-1 text-[13px] leading-[17px] text-[#767980]">
-                      <b className="font-medium text-[#1A202C]">{n.title}</b> {describe(n)}
+                    <p className="min-w-0 flex-1 text-paragraph-sm text-dark-300">
+                      <b className="font-medium text-dark">{n.title}</b> {describe(n)}
                     </p>
-                    <time className="ml-auto shrink-0 whitespace-nowrap text-[12px] text-[#A3A6AB]">
+                    <time className="ml-auto shrink-0 whitespace-nowrap text-caption text-dark-300">
                       {n.kind === "upcoming" ? "" : notificationWhen(n.at)}
                     </time>
                   </button>
                 ))
               ) : (
-                <p className="p-[10px] text-[12px] leading-[14px] text-[#767980]">
+                <p className="p-2.5 text-caption text-dark-300">
                   {notificationsQuery.isLoading ? "Loading…" : "You're all caught up."}
                 </p>
               )}
@@ -180,6 +186,7 @@ export const AppTopBar = () => {
         </Popover>
         <UserMenu useFallbackDelay avatarReady={profileReady} />
       </div>
+      {showCreate ? <CreateSessionSheet open={createOpen} onOpenChange={setCreateOpen} /> : null}
     </header>
   );
 };

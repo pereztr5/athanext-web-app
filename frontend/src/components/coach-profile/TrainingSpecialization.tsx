@@ -1,4 +1,4 @@
-import { MapPin, Video } from "lucide-react";
+import { MapPin, Video } from "@/components/icons";
 import { CoachProfileCard, CoachProfileCardHeader, CoachProfileChip } from "./CoachProfileCard";
 
 interface TrainingSpecializationProps {
@@ -15,7 +15,7 @@ const formatSessionType = (value: string) => {
   return spaced.charAt(0).toUpperCase() + spaced.slice(1);
 };
 
-const subheading = "text-[16px] font-normal leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+const subheading = "text-body-l text-dark";
 
 export function TrainingSpecialization({
   specializations = [],
@@ -35,7 +35,7 @@ export function TrainingSpecialization({
             ))}
           </div>
         ) : (
-          <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]">None set</p>
+          <p className="text-body-m text-dark-300">None set</p>
         )}
       </div>
 
@@ -47,11 +47,11 @@ export function TrainingSpecialization({
               const isVirtual = type.toLowerCase().includes("virtual") || type.toLowerCase().includes("online");
               const Icon = isVirtual ? Video : MapPin;
               return (
-                <li key={`${type}-${index}`} className="flex items-start gap-2 text-[14px] leading-[18px] tracking-[-0.03em]">
-                  <Icon className="mt-px size-4 shrink-0 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
-                  <span className="font-medium text-[#1A202C]">{formatSessionType(type)}</span>
+                <li key={`${type}-${index}`} className="flex items-start gap-2 text-body-m">
+                  <Icon className="mt-px size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+                  <span className="font-medium text-dark">{formatSessionType(type)}</span>
                   {type.toLowerCase().includes("person") && locations.length > 0 && (
-                    <span className="text-[#767980]">{locations[0]}</span>
+                    <span className="text-dark-300">{locations[0]}</span>
                   )}
                 </li>
               );

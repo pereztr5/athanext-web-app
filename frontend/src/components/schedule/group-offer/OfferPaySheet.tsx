@@ -127,7 +127,7 @@ export const OfferPaySheet = ({
         <div className={sheetBody}>
           <div className="flex flex-col gap-2">
             {sessions.map((s) => (
-              <div key={s.id} className="flex items-center justify-between gap-3 text-[14px]">
+              <div key={s.id} className="flex items-center justify-between gap-3 text-body-m">
                 <span className="min-w-0 truncate">
                   {s.sessionName} · {formatDayISO(s.date, { weekday: "short", month: "short", day: "numeric" })}
                 </span>
@@ -136,11 +136,11 @@ export const OfferPaySheet = ({
             ))}
           </div>
 
-          <div className="flex flex-col gap-2 rounded-[8px] bg-[#F4F4EB] px-4 py-3.5 text-[14px] leading-[18px]">
+          <div className="flex flex-col gap-2 rounded-card border border-light-525 bg-light-400 px-4 py-3.5 text-body-m">
             {direct ? (
               <>
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[16px] font-medium tracking-[-0.05em]">Pay {first} directly</span>
+                  <span className="text-subtitle">Pay {first} directly</span>
                   <span className={stat28}>{money2(total)}</span>
                 </div>
                 <span className={meta}>
@@ -150,20 +150,20 @@ export const OfferPaySheet = ({
             ) : (
               <>
                 <div className="flex justify-between gap-3">
-                  <span className="text-[#767980]">{sessions.length > 1 ? "Sessions" : "Session"}</span>
+                  <span className="text-dark-300">{sessions.length > 1 ? "Sessions" : "Session"}</span>
                   <span className="tabular-nums">{money2(plan.subtotal)}</span>
                 </div>
                 <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
-                <div className="h-px bg-[#EAEADF]" />
+                <div className="h-px bg-light-525" />
                 <div className="flex items-baseline justify-between gap-3">
-                  <span className="text-[16px] font-medium tracking-[-0.05em]">Total</span>
+                  <span className="text-subtitle">Total</span>
                   <span className={stat28}>{money2(total)}</span>
                 </div>
               </>
             )}
           </div>
 
-          {error ? <p className="text-[13px] text-[#972B2B]">{error}</p> : null}
+          {error ? <p className="text-body-m text-error-700">{error}</p> : null}
         </div>
         <div className={cn(sheetFooter, "flex-col")}>
           {pay.isPending ? (
@@ -183,7 +183,7 @@ export const OfferPaySheet = ({
           )}
           {!direct ? <CheckoutTermsLine /> : null}
           {canOff ? (
-            <button type="button" className={cn(textButton, "justify-center text-[#767980]")} onClick={() => setOffline((v) => !v)}>
+            <button type="button" className={cn(textButton, "justify-center text-dark-300")} onClick={() => setOffline((v) => !v)}>
               {offline ? "Pay by card instead" : `Pay ${first} directly instead`}
             </button>
           ) : null}

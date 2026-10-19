@@ -1,5 +1,5 @@
 import { Link, useLocation } from "react-router-dom";
-import { Shield, Users } from "lucide-react";
+import { Shield, Users } from "@/components/icons";
 import {
   Sidebar,
   SidebarMenu,
@@ -22,10 +22,13 @@ import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PROFILE_NAV, isNavActive, type NavItem
 import { useOverdueInvoices } from "@/hooks/useOverdueInvoices";
 import { cn } from "@/lib/utils";
 
-// Working Copy `.nav button`: 28px rows, the current page grows to 38px on the active tint.
+// Design system NavItem: 34px in every state with 10px padding, so clicking never shifts the list.
+// Active: light fill, 1px primary-400 stroke (4.1:1), primary label and icon. Hover: light-400 fill.
 const navItemClass =
-  "!h-7 !gap-[5px] !rounded-[8px] !px-[5px] !py-0 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#767980] shadow-none transition-colors hover:!bg-transparent hover:!text-[#1A202C] focus-visible:!ring-2 focus-visible:!ring-[#6698D2] data-[active=true]:!h-[38px] data-[active=true]:!bg-[#F9F9F5] data-[active=true]:!px-[10px] data-[active=true]:font-medium data-[active=true]:!text-[#0054B4] data-[active=true]:shadow-none data-[active=true]:hover:!bg-[#F9F9F5] data-[active=true]:hover:!text-[#0054B4] [&>svg]:!size-4 [&>svg]:shrink-0";
-const navBadge = "ml-auto rounded-[4px] bg-[#0054B4] px-2 py-[3px] text-[12px] font-medium leading-[13px] text-[#F1F1E6]";
+  "!h-control !gap-2 !rounded-control !border !border-transparent !px-2.5 !py-0 text-label-sm text-dark-300 shadow-none transition-colors hover:!bg-light-400 hover:!text-dark focus-visible:!ring-0 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary data-[active=true]:!border-primary-400 data-[active=true]:!bg-light data-[active=true]:font-medium data-[active=true]:!text-primary data-[active=true]:shadow-none data-[active=true]:hover:!bg-light data-[active=true]:hover:!text-primary [&>svg]:!size-4 [&>svg]:shrink-0";
+// One count style: pill-notify (blue). Red pill-failed only for overdue money.
+const navBadge = "ml-auto rounded-pill border border-primary bg-primary px-[7px] py-[2px] text-label-xsm text-light";
+const navBadgeFailed = "border-error-300 bg-error-100 text-error-700";
 
 export const AppSidebar = () => {
   const location = useLocation();
@@ -35,7 +38,7 @@ export const AppSidebar = () => {
   const { setOpenMobile } = useSidebar();
   const { data: myOrg } = useMyOrganization();
   const overdue = useOverdueInvoices();
-  // Badges as in the Working Copy: requests waiting on My Schedule, new families on My Athletes.
+  // Badges as in the Working Copy: requests waiting on My schedule, new families on My athletes.
   const requests = useQuery({ queryKey: ["booking-requests"], queryFn: () => bookingRequestsAPI.listForCoach(), enabled: isCoach, staleTime: 60_000 });
   const referrals = useCoachReferrals(isCoach ? userProfile?.coach_id ?? undefined : undefined);
   const approvals = (referrals.data ?? []).filter(isAwaitingCoachApproval).length;
@@ -70,7 +73,7 @@ export const AppSidebar = () => {
 
   return (
     <Sidebar className="border-0">
-      <div className="flex h-full min-h-0 w-full flex-col gap-5 overflow-y-auto border-r border-[#EAEADF] bg-[#F7F7F0] px-[10px] py-5">
+      <div className="flex h-full min-h-0 w-full flex-col gap-5 overflow-y-auto border-r border-light-525 bg-light-300 px-[10px] py-5">
         <div className="flex w-full flex-col gap-5">
           <div className="flex items-center px-[10px] pb-1 pt-1.5">
             <Link to={ROUTES.DASHBOARD} aria-label="AthaNext home" className="inline-flex">
@@ -81,11 +84,15 @@ export const AppSidebar = () => {
             {items.map((item) => (
               <SidebarMenuItem key={item.title}>
                 <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
-                  <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                  <Link
+                    to={item.url}
+                    onClick={() => setOpenMobile(false)}
+                    aria-current={isNavActive(item, location.pathname) ? "page" : undefined}
+                  >
                     <item.icon className="size-4" strokeWidth={1.5} />
                     <span>{item.title}</span>
                     {badgeFor(item.url) ? (
-                      <span className={cn(navBadge, item.url === ROUTES.PAYMENTS && "bg-[#FEDADA] text-[#972B2B]")}>{badgeFor(item.url)}</span>
+                      <span className={cn(navBadge, item.url === ROUTES.PAYMENTS && navBadgeFailed)}>{badgeFor(item.url)}</span>
                     ) : null}
                   </Link>
                 </SidebarMenuButton>
@@ -94,12 +101,16 @@ export const AppSidebar = () => {
           </SidebarMenu>
           {publicPages.length ? (
             <div className="flex flex-col gap-2">
-              <p className="px-[5px] text-[12px] font-medium leading-[13px] tracking-[-0.03em] text-[#A3A6AB]">Public pages</p>
+              <p className="px-2.5 text-label-xsm text-dark-300">Public pages</p>
               <SidebarMenu className="w-full gap-1">
                 {publicPages.map((item) => (
                   <SidebarMenuItem key={item.title}>
                     <SidebarMenuButton asChild isActive={isNavActive(item, location.pathname)} className={navItemClass}>
-                      <Link to={item.url} onClick={() => setOpenMobile(false)}>
+                      <Link
+                        to={item.url}
+                        onClick={() => setOpenMobile(false)}
+                        aria-current={isNavActive(item, location.pathname) ? "page" : undefined}
+                      >
                         <item.icon className="size-4" strokeWidth={1.5} />
                         <span>{item.title}</span>
                       </Link>
@@ -110,7 +121,7 @@ export const AppSidebar = () => {
             </div>
           ) : null}
         </div>
-        <div className="mt-auto border-t border-[#EAEADF] pt-4">
+        <div className="mt-auto border-t border-light-525 pt-4">
           <UserMenu variant="sidebar" useFallbackDelay avatarReady={profileReady} label={{ name: firstName, sub: sportLabel }} />
         </div>
       </div>

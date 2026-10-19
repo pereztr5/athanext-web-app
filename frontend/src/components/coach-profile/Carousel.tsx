@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Image as ImageIcon, Loader2, X } from "@/components/icons";
 
 const navButtonClass =
-    "absolute top-1/2 -translate-y-1/2 inline-flex size-[34px] items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0]/90 text-[#1A202C] transition-colors hover:bg-[#F7F7F0]";
+    "absolute top-1/2 -translate-y-1/2 inline-flex size-[34px] items-center justify-center rounded-control border border-light-525 bg-light-300/90 text-dark transition-colors hover:bg-light-300 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
 interface CarouselProps {
     photos: string[];
@@ -70,10 +70,10 @@ export function Carousel({
     // When no photos are available, show a grayed-out placeholder
     if (hasNoPhotos) {
         return (
-            <div className={`${frameClass} flex items-center justify-center rounded-[8px] bg-[#F4F4EB]`}>
+            <div className={`${frameClass} flex items-center justify-center rounded-control bg-light-400`}>
                 <div className="flex flex-col items-center gap-2 text-center">
-                    <ImageIcon className="size-6 text-[#A3A6AB]" strokeWidth={1.5} aria-hidden="true" />
-                    <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">No cover photo yet</p>
+                    <ImageIcon className="size-6 text-dark-200" strokeWidth={1.5} aria-hidden="true" />
+                    <p className="text-body-m text-dark-300">No cover photo yet</p>
                 </div>
             </div>
         );
@@ -81,11 +81,11 @@ export function Carousel({
 
     return (
         <>
-        <div className={`${frameClass} overflow-hidden rounded-[8px] bg-[#F4F4EB]`}>
+        <div className={`${frameClass} overflow-hidden rounded-control bg-light-400`}>
             <img
                 src={currentPhoto}
                 alt={`${altTextPrefix || 'Photo'} ${currentPhotoIndex + 1}`}
-                className={`w-full h-full ${fitClass} rounded-[8px] !border-0 !ring-0 !outline-none bg-[#F4F4EB] ${isImageLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
+                className={`w-full h-full ${fitClass} rounded-control !border-0 !ring-0 !outline-none bg-light-400 ${isImageLoading ? "opacity-0" : "opacity-100"} transition-opacity duration-300`}
                 onClick={enablePreview ? () => setPreviewOpen(true) : undefined}
                 role={enablePreview ? 'button' : undefined}
                 tabIndex={enablePreview ? 0 : -1}
@@ -102,13 +102,13 @@ export function Carousel({
                 }}
             />
             {(isImageLoading || isImageError) && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#F4F4EB]">
+                <div className="absolute inset-0 flex items-center justify-center bg-light-400">
                     {isImageError ? (
-                        <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">This photo couldn't load.</p>
+                        <p className="text-body-m text-dark-300">This photo couldn't load.</p>
                     ) : (
-                        <div className="flex items-center gap-2 text-[#767980]">
+                        <div className="flex items-center gap-2 text-dark-300">
                             <Loader2 className="size-4 animate-spin" strokeWidth={1.5} aria-hidden="true" />
-                            <span className="text-[14px] leading-[18px] tracking-[-0.03em]">Loading photo</span>
+                            <span className="text-body-m">Loading photo</span>
                         </div>
                     )}
                 </div>
@@ -144,9 +144,9 @@ export function Carousel({
                             type="button"
                             key={index}
                             onClick={() => setCurrentPhotoIndex(index)}
-                            className={`h-[5px] rounded-[10px] transition-all ${index === currentPhotoIndex
-                                ? 'w-6 bg-[#F7F7F0]'
-                                : 'w-[5px] bg-[#F7F7F0]/60'
+                            className={`h-[5px] rounded-full transition-all ${index === currentPhotoIndex
+                                ? 'w-6 bg-light-300'
+                                : 'w-[5px] bg-light-300/60'
                                 }`}
                             aria-label={`Go to photo ${index + 1}`}
                         />
@@ -156,18 +156,18 @@ export function Carousel({
         </div>
 
         {enablePreview && previewOpen && portalTarget && safePhotos[currentPhotoIndex] && createPortal(
-            <div className="fixed inset-0 z-[2100] bg-black/80 flex items-center justify-center px-4">
+            <div className="fixed inset-0 z-[2100] bg-dark/80 flex items-center justify-center px-4">
                 <div className="absolute inset-0" onClick={() => setPreviewOpen(false)} />
                 <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col gap-3 z-[2101]">
                     <button
                         type="button"
                         aria-label="Close preview"
-                        className="absolute -top-10 right-0 text-[#F1F1E6]/90 hover:text-[#F1F1E6]"
+                        className="absolute -top-10 right-0 text-light/90 hover:text-light"
                         onClick={() => setPreviewOpen(false)}
                     >
                         <X className="size-6" strokeWidth={1.5} />
                     </button>
-                    <div className="relative w-full h-full max-h-[80vh] bg-black/30 rounded-[10px] overflow-hidden flex items-center justify-center">
+                    <div className="relative w-full h-full max-h-[80vh] bg-dark/30 rounded-card overflow-hidden flex items-center justify-center">
                         <img
                             src={safePhotos[currentPhotoIndex]}
                             alt={`${altTextPrefix || 'Photo'} ${currentPhotoIndex + 1}`}
@@ -201,7 +201,7 @@ export function Carousel({
                                     type="button"
                                     key={index}
                                     onClick={() => setCurrentPhotoIndex(index)}
-                                    className={`h-[5px] rounded-[10px] transition-all ${index === currentPhotoIndex ? 'w-6 bg-[#F7F7F0]' : 'w-[5px] bg-[#F7F7F0]/60'}`}
+                                    className={`h-[5px] rounded-full transition-all ${index === currentPhotoIndex ? 'w-6 bg-light-300' : 'w-[5px] bg-light-300/60'}`}
                                     aria-label={`Go to photo ${index + 1}`}
                                 />
                             ))}

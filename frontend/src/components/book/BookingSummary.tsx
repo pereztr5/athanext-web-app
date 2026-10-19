@@ -1,5 +1,5 @@
 /** "Your booking" column on Book a Session (Working Copy `AN.summaryCard`): picks, credits, totals, Review and pay. */
-import { ShieldCheck, X } from "lucide-react";
+import { ShieldCheck, X } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import type { BookableSession, BookingCoach } from "@/api/book";
 import { Switch } from "@/components/ui/switch";
@@ -12,12 +12,12 @@ import { FeeLines } from "./FeeLines";
 import { firstName, reviewLabel, type BookingPlan } from "./bookSummary";
 
 const between = "flex items-center justify-between gap-3";
-const total28 = "text-[28px] font-bold leading-[30px] tracking-[-0.05em] tabular-nums text-[#1A202C]";
+const total28 = "text-highlight tabular-nums text-dark";
 
 const CreditsSwitch = ({ checked, onChange }: { checked: boolean; onChange: (v: boolean) => void }) => (
   <div className={between}>
     <span className="flex flex-col gap-1">
-      <span className="text-[14px] font-medium leading-[18px]">Use package credits</span>
+      <span className="text-label-sm">Use package credits</span>
       <span className={meta}>Applied before payment</span>
     </span>
     <Switch checked={checked} onCheckedChange={onChange} aria-label="Use package credits" />
@@ -55,16 +55,16 @@ export const BookingSummary = ({
   return (
     <section className={card} aria-label="Your booking">
       <div className={between}>
-        <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.04em] text-[#1A202C]">Your booking</h2>
+        <h2 className="text-card-title text-dark">Your booking</h2>
         {picked.length ? (
-          <button type="button" className={cn(textButton, "text-[#767980]")} onClick={onClear}>
+          <button type="button" className={cn(textButton, "text-dark-300")} onClick={onClear}>
             Clear
           </button>
         ) : null}
       </div>
 
       {picked.length ? (
-        <div className="flex flex-col divide-y divide-[#EAEADF]">
+        <div className="flex flex-col divide-y divide-light-525">
           {picked.map((s) => {
             const start = bookableStart(s);
             const day = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
@@ -72,13 +72,13 @@ export const BookingSummary = ({
             return (
               <div key={s.id} className="flex items-start justify-between gap-2.5 py-2.5">
                 <span className="flex min-w-0 flex-col gap-1">
-                  <span className="text-[14px] font-medium leading-[18px]">
+                  <span className="text-label-sm">
                     {day}, {formatClock(start, timeZone)}
                   </span>
                   <span className={meta}>{[firstName(coaches[s.coachId]), what].filter(Boolean).join(", ")}</span>
                 </span>
                 <span className="flex flex-none items-center gap-1.5">
-                  <span className="text-[14px] font-medium tabular-nums">
+                  <span className="text-label-sm tabular-nums">
                     {requestIds.has(s.id) ? (
                       <BrandPill tone="amber">Request</BrandPill>
                     ) : plan.covered.has(s.id) ? (
@@ -89,7 +89,7 @@ export const BookingSummary = ({
                   </span>
                   <button
                     type="button"
-                    className="inline-flex size-[28px] items-center justify-center rounded-[8px] text-[#767980] hover:bg-[#F1F1E6] hover:text-[#1A202C]"
+                    className="inline-flex size-[28px] items-center justify-center rounded-control text-dark-300 hover:bg-light hover:text-dark"
                     aria-label={`Remove ${day}, ${formatClock(start, timeZone)}`}
                     onClick={() => onRemove(s)}
                   >
@@ -101,18 +101,18 @@ export const BookingSummary = ({
           })}
         </div>
       ) : (
-        <p className="rounded-[8px] border border-dashed border-[#C1C1B8] px-4 py-6 text-center text-[14px] leading-[18px] text-[#767980]">
+        <p className="rounded-control border border-dashed border-light-600 px-4 py-6 text-center text-body-m text-dark-300">
           Sessions you pick show up here. You can mix days, weeks and coaches.
         </p>
       )}
 
       {plan.availableCredits > 0 ? <CreditsSwitch checked={useCredits} onChange={onUseCreditsChange} /> : null}
 
-      <div className="flex flex-col gap-2.5 rounded-[8px] bg-[#F4F4EB] px-4 py-3.5">
+      <div className="flex flex-col gap-2.5 rounded-control bg-light-400 px-4 py-3.5">
         {onlyDirect ? (
           <>
             <div className={cn(between, "items-baseline")}>
-              <span className="text-[16px] font-medium">Pay {directName} directly</span>
+              <span className="text-subtitle">Pay {directName} directly</span>
               <span className={total28}>{money(plan.payDirect)}</span>
             </div>
             <span className={meta}>Nothing is charged in AthaNext.</span>
@@ -120,25 +120,25 @@ export const BookingSummary = ({
         ) : (
           <>
             <div className={between}>
-              <span className="text-[14px] text-[#767980]">Sessions</span>
-              <span className="text-[14px] tabular-nums">{money(plan.subtotal)}</span>
+              <span className="text-body-m text-dark-300">Sessions</span>
+              <span className="text-body-m tabular-nums">{money(plan.subtotal)}</span>
             </div>
             {plan.requests.length ? (
               <div className={between}>
-                <span className="text-[14px] text-[#767980]">{plural(plan.requests.length, "request")}, not charged yet</span>
-                <span className="text-[14px] tabular-nums text-[#A3A6AB]">{money(plan.ifAccepted)}</span>
+                <span className="text-body-m text-dark-300">{plural(plan.requests.length, "request")}, not charged yet</span>
+                <span className="text-body-m tabular-nums text-dark-200">{money(plan.ifAccepted)}</span>
               </div>
             ) : null}
             <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
-            <div className="h-px bg-[#EAEADF]" />
+            <div className="h-px bg-light-525" />
             <div className={cn(between, "items-baseline")}>
-              <span className="text-[16px] font-medium">{plan.direct.length ? "Due now" : "Total"}</span>
+              <span className="text-subtitle">{plan.direct.length ? "Due now" : "Total"}</span>
               <span className={total28}>{money(plan.dueNow)}</span>
             </div>
             {plan.direct.length ? (
               <div className={cn(between, "items-baseline")}>
-                <span className="text-[14px] text-[#767980]">Pay {directName} directly</span>
-                <span className="text-[14px] font-medium tabular-nums">{money(plan.payDirect)}</span>
+                <span className="text-body-m text-dark-300">Pay {directName} directly</span>
+                <span className="text-label-sm tabular-nums">{money(plan.payDirect)}</span>
               </div>
             ) : null}
           </>
@@ -148,7 +148,7 @@ export const BookingSummary = ({
       <button type="button" className={cn(primaryButton, "h-[44px] w-full")} disabled={!picked.length} onClick={onReview}>
         {reviewLabel(plan)}
       </button>
-      <p className="flex items-start gap-2.5 rounded-[8px] bg-[#F4F4EB] px-3.5 py-3 text-[12px] leading-[14px] text-[#767980]">
+      <p className="flex items-start gap-2.5 rounded-control bg-light-400 px-3.5 py-3 text-caption text-dark-300">
         <ShieldCheck className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
         Free cancellation with 24 hours notice. Cancelled sessions come back as a credit with the same coach.
       </p>

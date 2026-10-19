@@ -37,7 +37,7 @@ const Field = ({ text, hint, error, children }: { text: string; hint?: string; e
   <label className="flex min-w-0 flex-col gap-1.5">
     <span className={label}>{text}</span>
     {children}
-    {error ? <span className="text-[12px] leading-[14px] text-[#972B2B]">{error}</span> : hint ? <span className={caption}>{hint}</span> : null}
+    {error ? <span className="text-caption text-error-700">{error}</span> : hint ? <span className={caption}>{hint}</span> : null}
   </label>
 );
 
@@ -81,8 +81,8 @@ export const EditRulesDialog = ({ rules, onClose }: { rules: RulesView; onClose:
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
       <DialogContent className={cn(dialogContent, "w-[calc(100vw-16px)] max-w-[640px] md:w-[calc(100vw-32px)]")}>
-        <DialogHeader className="border-b border-[#EAEADF] px-4 py-5 pr-14 text-left md:px-[25px]">
-          <DialogTitle className="text-[20px] font-semibold leading-[24px] tracking-[-0.05em] md:text-[24px] md:leading-[30px]">Booking rules</DialogTitle>
+        <DialogHeader className="border-b border-light-525 px-4 py-5 pr-14 text-left md:px-[25px]">
+          <DialogTitle className="text-card-title md:text-section">Booking rules</DialogTitle>
           <DialogDescription className="sr-only">Cancellation, booking window, travel, group minimum and new families</DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-4 px-4 py-5 md:px-[25px]">
@@ -151,7 +151,7 @@ export const EditRulesDialog = ({ rules, onClose }: { rules: RulesView; onClose:
             </select>
           </Field>
         </div>
-        <div className="flex flex-wrap justify-end gap-2.5 border-t border-[#EAEADF] px-4 py-4 md:px-[25px]">
+        <div className="flex flex-wrap justify-end gap-2.5 border-t border-light-525 px-4 py-4 md:px-[25px]">
           <button type="button" className={secondaryButton} onClick={onClose}>
             Cancel
           </button>

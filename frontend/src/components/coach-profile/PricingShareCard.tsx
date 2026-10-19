@@ -4,6 +4,23 @@ import { coachPublicLinkLabel } from "@/utils/coachSlug";
 import { cn } from "@/lib/utils";
 import logoMarkWhite from "@/assets/logo-mark-white.svg";
 
+/*
+ * The share image is a fixed 1080px Instagram canvas exported with html2canvas, not app UI,
+ * so its type is sized for that canvas instead of the app type ramp, and its dark panels use
+ * export-only colours that have no light-theme token.
+ */
+const SURFACE = "#222b3c";
+const SURFACE_LINE = "#2d3649";
+const ROW_LINE = "#2a3142";
+const BADGE = "#084184";
+const BADGE_LINE = "#2462b3";
+const exportType = (size: number, weight: number, tracking = "-0.05em", lineHeight?: number): React.CSSProperties => ({
+  fontSize: size,
+  fontWeight: weight,
+  letterSpacing: tracking,
+  ...(lineHeight ? { lineHeight } : {}),
+});
+
 export interface PricingShareSession {
   title: string;
   meta: string;
@@ -62,7 +79,7 @@ export function PricingShareCard({
   return (
     <div
       className={cn(
-        "relative box-border flex h-[1350px] w-[1080px] flex-col overflow-hidden bg-[#1a202c] font-sans text-[#f5f6f8]",
+        "relative box-border flex h-[1350px] w-[1080px] flex-col overflow-hidden bg-dark font-sans text-light-400",
         className
       )}
       style={style}
@@ -83,13 +100,14 @@ export function PricingShareCard({
                 className="block size-[132px] rounded-[24px] object-cover object-top"
               />
             ) : (
-              <div className="flex size-[132px] items-center justify-center rounded-[24px] bg-[#222b3c] text-[40px] font-semibold">
+              <div className="flex size-[132px] items-center justify-center rounded-[24px]"
+                style={{ ...exportType(40, 600), background: SURFACE }}>
                 {coach.name.slice(0, 1)}
               </div>
             )}
             <div className="flex flex-col gap-2.5">
               <div className="flex items-center gap-2">
-                <div className="text-[40px] font-semibold leading-none tracking-[-0.045em]">
+                <div style={exportType(40, 600, "-0.045em", 1)}>
                   {coach.name}
                 </div>
                 {coach.verified ? (
@@ -106,15 +124,15 @@ export function PricingShareCard({
                   </svg>
                 ) : null}
               </div>
-              <div className="flex items-center gap-3 text-[19px] tracking-[-0.03em] text-[#c9ced8]">
+              <div className="flex items-center gap-3 text-light-600" style={exportType(19, 400, "-0.03em")}>
                 <span>{coach.sport}</span>
-                <span className="size-[5px] rounded-full bg-[#c9ced8]" />
+                <span className="size-[5px] rounded-full bg-light-600" />
                 <span>{coach.position}</span>
               </div>
               {showRating ? (
-                <div className="flex items-center gap-2 text-[17px] tracking-[-0.02em] text-[#c9ced8]">
+                <div className="flex items-center gap-2 text-light-600" style={exportType(17, 400, "-0.02em")}>
                   <BrandStar size={16} />
-                  <span className="font-medium text-[#f5f6f8]">{coach.rating}</span>
+                  <span className="font-medium text-light-400">{coach.rating}</span>
                   <span>· {coach.reviews} reviews</span>
                 </div>
               ) : null}
@@ -125,7 +143,8 @@ export function PricingShareCard({
               {coach.specialties.slice(0, 3).map((specialty) => (
                 <span
                   key={specialty}
-                  className="flex h-[38px] items-center whitespace-nowrap rounded-full border border-[#2d3649] bg-[#222b3c] px-[18px] text-[15px] tracking-[-0.02em]"
+                  className="flex h-[38px] items-center whitespace-nowrap rounded-full border px-[18px]"
+                  style={{ ...exportType(15, 400, "-0.02em"), background: SURFACE, borderColor: SURFACE_LINE }}
                 >
                   {specialty}
                 </span>
@@ -136,23 +155,23 @@ export function PricingShareCard({
 
         {showSessions && sessions.length > 0 ? (
           <div className="flex flex-col">
-            <div className="mb-[34px] mt-[72px] text-[24px] font-semibold tracking-[-0.02em] text-[#8e97a9]">
+            <div className="mb-[34px] mt-[72px] text-section text-dark-250">
               Sessions
             </div>
             {sessions.map((row, index) => (
               <div
                 key={`${row.title}-${index}`}
-                className="flex items-end justify-between border-b border-[#2a3142] pb-5"
+                className="flex items-end justify-between border-b pb-5"
                 style={{
                   paddingTop: index === 0 ? 0 : 22,
-                  borderBottomColor: index === sessions.length - 1 ? "transparent" : "#2a3142",
+                  borderBottomColor: index === sessions.length - 1 ? "transparent" : ROW_LINE,
                 }}
               >
                 <div className="flex flex-col gap-1.5">
-                  <div className="text-[24px] font-medium tracking-[-0.05em]">{row.title}</div>
-                  <div className="text-[24px] tracking-[-0.05em] text-[#8e97a9]">{row.meta}</div>
+                  <div style={exportType(24, 500)}>{row.title}</div>
+                  <div className="text-dark-250" style={exportType(24, 400)}>{row.meta}</div>
                 </div>
-                <div className="text-[32px] font-medium tracking-[-0.06em]">{row.price}</div>
+                <div style={exportType(32, 500, "-0.06em")}>{row.price}</div>
               </div>
             ))}
           </div>
@@ -160,7 +179,7 @@ export function PricingShareCard({
 
         {showPackages && visiblePackages.length > 0 ? (
           <div className="flex flex-col">
-            <div className="mb-[34px] mt-16 text-[24px] font-semibold tracking-[-0.02em] text-[#8e97a9]">
+            <div className="mb-[34px] mt-16 text-section text-dark-250">
               Packages
             </div>
             <div
@@ -179,14 +198,15 @@ export function PricingShareCard({
                     }}
                   >
                     {featured ? (
-                      <span className="absolute right-[18px] top-[18px] rounded-full border border-[#2462b3] bg-[#084184] px-3 py-0.5 text-[11px] font-medium">
+                      <span className="absolute right-[18px] top-[18px] rounded-full border px-3 py-0.5"
+                        style={{ ...exportType(11, 500, "normal"), background: BADGE, borderColor: BADGE_LINE }}>
                         {pkg.badge}
                       </span>
                     ) : null}
-                    <div className="text-[29px] font-medium tracking-[-0.04em]">{pkg.name}</div>
+                    <div style={exportType(29, 500, "-0.04em")}>{pkg.name}</div>
                     <div
-                      className="mt-3 h-[72px] text-[17px] leading-[1.18] tracking-[-0.04em]"
-                      style={{ color: featured ? "#9aa6ba" : "#8e97a9" }}
+                      className="mt-3 h-[72px]"
+                      style={{ ...exportType(17, 400, "-0.04em", 1.18), color: featured ? "#9aa6ba" : "#8e97a9" }}
                     >
                       {pkg.desc}
                     </div>
@@ -195,9 +215,9 @@ export function PricingShareCard({
                       style={{ background: featured ? "#24466f" : "#353e52" }}
                     />
                     <div className="flex items-baseline gap-3.5 py-7">
-                      <span className="text-[38px] font-medium tracking-[-0.07em]">{pkg.price}</span>
+                      <span style={exportType(38, 500, "-0.07em")}>{pkg.price}</span>
                       {pkg.save ? (
-                        <span className="text-[15px] font-medium tracking-[-0.02em] text-[#9fc2ff]">
+                        <span className="text-primary-200" style={exportType(15, 500, "-0.02em")}>
                           {pkg.save}
                         </span>
                       ) : null}
@@ -207,8 +227,8 @@ export function PricingShareCard({
                       style={{ background: featured ? "#24466f" : "#353e52" }}
                     />
                     <div
-                      className="mt-auto text-[17px] leading-[1.5] tracking-[-0.04em]"
-                      style={{ color: featured ? "#9aa6ba" : "#8e97a9" }}
+                      className="mt-auto"
+                      style={{ ...exportType(17, 400, "-0.04em", 1.5), color: featured ? "#9aa6ba" : "#8e97a9" }}
                     >
                       {pkg.count}
                       <br />
@@ -221,7 +241,7 @@ export function PricingShareCard({
           </div>
         ) : null}
 
-        <div className="mt-auto flex flex-col items-center gap-1.5 pb-7 text-[#8e97a9]">
+        <div className="mt-auto flex flex-col items-center gap-1.5 pb-7 text-dark-250">
           <div className="flex items-center gap-1.5">
             <img
               src={logoMarkWhite}
@@ -231,9 +251,9 @@ export function PricingShareCard({
               className="block size-[22px] object-contain"
               aria-hidden="true"
             />
-            <span className="text-[17px] font-medium tracking-[-0.04em]">AthaNext</span>
+            <span style={exportType(17, 500, "-0.04em")}>AthaNext</span>
           </div>
-          <span className="text-[14px] tracking-[-0.01em] text-[#6f7788]">
+          <span className="text-body-m text-dark-300">
             Book at {coachPublicLinkLabel(coach.slug)}
           </span>
         </div>

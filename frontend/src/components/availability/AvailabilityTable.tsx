@@ -69,7 +69,7 @@ export const AvailabilityTable = ({
             <TableRow className="border-0 hover:bg-transparent">
               <TableCell
                 colSpan={hasActions ? 8 : 7}
-                className="border-t border-[#EAEADF] px-0 py-8 text-center text-[14px] leading-[18px] tracking-[-0.03em] text-[#A3A6AB]"
+                className="border-t border-light-525 px-0 py-8 text-center text-body-m text-dark-300"
               >
                 No time slots available for this period
               </TableCell>

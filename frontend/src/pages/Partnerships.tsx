@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
 import { SOCCER_THEME, ROWING_BLUE_THEME } from "@/config/colors";
 
-import { Loader2, ShoppingCart, Info, Filter } from "lucide-react";
+import { Loader2, ShoppingCart, Info, Filter } from "@/components/icons";
 import { PartnershipPreviewModal } from "@/components/sections/PartnershipPreviewModal";
 import { cn } from "@/lib/utils";
 import { capitalize } from "@/utils/helperFunctions";

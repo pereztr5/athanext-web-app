@@ -66,7 +66,7 @@ export const ServiceEditorDialog = ({
     <Dialog open={Boolean(service)} onOpenChange={(open) => !open && onClose()}>
       <DialogContent className={dialogContent}>
         <DialogHeader className="px-[25px] pb-4 pt-5 pr-14 text-left">
-          <DialogTitle className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em]">{isNew ? "Add session type" : "Edit session type"}</DialogTitle>
+          <DialogTitle className="text-section">{isNew ? "Add session type" : "Edit session type"}</DialogTitle>
         </DialogHeader>
         <form
           className="flex flex-col gap-4 px-[25px] pb-5"
@@ -78,12 +78,12 @@ export const ServiceEditorDialog = ({
           <label className="flex flex-col gap-1.5">
             <span className={label}>Name</span>
             <input
-              className={cn(input, errors.name && "ring-2 ring-[#972B2B]")}
+              className={cn(input, errors.name && "border-error-600")}
               placeholder="For example, Finishing clinic"
               value={name}
               onChange={(e) => setName(e.target.value)}
             />
-            {errors.name ? <span className="text-[12px] text-[#972B2B]">{errors.name}</span> : null}
+            {errors.name ? <span className="text-caption text-error-700">{errors.name}</span> : null}
           </label>
           {!isBase ? (
             <div className="flex flex-col gap-1.5">
@@ -111,9 +111,9 @@ export const ServiceEditorDialog = ({
             <label className="flex flex-col gap-1.5">
               <span className={label}>{format === "group" && !isBase ? "Price per athlete" : "Price"}</span>
               <span className="relative">
-                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[14px] text-[#767980]">$</span>
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-body-m text-dark-300">$</span>
                 <input
-                  className={cn(input, "pl-6", errors.price && "ring-2 ring-[#972B2B]")}
+                  className={cn(input, "pl-6", errors.price && "border-error-600")}
                   type="number"
                   min={0}
                   inputMode="decimal"
@@ -121,7 +121,7 @@ export const ServiceEditorDialog = ({
                   onChange={(e) => setPrice(e.target.value)}
                 />
               </span>
-              {errors.price ? <span className="text-[12px] text-[#972B2B]">{errors.price}</span> : null}
+              {errors.price ? <span className="text-caption text-error-700">{errors.price}</span> : null}
             </label>
           </div>
           <label className="flex flex-col gap-1.5">
@@ -132,12 +132,12 @@ export const ServiceEditorDialog = ({
               ))}
             </select>
           </label>
-          <p className="text-[12px] leading-[14px] text-[#767980]">
+          <p className="text-caption text-dark-300">
             {isBase ? "Price and place save when you press Done. " : ""}Price changes apply to new bookings. Existing bookings keep their price.
           </p>
           <div className="flex items-center justify-end gap-2">
             {!isNew && !isBase ? (
-              <button type="button" className={cn(textButton, "mr-auto text-[#972B2B]")} disabled={saving} onClick={() => void remove()}>
+              <button type="button" className={cn(textButton, "mr-auto text-error-700")} disabled={saving} onClick={() => void remove()}>
                 Delete
               </button>
             ) : null}

@@ -287,6 +287,19 @@ Deno.serve(async (req) => {
       });
     }
 
+    // Account settings > Notifications: message_email false turns these emails off (missing = on).
+    const { data: prefRow } = await supabase
+      .from("user_profiles")
+      .select("notification_prefs")
+      .eq("id", recipient.user_id)
+      .maybeSingle();
+    if ((prefRow as { notification_prefs?: Record<string, unknown> } | null)?.notification_prefs?.message_email === false) {
+      return new Response(JSON.stringify({ success: true, notified: false, reason: "opted out" }), {
+        status: 200,
+        headers: { ...corsHeaders, "Content-Type": "application/json" },
+      });
+    }
+
     const templates = await fetchTemplates(supabase);
     const configuredTemplate = templates["conversation_notification_template"];
     const { transporter, fromEmail } = await buildTransporter();

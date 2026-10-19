@@ -26,7 +26,7 @@ interface ReviewsCardProps {
 
 const MAX_LISTED_REVIEWS = 5;
 
-const AVATAR_TINTS = ["bg-[#E5EDF7] text-[#0054B4]", "bg-[#E7F4F8] text-[#1599BC]"];
+const AVATAR_TINTS = ["border border-primary-300 bg-primary-100 text-primary-700", "border border-secondary-300 bg-secondary-100 text-secondary-700"];
 
 const getInitials = (name: string) =>
   name
@@ -49,7 +49,7 @@ const formatReviewDate = (value?: string | null) => {
   });
 };
 
-const mutedLine = "text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
+const mutedLine = "text-body-m text-dark-300";
 
 /** Brand-kit reviews card shared by every coach-profile reviews surface. */
 export function ReviewsCard({
@@ -70,14 +70,14 @@ export function ReviewsCard({
     <CoachProfileCard className={className}>
       <div className="flex items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <h2 className="text-[20px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">Reviews</h2>
+          <h2 className="text-card-title text-dark">Reviews</h2>
           {hasRatings ? <BrandPill tone="neutral">{totalReviews}</BrandPill> : null}
         </div>
         {onWriteReview ? (
           <button
             type="button"
             onClick={onWriteReview}
-            className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] hover:text-[#004390]"
+            className="text-label-sm text-primary hover:text-primary-600"
           >
             Write a review
           </button>
@@ -97,20 +97,20 @@ export function ReviewsCard({
             const date = formatReviewDate(review.created_at);
             return (
               <Fragment key={review.id}>
-                <div className="h-px w-full bg-[#EAEADF]" />
+                <div className="h-px w-full bg-light-525" />
                 <div className="flex flex-col gap-[10px]">
                   <div className="flex items-center justify-between gap-3">
                     <div className="flex min-w-0 flex-wrap items-center gap-[10px]">
                       <span
                         aria-hidden="true"
                         className={cn(
-                          "flex size-7 shrink-0 items-center justify-center rounded-full text-[12px] font-medium",
+                          "flex size-7 shrink-0 items-center justify-center rounded-full text-label-xsm",
                           AVATAR_TINTS[index % AVATAR_TINTS.length],
                         )}
                       >
                         {getInitials(name)}
                       </span>
-                      <span className="min-w-0 truncate text-[16px] font-medium leading-[18px] tracking-[-0.05em] text-[#1A202C]">
+                      <span className="min-w-0 truncate text-subtitle text-dark">
                         {name}
                       </span>
                       {rating > 0 ? (
@@ -122,12 +122,12 @@ export function ReviewsCard({
                       ) : null}
                     </div>
                     {date ? (
-                      <span className="shrink-0 text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+                      <span className="shrink-0 text-caption text-dark-300">
                         {date}
                       </span>
                     ) : null}
                   </div>
-                  <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56] [text-wrap:pretty]">
+                  <p className="text-body-m text-dark-400 [text-wrap:pretty]">
                     {review.review_text}
                   </p>
                 </div>

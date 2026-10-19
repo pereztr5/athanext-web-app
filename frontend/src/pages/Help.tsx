@@ -3,11 +3,13 @@
  * and a Message support sheet. Content is the prototype placeholder set.
  */
 import { useMemo, useState } from "react";
-import { BookOpen, ChevronDown, MessageCircle, Search } from "lucide-react";
+import { BookOpen, ChevronDown, MessageCircle, Search } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LegalCard } from "@/components/legal/LegalLinks";
-import { card, dialogContent, input, label, meta, pageTitle, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { card, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/contexts/AuthContext";
+import { useContactSubmission } from "@/hooks/useContactSubmission";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
@@ -18,10 +20,16 @@ const TOPICS = {
   athlete: ["A payment or refund", "A booking", "A coach", "My account", "Something else"],
 } as const;
 
+const accountName = (name: string | null | undefined) => {
+  const cleaned = (name ?? "").replace(/[^a-zA-Z\s\-'.]/g, " ").replace(/\s+/g, " ").trim();
+  return cleaned.length >= 2 ? cleaned.slice(0, 100) : "Account holder";
+};
+
 const Help = () => {
   const { isCoach } = useRole();
   const { user, userName } = useAuth();
   const { toast } = useToast();
+  const { submitContactForm, isSubmitting } = useContactSubmission();
   const role = isCoach ? "coach" : "athlete";
   const list = HELP_ARTICLES[role];
   const [q, setQ] = useState("");
@@ -43,33 +51,46 @@ const Help = () => {
   const heading = cat || (q.trim() ? "Results" : "Common questions");
   const email = user?.email || "";
 
-  const send = () => {
+  const send = async () => {
     const next: typeof errors = {};
     if (!topic) next.topic = "Choose a topic";
     if (msg.trim().length < 10) next.msg = "Tell us a bit more";
+    else if (msg.trim().length > 2000) next.msg = "Use 2000 characters or fewer";
     setErrors(next);
     if (Object.keys(next).length) return;
+    const email = user?.email?.trim().toLowerCase() ?? "";
+    if (!email) {
+      toast({ title: "That didn't send. Try again", variant: "destructive" });
+      return;
+    }
+    const ok = await submitContactForm(
+      { fullName: accountName(userName), email, subject: topic, message: msg.trim() },
+      { quiet: true }
+    );
+    if (!ok) {
+      toast({ title: "That didn't send. Try again", variant: "destructive" });
+      return;
+    }
     setSupportOpen(false);
     setTopic("");
     setMsg("");
-    toast({ title: "Message sent. We usually reply within a day" });
+    setErrors({});
+    toast({ title: "Message sent" });
   };
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-5">
-        <header className="flex flex-col gap-[10px]">
-          <h1 className={pageTitle}>Help</h1>
-          <p className="text-[16px] leading-[18px] text-[#767980]">
-            {isCoach ? "Answers for running your coaching business on AthaNext" : "Answers about booking, payments and your account"}
-          </p>
-        </header>
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+        <PageHeader
+          title="Help"
+          subtitle={isCoach ? "Answers for running your coaching business on AthaNext" : "Answers about booking, payments and your account"}
+        />
 
         <label className="relative block">
           <span className="sr-only">Search help</span>
-          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
           <input
-            className={cn(input, "border border-[#EAEADF] bg-[#F7F7F0] pl-9")}
+            className={cn(input, "pl-9")}
             placeholder={isCoach ? "Search help, for example payouts or parent accounts" : "Search help, for example credits or cancel"}
             value={q}
             onChange={(e) => setQ(e.target.value)}
@@ -85,12 +106,12 @@ const Help = () => {
                 key={c.name}
                 type="button"
                 onClick={() => setCat((cur) => (cur === c.name ? null : c.name))}
-                className={cn(card, "items-start gap-3 p-[18px] text-left md:p-5", on && "border-[#1A202C]")}
+                className={cn(card, "items-start gap-3 p-[18px] text-left transition-colors md:p-5 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary", on ? "border-primary bg-primary-50" : "hover:bg-light-200")}
               >
-                <span className="inline-flex size-8 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
+                <span className="inline-flex size-8 items-center justify-center rounded-control border border-primary-300 bg-primary-50 text-primary">
                   <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <span className="text-[16px] font-medium leading-[18px] tracking-[-0.05em]">{c.name}</span>
+                <span className="text-subtitle text-dark">{c.name}</span>
                 <span className={meta}>{c.articles.length} articles</span>
               </button>
             );
@@ -100,12 +121,12 @@ const Help = () => {
         <div className="grid grid-cols-1 items-start gap-5 lg:grid-cols-[minmax(0,1fr)_317px]">
           <section className={cn(card, "gap-0")}>
             <div className="mb-3 flex items-center justify-between gap-3">
-              <h2 className="flex items-center gap-2 text-[16px] font-medium leading-[18px] tracking-[-0.05em]">
-                <BookOpen className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+              <h2 className="flex items-center gap-2 text-subtitle text-dark">
+                <BookOpen className="size-5 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                 {heading}
               </h2>
               {cat ? (
-                <button type="button" className="text-[14px] font-medium text-[#0054B4] hover:underline" onClick={() => setCat(null)}>
+                <button type="button" className={textButton} onClick={() => setCat(null)}>
                   Show all
                 </button>
               ) : null}
@@ -113,12 +134,12 @@ const Help = () => {
             {arts.length ? (
               <div className="flex flex-col">
                 {arts.map((a) => (
-                  <details key={a.title} className="group border-t border-[#EAEADF] first:border-t-0">
-                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3.5 text-left text-[14px] font-medium leading-[18px] [&::-webkit-details-marker]:hidden">
+                  <details key={a.title} className="group border-t border-light-525 first:border-t-0">
+                    <summary className="flex cursor-pointer list-none items-center justify-between gap-3 py-3.5 text-left text-label-sm text-dark [&::-webkit-details-marker]:hidden">
                       {a.title}
-                      <ChevronDown className="size-4 shrink-0 text-[#767980] transition-transform group-open:rotate-180" strokeWidth={1.5} aria-hidden="true" />
+                      <ChevronDown className="size-4 shrink-0 text-dark-300 transition-transform group-open:rotate-180" strokeWidth={1.5} aria-hidden="true" />
                     </summary>
-                    <p className="pb-3.5 text-[14px] leading-[20px] text-[#484D56]">{a.body}</p>
+                    <p className="pb-3.5 text-paragraph text-dark-300">{a.body}</p>
                   </details>
                 ))}
               </div>
@@ -129,17 +150,17 @@ const Help = () => {
 
           <div className="flex flex-col gap-5">
             <section className={card}>
-              <h2 className="flex items-center gap-2 text-[16px] font-medium leading-[18px] tracking-[-0.05em]">
-                <MessageCircle className="size-5 text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+              <h2 className="flex items-center gap-2 text-subtitle text-dark">
+                <MessageCircle className="size-5 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                 Contact support
               </h2>
-              <p className="text-[14px] leading-[18px] text-[#484D56]">
+              <p className="text-paragraph text-dark-300">
                 Questions about your account, a payment or {isCoach ? "a family" : "a coach"}. We usually reply within a day.
               </p>
               <button type="button" className={cn(secondaryButton, "self-start")} onClick={() => setSupportOpen(true)}>
                 Message support
               </button>
-              <a className={meta} href="mailto:support@athanext.com">
+              <a className={cn(meta, "self-start hover:text-dark")} href="mailto:support@athanext.com">
                 support@athanext.com
               </a>
             </section>
@@ -151,7 +172,7 @@ const Help = () => {
       <Dialog open={supportOpen} onOpenChange={setSupportOpen}>
         <DialogContent className={dialogContent}>
           <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
-            <DialogTitle className="text-[22px] font-semibold leading-[28px] tracking-[-0.05em]">Message support</DialogTitle>
+            <DialogTitle>Message support</DialogTitle>
             <DialogDescription className={meta}>
               We reply by email{email ? ` to ${email}` : userName ? ` to ${userName}` : ""}.
             </DialogDescription>
@@ -172,7 +193,7 @@ const Help = () => {
                   <option key={t}>{t}</option>
                 ))}
               </select>
-              {errors.topic ? <span className="text-[12px] text-[#972B2B]">{errors.topic}</span> : null}
+              {errors.topic ? <span className="text-caption text-error-700">{errors.topic}</span> : null}
             </label>
             <label className="flex flex-col gap-1.5">
               <span className={label}>How can we help?</span>
@@ -185,14 +206,14 @@ const Help = () => {
                   setErrors((x) => ({ ...x, msg: undefined }));
                 }}
               />
-              {errors.msg ? <span className="text-[12px] text-[#972B2B]">{errors.msg}</span> : null}
+              {errors.msg ? <span className="text-caption text-error-700">{errors.msg}</span> : null}
             </label>
             <div className="flex justify-end gap-2">
               <button type="button" className={secondaryButton} onClick={() => setSupportOpen(false)}>
                 Cancel
               </button>
-              <button type="button" className={primaryButton} onClick={send}>
-                Send
+              <button type="button" className={primaryButton} onClick={() => void send()} disabled={isSubmitting}>
+                {isSubmitting ? "Sending…" : "Send"}
               </button>
             </div>
           </div>

@@ -28,7 +28,7 @@ import {
   Users,
   Video,
   Zap,
-} from "lucide-react";
+} from "@/components/icons";
 import { authAPI } from "@/api/auth";
 import { coachesAPI, userProfilesAPI, type PublicCoach } from "@/api";
 import { createAthleteInitiatedReferral } from "@/api/referrals";
@@ -39,7 +39,9 @@ import { LegalAnchor } from "@/components/legal/LegalLinks";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { getPrivacyPolicyContent } from "@/api/privacy-policy";
 import { getTermsAndConditionsContent } from "@/api/terms";
-import { input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { input, label, meta, textButton } from "@/components/schedule/styles";
+import { buttonVariants } from "@/components/ui/button";
+import { BrandPill } from "@/components/brand";
 import { useAuth } from "@/contexts/AuthContext";
 import { usePasswordValidation } from "@/hooks/usePasswordValidation";
 import { useToast } from "@/hooks/use-toast";
@@ -63,8 +65,9 @@ import {
   type SignupWho,
 } from "@/utils/signup";
 
-/** Pill primary CTA (WC4 `.gx-cta`): full-width, 46px, large radius. */
-const signupCta = cn(primaryButton, "h-[46px] w-full rounded-[23px]");
+/** Primary CTA: full-width large primary button. */
+const signupCta = cn(buttonVariants({ variant: "default", size: "lg" }), "w-full");
+const wideSecondary = cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-full");
 
 const legalAcceptanceFields = async () => {
   const [termsRes, privacyRes] = await Promise.all([getTermsAndConditionsContent(), getPrivacyPolicyContent()]);
@@ -131,8 +134,8 @@ const AGE_TILES = [
 
 const tileClass = (on: boolean) =>
   cn(
-    "relative flex w-full items-start gap-3 rounded-[10px] border px-3.5 py-3 text-left transition-colors",
-    on ? "border-[#0054B4] bg-[#E5EDF7]" : "border-[#EAEADF] bg-[#F9F9F5] hover:border-[#6698D2]"
+    "relative flex w-full items-start gap-3 rounded-control border px-3.5 py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+    on ? "border-primary bg-primary-50" : "border-light-525 bg-light-300 hover:bg-light-200"
   );
 
 const errorText = (err: unknown, fallback: string) =>
@@ -150,7 +153,7 @@ const Field = ({ text, error, children }: { text: string; error?: string; childr
   <label className="flex flex-col gap-1.5">
     <span className={label}>{text}</span>
     {children}
-    {error ? <span className="text-[12px] text-[#972B2B]">{error}</span> : null}
+    {error ? <span className="text-caption text-error-700">{error}</span> : null}
   </label>
 );
 
@@ -178,18 +181,18 @@ const Tile = ({
     onClick={onClick}
   >
     {icon ? (
-      <span className="flex size-10 shrink-0 items-center justify-center rounded-[8px] bg-[#E5EDF7] text-[#0054B4]">
+      <span className="flex size-10 shrink-0 items-center justify-center rounded-control border border-primary-300 bg-primary-50 text-primary">
         {icon}
       </span>
     ) : null}
     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <span className="text-[14px] font-medium text-[#1A202C]">{title}</span>
+      <span className="text-label-sm text-dark">{title}</span>
       {detail ? <span className={meta}>{detail}</span> : null}
     </span>
     <span
       className={cn(
         "mt-0.5 ml-auto flex size-5 shrink-0 items-center justify-center rounded-full border",
-        on ? "border-[#0054B4] bg-[#0054B4] text-white" : "border-[#C1C1B8] text-transparent"
+        on ? "border-primary bg-primary text-light" : "border-light-600 text-transparent"
       )}
       aria-hidden="true"
     >
@@ -604,7 +607,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           <button
             type="button"
             className={cn(
-              "inline-flex size-8 items-center justify-center rounded-[8px] text-[#484D56] hover:bg-[#F1F1E6]",
+              "inline-flex size-8 items-center justify-center rounded-control text-dark hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
               questionIndex <= 0 && "invisible"
             )}
             aria-label="Back"
@@ -623,14 +626,14 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
                   title={`Question ${k + 1}`}
                   onClick={() => go(flow[k]!)}
                 >
-                  <span className="absolute inset-x-0 top-[6px] h-1.5 rounded-[3px] bg-[#0054B4]" />
+                  <span className="absolute inset-x-0 top-[6px] h-1.5 rounded-pill bg-primary" />
                 </button>
               ) : (
                 <span key={k} className="relative h-[18px] flex-1" aria-hidden={k !== qi}>
                   <span
                     className={cn(
-                      "absolute inset-x-0 top-[6px] h-1.5 rounded-[3px]",
-                      k === qi ? "bg-[#0054B4]" : "bg-[#D9D9CF]"
+                      "absolute inset-x-0 top-[6px] h-1.5 rounded-pill",
+                      k === qi ? "bg-primary" : "bg-light-550"
                     )}
                   />
                 </span>
@@ -641,7 +644,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
             {qi + 1}/{qs}
           </span>
         </div>
-        <p className={cn(meta, "text-center font-medium text-[#0054B4]")}>
+        <p className={cn(meta, "text-center font-medium text-primary")}>
           {step === "who" ? "Welcome to AthaNext" : isCoach ? "Set up your coaching profile" : "Find the right coach"}
         </p>
       </div>
@@ -650,7 +653,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
 
   const Head = ({ title, sub }: { title: string; sub?: string }) => (
     <div className="flex flex-col gap-1">
-      <h2 className="text-[20px] font-semibold leading-[24px] tracking-[-0.03em] text-[#1A202C]">{title}</h2>
+      <h2 className="text-card-title text-dark">{title}</h2>
       {sub ? <p className={meta}>{sub}</p> : null}
     </div>
   );
@@ -667,12 +670,12 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
     const clickable = !offFlow && step !== "who";
     const img = <img src={logo} alt="AthaNext" className="h-7 w-auto" />;
     if (!clickable) {
-      return <span className="inline-flex items-center rounded-[8px] px-2 py-1.5 -ml-2">{img}</span>;
+      return <span className="inline-flex items-center rounded-control px-2 py-1.5 -ml-2">{img}</span>;
     }
     return (
       <button
         type="button"
-        className="inline-flex items-center rounded-[8px] px-2 py-1.5 -ml-2 hover:bg-[#F1F1E6] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+        className="inline-flex items-center rounded-control px-2 py-1.5 -ml-2 hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         aria-label="Back to the first question"
         title="Back to the start"
         onClick={() => go("who")}
@@ -694,7 +697,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
     return bits;
   }, [answers, isCoach, isParent]);
 
-  // —— Screens ——
+  // Screens
   let body: ReactNode = null;
 
   if (step === "who") {
@@ -706,7 +709,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         <Tile on={answers.who === "parent"} title="I'm a parent or guardian" detail="Of an athlete under 18" icon={<Users className="size-5" strokeWidth={1.5} />} onClick={() => pickWho("parent")} />
         <p className={cn(meta, "text-center")}>
           Already have an account?{" "}
-          <Link to={`${ROUTES.AUTH}?mode=signin`} className="font-medium text-[#0054B4] hover:underline">
+          <Link to={`${ROUTES.AUTH}?mode=signin`} className="font-medium text-primary hover:underline">
             Sign in
           </Link>
         </p>
@@ -745,18 +748,18 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           <Tile on={answers.sport === "Soccer"} title="Soccer" onClick={() => pickSport("Soccer")} />
           <Tile on={answers.sport === "Rowing"} title="Rowing" onClick={() => pickSport("Rowing")} />
         </div>
-        <div className="flex items-center gap-3 rounded-[10px] border border-dashed border-[#EAEADF] bg-[#F9F9F5] px-3.5 py-3">
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-[8px] bg-[#F1F1E6] text-[#767980]">+</span>
+        <div className="flex items-center gap-3 rounded-control border border-dashed border-light-600 bg-light-400 px-3.5 py-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-control border border-light-525 bg-light text-dark-300">+</span>
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-[14px] font-medium">More sports</span>
+            <span className="text-label-sm">More sports</span>
             <span className={meta}>We're adding new sports to AthaNext</span>
           </span>
-          <span className="rounded-full bg-[#EAEADF] px-2 py-0.5 text-[11px] font-medium text-[#484D56]">Coming soon</span>
+          <BrandPill tone="neutral">Coming soon</BrandPill>
         </div>
         {answers.sport ? (
-          <div className="flex flex-col gap-2 border-t border-[#EAEADF] pt-3">
+          <div className="flex flex-col gap-2 border-t border-light-525 pt-3">
             <div className="flex flex-col gap-0.5">
-              <h3 className="text-[16px] font-medium text-[#1A202C]">{posTitle}</h3>
+              <h3 className="text-subtitle text-dark">{posTitle}</h3>
               {isCoach ? <p className={meta}>Pick all that apply.</p> : null}
             </div>
             {isCoach
@@ -877,8 +880,8 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
               key={v}
               type="button"
               className={cn(
-                "rounded-[10px] border px-2 py-3 text-center text-[14px] font-medium transition-colors",
-                answers.age === v ? "border-[#6698D2] bg-[#E5EDF7] text-[#0054B4]" : "border-[#EAEADF] bg-[#F9F9F5] text-[#1A202C] hover:border-[#6698D2]"
+                "rounded-control border px-2 py-3 text-center text-label-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
+                answers.age === v ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200"
               )}
               onClick={() => {
                 const who = answers.who;
@@ -919,11 +922,11 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           onClick={() => patch({ video: !answers.video })}
         >
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-[14px] font-medium">Remote sessions work too</span>
+            <span className="text-label-sm">Remote sessions work too</span>
             <span className={meta}>Sessions over video, with coaches from anywhere</span>
           </span>
-          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", answers.video ? "bg-[#0054B4]" : "bg-[#C1C1B8]")}>
-            <span className={cn("absolute top-0.5 size-5 rounded-full bg-white transition-transform", answers.video ? "left-4" : "left-0.5")} />
+          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", answers.video ? "bg-primary" : "bg-light-600")}>
+            <span className={cn("absolute top-0.5 size-5 rounded-full bg-light-50 transition-transform", answers.video ? "left-4" : "left-0.5")} />
           </span>
         </button>
         <Continue ok={/^\d{5}$/.test(answers.zip)} onClick={() => nextFrom("where")} />
@@ -983,11 +986,11 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           onClick={() => patch({ video: !answers.video })}
         >
           <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-[14px] font-medium">Remote sessions</span>
+            <span className="text-label-sm">Remote sessions</span>
             <span className={meta}>Coach over video, from anywhere</span>
           </span>
-          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", answers.video ? "bg-[#0054B4]" : "bg-[#C1C1B8]")}>
-            <span className={cn("absolute top-0.5 size-5 rounded-full bg-white transition-transform", answers.video ? "left-4" : "left-0.5")} />
+          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", answers.video ? "bg-primary" : "bg-light-600")}>
+            <span className={cn("absolute top-0.5 size-5 rounded-full bg-light-50 transition-transform", answers.video ? "left-4" : "left-0.5")} />
           </span>
         </button>
         <Continue ok={/^\d{5}$/.test(answers.zip) && answers.ctypes.length > 0} onClick={() => nextFrom("cwhere")} />
@@ -1012,15 +1015,15 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         {!isCoach && !googleMode && summaryPills.length ? (
           <div className="flex flex-wrap gap-1.5">
             {summaryPills.map((p) => (
-              <span key={p} className="rounded-full bg-[#E5EDF7] px-2.5 py-1 text-[12px] font-medium text-[#0054B4]">
+              <BrandPill key={p} tone="blue">
                 {p}
-              </span>
+              </BrandPill>
             ))}
           </div>
         ) : null}
         {!googleMode ? (
           <>
-            <button type="button" className={cn(secondaryButton, "h-[40px] w-full gap-2")} disabled={busy} onClick={startGoogle}>
+            <button type="button" className={wideSecondary} disabled={busy} onClick={startGoogle}>
               <svg className="size-4" viewBox="0 0 24 24" aria-hidden="true">
                 <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" />
                 <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" />
@@ -1031,10 +1034,10 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
             </button>
             <div className="relative py-1">
               <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-[#EAEADF]" />
+                <span className="w-full border-t border-light-525" />
               </div>
-              <div className="relative flex justify-center text-[12px]">
-                <span className="bg-card px-2 text-[#767980]">or use your email</span>
+              <div className="relative flex justify-center text-caption">
+                <span className="bg-card px-2 text-dark-300">or use your email</span>
               </div>
             </div>
           </>
@@ -1076,7 +1079,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
               <button
                 type="button"
                 onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-2 flex items-center rounded-[4px] text-[#767980] hover:text-[#1A202C]"
+                className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                 aria-label={showPassword ? "Hide password" : "Show password"}
               >
                 {showPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
@@ -1085,7 +1088,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
             {answers.pw ? <PasswordRequirements items={passwordItems} /> : <span className={meta}>8 or more characters with a number and a symbol</span>}
           </Field>
         ) : null}
-        <label className="flex items-start gap-2 text-[13px] text-[#484D56]">
+        <label className="flex items-start gap-2 text-body-m text-dark-300">
           <input
             type="checkbox"
             className="mt-[3px]"
@@ -1093,12 +1096,12 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
             onChange={(e) => patch({ terms: e.target.checked })}
           />
           <span>
-            I agree to the <LegalAnchor kind="terms" className="text-[#0054B4]" /> and the{" "}
-            <LegalAnchor kind="privacy" className="text-[#0054B4]" />
+            I agree to the <LegalAnchor kind="terms" className="text-primary" /> and the{" "}
+            <LegalAnchor kind="privacy" className="text-primary" />
             {isParent ? ", on behalf of my athlete too" : ""}
           </span>
         </label>
-        {errors.terms ? <span className="text-[12px] text-[#972B2B]">{errors.terms}</span> : null}
+        {errors.terms ? <span className="text-caption text-error-700">{errors.terms}</span> : null}
         <button
           type="button"
           className={signupCta}
@@ -1144,8 +1147,8 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         {matches.length ? (
           <>
             <div className="flex flex-col items-center gap-1 text-center">
-              <span className="text-[40px] font-semibold leading-none tracking-[-0.05em] text-[#0054B4]">{matchTotal || matches.length}</span>
-              <h2 className="text-[20px] font-semibold tracking-[-0.03em]">
+              <span className="text-stat tabular-nums text-primary">{matchTotal || matches.length}</span>
+              <h2 className="text-card-title text-dark">
                 {(matchTotal || matches.length) === 1 ? "coach fits" : "coaches fit"} {nm}
               </h2>
               <p className={meta}>
@@ -1157,13 +1160,13 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
             </div>
             <div className="flex flex-col gap-2.5">
               {matches.map((c) => (
-                <div key={c.id} className="flex gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F9F9F5] p-3">
-                  <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#E5EDF7] text-[14px] font-semibold text-[#0054B4]">
+                <div key={c.id} className="flex gap-3 rounded-card border border-light-525 bg-light-200 p-3">
+                  <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-primary-300 bg-primary-50 text-label-sm text-primary">
                     {initials(c.name)}
                   </span>
                   <div className="flex min-w-0 flex-1 flex-col gap-1.5">
                     <div className="flex items-start justify-between gap-2">
-                      <span className="text-[14px] font-medium">{c.name}</span>
+                      <span className="text-label-sm">{c.name}</span>
                       {c.rating != null ? (
                         <span className={cn(meta, "inline-flex items-center gap-1")}>
                           <Star className="size-3" strokeWidth={1.5} aria-hidden="true" />
@@ -1174,20 +1177,20 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
                     <span className={meta}>{(c.specialties ?? []).slice(0, 2).join(" · ") || c.position || "Coach"}</span>
                     <div className="flex flex-wrap gap-1">
                       {(c.specialties ?? []).slice(0, 2).map((p) => (
-                        <span key={p} className="rounded-full bg-[#E5EDF7] px-2 py-0.5 text-[11px] font-medium text-[#0054B4]">
+                        <BrandPill key={p} tone="blue">
                           {p}
-                        </span>
+                        </BrandPill>
                       ))}
-                      <span className="rounded-full bg-[#EAEADF] px-2 py-0.5 text-[11px] font-medium text-[#484D56]">
+                      <BrandPill tone="neutral">
                         {(c.session_types ?? []).some((t) => /virtual|video/i.test(t)) ? "Video call" : (c.locations?.[0] ?? "Nearby")}
-                      </span>
+                      </BrandPill>
                     </div>
                     <div className="flex items-center justify-between gap-2">
-                      <span className={cn(meta, "inline-flex items-center gap-1 text-[#0054B4]")}>
+                      <span className={cn(meta, "inline-flex items-center gap-1 text-primary")}>
                         <Check className="size-3" strokeWidth={2} aria-hidden="true" />
                         {(c.positions?.length ?? 0) > 1 ? "Coaches every position" : `${c.position || pos} specialist`}
                       </span>
-                      <span className="text-[14px] font-medium whitespace-nowrap">From ${c.hourly_rate ?? 0}</span>
+                      <span className="whitespace-nowrap text-label-sm">From ${c.hourly_rate ?? 0}</span>
                     </div>
                   </div>
                 </div>
@@ -1235,18 +1238,18 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
     body = (
       <div className="flex flex-col gap-3">
         <div className="flex flex-col items-center gap-1 text-center">
-          <h2 className="text-[20px] font-semibold tracking-[-0.03em]">Your profile is started</h2>
+          <h2 className="text-card-title text-dark">Your profile is started</h2>
           <p className={meta}>This is how families will see you once you go live.</p>
         </div>
-        <div className="flex flex-col gap-3 rounded-[10px] border border-[#EAEADF] bg-[#F9F9F5] p-3">
+        <div className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-200 p-3">
           <div className="flex gap-3">
-            <span className="flex size-12 shrink-0 items-center justify-center rounded-full bg-[#E5EDF7] text-[14px] font-semibold text-[#0054B4]">
+            <span className="flex size-12 shrink-0 items-center justify-center rounded-full border border-primary-300 bg-primary-50 text-label-sm text-primary">
               {initials(nm)}
             </span>
             <div className="flex min-w-0 flex-1 flex-col gap-1">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <span className="text-[14px] font-medium">{nm}</span>
-                <span className="rounded-full bg-[#EAEADF] px-2 py-0.5 text-[11px] font-medium text-[#484D56]">Draft, only you can see this</span>
+                <span className="text-label-sm">{nm}</span>
+                <BrandPill tone="neutral">Draft, only you can see this</BrandPill>
               </div>
               <span className={meta}>
                 {answers.sport || "Soccer"} · {spec}
@@ -1255,21 +1258,21 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           </div>
           <div className="flex flex-wrap gap-1">
             {answers.pillars.map((p) => (
-              <span key={p} className="rounded-full bg-[#E5EDF7] px-2 py-0.5 text-[11px] font-medium text-[#0054B4]">
+              <BrandPill key={p} tone="blue">
                 {p}
-              </span>
+              </BrandPill>
             ))}
           </div>
           <div className="flex flex-wrap gap-1">
             {types.map((t) => (
-              <span key={t} className="rounded-full bg-[#D8EEE4] px-2 py-0.5 text-[11px] font-medium text-[#0F6B4C]">
+              <BrandPill key={t} tone="teal">
                 {t}
-              </span>
+              </BrandPill>
             ))}
             {answers.clevels.map((l) => (
-              <span key={l} className="rounded-full bg-[#EAEADF] px-2 py-0.5 text-[11px] font-medium text-[#484D56]">
+              <BrandPill key={l} tone="neutral">
                 {l}
-              </span>
+              </BrandPill>
             ))}
           </div>
           {answers.zip ? (
@@ -1282,16 +1285,16 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         <div className="flex flex-col gap-2">
           <span className={label}>Before families can book you</span>
           {setup.map(([t, done], k) => (
-            <div key={t} className="flex items-center gap-3 rounded-[8px] bg-[#F9F9F5] px-3 py-2.5">
+            <div key={t} className="flex items-center gap-3 rounded-control border border-light-525 bg-light-200 px-3 py-2.5">
               <span
                 className={cn(
-                  "flex size-6 shrink-0 items-center justify-center rounded-full text-[11px] font-semibold",
-                  done ? "bg-[#0054B4] text-white" : "border border-[#C1C1B8] text-[#767980]"
+                  "flex size-6 shrink-0 items-center justify-center rounded-full text-label-xsm",
+                  done ? "bg-primary text-light" : "border border-light-600 text-dark-300"
                 )}
               >
                 {done ? <Check className="size-3" strokeWidth={2.5} /> : k + 1}
               </span>
-              <span className="text-[14px]">{t}</span>
+              <span className="text-body-m">{t}</span>
             </div>
           ))}
         </div>
@@ -1309,9 +1312,9 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         {summaryPills.length ? (
           <div className="flex flex-wrap gap-1.5">
             {summaryPills.map((p) => (
-              <span key={p} className="rounded-full bg-[#E5EDF7] px-2.5 py-1 text-[12px] font-medium text-[#0054B4]">
+              <BrandPill key={p} tone="blue">
                 {p}
-              </span>
+              </BrandPill>
             ))}
           </div>
         ) : null}
@@ -1325,7 +1328,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
             autoFocus
           />
         </Field>
-        <p className="flex items-start gap-2 rounded-[8px] bg-[#E5EDF7] px-3 py-2.5 text-[13px] leading-[18px] text-[#00326C]">
+        <p className="flex items-start gap-2 rounded-control border border-primary-300 bg-primary-50 px-3 py-2.5 text-body-m text-primary-700">
           <ShieldCheck className="mt-[1px] size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
           Your answers are saved. Your parent becomes the account holder and checks them before any booking.
         </p>
@@ -1349,11 +1352,11 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
   } else if (step === "sent") {
     body = (
       <div className="flex flex-col items-center gap-3 text-center">
-        <span className="flex size-14 items-center justify-center rounded-full bg-[#E5EDF7] text-[#0054B4]">
+        <span className="flex size-14 items-center justify-center rounded-full bg-primary-50 text-primary">
           <Mail className="size-7" strokeWidth={1.5} aria-hidden="true" />
         </span>
         <Head title="We emailed your parent" sub={`${answers.pemail} has a link to finish your account. Your matches will be waiting.`} />
-        <Link to={`${ROUTES.AUTH}?mode=signin`} className={cn(secondaryButton, "h-[40px] w-full")}>
+        <Link to={`${ROUTES.AUTH}?mode=signin`} className={wideSecondary}>
           Back to sign in
         </Link>
       </div>

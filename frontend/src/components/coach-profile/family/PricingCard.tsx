@@ -1,5 +1,9 @@
 import { useState } from "react";
+import type { Camp } from "@/api/packages";
 import { BrandPill } from "@/components/brand";
+import { CampCards, type CampRegisterResult } from "@/components/camps/CampCards";
+import { packageKind } from "@/components/camps/format";
+import { useCamps } from "@/components/camps/useCamps";
 import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
 import { secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
@@ -33,6 +37,7 @@ export const PricingCard = ({
   buying,
   onBuy,
   onAsk,
+  onRegister,
   mostBookedId,
 }: {
   coachId: string;
@@ -46,9 +51,14 @@ export const PricingCard = ({
   buying: string | null;
   onBuy: (pkg: CoachPackage) => void;
   onAsk?: () => void;
+  onRegister: (camp: Camp) => Promise<CampRegisterResult>;
 }) => {
   const [allSessions, setAllSessions] = useState(false);
-  const sorted = [...packages].sort((a, b) => a.total_price - b.total_price);
+  const camps = useCamps(coachId);
+  const sorted = packages.filter((pkg) => packageKind(pkg) !== "camp").sort((a, b) => a.total_price - b.total_price);
+  const campList = camps.data ?? [];
+  if (camps.isLoading && !sorted.length && !sessions.length) return null;
+  if (!camps.isLoading && !camps.isError && !sorted.length && !sessions.length && !campList.length) return null;
   const shownSessions = allSessions ? sessions : sessions.slice(0, SHOWN_SESSIONS);
 
   return (
@@ -64,8 +74,8 @@ export const PricingCard = ({
               <div
                 key={pkg.id}
                 className={cn(
-                  "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-[10px] border px-[14px] pb-[14px] pt-4 md:flex md:flex-col md:items-stretch",
-                  best ? "border-[#99BBE1] bg-[#F7F7F0]" : "border-[#EAEADF] bg-[#F1F1E6]"
+                  "grid min-w-0 grid-cols-[minmax(0,1fr)_auto] items-center gap-x-3 gap-y-2 rounded-card border px-[14px] pb-[14px] pt-4 md:flex md:flex-col md:items-stretch",
+                  best ? "border-primary-200 bg-light-300" : "border-light-525 bg-light"
                 )}
               >
                 {best ? (
@@ -79,7 +89,7 @@ export const PricingCard = ({
                     {[per ? `${money(per)} a session` : "", pkg.validity_days ? `Valid ${pkg.validity_days} days` : ""].filter(Boolean).join(" · ")}
                   </span>
                 </div>
-                <span className="text-[28px] font-bold leading-[30px] tracking-[-0.05em] text-[#1A202C] tabular-nums">{money(pkg.total_price / 100)}</span>
+                <span className="text-highlight text-dark tabular-nums">{money(pkg.total_price / 100)}</span>
                 <button
                   type="button"
                   onClick={() => (paysDirect ? onAsk?.() : onBuy(pkg))}
@@ -94,6 +104,8 @@ export const PricingCard = ({
         </div>
       ) : null}
 
+      <CampCards coachId={coachId} interactive first={first} paysDirect={paysDirect} onAsk={onAsk} onRegister={onRegister} />
+
       <CoachAcademyPackages coachId={coachId} canBuy={!paysDirect} />
 
       {paysDirect && sorted.length ? (
@@ -101,7 +113,7 @@ export const PricingCard = ({
       ) : null}
 
       {shownSessions.length ? (
-        <div className="flex flex-col divide-y divide-[#EAEADF]">
+        <div className="flex flex-col divide-y divide-light-525">
           {shownSessions.map((row) => (
             <div key={row.key} className="flex items-center gap-3 py-3">
               <span className="flex min-w-0 flex-1 flex-col gap-1">
@@ -109,7 +121,7 @@ export const PricingCard = ({
                 <span className={caption}>{row.detail}</span>
               </span>
               <span className="flex shrink-0 flex-col items-end gap-1">
-                <b className="text-[16px] font-medium leading-[18px] text-[#1A202C]">{money(row.price)}</b>
+                <b className="text-subtitle text-dark">{money(row.price)}</b>
                 {row.unit ? <span className={caption}>{row.unit}</span> : null}
               </span>
             </div>
@@ -119,7 +131,7 @@ export const PricingCard = ({
 
       <div className="flex flex-wrap items-center justify-between gap-3">
         {sessions.length > SHOWN_SESSIONS ? (
-          <button type="button" className={cn(textButton, "text-[14px]")} onClick={() => setAllSessions((v) => !v)}>
+          <button type="button" className={cn(textButton, "text-body-m")} onClick={() => setAllSessions((v) => !v)}>
             {allSessions ? "Show fewer" : `Show all ${sessions.length} session types`}
           </button>
         ) : (

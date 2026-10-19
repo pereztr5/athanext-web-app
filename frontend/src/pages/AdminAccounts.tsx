@@ -7,6 +7,8 @@ import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { PageHeader } from "@/components/ui/page-header";
+import { input } from "@/components/schedule/styles";
 import {
   callAdminAccounts,
   searchAdminAccounts,
@@ -20,10 +22,10 @@ const PERSONAS = ["athlete", "parent", "coach"] as const;
 
 const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 
-const labelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
+const labelClass = "text-label-sm text-dark";
 
 const EmptyNote = ({ children }: { children: string }) => (
-  <p className="rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]">
+  <p className="rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] text-body-m text-dark-300 md:px-[25px] md:pb-[25px] md:pt-[30px]">
     {children}
   </p>
 );
@@ -123,7 +125,7 @@ export default function AdminAccounts() {
   if (!initialCheckComplete || !profileReady || loading || !adminReady) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <div className="h-8 w-8 animate-spin rounded-full border-2 border-[#EAEADF] border-t-[#0054B4]" />
+        <div className="h-8 w-8 animate-spin rounded-full border-2 border-light-525 border-t-primary" />
       </div>
     );
   }
@@ -141,13 +143,11 @@ export default function AdminAccounts() {
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
-    <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
-      <header className="flex flex-col gap-[10px]">
-        <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-1.6px] text-[#1A202C]">Accounts</h1>
-        <p className="max-w-[720px] text-[16px] font-normal leading-[20px] tracking-[-0.48px] text-[#767980]">
-          Search for a person, then change their name, email, or persona. Deactivate keeps their sessions. Delete removes the login and does not refund payments.
-        </p>
-      </header>
+    <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
+      <PageHeader
+        title="Accounts"
+        subtitle="Search for a person, then change their name, email, or persona. Deactivate keeps their sessions. Delete removes the login and does not refund payments."
+      />
 
       <form
         className="flex gap-[10px]"
@@ -163,7 +163,7 @@ export default function AdminAccounts() {
           aria-label="Search accounts by name or email"
         />
         <Button type="submit" disabled={query.trim().length < 2 || search.isPending}>
-          {search.isPending ? "Searching..." : "Search"}
+          {search.isPending ? "Searching…" : "Search"}
         </Button>
       </form>
 
@@ -177,15 +177,15 @@ export default function AdminAccounts() {
                 key={account.id}
                 type="button"
                 onClick={() => choose(account)}
-                className={`flex flex-col gap-1 rounded-[10px] border px-[15px] py-3 text-left transition-colors ${
+                className={`flex flex-col gap-1 rounded-control border px-[15px] py-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary ${
                   selected?.id === account.id
-                    ? "border-[#6698D2] bg-[#E5EDF7]"
-                    : "border-[#EAEADF] bg-[#F7F7F0] hover:bg-[#F4F4EB]"
+                    ? "border-primary bg-primary-50"
+                    : "border-light-525 bg-light-300 hover:bg-light-200"
                 }`}
               >
-                <p className="text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]">{account.name}</p>
-                <p className="truncate text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]">{account.email}</p>
-                <p className="text-[12px] leading-[14px] tracking-[-0.03em] text-[#A3A6AB]">
+                <p className="text-label-sm text-dark">{account.name}</p>
+                <p className="truncate text-caption text-dark-300">{account.email}</p>
+                <p className="text-caption text-dark-300">
                   {account.persona_type ? capitalize(account.persona_type) : "No persona"}
                   {account.is_active ? "" : " · Deactivated"}
                 </p>
@@ -196,7 +196,7 @@ export default function AdminAccounts() {
 
         {selected ? (
           <form
-            className="flex flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]"
+            className="flex flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]"
             onSubmit={(event) => {
               event.preventDefault();
               save.mutate();
@@ -216,7 +216,7 @@ export default function AdminAccounts() {
                 id="account-persona"
                 value={persona}
                 onChange={(event) => setPersona(event.target.value as (typeof PERSONAS)[number])}
-                className="h-[38px] w-full rounded-[8px] border border-[#EAEADF] bg-[#F1F1E6] px-3 text-[14px] tracking-[-0.03em] text-[#1A202C] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2]"
+                className={input}
               >
                 {PERSONAS.map((option) => (
                   <option key={option} value={option}>
@@ -227,7 +227,7 @@ export default function AdminAccounts() {
             </div>
             <div className="flex flex-wrap gap-[10px]">
               <Button type="submit" disabled={save.isPending || !name.trim() || !email.trim()}>
-                {save.isPending ? "Saving..." : "Save changes"}
+                {save.isPending ? "Saving…" : "Save changes"}
               </Button>
               <Button
                 type="button"
@@ -239,11 +239,11 @@ export default function AdminAccounts() {
               </Button>
             </div>
             {selected.coach_id ? (
-              <div className="flex items-start justify-between gap-4 border-t border-[#EAEADF] pt-5">
+              <div className="flex items-start justify-between gap-4 border-t border-light-525 pt-5">
                 <div className="flex flex-col gap-1">
                   <Label htmlFor="org-owner" className={labelClass}>Org owner</Label>
-                  <p className="text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
-                    Gives this coach My Organization: invite coaches at a % rate, an org page and splits. Turning it off deletes the org, its
+                  <p className="text-paragraph-sm text-dark-300">
+                    Gives this coach My organization: invite coaches at a % rate, an org page and splits. Turning it off deletes the org, its
                     page and invites. Coaches keep their own profiles, athletes and payments.
                   </p>
                 </div>
@@ -258,7 +258,7 @@ export default function AdminAccounts() {
                 />
               </div>
             ) : null}
-            <div className="flex flex-col items-start gap-2 border-t border-[#EAEADF] pt-5">
+            <div className="flex flex-col items-start gap-2 border-t border-light-525 pt-5">
               <Label htmlFor="confirm-email" className={labelClass}>Type {selected.email} to delete this login</Label>
               <Input
                 id="confirm-email"
@@ -272,9 +272,9 @@ export default function AdminAccounts() {
                 disabled={remove.isPending || confirmEmail.trim().toLowerCase() !== selected.email.toLowerCase()}
                 onClick={() => remove.mutate()}
               >
-                {remove.isPending ? "Deleting..." : "Delete account"}
+                {remove.isPending ? "Deleting…" : "Delete account"}
               </Button>
-              <p className="text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]">
+              <p className="text-paragraph-sm text-dark-300">
                 Upcoming sessions are cancelled. Past sessions stay, without a refund. The login is removed.
               </p>
             </div>

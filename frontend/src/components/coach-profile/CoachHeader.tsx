@@ -13,7 +13,7 @@ import { BrandPill, BrandStar } from "@/components/brand";
 import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { formatLocationDisplay, type LocationInfo } from "@/utils/geolocation";
-import { BadgeCheck, MapPin, Instagram, Camera, Plus, Trash2, X, Loader2 } from "lucide-react";
+import { BadgeCheck, MapPin, Instagram, Camera, Plus, Trash2, X, Loader2 } from "@/components/icons";
 import type { CoachHeaderProps } from "@/types/coachProfile";
 import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import { createPortal } from "react-dom";
@@ -59,12 +59,12 @@ function useObjectUrl() {
 }
 
 /* Shared brand-kit classes for the header, its edit form and image dialogs */
-const fieldLabelClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
-const requiredMarkClass = "ml-1 text-destructive";
+const fieldLabelClass = "text-label-sm text-dark";
+const requiredMarkClass = "ml-1 text-error-700";
 const modalSurfaceClass =
-    "w-full rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] font-sans tracking-[-0.03em] text-[#1A202C] shadow-[0_0_15px_rgba(0,0,0,0.05)]";
-const modalTitleClass = "text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]";
-const rangeClass = "h-[5px] w-full cursor-pointer accent-[#0054B4]";
+    "w-full rounded-card border border-light-525 bg-light-300 font-sans tracking-[-0.03em] text-dark shadow-overlay";
+const modalTitleClass = "text-section text-dark";
+const rangeClass = "h-[5px] w-full cursor-pointer accent-primary";
 
 /* Avatar area:  uses a real <button> when interactive to satisfy ARIA/axe rules */
 function AvatarArea({
@@ -86,12 +86,12 @@ function AvatarArea({
     const isInteractive = Boolean(onClick);
 
     const commonClasses =
-        "relative flex size-28 items-center justify-center overflow-hidden rounded-[10px] border border-[#EAEADF] bg-[#C1C1B8] p-0";
+        "relative flex size-28 items-center justify-center overflow-hidden rounded-full border border-light-550 bg-light-600 p-0";
 
     const editOverlay = isEditMode ? (
-        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-[#1A202C]/50 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
-            <Camera className="size-5 text-[#F1F1E6]" strokeWidth={1.5} aria-hidden="true" />
-            <span className="text-[12px] font-medium leading-[13px] text-[#F1F1E6]">Change photo</span>
+        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center gap-1 bg-dark/50 opacity-0 transition-opacity group-hover:opacity-100 group-focus-visible:opacity-100">
+            <Camera className="size-5 text-light" strokeWidth={1.5} aria-hidden="true" />
+            <span className="text-label-xsm text-light">Change photo</span>
         </div>
     ) : null;
 
@@ -107,11 +107,11 @@ function AvatarArea({
                     {...({ fetchpriority: "high" } as Record<string, string>)}
                 />
             ) : (
-                <span className="text-[20px] font-medium text-[#484D56]">{initials}</span>
+                <span className="text-card-title text-dark-400">{initials}</span>
             )}
             {isLoading && (
-                <div className="absolute inset-0 flex items-center justify-center bg-[#F7F7F0]/70">
-                    <Loader2 className="size-5 animate-spin text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+                <div className="absolute inset-0 flex items-center justify-center bg-light-300/70">
+                    <Loader2 className="size-5 animate-spin text-dark-300" strokeWidth={1.5} aria-hidden="true" />
                 </div>
             )}
             {editOverlay}
@@ -125,7 +125,7 @@ function AvatarArea({
                     type="button"
                     onClick={onClick}
                     aria-label={isEditMode ? `Change ${name}'s photo` : `View ${name}'s photo`}
-                    className={`${commonClasses} group cursor-pointer focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#6698D2] focus-visible:ring-offset-2`}
+                    className={`${commonClasses} group cursor-pointer focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary`}
                 >
                     {avatarContent}
                 </button>
@@ -226,13 +226,13 @@ function CoverCarouselManager({
                             <img
                                 src={preview}
                                 alt={`Cover ${index + 1}`}
-                                className="h-16 w-24 rounded-[8px] border border-[#EAEADF] object-cover"
+                                className="h-16 w-24 rounded-control border border-light-525 object-cover"
                             />
 
                             <button
                                 type="button"
                                 onClick={() => onCoverImageRemove?.(index)}
-                                className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-[6px] border border-[#EAEADF] bg-[#F7F7F0] text-destructive transition-colors hover:bg-[#EAEADF]"
+                                className="absolute right-1 top-1 inline-flex size-6 items-center justify-center rounded-control border border-light-525 bg-light-300 text-error-600 transition-colors hover:bg-light-525"
                                 aria-label={`Remove cover image ${index + 1}`}
                             >
                                 <Trash2 className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
@@ -276,7 +276,7 @@ function ProfileActions({
                         {isSaving ? (
                             <>
                                 <Loader2 className="animate-spin" strokeWidth={1.5} aria-hidden="true" />
-                                Saving...
+                                Saving…
                             </>
                         ) : (
                             "Save changes"
@@ -842,7 +842,7 @@ export function CoachHeader({
     const profileCropperOverlay =
         portalTarget && showProfileCropper && cropProfileFile
             ? createPortal(
-                <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 px-4">
+                <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-dark/50 px-4">
                     <div
                         role="dialog"
                         aria-modal="true"
@@ -850,11 +850,11 @@ export function CoachHeader({
                         className={`${modalSurfaceClass} max-w-3xl`}
                     >
                         <h3 id="crop-profile-title" className={`${modalTitleClass} px-[25px] py-5`}>Crop profile photo</h3>
-                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="h-px bg-light-525" />
                         <div className="flex flex-col gap-5 px-[25px] py-5">
                             <div
                                 ref={profileCropContainerRef}
-                                className="relative h-[200px] w-full overflow-hidden rounded-[8px] bg-[#F1F1E6] sm:h-[250px] lg:h-[300px]"
+                                className="relative h-[200px] w-full overflow-hidden rounded-control bg-light sm:h-[250px] lg:h-[300px]"
                             >
                                 {profileObjectUrl && profileCropSize && (
                                     <Cropper
@@ -876,7 +876,7 @@ export function CoachHeader({
                                 )}
                             </div>
                             <div className="flex items-center gap-4">
-                                <Label htmlFor="crop-profile-zoom" className="text-[14px] font-medium text-[#484D56]">Zoom</Label>
+                                <Label htmlFor="crop-profile-zoom" className="text-label-sm text-dark-400">Zoom</Label>
                                 <input
                                     id="crop-profile-zoom"
                                     type="range"
@@ -889,7 +889,7 @@ export function CoachHeader({
                                 />
                             </div>
                         </div>
-                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="h-px bg-light-525" />
                         <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
                             <Button variant="outline" onClick={handleUseFullProfileImage}>Use full image</Button>
                             <Button variant="outline" onClick={handleProfileCropCancel}>Cancel</Button>
@@ -904,7 +904,7 @@ export function CoachHeader({
     const coverCropperOverlay =
         portalTarget && showCoverCropper && cropCoverFile
             ? createPortal(
-                <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-black/50 px-4">
+                <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-dark/50 px-4">
                     <div
                         role="dialog"
                         aria-modal="true"
@@ -914,17 +914,17 @@ export function CoachHeader({
                         <div className="flex flex-wrap items-center justify-between gap-2 px-[25px] py-5">
                             <h3 id="crop-cover-title" className={modalTitleClass}>Crop cover photo</h3>
                             {pendingCoverFiles.length > 0 && (
-                                <span className="text-[14px] leading-[18px] text-[#767980]">
+                                <span className="text-body-m text-dark-300">
                                     {pendingCoverFiles.length} {pendingCoverFiles.length === 1 ? "photo" : "photos"} left
                                 </span>
                             )}
                         </div>
-                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="h-px bg-light-525" />
                         <div className="flex flex-col gap-5 px-[25px] py-5">
                             <div className="flex flex-col gap-4 lg:flex-row">
                                 <div
                                     ref={coverCropperRef}
-                                    className="relative h-[200px] w-full overflow-hidden rounded-[8px] sm:h-[250px] lg:h-[300px]"
+                                    className="relative h-[200px] w-full overflow-hidden rounded-control sm:h-[250px] lg:h-[300px]"
                                     style={{ backgroundColor: coverBgColor }}
                                 >
                                     {coverObjectUrl && coverCropSize && (
@@ -946,9 +946,9 @@ export function CoachHeader({
                                     )}
                                 </div>
                                 <div className="flex w-full shrink-0 flex-col gap-2 lg:w-56">
-                                    <p className="text-[12px] font-medium leading-[13px] text-[#767980]">Preview</p>
+                                    <p className="text-label-xsm text-dark-300">Preview</p>
                                     <div
-                                        className="aspect-[3/1] w-full overflow-hidden rounded-[8px] border border-[#EAEADF]"
+                                        className="aspect-[3/1] w-full overflow-hidden rounded-control border border-light-525"
                                         style={{ backgroundColor: coverBgColor }}
                                     >
                                         {coverPreviewUrl ? (
@@ -961,7 +961,7 @@ export function CoachHeader({
                             </div>
                             <div className="flex flex-col gap-4">
                                 <div className="flex flex-wrap items-center gap-3">
-                                    <span className="text-[14px] font-medium text-[#484D56]">Background</span>
+                                    <span className="text-label-sm text-dark-400">Background</span>
                                     <div className="flex flex-wrap items-center gap-2">
                                         {COVER_BG_COLORS.map((color) => (
                                             <button
@@ -969,7 +969,7 @@ export function CoachHeader({
                                                 type="button"
                                                 onClick={() => setCoverBgColor(color)}
                                                 aria-pressed={coverBgColor === color}
-                                                className={`size-6 rounded-[6px] border border-[#EAEADF] transition-shadow ${coverBgColor === color ? "ring-2 ring-[#6698D2] ring-offset-2 ring-offset-[#F7F7F0]" : "hover:ring-1 hover:ring-[#C1C1B8]"}`}
+                                                className={`size-6 rounded-control border border-light-525 transition-shadow ${coverBgColor === color ? "ring-2 ring-primary ring-offset-2 ring-offset-light-300" : "hover:ring-1 hover:ring-light-600"}`}
                                                 style={{ backgroundColor: color }}
                                                 aria-label={`Select ${color} background`}
                                             />
@@ -977,7 +977,7 @@ export function CoachHeader({
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-4">
-                                    <Label htmlFor="crop-cover-zoom" className="text-[14px] font-medium text-[#484D56]">Zoom</Label>
+                                    <Label htmlFor="crop-cover-zoom" className="text-label-sm text-dark-400">Zoom</Label>
                                     <input
                                         id="crop-cover-zoom"
                                         type="range"
@@ -991,7 +991,7 @@ export function CoachHeader({
                                 </div>
                             </div>
                         </div>
-                        <div className="h-px bg-[#EAEADF]" />
+                        <div className="h-px bg-light-525" />
                         <div className="flex flex-col-reverse gap-[10px] px-[25px] py-5 sm:flex-row sm:justify-end">
                             <Button variant="outline" onClick={handleUseFullCoverImage}>Use full image</Button>
                             <Button variant="outline" onClick={handleCoverCropSkip}>Skip</Button>
@@ -1010,12 +1010,12 @@ export function CoachHeader({
     const ratingLabel = showRating
         ? `${publicCoachRatingLabel(coach.rating, coach.total_reviews)} (${coach.total_reviews})`
         : publicCoachRatingLabel(coach.rating, coach.total_reviews);
-    const metaLabel = "text-[12px] font-normal leading-[14px] tracking-[-0.03em] text-[#767980]";
+    const metaLabel = "text-caption text-dark-300";
 
     return (
         <>
         <div
-            className={`flex w-full min-w-0 flex-col gap-6 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px] font-sans tracking-[-0.03em] text-[#1A202C] ${className}`}
+            className={`flex w-full min-w-0 flex-col gap-6 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] font-sans tracking-[-0.03em] text-dark ${className}`}
         >
             {/* Profile Strength Meter */}
             {showStrengthMeter && (
@@ -1037,7 +1037,7 @@ export function CoachHeader({
                             if (!file.type.startsWith("image/")) {
                                 toast({
                                     title: "Invalid file type",
-                                    description: "Please select a valid image file.",
+                                    description: "Choose an image file.",
                                     variant: "destructive",
                                 });
                                 return;
@@ -1075,9 +1075,9 @@ export function CoachHeader({
                     <div className="flex w-full min-w-0 flex-1 flex-col gap-5">
                         <div className="flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
                             <div className="flex flex-col gap-1.5">
-                                <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">Edit profile</h2>
+                                <h2 className="text-card-title text-dark">Edit profile</h2>
                                 <p className={metaLabel}>
-                                    Fields marked <span className="text-destructive">*</span> are required
+                                    Fields marked <span className="text-error-700">*</span> are required
                                 </p>
                             </div>
                             <div className="hidden md:flex">
@@ -1253,32 +1253,32 @@ export function CoachHeader({
                         <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
                             <div className="flex min-w-0 flex-col gap-[10px]">
                                 <div className="flex flex-wrap items-end gap-[6px]">
-                                    <h1 className="text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[28px] tracking-[-0.05em] text-[#1A202C]">
+                                    <h1 className="text-page-title-phone text-dark md:text-page-title">
                                         {editedCoach?.name ?? coach.name}
                                     </h1>
                                     {coach?.is_verified && (
-                                        <BadgeCheck className="size-5 shrink-0 fill-[#0054B4] text-[#F7F7F0]" aria-label="Verified" />
+                                        <BadgeCheck className="size-5 shrink-0 fill-primary text-light-300" aria-label="Verified" />
                                     )}
                                     {instagramHandle ? (
                                         <a
                                             href={`https://instagram.com/${instagramHandle}`}
                                             target="_blank"
                                             rel="noopener noreferrer"
-                                            className="inline-flex size-[26px] items-center justify-center rounded-[6px] border border-[#EAEADF] bg-[#F4F4EB] text-[#484D56] transition-colors hover:bg-[#EAEADF]"
+                                            className="inline-flex size-[26px] items-center justify-center rounded-control border border-light-525 bg-light-400 text-dark-400 transition-colors hover:bg-light-525"
                                             aria-label={`View ${coach.name}'s Instagram profile`}
                                         >
                                             <Instagram className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                                         </a>
                                     ) : null}
                                 </div>
-                                <div className="flex flex-col gap-[2px] text-[12px] tracking-[-0.03em] text-[#767980]">
+                                <div className="flex flex-col gap-[2px] text-caption text-dark-300">
                                     {locationDisplay ? (
-                                        <p className="inline-flex items-center gap-1 font-normal leading-[14px]">
+                                        <p className="inline-flex items-center gap-1">
                                             <MapPin className="size-3" strokeWidth={1.5} aria-hidden="true" />
                                             {locationDisplay}
                                         </p>
                                     ) : null}
-                                    <p className="font-medium leading-[13px]">{displayedPosition}</p>
+                                    <p className="text-label-xsm">{displayedPosition}</p>
                                 </div>
                             </div>
 
@@ -1339,7 +1339,7 @@ export function CoachHeader({
                                     {isSendingMessage ? (
                                         <>
                                             <Loader2 className="animate-spin" strokeWidth={1.5} aria-hidden="true" />
-                                            Starting chat...
+                                            Starting chat…
                                         </>
                                     ) : (
                                         "Send a message"
@@ -1358,18 +1358,18 @@ export function CoachHeader({
         {profileCropperOverlay}
         {coverCropperOverlay}
         {!isEditMode && avatarPreviewOpen && avatarDisplayUrl && portalTarget && createPortal(
-            <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-black/80 px-4">
+            <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-dark/80 px-4">
                 <div className="absolute inset-0" onClick={() => setAvatarPreviewOpen(false)} />
                 <div className="relative z-[2101] flex max-h-[90vh] w-full max-w-3xl flex-col gap-3">
                     <button
                         type="button"
                         aria-label="Close preview"
-                        className="absolute -top-10 right-0 inline-flex size-[34px] items-center justify-center rounded-[8px] text-[#F1F1E6]/90 transition-colors hover:text-[#F1F1E6]"
+                        className="absolute -top-10 right-0 inline-flex size-[34px] items-center justify-center rounded-control text-light/90 transition-colors hover:text-light"
                         onClick={() => setAvatarPreviewOpen(false)}
                     >
                         <X className="size-5" strokeWidth={1.5} />
                     </button>
-                    <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-[10px] bg-black/30">
+                    <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-card bg-dark/30">
                         <img
                             src={avatarDisplayUrl}
                             alt={`${coach.name} profile`}

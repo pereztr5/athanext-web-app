@@ -33,9 +33,9 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
   const modal = variant === "modal";
   const cream = variant === "cream";
   const fieldClass = modal
-    ? "h-[38px] w-[150px] rounded-[8px] border-0 bg-[#F1F1E6] px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980] shadow-none focus-visible:ring-0"
+    ? "h-[38px] w-[150px] rounded-[8px] border-0 bg-light px-[10px] text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-dark-300 shadow-none focus-visible:ring-0"
     : cream
-      ? "h-auto w-[148px] rounded-[8px] border-[#EAEADF] bg-[#F1F1E6] px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-[#1A202C]"
+      ? "h-auto w-[148px] rounded-[8px] border-light-525 bg-light px-[15px] py-[10px] text-[16px] font-medium leading-[18px] tracking-[-0.48px] text-dark"
       : "w-32 md:w-40";
 
   const minEndDate = React.useMemo(() => {
@@ -99,7 +99,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
           min={minStartDate ? formatDateForInput(minStartDate) : undefined}
         />
       </div>
-      <span className={modal ? "text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-[#767980]" : cream ? "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-[#767980]" : "text-gray-500"}>to</span>
+      <span className={modal ? "text-[14px] font-normal leading-[18px] tracking-[-0.42px] text-dark-300" : cream ? "text-[12px] font-normal leading-[14px] tracking-[-0.36px] text-dark-300" : "text-gray-500"}>to</span>
       <div className="flex items-center gap-2">
         {endLabel && <span className="text-sm text-gray-700">{endLabel}</span>}
         <Input
@@ -115,7 +115,7 @@ export const DateRangePicker: React.FC<DateRangePickerProps> = ({
         <span
           className={
             modal
-              ? "rounded-[4px] border border-[#F9E0B4] bg-[#FDF7EC] px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-[#F0B144]"
+              ? "rounded-[4px] border border-info-200 bg-info-50 px-2 py-[3px] text-[12px] font-medium leading-[13px] tracking-[-0.36px] text-info"
               : "text-xs font-medium text-blue-700 bg-blue-50 px-2 py-1 rounded-full border border-blue-100"
           }
         >

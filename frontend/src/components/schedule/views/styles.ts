@@ -1,71 +1,71 @@
 import { cn } from "@/lib/utils";
 import type { ScheduleItemKind } from "@/utils/schedule";
 
-/** Class strings for My Schedule views (Working Copy `.sch-*`), local to the schedule page. */
+/** Class strings for My schedule views (Working Copy `.sch-*`), local to the schedule page. */
 
 /** Google Calendar busy times and days off. */
-export const striped = "bg-[repeating-linear-gradient(135deg,#ECECE2_0_6px,#E5E5DA_6px_12px)]";
+export const striped = "bg-light-525";
 
 /** Week chip (`.sch-chip`): white card with a blue left edge, tinted per kind. */
 export const chipBox = (kind: ScheduleItemKind, draft = false) =>
   cn(
-    "flex w-full min-w-0 flex-col rounded-[8px] border border-[#EAEADF] border-l-[3px] border-l-[#0054B4] bg-[#F7F7F0] px-2 py-[7px] text-left transition-shadow hover:shadow-[0_2px_8px_rgba(16,19,26,0.1)]",
-    kind === "group" && (draft ? "border border-dashed border-[#117A96] bg-transparent" : "border-[#A9D4E0] border-l-[#117A96] bg-[#E7F4F8]"),
-    kind === "request" && "border-[#F1D7AC] border-l-[#C26E12] bg-[#FCEFDA]",
-    (kind === "open" || kind === "offered") && "border border-dashed border-[#9DB6D6] bg-transparent",
-    kind === "busy" && cn(striped, "border-l-[#B9B9AD] hover:shadow-none")
+    "flex w-full min-w-0 flex-col rounded-control border border-light-525 border-l-[3px] border-l-primary bg-light-300 px-2 py-[7px] text-left transition-colors hover:bg-light-200",
+    kind === "group" && (draft ? "border border-dashed border-primary-200 bg-transparent" : "border-secondary-300 border-l-secondary-600 bg-secondary-50"),
+    kind === "request" && "border-info-300 border-l-info-600 bg-info-100",
+    (kind === "open" || kind === "offered") && "border border-dashed border-primary-200 bg-transparent",
+    kind === "busy" && cn(striped, "border-l-light-600 hover:bg-light-525")
   );
-export const chipTime = "w-full truncate text-[11px] leading-[14px] text-[#767980]";
+export const chipTime = "w-full truncate text-caption text-dark-300";
 export const chipName = (kind: ScheduleItemKind) =>
   cn(
-    "w-full truncate text-[12.5px] font-semibold leading-[16px] text-[#1A202C]",
-    (kind === "open" || kind === "offered") && "font-medium text-[#0054B4]",
-    kind === "busy" && "font-medium text-[#767980]"
+    "w-full truncate text-label-xsm text-dark",
+    (kind === "open" || kind === "offered") && "text-primary",
+    kind === "busy" && "text-dark-300"
   );
 export const chipSub = (kind: ScheduleItemKind) =>
   cn(
-    "w-full truncate text-[11px] leading-[14px] text-[#767980]",
-    kind === "group" && "text-[#117A96]",
-    kind === "request" && "text-[#906A29]"
+    "w-full truncate text-caption text-dark-300",
+    kind === "group" && "text-secondary-700",
+    kind === "request" && "text-info-700"
   );
 
 /** Day row (`.sch-it`): 62px time column, then the item box. */
 export const rowGrid = "grid grid-cols-[62px_minmax(0,1fr)] gap-2";
-export const rowTime = "pt-3 text-[12px] font-semibold leading-[14px] text-[#484D56]";
+export const rowTime = "pt-3 text-label-xsm text-dark-400";
 export const rowBox = (kind: ScheduleItemKind, draft = false) =>
   cn(
-    "flex w-full min-w-0 items-center gap-[10px] rounded-[12px] border border-[#EAEADF] border-l-4 border-l-[#0054B4] bg-[#F7F7F0] px-3 py-[10px] text-left [&_svg]:size-4 [&_svg]:flex-none",
-    kind === "group" && (draft ? "border border-dashed border-[#117A96] bg-transparent" : "border-[#A9D4E0] border-l-[#117A96] bg-[#E7F4F8]"),
-    kind === "request" && "border-[#F1D7AC] border-l-[#C26E12] bg-[#FCEFDA]",
-    kind === "open" && "border border-dashed border-[#9DB6D6] bg-transparent text-[#0054B4]",
-    kind === "offered" && "border-dashed border-[#0054B4] bg-transparent [border-left-style:solid]",
-    kind === "busy" && cn(striped, "border-l-[#B9B9AD]")
+    "flex w-full min-w-0 items-center gap-[10px] rounded-card border border-light-525 border-l-4 border-l-primary bg-light-300 px-3 py-[10px] text-left [&_svg]:size-4 [&_svg]:flex-none",
+    kind === "group" && (draft ? "border border-dashed border-primary-200 bg-transparent" : "border-secondary-300 border-l-secondary-600 bg-secondary-50"),
+    kind === "request" && "border-info-300 border-l-info-600 bg-info-100",
+    kind === "open" && "border border-dashed border-primary-200 bg-transparent text-primary",
+    kind === "offered" && "border-dashed border-primary-200 bg-transparent [border-left-style:solid] border-l-primary",
+    kind === "busy" && cn(striped, "border-l-light-600")
   );
 export const rowName = (kind: ScheduleItemKind) =>
   cn(
-    "text-[14px] font-semibold leading-[18px] tracking-[-0.03em] text-[#1A202C]",
-    (kind === "open" || kind === "offered") && "text-[#0054B4]"
+    "text-label-sm text-dark",
+    (kind === "open" || kind === "offered") && "text-primary"
   );
 export const rowSub = (kind: ScheduleItemKind) =>
-  cn("text-[12px] leading-[16px] tracking-[-0.03em] text-[#767980]", kind === "request" && "text-[#906A29]");
+  cn("text-caption text-dark-300", kind === "request" && "text-info-700");
 
 /** Small blue link inside a row (`.lnkx`). */
-export const rowLink = "inline-flex flex-none items-center gap-0.5 text-[12px] font-medium text-[#0054B4] [&_svg]:!size-3";
+export const rowLink = "inline-flex flex-none items-center gap-0.5 text-label-xsm text-primary [&_svg]:!size-3";
 
 /** Week arrows (`.ibtn.box`). */
 export const navArrow =
-  "inline-flex size-[30px] flex-none items-center justify-center rounded-[8px] border border-[#EAEADF] bg-[#F7F7F0] text-[#1A202C] transition-colors hover:bg-[#F4F4EB] disabled:cursor-not-allowed disabled:opacity-40 [&>svg]:size-4";
+  "inline-flex size-[30px] flex-none items-center justify-center rounded-control border border-light-525 bg-light-300 text-dark transition-colors hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed disabled:bg-light-400 disabled:text-dark-200 [&>svg]:size-4";
 
 /** The calendar card (`.sch-card`): no card chrome on phone. */
 export const calendarCard =
-  "flex flex-col gap-[14px] md:rounded-[10px] md:border md:border-[#EAEADF] md:bg-[#F7F7F0] md:px-[18px] md:pb-4 md:pt-[18px]";
+  "flex flex-col gap-[14px] md:rounded-card md:border md:border-light-525 md:bg-light-300 md:px-[18px] md:pb-4 md:pt-[18px]";
 
 /** Group fill bar (`.sch-fb`). */
-export const fillTrack = "block h-[5px] w-full flex-none overflow-hidden rounded-[3px] bg-[#C9E3EB]";
-export const fillBar = "block h-full rounded-[3px] bg-[#117A96]";
+export const fillTrack = "block h-[5px] w-full flex-none overflow-hidden rounded-pill bg-secondary-100";
+export const fillBar = "block h-full rounded-pill bg-secondary-600";
 
-/** Clear day (Working Copy red). */
-export const clearDayText = "text-[#B4231B]";
+/** Clear day: error text. */
+export const clearDayText = "text-error-700";
 
 export const initials = (name: string) =>
   name

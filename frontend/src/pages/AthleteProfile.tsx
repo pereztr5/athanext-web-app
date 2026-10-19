@@ -15,7 +15,7 @@ import {
   Loader2,
   X,
   type LucideIcon,
-} from "lucide-react";
+} from "@/components/icons";
 import { fetchLocationFromZipCode, formatLocationDisplay, type LocationInfo } from "@/utils/geolocation";
 import { GenderPill } from "@/components/form/GenderPill";
 import {
@@ -73,17 +73,17 @@ import type { Enums } from "@/integrations/supabase/types";
 const { MAX_COVER_IMAGES } = ATHLETE_PROFILE_CONSTANTS;
 
 const cardClass =
-  "flex w-full min-w-0 flex-col gap-5 rounded-[10px] border border-[#EAEADF] bg-[#F7F7F0] px-[25px] pb-[25px] pt-[30px]";
+  "flex w-full min-w-0 flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]";
 const cardTitleClass =
-  "flex items-center gap-2 text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]";
+  "flex items-center gap-2 text-card-title text-dark";
 const linkButtonClass =
-  "shrink-0 text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#0054B4] transition-colors hover:text-[#004390]";
-const rowClass = "rounded-[8px] bg-[#F4F4EB] px-4 py-3";
-const rowTitleClass = "text-[14px] font-medium leading-[18px] tracking-[-0.03em] text-[#1A202C]";
-const rowMetaClass = "text-[12px] leading-[14px] tracking-[-0.03em] text-[#767980]";
-const mutedTextClass = "text-[14px] leading-[18px] tracking-[-0.03em] text-[#767980]";
+  "shrink-0 text-label-sm text-primary transition-colors hover:text-primary-600";
+const rowClass = "rounded-control bg-light-400 px-4 py-3";
+const rowTitleClass = "text-label-sm text-dark";
+const rowMetaClass = "text-caption text-dark-300";
+const mutedTextClass = "text-body-m text-dark-300";
 
-const AVATAR_TINTS = ["bg-[#E5EDF7] text-[#0054B4]", "bg-[#E7F4F8] text-[#1599BC]"];
+const AVATAR_TINTS = ["bg-primary-50 text-primary", "bg-secondary-50 text-secondary"];
 
 /** Brand copy and icon tile for each training stat (labels in sentence case). */
 const STAT_META: Record<string, { label: string; subtitle: string; icon: LucideIcon; tint: string }> = {
@@ -91,32 +91,32 @@ const STAT_META: Record<string, { label: string; subtitle: string; icon: LucideI
     label: "Sessions completed",
     subtitle: "Training sessions",
     icon: Calendar,
-    tint: "bg-[#E5EDF7] text-[#0054B4]",
+    tint: "border border-primary-300 bg-primary-50 text-primary",
   },
   hours_trained: {
     label: "Hours trained",
     subtitle: "Total training time",
     icon: Clock,
-    tint: "bg-[#E7F4F8] text-[#1599BC]",
+    tint: "border border-secondary-300 bg-secondary-50 text-secondary-700",
   },
   coaches_worked_with: {
     label: "Coaches worked with",
     subtitle: "Different coaches",
     icon: Trophy,
-    tint: "bg-[#F4F4EB] text-[#484D56]",
+    tint: "border border-light-525 bg-light-400 text-dark-300",
   },
   average_rating: {
     label: "Average rating",
     subtitle: "Coach feedback",
     icon: Star,
-    tint: "bg-[#FDF7EC] text-[#906A29]",
+    tint: "border border-info-300 bg-info-50 text-info-700",
   },
 };
 
 const STATUS_TONES: Record<string, BrandPillTone> = {
   "in-progress": "green",
   upcoming: "blue",
-  completed: "teal",
+  completed: "neutral",
   past: "neutral",
   canceled: "muted",
 };
@@ -149,7 +149,7 @@ const SectionCard = ({
   <section className={cn(cardClass, className)}>
     <div className="flex min-h-[30px] items-center justify-between gap-3">
       <h2 className={cardTitleClass}>
-        <Icon className="size-5 flex-none text-[#0054B4]" strokeWidth={1.5} aria-hidden="true" />
+        <Icon className="size-5 flex-none text-primary" strokeWidth={1.5} aria-hidden="true" />
         {title}
       </h2>
       {action}
@@ -160,10 +160,10 @@ const SectionCard = ({
 
 const EmptyNote = ({ icon: Icon, tone = "muted", children }: { icon: LucideIcon; tone?: "muted" | "error"; children: ReactNode }) => (
   <div className="flex flex-col items-center justify-center gap-[10px] py-6 text-center">
-    <span className="inline-flex size-8 items-center justify-center rounded-[8px] bg-[#F4F4EB] text-[#A3A6AB]">
+    <span className="inline-flex size-8 items-center justify-center rounded-control bg-light-400 text-dark-300">
       <Icon className="size-4" strokeWidth={1.5} aria-hidden="true" />
     </span>
-    <p className={tone === "error" ? "text-[14px] leading-[18px] tracking-[-0.03em] text-destructive" : mutedTextClass}>
+    <p className={tone === "error" ? "text-body-m text-error-700" : mutedTextClass}>
       {children}
     </p>
   </div>
@@ -174,7 +174,7 @@ const ProfileNotice = ({ title, description, children }: { title: string; descri
   <div className="mb-20 mt-[3.8rem] flex min-h-[70vh] flex-col items-center justify-center px-4">
     <div className={cn(cardClass, "max-w-md items-center text-center")}>
       <div className="flex flex-col gap-[10px]">
-        <h1 className="text-[24px] font-semibold leading-[30px] tracking-[-0.05em] text-[#1A202C]">{title}</h1>
+        <h1 className="text-section text-dark">{title}</h1>
         <p className={mutedTextClass}>{description}</p>
       </div>
       <div className="flex flex-wrap items-center justify-center gap-[10px]">{children}</div>
@@ -965,19 +965,19 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
 
   const academicYearDisplay = getAcademicYearDisplay();
   const sportBadge = (
-    <span className="absolute -bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-[#EAEADF] bg-[#F7F7F0] p-1">
+    <span className="absolute -bottom-3 left-1/2 z-10 -translate-x-1/2 rounded-full border border-light-525 bg-light-300 p-1">
       <img src={sportIcon} alt="sport" className="size-7" />
     </span>
   );
   const avatarLoadingOverlay = isAvatarLoading ? (
-    <div className="absolute inset-0 flex items-center justify-center bg-[#F7F7F0]/70">
-      <Loader2 className="size-5 animate-spin text-[#767980]" strokeWidth={1.5} aria-hidden="true" />
+    <div className="absolute inset-0 flex items-center justify-center bg-light-300/70">
+      <Loader2 className="size-5 animate-spin text-dark-300" strokeWidth={1.5} aria-hidden="true" />
     </div>
   ) : null;
 
   return (
     <div className="mb-20 mt-[3.8rem] px-4 pt-6 md:px-10">
-      <div className="mx-auto flex w-full max-w-[1000px] flex-col gap-6">
+      <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
         {/* Header Section */}
         <section className={cardClass}>
           <ProfileStrengthMeter
@@ -996,7 +996,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                 className="relative mb-3 size-24 flex-shrink-0 rounded-full bg-transparent p-0 md:mb-0"
                 aria-label="Open profile image preview"
               >
-                <div className="relative size-full overflow-hidden rounded-full border border-[#EAEADF]">
+                <div className="relative size-full overflow-hidden rounded-full border border-light-525">
                   <img
                     src={activeProfile.profileImageUrl}
                     alt={activeProfile.fullName || "Athlete"}
@@ -1015,8 +1015,8 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
               </button>
             ) : (
               <div className="relative mb-3 size-24 flex-shrink-0 rounded-full md:mb-0">
-                <div className="relative flex size-full items-center justify-center overflow-hidden rounded-full border border-[#EAEADF] bg-[#E5EDF7]">
-                  <span className="text-[32px] font-medium leading-[30px] tracking-[-0.05em] text-[#0054B4]">
+                <div className="relative flex size-full items-center justify-center overflow-hidden rounded-full border border-light-525 bg-primary-50">
+                  <span className="text-stat text-primary">
                     {activeProfile.initials}
                   </span>
                   {avatarLoadingOverlay}
@@ -1027,7 +1027,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
 
             {/* Athlete Info */}
             <div className="flex w-full min-w-0 flex-1 flex-col gap-[10px]">
-              <h1 className="break-words text-[26px] md:text-[32px] font-bold leading-[26px] md:leading-[34px] tracking-[-0.05em] text-[#1A202C]">
+              <h1 className="break-words text-page-title-phone text-dark md:text-page-title">
                 {activeProfile.fullName}
               </h1>
               {locationInfo && (
@@ -1036,7 +1036,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                   <span>{formatLocationDisplay(locationInfo)}</span>
                 </p>
               )}
-              <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">
+              <p className="text-body-m text-dark-300">
                 Track your progress and manage your training sessions.
               </p>
               {(activeProfile.position || academicYearDisplay || activeProfile.gender || (activeProfile.pathwayTags?.length ?? 0) > 0) && (
@@ -1062,9 +1062,8 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
         </section>
 
         {/* Training Statistics */}
-        <section className="flex flex-col gap-[14px]">
-          <h2 className="text-[20px] font-medium leading-[24px] tracking-[-0.05em] text-[#1A202C]">Training stats</h2>
-          <div className="grid grid-cols-1 gap-[14px] sm:grid-cols-2 lg:grid-cols-3">
+        <section aria-label="Training stats">
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:gap-6 lg:grid-cols-3">
             {updatedStats.length > 0 ? (
               updatedStats.map((stat) => {
                 const meta = STAT_META[stat.key] ?? STAT_META.sessions_completed;
@@ -1072,13 +1071,13 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                 return (
                   <div key={stat.key} className={cn(cardClass, "gap-4")}>
                     <span
-                      className={cn("inline-flex size-8 items-center justify-center rounded-[8px]", meta.tint)}
+                      className={cn("inline-flex size-8 items-center justify-center rounded-control", meta.tint)}
                       aria-hidden="true"
                     >
                       <Icon className="size-4" strokeWidth={1.5} />
                     </span>
                     <div className="flex flex-col gap-1.5">
-                      <span className="text-[32px] font-bold leading-[30px] tracking-[-0.03em] text-[#1A202C]">
+                      <span className="text-stat text-dark">
                         {stat.value}
                       </span>
                       <span className={rowTitleClass}>{meta.label}</span>
@@ -1110,8 +1109,8 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
           >
             {sessionsLoading ? (
               <div className="flex flex-col gap-[10px]" aria-label="Loading upcoming sessions">
-                <Skeleton className="h-[58px] w-full rounded-[8px]" />
-                <Skeleton className="h-[58px] w-full rounded-[8px]" />
+                <Skeleton className="h-[58px] w-full rounded-control" />
+                <Skeleton className="h-[58px] w-full rounded-control" />
               </div>
             ) : safeUpcomingSessions.length > 0 ? (
               <div className="flex max-h-[320px] flex-col gap-[10px] overflow-y-auto pr-1">
@@ -1153,7 +1152,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                     type="button"
                     key={message.id}
                     onClick={() => navigate(ROUTES.CHAT)}
-                    className={cn(rowClass, "flex w-full flex-col gap-1.5 text-left transition-colors hover:bg-[#EAEADF]")}
+                    className={cn(rowClass, "flex w-full flex-col gap-1.5 text-left transition-colors hover:bg-light-525")}
                   >
                     <div className="flex w-full items-start justify-between gap-3">
                       <span className={cn(rowTitleClass, "min-w-0 truncate")}>{message.sender}</span>
@@ -1205,7 +1204,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                     <span
                       aria-hidden="true"
                       className={cn(
-                        "flex size-10 shrink-0 items-center justify-center rounded-full text-[14px] font-medium",
+                        "flex size-10 shrink-0 items-center justify-center rounded-full text-label-sm",
                         AVATAR_TINTS[index % AVATAR_TINTS.length]
                       )}
                     >
@@ -1282,7 +1281,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
                         <p className={cn(rowTitleClass, "min-w-0 truncate")}>{message.sender}</p>
                         <span className={cn(rowMetaClass, "shrink-0")}>{formatRelativeTime(message.time)}</span>
                       </div>
-                      <p className="text-[14px] leading-[18px] tracking-[-0.03em] text-[#484D56]">{message.message}</p>
+                      <p className="text-body-m text-dark-300">{message.message}</p>
                     </div>
                   ))
                 ) : (
@@ -1300,12 +1299,12 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
             <button
               type="button"
               aria-label="Close preview"
-              className="absolute -top-10 right-0 text-[#F1F1E6]/90 hover:text-[#F1F1E6]"
+              className="absolute -top-10 right-0 text-light/90 hover:text-light"
               onClick={() => setAvatarPreviewOpen(false)}
             >
               <X className="size-6" strokeWidth={1.5} />
             </button>
-            <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-[10px] bg-black/30">
+            <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-card bg-black/30">
               <img
                 src={activeProfile.profileImageUrl}
                 alt={`${activeProfile.fullName || "Athlete"} profile`}
