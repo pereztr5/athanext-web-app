@@ -7,6 +7,7 @@ import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight } from "@/components/icons";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
+import { CampEditorDialog } from "@/components/camps/CampEditorDialog";
 import { SessionDialog } from "@/components/schedule/SessionDialog";
 import { AddSessionSheet } from "@/components/schedule/createweek/AddSessionSheet";
 import { WeekDayGrid } from "@/components/schedule/WeekDayGrid";
@@ -53,6 +54,7 @@ export default function CreateSession() {
   const canPrev = weekStart > todayISO;
   const [addDate, setAddDate] = useState<string | null>(null);
   const [openSession, setOpenSession] = useState<ScheduleSession | null>(null);
+  const [campOpen, setCampOpen] = useState(false);
 
   useEffect(() => {
     if (weekStart < todayISO) setWeekStart(todayISO);
@@ -195,8 +197,14 @@ export default function CreateSession() {
           rules={rules}
           day={days.find((d) => d.date === addDate)}
           coachId={coachId}
+          onPickCamp={() => {
+            setAddDate(null);
+            setCampOpen(true);
+          }}
         />
       ) : null}
+
+      {coachId ? <CampEditorDialog open={campOpen} camp={null} coachId={coachId} onOpenChange={setCampOpen} /> : null}
 
       {schedule.data && coachId ? (
         <SessionDialog

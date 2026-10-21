@@ -1,5 +1,5 @@
 import type { CSSProperties } from "react";
-import { Lock } from "@/components/icons";
+import { Eye } from "@/components/icons";
 import { cn } from "@/lib/utils";
 import { scoreWord } from "@/utils/feedback";
 import { caption } from "./helpers";
@@ -16,13 +16,13 @@ const range = cn(
 const unset =
   "[&::-webkit-slider-runnable-track]:bg-light-525 [&::-moz-range-track]:bg-light-525 [&::-webkit-slider-thumb]:border-light-600 [&::-moz-range-thumb]:border-light-600";
 
-/** "How was the session?" box: a 0 to 10 score only the coach sees. */
+/** "How was the session?" box: a 0 to 10 score, shown to families with the summary. */
 export const ScoreBox = ({ score, onChange, disabled }: { score: number; onChange: (score: number) => void; disabled?: boolean }) => (
   <div className="flex flex-col gap-2.5 rounded-card border border-light-525 bg-light-300 px-4 py-3.5">
     <div className="flex items-center justify-between gap-3">
       <span className={cn(caption, "flex items-center gap-1.5")}>
-        <Lock className="size-3" strokeWidth={1.5} aria-hidden="true" />
-        Only you see this score
+        <Eye className="size-3" strokeWidth={1.5} aria-hidden="true" />
+        Families see this score
       </span>
       <span className="text-label-sm text-primary">
         <b className="text-card-title">{score}</b>/10{score ? ` · ${scoreWord(score)}` : ""}

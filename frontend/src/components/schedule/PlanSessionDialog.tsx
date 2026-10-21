@@ -3,14 +3,14 @@
  * `pses`). A time that overlaps another session is still refused, so the coach is never booked
  * twice at once; overlapping a Google Calendar busy time saves with a heads-up.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Minus, Plus } from "@/components/icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { scheduleAPI, type BusyBlock, type ScheduleRules, type ScheduleSession, type SessionPosition } from "@/api/schedule";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
-import { DEFAULT_PILLARS } from "@/utils/pillarIcons";
+import { lengthLabel, lengthOptions, missingFields, plainError } from "@/utils/sessionForm";
 import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import {
   ALL_START_MINUTES,
@@ -22,10 +22,10 @@ import {
   viewerToEastern,
 } from "@/utils/schedule";
 import { sheetBody, sheetContent, sheetFooter, sheetHeader, sheetTitle } from "./create/classes";
+import { FieldHint, MissingNote } from "./create/parts";
 import { SessionTagField, sessionTagOf } from "./plan/SessionTag";
 import { dialogContent, iconButton, input, label, meta, primaryButton, secondaryButton, textButton } from "./styles";
 
-const LENGTHS = [45, 60, 75, 90, 120];
 const LEVELS = ["All levels", "Beginners welcome", "Club and up"];
 const VIDEO = "Video call";
 const stepButton = cn(iconButton, "size-[30px] bg-light-300");
@@ -79,8 +79,13 @@ export const PlanSessionDialog = ({
   const [bring, setBring] = useState("Ball, water, shin guards");
   const [error, setError] = useState<string | null>(null);
 
+  // Fill the form when it opens (or switches session), not when the schedule refetches while open.
+  const filledFor = useRef<string | null>(null);
   useEffect(() => {
-    if (!open) return;
+    const key = open ? (session?.id ?? "new") : null;
+    const fresh = key !== null && key !== filledFor.current;
+    filledFor.current = key;
+    if (!fresh) return;
     setError(null);
     if (session) {
       const startAt = sessionStart(session);
@@ -98,7 +103,7 @@ export const PlanSessionDialog = ({
       setLevel(session.details.level ?? LEVELS[0]);
       setAbout((session.details.about ?? []).join("\n"));
       setBring(session.details.bring ?? "");
-      setMore(Boolean(session.pillar || session.details.about?.length || session.details.ages));
+      setMore(Boolean(session.details.about?.length || (session.details.ages && session.details.ages !== session.details.tag)));
     } else {
       setTitle("");
       setTag("");
@@ -182,7 +187,7 @@ export const PlanSessionDialog = ({
       });
       onOpenChange(false);
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't save the session."),
+    onError: (err: unknown) => setError(plainError(err, "Couldn't save the session. Try again.")),
   });
 
   const remove = useMutation({
@@ -192,14 +197,19 @@ export const PlanSessionDialog = ({
       toast({ title: "Session removed" });
       onOpenChange(false);
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't remove the session."),
+    onError: (err: unknown) => setError(plainError(err, "Couldn't remove the session. Try again.")),
   });
+
+  const priceBad = price.trim() !== "" && !(Number(price) >= 0);
+  const missing = missingFields([
+    ["a title", Boolean(title.trim())],
+    ["a tag", Boolean(tag.trim())],
+    ["a price", price.trim() !== "" && !priceBad],
+  ]);
 
   const submit = () => {
     setError(null);
-    if (!title.trim()) return setError("Give it a title.");
-    if (!tag.trim()) return setError("Add a tag.");
-    if (price.trim() === "" || !(Number(price) >= 0)) return setError("Add a price.");
+    if (missing.length) return;
     save.mutate();
   };
 
@@ -219,7 +229,13 @@ export const PlanSessionDialog = ({
           </label>
           <div className={field}>
             <span className={label}>Tag</span>
-            <SessionTagField value={tag} onChange={setTag} />
+            <SessionTagField
+              value={tag}
+              onChange={(next) => {
+                setTag(next);
+                if (next) setPillar(next);
+              }}
+            />
           </div>
           <div className={pair}>
             {dayMode ? (
@@ -256,9 +272,9 @@ export const PlanSessionDialog = ({
             <label className={field}>
               <span className={label}>Length</span>
               <select className={input} value={length} onChange={(e) => setLength(Number(e.target.value))}>
-                {LENGTHS.map((l) => (
+                {lengthOptions(length).map((l) => (
                   <option key={l} value={l}>
-                    {l === 120 ? "2 hours" : `${l} min`}
+                    {lengthLabel(l)}
                   </option>
                 ))}
               </select>
@@ -285,9 +301,11 @@ export const PlanSessionDialog = ({
                   min={0}
                   inputMode="decimal"
                   value={price}
+                  aria-invalid={priceBad || undefined}
                   onChange={(e) => setPrice(e.target.value)}
                 />
               </span>
+              <FieldHint>{priceBad ? "Enter a price of $0 or more." : null}</FieldHint>
             </label>
             <div className={field}>
               <span className={label}>Spots</span>
@@ -306,17 +324,6 @@ export const PlanSessionDialog = ({
           {more ? (
             <>
               <div className={pair}>
-                <label className={field}>
-                  <span className={label}>Pillar</span>
-                  <select className={input} value={pillar} onChange={(e) => setPillar(e.target.value)}>
-                    <option value="">Not set</option>
-                    {DEFAULT_PILLARS.soccer.map((p) => (
-                      <option key={p.title} value={p.title}>
-                        {p.title}
-                      </option>
-                    ))}
-                  </select>
-                </label>
                 <label className={field}>
                   <span className={label}>Position</span>
                   <select className={input} value={position} onChange={(e) => setPosition(e.target.value as SessionPosition | "")}>
@@ -353,7 +360,7 @@ export const PlanSessionDialog = ({
           ) : (
             <button type="button" className={cn(textButton, "self-start")} onClick={() => setMore(true)}>
               <Plus strokeWidth={1.5} aria-hidden="true" />
-              More details: pillar, position, ages, what to bring
+              More details: position, ages, what to bring
             </button>
           )}
 
@@ -363,7 +370,8 @@ export const PlanSessionDialog = ({
             </p>
           ) : null}
         </div>
-        <div className={sheetFooter}>
+        <div className={cn(sheetFooter, "flex-col")}>
+          <MissingNote missing={missing} />
           <div className="grid w-full grid-cols-2 gap-2">
             {session ? (
               <button type="button" className={secondaryButton} disabled={remove.isPending} onClick={() => remove.mutate()}>
@@ -374,7 +382,7 @@ export const PlanSessionDialog = ({
                 Cancel
               </button>
             )}
-            <button type="button" className={primaryButton} disabled={save.isPending} onClick={submit}>
+            <button type="button" className={primaryButton} disabled={missing.length > 0 || save.isPending} onClick={submit}>
               {session ? "Save" : "Add session"}
             </button>
           </div>

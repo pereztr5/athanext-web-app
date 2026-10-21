@@ -58,6 +58,10 @@ export interface AthleteSession {
   };
   attendance: "present" | "absent" | "no_show" | null;
   summary: string | null;
+  /** The coach's 1 to 10 session score, shown with the summary. */
+  score: number | null;
+  /** "<Athlete> was marked as missed for …" when the coach marked them as missed. */
+  missedMessage: string | null;
   note: string | null;
 }
 
@@ -191,6 +195,8 @@ export const athleteSessionAPI = {
       },
       attendance: raw.attendance ?? null,
       summary: raw.summary ?? null,
+      score: raw.score != null ? Number(raw.score) || null : null,
+      missedMessage: raw.missed_message ?? null,
       note: raw.note ?? null,
     };
   },

@@ -17,7 +17,7 @@ export type UsualSession = {
   pillar: string;
   /** Real 1-on-1 open slot, not a one-spot group. */
   isOneOnOne: boolean;
-  /** Age group or level, when this usual session is a group. */
+  /** The pillar tag; older saved sessions may hold an age group or level. */
   tag?: string;
 };
 

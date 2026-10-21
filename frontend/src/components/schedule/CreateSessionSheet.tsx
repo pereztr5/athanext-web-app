@@ -1,8 +1,11 @@
 /**
  * Opens the Create session sheet in place (My schedule, Home, and the top bar).
- * The week page at /schedule/create stays as its own route.
+ * The week page at /schedule/create stays as its own route. Camp in the type picker
+ * closes the sheet and opens the camp editor.
  */
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { CampEditorDialog } from "@/components/camps/CampEditorDialog";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { scheduleAPI } from "@/api/schedule";
 import { useAuth } from "@/contexts/AuthContext";
@@ -36,7 +39,14 @@ export const CreateSessionSheet = ({
     queryFn: () => scheduleAPI.get(addDaysISO(todayISO, -1), addDaysISO(todayISO, 8)),
   });
 
-  if (!open || !coachId) return null;
+  const [campOpen, setCampOpen] = useState(false);
+  const camp = coachId ? <CampEditorDialog open={campOpen} camp={null} coachId={coachId} onOpenChange={setCampOpen} /> : null;
+  const pickCamp = () => {
+    setCampOpen(true);
+    onOpenChange(false);
+  };
+
+  if (!open || !coachId) return camp;
 
   if (!schedule.data?.rules) {
     return (
@@ -57,15 +67,19 @@ export const CreateSessionSheet = ({
   }
 
   return (
-    <CreateSessionDialog
-      open
-      onOpenChange={onOpenChange}
-      startDate={start}
-      todayISO={todayISO}
-      timeZone={timeZone}
-      rules={schedule.data.rules}
-      coachId={coachId}
-      coachName={userName || userProfile?.name || "Your coach"}
-    />
+    <>
+      <CreateSessionDialog
+        open
+        onOpenChange={onOpenChange}
+        startDate={start}
+        todayISO={todayISO}
+        timeZone={timeZone}
+        rules={schedule.data.rules}
+        coachId={coachId}
+        coachName={userName || userProfile?.name || "Your coach"}
+        onPickCamp={pickCamp}
+      />
+      {camp}
+    </>
   );
 };

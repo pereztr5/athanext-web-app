@@ -274,7 +274,12 @@ const CoachSessionPage = () => {
   const shown = showAll ? live : live.slice(0, SHOWN);
   const notesFor = booked.filter((b) => b.note);
   const fb = s.feedback;
-  const sharedWith = group ? "each family" : first?.parentName ?? "the family";
+  // Families of athletes marked as missed get a short missed message instead of the summary.
+  const sharedWith = group
+    ? booked.some((b) => b.attendance && b.attendance !== "present")
+      ? "the families who came"
+      : "each family"
+    : first?.parentName ?? "the family";
 
   return (
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
@@ -414,8 +419,12 @@ const CoachSessionPage = () => {
                 <p className="text-body-m text-dark-300">No message sent. The session stays charged.</p>
               ) : null}
               <span className={cn(cap, "inline-flex items-center gap-1.5")}>
-                {fb.summary ? <Eye className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <Lock className="size-3" strokeWidth={1.5} aria-hidden="true" />}
-                {fb.summary ? `Shared with ${sharedWith}${fb.editCount ? " · Edited" : ""}` : "Private, only you can see this"}
+                {fb.summary || (!fb.noShow && fb.score) ? <Eye className="size-3" strokeWidth={1.5} aria-hidden="true" /> : <Lock className="size-3" strokeWidth={1.5} aria-hidden="true" />}
+                {fb.summary
+                  ? `Shared with ${sharedWith}${fb.editCount ? " · Edited" : ""}`
+                  : !fb.noShow && fb.score
+                    ? `Score shared with ${sharedWith}`
+                    : "Private, only you can see this"}
               </span>
               {group ? (
                 <>

@@ -78,7 +78,7 @@ const BusinessPage = () => {
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-wrapper-focused flex-col gap-4 md:gap-6">
-        <PageHeader title="Business" />
+        <PageHeader title="My Business" />
         <section className={cn(card, "gap-4")}>
           <div className="flex items-center gap-3">
             <span className="flex size-14 flex-none items-center justify-center overflow-hidden rounded-full border border-primary-200 bg-primary-50 text-subtitle text-primary">

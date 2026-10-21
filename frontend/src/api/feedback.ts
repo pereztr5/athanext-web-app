@@ -1,5 +1,5 @@
 /**
- * Session feedback (ATH-82): who came, a 1 to 10 score only the coach sees, one summary for
+ * Session feedback (ATH-82): who came, a 1 to 10 score families see too, one summary for
  * every family who came, and optional notes for single athletes, sent with the summary or later.
  */
 import { supabase } from "@/integrations/supabase/client";
@@ -13,6 +13,8 @@ export interface FeedbackAthlete {
   imageUrl: string | null;
   age: number | null;
   position: string | null;
+  /** The parent's name on a minor's account, for the roll call. Null until the migration is applied. */
+  parentName: string | null;
   attendance: "present" | "absent" | "no_show" | null;
   note: string | null;
 }
@@ -34,6 +36,8 @@ export interface FeedbackScreen {
   summary: string | null;
   score: number | null;
   editCount: number;
+  /** Server switch: families of athletes marked as missed get a short missed message, not the summary. */
+  missedGetsShortMessage: boolean;
   athletes: FeedbackAthlete[];
 }
 
@@ -67,6 +71,7 @@ export const feedbackAPI = {
       summary: raw.summary ?? null,
       score: raw.score != null ? Number(raw.score) : null,
       editCount: Number(raw.edit_count) || 0,
+      missedGetsShortMessage: Boolean(raw.missed_gets_short_message),
       athletes: ((raw.athletes as Row[]) ?? []).map((a) => ({
         bookingId: a.booking_id,
         athleteId: a.athlete_id,
@@ -74,6 +79,7 @@ export const feedbackAPI = {
         imageUrl: a.image_url ?? null,
         age: a.age != null ? Number(a.age) : null,
         position: a.position ?? null,
+        parentName: a.parent_name ?? null,
         attendance: a.attendance ?? null,
         note: a.note ?? null,
       })),

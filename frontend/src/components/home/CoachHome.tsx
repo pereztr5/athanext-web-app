@@ -358,7 +358,7 @@ export const CoachHome = () => {
                     ))}
                   </div>
                   <Link to={ROUTES.PAYMENTS} className={textButton}>
-                    Business
+                    My Business
                     <ChevronRight strokeWidth={1.5} aria-hidden="true" />
                   </Link>
                 </div>

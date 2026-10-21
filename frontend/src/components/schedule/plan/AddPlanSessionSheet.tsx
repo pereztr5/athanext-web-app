@@ -2,7 +2,7 @@
  * Add a session on Plan next week: tap a usual session, or create a new Group / 1-on-1
  * open slot (real individual, not a one-spot group) and optionally save it as usual.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Minus, Plus } from "@/components/icons";
 import { scheduleAPI, type ScheduleRules } from "@/api/schedule";
@@ -11,20 +11,14 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { money } from "@/utils/booking";
 import { ALL_START_MINUTES, formatDayISO, formatMinutes, viewerToEastern } from "@/utils/schedule";
+import { SESSION_LENGTHS, lengthLabel, missingFields, plainError } from "@/utils/sessionForm";
 import { dialogContent, input, label, meta, primaryButton, secondaryButton, segButton, segGroup } from "../styles";
+import { MissingNote } from "../create/parts";
 import { pickRow } from "./parts";
 import { SessionTagField } from "./SessionTag";
+import { tagDetails } from "./tags";
 import { saveUsual, type UsualSession } from "./usualSessions";
 
-const PILLARS = [
-  "On-field training",
-  "Video analysis",
-  "Mentorship",
-  "Performance coaching",
-  "Academic tutoring",
-  "College recruiting",
-];
-const LENGTHS = [45, 60, 90] as const;
 const VIDEO = "Video call";
 
 type Type = "group" | "slot";
@@ -51,7 +45,6 @@ export const AddPlanSessionSheet = ({
   const [view, setView] = useState<"list" | "form">("list");
   const [type, setType] = useState<Type>("group");
   const [name, setName] = useState("");
-  const [pillar, setPillar] = useState(PILLARS[0]);
   const [start, setStart] = useState(17 * 60);
   const [length, setLength] = useState(60);
   const [loc, setLoc] = useState(rules.locations[0] ?? VIDEO);
@@ -65,22 +58,31 @@ export const AddPlanSessionSheet = ({
     return [...list, VIDEO].filter((x, i, a) => a.indexOf(x) === i);
   }, [rules.locations]);
 
+  // Fresh form only when the sheet opens, not when the schedule refetches while it's open.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opening) return;
     setView("list");
     setType("group");
     setName("");
-    setPillar(PILLARS[0]);
     setStart(17 * 60);
     setLength(60);
     setLoc(places[0] ?? VIDEO);
     setCap(8);
-    setPrice(String(rules.hourlyRate && type === "slot" ? rules.hourlyRate : 40));
+    setPrice("40");
     setTag("");
     setSave(true);
-  }, [open, places, rules.hourlyRate]);
+  }, [open, places]);
 
-  const ok = (type === "slot" || name.trim().length > 0) && tag.trim().length > 0 && Number(price) > 0;
+  // The tag is the session's pillar.
+  const pillar = tag.trim();
+  const missing = missingFields([
+    ["a name", type === "slot" || name.trim().length > 0],
+    ["a tag", pillar.length > 0],
+    ["a price above $0", Number(price) > 0],
+  ]);
 
   const createFromUsual = useMutation({
     mutationFn: async (u: UsualSession) => {
@@ -127,7 +129,7 @@ export const AddPlanSessionSheet = ({
     onError: (err: unknown) =>
       toast({
         title: "Couldn't add that session",
-        description: err instanceof Error ? err.message : "Try another time.",
+        description: plainError(err, "Try another time."),
         variant: "destructive",
       }),
   });
@@ -150,7 +152,7 @@ export const AddPlanSessionSheet = ({
         location: online ? "online" : "in-person",
         place: online || loc === "In person" ? null : loc,
         pillar,
-        details: tag.trim() ? { tag: tag.trim(), ages: tag.trim() } : undefined,
+        details: pillar ? tagDetails(pillar) : undefined,
         isDraft: true,
       });
       if (!result.created.length) throw new Error("That time overlaps another session. Pick another time.");
@@ -164,7 +166,7 @@ export const AddPlanSessionSheet = ({
           capacity: isSlot ? 1 : cap,
           pillar,
           isOneOnOne: isSlot,
-          tag: tag.trim() || undefined,
+          tag: pillar || undefined,
         });
       }
       return title;
@@ -177,7 +179,7 @@ export const AddPlanSessionSheet = ({
     onError: (err: unknown) =>
       toast({
         title: "Couldn't add that session",
-        description: err instanceof Error ? err.message : "Try again.",
+        description: plainError(err),
         variant: "destructive",
       }),
   });
@@ -217,7 +219,7 @@ export const AddPlanSessionSheet = ({
                     <span className="flex min-w-0 flex-1 flex-col gap-1 text-left">
                       <span className="text-label-sm">{u.title}</span>
                       <span className={meta}>
-                        {formatMinutes(u.startMinutes)} · {u.durationMinutes} min · {u.place}
+                        {formatMinutes(u.startMinutes)} · {lengthLabel(u.durationMinutes)} · {u.place}
                       </span>
                     </span>
                     <span className="flex flex-none flex-col items-end gap-1">
@@ -294,26 +296,6 @@ export const AddPlanSessionSheet = ({
                 <SessionTagField value={tag} onChange={setTag} />
               </div>
 
-              <div className="flex flex-col gap-1.5">
-                <span className={label}>Pillar</span>
-                <div className="flex flex-wrap gap-1.5">
-                  {PILLARS.map((p) => (
-                    <button
-                      key={p}
-                      type="button"
-                      className={cn(
-                        "h-8 rounded-control border px-3 text-label-sm transition-colors",
-                        pillar === p ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200",
-                      )}
-                      aria-pressed={pillar === p}
-                      onClick={() => setPillar(p)}
-                    >
-                      {p}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="grid grid-cols-2 gap-3">
                 <label className="flex flex-col gap-1.5">
                   <span className={label}>Starts</span>
@@ -325,16 +307,16 @@ export const AddPlanSessionSheet = ({
                     ))}
                   </select>
                 </label>
-                <div className="flex flex-col gap-1.5">
+                <label className="flex flex-col gap-1.5">
                   <span className={label}>Length</span>
-                  <div className={segGroup} role="group" aria-label="Length">
-                    {LENGTHS.map((n) => (
-                      <button key={n} type="button" className={segButton(length === n)} aria-pressed={length === n} onClick={() => setLength(n)}>
-                        {n === 90 ? "90 min" : `${n} min`}
-                      </button>
+                  <select className={input} value={length} onChange={(e) => setLength(Number(e.target.value))}>
+                    {SESSION_LENGTHS.map((n) => (
+                      <option key={n} value={n}>
+                        {lengthLabel(n)}
+                      </option>
                     ))}
-                  </div>
-                </div>
+                  </select>
+                </label>
               </div>
               <span className={cn(meta, "-mt-2")}>{rangeLabel}</span>
 
@@ -408,18 +390,21 @@ export const AddPlanSessionSheet = ({
                 <span className="text-body-m">Save to my usual sessions</span>
               </label>
             </div>
-            <div className="flex gap-2 border-t border-light-525 px-4 py-4 md:px-[25px]">
-              <button type="button" className={cn(secondaryButton, "h-11 flex-1")} onClick={() => setView("list")}>
-                Back
-              </button>
-              <button
-                type="button"
-                className={cn(primaryButton, "h-11 flex-[2]")}
-                disabled={!ok || createNew.isPending}
-                onClick={() => createNew.mutate()}
-              >
-                {createNew.isPending ? "Adding…" : `Add to ${formatDayISO(date, { weekday: "short", month: "short", day: "numeric" })}`}
-              </button>
+            <div className="flex flex-col gap-2.5 border-t border-light-525 px-4 py-4 md:px-[25px]">
+              <MissingNote missing={missing} />
+              <div className="flex gap-2">
+                <button type="button" className={cn(secondaryButton, "h-11 flex-1")} onClick={() => setView("list")}>
+                  Back
+                </button>
+                <button
+                  type="button"
+                  className={cn(primaryButton, "h-11 flex-[2]")}
+                  disabled={missing.length > 0 || createNew.isPending}
+                  onClick={() => createNew.mutate()}
+                >
+                  {createNew.isPending ? "Adding…" : `Add to ${formatDayISO(date, { weekday: "short", month: "short", day: "numeric" })}`}
+                </button>
+              </div>
             </div>
           </>
         )}

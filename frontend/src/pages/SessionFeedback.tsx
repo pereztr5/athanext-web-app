@@ -1,9 +1,9 @@
 /**
- * Session feedback (ATH-82), as in the Working Copy check-in: a session card, who was present
- * (everyone starts as present), a 0 to 10 score only the coach sees, one summary for every
- * family who came and, on a group, optional notes for each athlete sent with it. Nobody came:
- * a no-show with an optional message, still charged. After the first send, Session completed
- * offers a note for each athlete who came, then Done continues to the next session that is due.
+ * Session feedback (ATH-82), as in the Working Copy check-in: a session card, who was here
+ * (a roll call on a group where everyone starts as Here; Yes / No on a 1-on-1), a 0 to 10 score
+ * families see with the summary, one summary for every family who came and, on a group,
+ * optional notes for each athlete sent with it. Nobody came: a no-show with an optional
+ * message, still charged. Sending lands on the session page, where the feedback now shows.
  * Open with ?slotId=<session>; add &notes=1 to go straight to the notes for athletes.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -13,6 +13,7 @@ import { CalendarX, Check, ChevronLeft, ChevronRight, Plus, Send, X } from "@/co
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { feedbackAPI, type FeedbackAthlete } from "@/api/feedback";
 import { AthleteNotes } from "@/components/feedback/AthleteNotes";
+import { RollCall } from "@/components/feedback/RollCall";
 import { ScoreBox } from "@/components/feedback/ScoreBox";
 import { SessionHero } from "@/components/feedback/SessionHero";
 import { SessionPageHeader } from "@/components/session/SessionHeader";
@@ -35,6 +36,7 @@ import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { formatClock, formatDayISO, sessionStart } from "@/utils/schedule";
+import { plainError } from "@/utils/sessionForm";
 import { getZonedISODate } from "@/utils/dateHelpers";
 
 const roundButton = cn(iconButton, "size-control-sm flex-none bg-light-300");
@@ -67,7 +69,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
   const [score, setScore] = useState(0);
   const [summary, setSummary] = useState("");
   const [notes, setNotes] = useState<Record<string, string>>({});
-  const [stage, setStage] = useState<"form" | "notes" | "done">(startOnNotes ? "notes" : "form");
+  const [stage, setStage] = useState<"form" | "notes">(startOnNotes ? "notes" : "form");
   const [noteFor, setNoteFor] = useState<FeedbackAthlete | null>(null);
   const [noteText, setNoteText] = useState("");
 
@@ -111,44 +113,33 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
         )
       : {};
 
-  const goNext = (message: string) => {
-    const next = due.find((d) => d.id !== slotId);
-    if (next) {
-      navigate(feedbackLink(next.id), { replace: true });
-      toast({ title: `${message}. Next: ${next.title}, ${formatDayISO(next.date, { weekday: "short", month: "short", day: "numeric" })}` });
-    } else {
-      leave();
-      toast({ title: message });
-    }
-  };
-
-  const continueAfter = () => {
-    const next = due.find((d) => d.id !== slotId);
-    if (next) {
-      navigate(feedbackLink(next.id), { replace: true });
-      toast({ title: `Next: ${next.title}, ${formatDayISO(next.date, { weekday: "short", month: "short", day: "numeric" })}` });
-    } else {
-      navigate(ROUTES.MY_SESSIONS);
-    }
+  // Feedback merges into the session page: land there after sending.
+  const toSession = (message: string) => {
+    const more = due.filter((d) => d.id !== slotId).length;
+    navigate(`/sessions/${slotId}`, { replace: true });
+    toast({
+      title: message,
+      description: more ? `${more} more ${more === 1 ? "session needs" : "sessions need"} feedback.` : undefined,
+    });
   };
 
   const send = useMutation({
     mutationFn: () => feedbackAPI.submit(slotId, [...absent], noShow ? null : score, summary, changedNotes()),
     onSuccess: (result) => {
       refresh();
+      queryClient.invalidateQueries({ queryKey: ["coach-session", slotId] });
       if (screen?.submitted) {
-        toast({ title: "Feedback updated" });
-        leave();
+        toSession("Feedback updated");
         return;
       }
       if (result.noShow) {
-        goNext(`Marked as no-show${summary.trim() ? `. Message sent to ${group ? "families" : recipient}` : ""}`);
+        toSession(`Marked as no-show${summary.trim() ? `. Message sent to ${group ? "families" : recipient}` : ""}`);
         return;
       }
-      setStage("done");
+      toSession(`Feedback sent to ${group ? families(result.present || came.length) : recipient}`);
     },
     onError: (error: unknown) =>
-      toast({ title: "Feedback didn't send", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Feedback didn't send", description: plainError(error), variant: "destructive" }),
   });
 
   const saveNote = useMutation({
@@ -159,7 +150,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
       refresh();
     },
     onError: (error: unknown) =>
-      toast({ title: "Note didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Note didn't save", description: plainError(error), variant: "destructive" }),
   });
 
   if (screenQuery.isError) {
@@ -173,7 +164,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
 
   const wrap = "mx-auto flex w-full max-w-wrapper-focused flex-col gap-4";
 
-  if (stage === "notes" || stage === "done") {
+  if (stage === "notes") {
     const start = sessionStart(screen);
     const present = athletes.filter((a) => a.attendance === "present" || (!a.attendance && !absent.has(a.athleteId)));
     const family = (a: FeedbackAthlete) => {
@@ -183,22 +174,12 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
     return (
       <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
         <div className={wrap}>
-          {stage === "done" ? (
-            <div className="flex flex-col items-center gap-2 py-2 text-center">
-              <span className="flex size-12 items-center justify-center rounded-full border border-success-300 bg-success-50 text-success-700">
-                <Check className="size-6" strokeWidth={1.5} aria-hidden="true" />
-              </span>
-              <h1 className="text-section text-dark">Session completed</h1>
-              <p className="text-body-m text-dark-300">Feedback sent to {group ? families(present.length) : recipient}.</p>
-            </div>
-          ) : (
-            <SessionPageHeader
-              title="Notes for athletes"
-              subtitle={`${group ? screen.sessionName : "1-on-1"} · ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`}
-              onBack={leave}
-              backLabel="Back"
-            />
-          )}
+          <SessionPageHeader
+            title="Notes for athletes"
+            subtitle={`${group ? screen.sessionName : "1-on-1"} · ${formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" })} · ${formatClock(start, timeZone)}`}
+            onBack={leave}
+            backLabel="Back"
+          />
           <div className="flex flex-col gap-1">
             <h2 className="text-subtitle text-dark">Add a note for anyone?</h2>
             <span className={caption}>Optional. Only that athlete's family sees it.</span>
@@ -241,7 +222,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
           </div>
           <FeedbackBar>
             <span className={caption}>You can add notes later from the session page.</span>
-            <button type="button" className={secondaryButton} onClick={stage === "done" ? continueAfter : leave}>
+            <button type="button" className={secondaryButton} onClick={leave}>
               Done
             </button>
           </FeedbackBar>
@@ -288,13 +269,13 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
   const line = locked
     ? "Feedback was already edited once, so it can't change again. You can still add notes."
     : noShow
-      ? `${group ? "Everyone marked absent" : "Marked as no-show"} · still charged`
+      ? `${group ? "Everyone marked as missed" : "Marked as no-show"} · still charged`
       : !score
         ? "Slide the score above 0 to send"
         : group
           ? [
               families(came.length),
-              missed.length ? `${missed.map((a) => firstName(a.name)).join(", ")} absent` : null,
+              missed.length ? `${missed.map((a) => firstName(a.name)).join(", ")} missed` : null,
               withNotes.length ? `${withNotes.length} personal ${withNotes.length === 1 ? "note" : "notes"} included` : null,
             ]
               .filter(Boolean)
@@ -333,49 +314,13 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
         ) : (
           <>
             {group ? (
-              <>
-                <Question title="Who was present?">
-                  <span className="text-label-sm tabular-nums text-primary">
-                    {came.length} of {athletes.length}
-                  </span>
-                </Question>
-                <span className={caption}>Tap anyone who missed it.</span>
-                <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
-                  {athletes.length ? (
-                    athletes.map((a) => {
-                      const isAbsent = absent.has(a.athleteId);
-                      return (
-                        <button
-                          key={a.bookingId}
-                          type="button"
-                          aria-pressed={!isAbsent}
-                          disabled={locked}
-                          onClick={() =>
-                            setAbsent((cur) => {
-                              const next = new Set(cur);
-                              if (next.has(a.athleteId)) next.delete(a.athleteId);
-                              else next.add(a.athleteId);
-                              return next;
-                            })
-                          }
-                          className={cn(
-                            "flex min-h-[60px] min-w-0 items-center gap-2.5 rounded-control border py-2 pl-2.5 pr-3 text-left transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed",
-                            isAbsent ? "border-dashed border-light-600 bg-transparent" : "border-light-525 bg-light-300 hover:enabled:bg-light-200"
-                          )}
-                        >
-                          <FeedbackAvatar name={a.name} imageUrl={a.imageUrl} className={cn(isAbsent && "opacity-45")} />
-                          <span className="flex min-w-0 flex-col gap-1">
-                            <b className={cn("truncate text-label-sm", isAbsent ? "text-dark-200" : "text-dark")}>{shortName(a.name)}</b>
-                            {isAbsent ? <span className="text-label-xsm text-info-700">Absent</span> : null}
-                          </span>
-                        </button>
-                      );
-                    })
-                  ) : (
-                    <span className={caption}>No athletes on this session.</span>
-                  )}
-                </div>
-              </>
+              <RollCall
+                athletes={athletes}
+                absent={absent}
+                onChange={setAbsent}
+                disabled={locked}
+                missedGetsShortMessage={screen.missedGetsShortMessage}
+              />
             ) : (
               <>
                 <Question title={`Was ${first} present?`} />

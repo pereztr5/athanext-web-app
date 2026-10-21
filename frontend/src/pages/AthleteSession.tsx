@@ -17,6 +17,7 @@ import { RescheduleDialog } from "@/components/athlete-session/RescheduleDialog"
 import { SessionHeader } from "@/components/session/SessionHeader";
 import { card, dangerButton, dangerTextButton, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { buildIcs, downloadIcs } from "@/utils/ics";
+import { scoreWord } from "@/utils/feedback";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useStartCoachChat } from "@/hooks/useStartCoachChat";
 import { useToast } from "@/hooks/use-toast";
@@ -313,9 +314,16 @@ const AthleteSessionPage = () => {
 
             {s.ended && !cancelled ? (
               <section className={card}>
-                <h2 className="text-card-title">{missed ? "Missed session" : "Feedback"}</h2>
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="text-card-title">{missed ? "Missed session" : "Feedback"}</h2>
+                  {!missed && s.score ? (
+                    <span className="text-label-sm text-primary">
+                      <b className="text-card-title">{s.score}</b>/10 · {scoreWord(s.score)}
+                    </span>
+                  ) : null}
+                </div>
                 {missed ? (
-                  <p className={meta}>{coachFirst} marked this session as missed.</p>
+                  <p className={meta}>{s.missedMessage ?? `${coachFirst} marked this session as missed.`}</p>
                 ) : s.summary || s.note ? (
                   <>
                     {s.summary ? <p className="whitespace-pre-line text-paragraph text-dark">{s.summary}</p> : null}

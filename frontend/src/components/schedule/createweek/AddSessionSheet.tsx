@@ -1,8 +1,9 @@
 /**
  * Short Add a session form for the Create session week page (Working Copy 4).
- * Group or 1-on-1 (open slot / book an athlete), start and end in 15-minute steps.
+ * Group, 1-on-1 (open slot / book an athlete) or camp (opens the camp editor); the end time
+ * is the start plus one of the shared session lengths.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { MapPin, Minus, Plus, Video } from "@/components/icons";
 import { coachesAPI } from "@/api";
@@ -20,12 +21,15 @@ import {
   viewerToEastern,
   type ScheduleDay,
 } from "@/utils/schedule";
+import { SESSION_LENGTHS, lengthLabel, missingFields, plainError } from "@/utils/sessionForm";
 import { dialogContent, input, label, meta, primaryButton, secondaryButton, segButton, segGroup, smallButton } from "../styles";
+import { FieldHint, MissingNote } from "../create/parts";
 
 type Type = "group" | "one";
 type OneMode = "open" | "ath";
 
-const ENDS_FROM = (start: number) => ALL_START_MINUTES.filter((t) => t > start && t <= start + 4 * 60);
+/** End times: the start plus each shared length, before midnight. */
+const ENDS_FROM = (start: number) => SESSION_LENGTHS.map((l) => start + l).filter((t) => t <= 24 * 60);
 
 export const AddSessionSheet = ({
   open,
@@ -36,6 +40,7 @@ export const AddSessionSheet = ({
   rules,
   day,
   coachId,
+  onPickCamp,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -45,6 +50,8 @@ export const AddSessionSheet = ({
   rules: ScheduleRules;
   day: ScheduleDay | undefined;
   coachId: string;
+  /** Camp in the type picker: closes this sheet and opens the camp editor. */
+  onPickCamp?: () => void;
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -62,6 +69,7 @@ export const AddSessionSheet = ({
   const [newLoc, setNewLoc] = useState(false);
   const [newName, setNewName] = useState("");
   const [editingLocs, setEditingLocs] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const athletes = useQuery({
     queryKey: ["schedule-athlete-options"],
@@ -70,8 +78,13 @@ export const AddSessionSheet = ({
     staleTime: 60_000,
   });
 
+  // Fresh form only when the sheet opens. Saving a location refetches the schedule and the
+  // athlete list loads late; neither should wipe what the coach has typed.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
+    const opening = open && !wasOpen.current;
+    wasOpen.current = open;
+    if (!opening) return;
     setType("group");
     setOne("open");
     setName("");
@@ -88,7 +101,13 @@ export const AddSessionSheet = ({
     setNewLoc(false);
     setNewName("");
     setEditingLocs(false);
+    setError(null);
   }, [open, date, day, timeZone, rules.locations, rules.hourlyRate, athletes.data]);
+
+  // The athlete list can arrive after the sheet opens: pick the first one if none is chosen yet.
+  useEffect(() => {
+    if (open && !athleteId && athletes.data?.length) setAthleteId(athletes.data[0].athleteId);
+  }, [open, athleteId, athletes.data]);
 
   const duration = Math.max(15, end - start);
   const clash = itemAt(day, start, duration, timeZone, type === "one" && one === "open");
@@ -99,7 +118,7 @@ export const AddSessionSheet = ({
 
   const saveLoc = async (next: string[]) => {
     const { error } = await coachesAPI.updateCoach(coachId, { locations: next });
-    if (error) throw new Error(error.message || "Couldn't save locations");
+    if (error) throw new Error(plainError(error, "Couldn't save your locations. Try again."));
     await queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
   };
 
@@ -168,13 +187,21 @@ export const AddSessionSheet = ({
       void queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
       onOpenChange(false);
     },
-    onError: (err: unknown) =>
-      toast({
-        title: "Couldn't create the session",
-        description: err instanceof Error ? err.message : "Try again.",
-        variant: "destructive",
-      }),
+    onError: (err: unknown) => setError(plainError(err, "Couldn't create the session. Try again.")),
   });
+
+  const past = date < todayISO;
+  const athleteList = athletes.data ?? [];
+  const missing = missingFields([
+    ["a name for the group", type !== "group" || Boolean(name.trim())],
+    ["an athlete", !(type === "one" && one === "ath") || Boolean(athleteId)],
+    ["a price", Number(type === "group" ? price : oprice) > 0],
+  ]);
+  const blocked = past
+    ? "This day has passed. Pick a day from today on."
+    : clash
+      ? "That time overlaps another session. Pick another start time."
+      : null;
 
   const weekday = formatDayISO(date, { weekday: "long" });
 
@@ -193,12 +220,18 @@ export const AddSessionSheet = ({
             <button type="button" className={segButton(type === "one")} aria-pressed={type === "one"} onClick={() => setType("one")}>
               1-on-1
             </button>
+            {onPickCamp ? (
+              <button type="button" className={segButton(false)} aria-pressed={false} onClick={onPickCamp}>
+                Camp
+              </button>
+            ) : null}
           </div>
 
           {type === "group" ? (
             <label className="flex flex-col gap-1.5">
               <span className={label}>Name</span>
               <input className={input} value={name} onChange={(e) => setName(e.target.value)} placeholder="For example, U10 ball mastery" />
+              <FieldHint>{name.trim() ? null : "Name the group so families know what it is."}</FieldHint>
             </label>
           ) : (
             <>
@@ -230,13 +263,20 @@ export const AddSessionSheet = ({
               {one === "ath" ? (
                 <label className="flex flex-col gap-1.5">
                   <span className={label}>Athlete</span>
-                  <select className={input} value={athleteId} onChange={(e) => setAthleteId(e.target.value)}>
-                    {(athletes.data ?? []).map((a) => (
+                  <select className={input} value={athleteId} onChange={(e) => setAthleteId(e.target.value)} disabled={!athleteList.length}>
+                    {athleteList.map((a) => (
                       <option key={a.athleteId} value={a.athleteId}>
                         {a.fullName}
                       </option>
                     ))}
                   </select>
+                  <FieldHint>
+                    {athletes.isLoading
+                      ? null
+                      : athleteList.length
+                        ? null
+                        : "No athletes yet. Add an open slot instead, or invite a family first."}
+                  </FieldHint>
                 </label>
               ) : null}
             </>
@@ -245,7 +285,12 @@ export const AddSessionSheet = ({
           <div className="grid grid-cols-2 gap-3">
             <label className="flex flex-col gap-1.5">
               <span className={label}>Start time</span>
-              <select className={input} value={start} onChange={(e) => { const v = Number(e.target.value); setStart(v); if (end <= v) setEnd(v + 60); }}>
+              <select className={input} value={start} onChange={(e) => {
+                const v = Number(e.target.value);
+                const keep = end - start;
+                setStart(v);
+                setEnd(v + keep <= 24 * 60 ? v + keep : v + SESSION_LENGTHS[0]);
+              }}>
                 {ALL_START_MINUTES.map((m) => (
                   <option key={m} value={m}>{formatMinutes(m)}</option>
                 ))}
@@ -255,7 +300,7 @@ export const AddSessionSheet = ({
               <span className={label}>Ends</span>
               <select className={input} value={end} onChange={(e) => setEnd(Number(e.target.value))}>
                 {ENDS_FROM(start).map((m) => (
-                  <option key={m} value={m}>{formatMinutes(m)}</option>
+                  <option key={m} value={m}>{formatMinutes(m >= 24 * 60 ? m - 24 * 60 : m)} ({lengthLabel(m - start)})</option>
                 ))}
               </select>
             </label>
@@ -284,10 +329,12 @@ export const AddSessionSheet = ({
                       aria-label={`Remove ${p}`}
                       onClick={() => {
                         const next = rules.locations.filter((l) => l !== p);
-                        void saveLoc(next).then(() => {
-                          if (loc === p) setLoc(next[0] ?? "Video call");
-                          toast({ title: `${p} removed from your locations` });
-                        });
+                        void saveLoc(next)
+                          .then(() => {
+                            if (loc === p) setLoc(next[0] ?? "Video call");
+                            toast({ title: `${p} removed from your locations` });
+                          })
+                          .catch((err: unknown) => toast({ title: "Couldn't remove it", description: plainError(err), variant: "destructive" }));
                       }}
                     >
                       ×
@@ -325,11 +372,13 @@ export const AddSessionSheet = ({
                     onClick={() => {
                       const n = newName.trim();
                       if (!n) return;
-                      void saveLoc([...rules.locations.filter((l) => l !== "Video call"), n]).then(() => {
-                        setLoc(n);
-                        setNewLoc(false);
-                        setNewName("");
-                      });
+                      void saveLoc([...rules.locations.filter((l) => l !== "Video call"), n])
+                        .then(() => {
+                          setLoc(n);
+                          setNewLoc(false);
+                          setNewName("");
+                        })
+                        .catch((err: unknown) => toast({ title: "Couldn't save it", description: plainError(err), variant: "destructive" }));
                     }}
                   >
                     Use this location
@@ -357,9 +406,10 @@ export const AddSessionSheet = ({
                 <span className="text-label-sm">Price per athlete</span>
                 <span className="flex h-[38px] w-[120px] items-center rounded-control border border-dark-250 bg-light pl-3 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary">
                   <span className="text-dark-300">$</span>
-                  <input className="h-full w-full bg-transparent px-1 text-right focus:outline-none" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} />
+                  <input className="h-full w-full bg-transparent px-1 text-right focus:outline-none" inputMode="numeric" value={price} onChange={(e) => setPrice(e.target.value)} aria-invalid={Number(price) > 0 ? undefined : true} />
                 </span>
               </label>
+              {Number(price) > 0 ? null : <FieldHint>Enter a price above $0.</FieldHint>}
             </>
           ) : (
             <>
@@ -370,9 +420,10 @@ export const AddSessionSheet = ({
                 </span>
                 <span className="flex h-[38px] w-[120px] items-center rounded-control border border-dark-250 bg-light pl-3 focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary">
                   <span className="text-dark-300">$</span>
-                  <input className="h-full w-full bg-transparent px-1 text-right focus:outline-none" inputMode="numeric" value={oprice} onChange={(e) => setOprice(e.target.value)} />
+                  <input className="h-full w-full bg-transparent px-1 text-right focus:outline-none" inputMode="numeric" value={oprice} onChange={(e) => setOprice(e.target.value)} aria-invalid={Number(oprice) > 0 ? undefined : true} />
                 </span>
               </label>
+              {Number(oprice) > 0 ? null : <FieldHint>Enter a price above $0.</FieldHint>}
               {one === "open" ? (
                 <div className="flex items-center justify-between py-2">
                   <span className="flex flex-col gap-0.5">
@@ -393,12 +444,21 @@ export const AddSessionSheet = ({
             </>
           )}
         </div>
-        <div className="border-t border-light-525 px-4 py-4 md:px-[25px]">
+        <div className="flex flex-col gap-2.5 border-t border-light-525 px-4 py-4 md:px-[25px]">
+          {error ? (
+            <p role="alert" className="rounded-control border border-info-300 bg-info-50 px-3.5 py-3 text-paragraph-sm text-info-700">
+              {error}
+            </p>
+          ) : null}
+          {blocked ? <p className="text-caption text-dark-300">{blocked}</p> : <MissingNote missing={missing} />}
           <button
             type="button"
             className={cn(primaryButton, "h-[44px] w-full")}
-            disabled={Boolean(clash) || create.isPending || date < todayISO}
-            onClick={() => create.mutate()}
+            disabled={Boolean(blocked) || missing.length > 0 || create.isPending}
+            onClick={() => {
+              setError(null);
+              create.mutate();
+            }}
           >
             {create.isPending ? "Adding…" : type === "group" ? "Add group session" : one === "open" ? "Add open slot" : "Book session"}
           </button>

@@ -53,7 +53,7 @@ const MyOrganizationPage = () => {
         <p className="text-caption text-dark-300">
           Org coaches, rates and org sessions are under{" "}
           <Link to={`${ROUTES.PAYMENTS}?tab=coaches`} className="font-medium text-primary hover:underline">
-            Business
+            My Business
           </Link>
           .
         </p>

@@ -33,6 +33,7 @@ import { authAPI } from "@/api/auth";
 import { coachesAPI, userProfilesAPI, type PublicCoach } from "@/api";
 import { createAthleteInitiatedReferral } from "@/api/referrals";
 import { getSportPillars, setSportPillars } from "@/api/sport-pillars";
+import { SIGNUP_PILLARS, type PillarSport } from "@/utils/sessionPillars";
 import logo from "@/assets/AthaNext-Logo.svg";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
@@ -149,23 +150,22 @@ const LEVELS: { id: string; title: string; detail: string; Icon: typeof User }[]
   { id: "College or pro", title: "College or pro", detail: "18 and over, playing at a high level", Icon: GraduationCap },
 ];
 
-const PILLARS: Record<"Soccer" | "Rowing", { title: string; Icon: typeof User }[]> = {
-  Soccer: [
-    { title: "On-field training", Icon: Flag },
-    { title: "Video analysis", Icon: Video },
-    { title: "Mentorship", Icon: MessageCircle },
-    { title: "Performance coaching", Icon: Dumbbell },
-    { title: "Academic tutoring", Icon: BookOpen },
-    { title: "College recruiting", Icon: GraduationCap },
-  ],
-  Rowing: [
-    { title: "On-water technique", Icon: Zap },
-    { title: "Erg and race training", Icon: Zap },
-    { title: "Mentorship", Icon: MessageCircle },
-    { title: "Strength and conditioning", Icon: Dumbbell },
-    { title: "Academic tutoring", Icon: BookOpen },
-    { title: "College recruiting", Icon: GraduationCap },
-  ],
+const PILLAR_ICONS: Record<string, typeof User> = {
+  "On-field training": Flag,
+  "Video analysis": Video,
+  Mentorship: MessageCircle,
+  "Performance coaching": Dumbbell,
+  "Academic tutoring": BookOpen,
+  "College recruiting": GraduationCap,
+  "On-water technique": Zap,
+  "Erg and race training": Zap,
+  "Strength and conditioning": Dumbbell,
+};
+
+// Titles come from the shared list so session tags use the same pillars.
+const PILLARS: Record<PillarSport, { title: string; Icon: typeof User }[]> = {
+  Soccer: SIGNUP_PILLARS.Soccer.map((title) => ({ title, Icon: PILLAR_ICONS[title] ?? Zap })),
+  Rowing: SIGNUP_PILLARS.Rowing.map((title) => ({ title, Icon: PILLAR_ICONS[title] ?? Zap })),
 };
 
 const AGE_TILES = [

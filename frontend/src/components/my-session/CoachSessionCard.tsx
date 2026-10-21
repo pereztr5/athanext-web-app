@@ -1,11 +1,13 @@
 /**
  * Coach My Sessions (Working Copy 4 hybrid `.ms-hc`): date tile, pill row, athlete-first
  * title, clock/place lines, face stack, price, and View / Check in / feedback actions.
+ * The whole card opens the session; hovering a face shows who it is.
  */
-import type { ReactNode } from "react";
+import type { KeyboardEvent, MouseEvent, ReactNode } from "react";
 import { Children, useState } from "react";
 import { Clock, Info, MapPin, User, Users, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import type { UISession } from "@/types/my-sessions";
@@ -31,6 +33,12 @@ const initials = (name: string) =>
     .join("") || "?";
 
 const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;
+
+/** A button inside the card does its own thing, not open the session. */
+const own = (fn?: () => void) => (e: MouseEvent) => {
+  e.stopPropagation();
+  fn?.();
+};
 
 /** Three-line date tile: month, day number, weekday (WC4 `.ms-dt`). */
 export const SessionDateTile = ({ day, size = "lg" }: { day: string; size?: "sm" | "lg" }) => (
@@ -149,7 +157,7 @@ export const CoachSessionCard = ({
 
   const viewPrimary = kind === "up" || (kind === "past" && !due);
   const viewBtn = (
-    <button type="button" className={cn(viewPrimary ? primaryButton : secondaryButton, smallButton)} onClick={onViewDetails}>
+    <button type="button" className={cn(viewPrimary ? primaryButton : secondaryButton, smallButton)} onClick={own(onViewDetails)}>
       View details
     </button>
   );
@@ -157,7 +165,7 @@ export const CoachSessionCard = ({
     kind === "now" ? (
       <>
         {onCheckIn ? (
-          <button type="button" className={cn(primaryButton, smallButton)} onClick={onCheckIn}>
+          <button type="button" className={cn(primaryButton, smallButton)} onClick={own(onCheckIn)}>
             Check in
           </button>
         ) : null}
@@ -169,7 +177,7 @@ export const CoachSessionCard = ({
           <button
             type="button"
             className={cn(due ? primaryButton : secondaryButton, smallButton)}
-            onClick={onFeedback}
+            onClick={own(onFeedback)}
           >
             {due ? "Add feedback" : "Edit feedback"}
           </button>
@@ -180,8 +188,21 @@ export const CoachSessionCard = ({
       viewBtn
     );
 
+  const openOnKey = (e: KeyboardEvent<HTMLDivElement>) => {
+    if (e.target !== e.currentTarget || (e.key !== "Enter" && e.key !== " ")) return;
+    e.preventDefault();
+    onViewDetails();
+  };
+
   return (
-    <div className="flex flex-wrap items-stretch gap-3 rounded-card border border-light-525 bg-light-300 p-4 md:flex-nowrap md:gap-4">
+    <div
+      role="link"
+      tabIndex={0}
+      aria-label={`${title}, ${dateLine}. Open session`}
+      onClick={onViewDetails}
+      onKeyDown={openOnKey}
+      className="flex cursor-pointer flex-wrap items-stretch gap-3 rounded-card border border-light-525 bg-light-300 p-4 transition-colors hover:border-light-600 hover:bg-light-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary md:flex-nowrap md:gap-4"
+    >
       <SessionDateTile day={dayISO} />
       <div className="flex min-w-0 flex-1 flex-col gap-1.5">
         <div className="flex flex-wrap gap-1.5">
@@ -210,26 +231,48 @@ export const CoachSessionCard = ({
         <div className="flex items-center gap-2.5 pt-1">
           {faces.length ? (
             <div className="flex" role="list" aria-label="Athletes">
-              {faces.map((a, i) => (
-                <span
-                  key={a.id || `${a.name}-${i}`}
-                  role="listitem"
-                  title={a.name}
-                  className={cn(
-                    "flex size-7 items-center justify-center overflow-hidden rounded-full border-2 border-light-300 bg-primary-50 text-label-xsm text-primary",
-                    i > 0 && "-ml-1.5",
-                  )}
-                >
-                  {a.avatar ? <img src={a.avatar} alt="" className="size-full object-cover" /> : initials(a.name)}
-                </span>
-              ))}
+              {faces.map((a, i) => {
+                const extraLine = [a.parentName ? `Parent: ${a.parentName}` : null, a.age != null ? `Age ${a.age}` : null]
+                  .filter(Boolean)
+                  .join(" · ");
+                return (
+                  <Tooltip key={a.id || `${a.name}-${i}`} delayDuration={150}>
+                    <TooltipTrigger asChild>
+                      <span
+                        role="listitem"
+                        aria-label={extraLine ? `${a.name}, ${extraLine}` : a.name}
+                        className={cn(
+                          "relative flex size-7 items-center justify-center overflow-hidden rounded-full border-2 border-light-300 bg-primary-50 text-label-xsm text-primary hover:z-[1]",
+                          i > 0 && "-ml-1.5",
+                        )}
+                      >
+                        {a.avatar ? <img src={a.avatar} alt="" className="size-full object-cover" /> : initials(a.name)}
+                      </span>
+                    </TooltipTrigger>
+                    <TooltipContent side="top" className="flex flex-col gap-0.5">
+                      <b className="font-medium">{a.name}</b>
+                      {extraLine ? <span className="text-dark-300">{extraLine}</span> : null}
+                    </TooltipContent>
+                  </Tooltip>
+                );
+              })}
               {extra > 0 ? (
-                <span
-                  className="-ml-1.5 flex size-7 items-center justify-center rounded-full border-2 border-light-300 bg-light-525 text-label-xsm text-dark-400"
-                  title={`+${extra} more`}
-                >
-                  +{extra}
-                </span>
+                <Tooltip delayDuration={150}>
+                  <TooltipTrigger asChild>
+                    <span
+                      role="listitem"
+                      aria-label={`${extra} more`}
+                      className="-ml-1.5 flex size-7 items-center justify-center rounded-full border-2 border-light-300 bg-light-525 text-label-xsm text-dark-400"
+                    >
+                      +{extra}
+                    </span>
+                  </TooltipTrigger>
+                  <TooltipContent side="top">
+                    {session.athleteNames && session.athleteNames.length > faces.length
+                      ? session.athleteNames.slice(faces.length).join(", ")
+                      : `${extra} more ${extra === 1 ? "athlete" : "athletes"}`}
+                  </TooltipContent>
+                </Tooltip>
               ) : null}
             </div>
           ) : null}

@@ -5,7 +5,7 @@
  */
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { Check, CircleCheck, Copy, MessageCircle, MessageSquare, Search, UserCheck, Users } from "@/components/icons";
+import { Check, CircleCheck, Copy, Search, UserCheck, Users } from "@/components/icons";
 import { chatAPI } from "@/api";
 import { rosterAPI } from "@/api/roster";
 import { scheduleAPI, type ScheduleSession } from "@/api/schedule";
@@ -201,15 +201,7 @@ export const ShareSession = ({
       ) : null}
 
       <span className={label}>Or share anywhere</span>
-      <div className="grid grid-cols-4 gap-1.5">
-        <a className={shareTile()} href={`https://wa.me/?text=${encodeURIComponent(message)}`} target="_blank" rel="noreferrer">
-          <MessageCircle strokeWidth={1.5} aria-hidden="true" />
-          WhatsApp
-        </a>
-        <a className={shareTile()} href={`sms:?&body=${encodeURIComponent(message)}`}>
-          <MessageSquare strokeWidth={1.5} aria-hidden="true" />
-          Text
-        </a>
+      <div className="grid grid-cols-2 gap-1.5">
         <button type="button" className={shareTile(chatsOpen)} aria-pressed={chatsOpen} aria-expanded={chatsOpen} onClick={() => setChatsOpen((v) => !v)}>
           <Users strokeWidth={1.5} aria-hidden="true" />
           Group chat

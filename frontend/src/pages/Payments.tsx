@@ -275,7 +275,7 @@ const PaymentsPage = () => {
         ) : null}
 
         <PageHeader
-          title="Business"
+          title="My Business"
           subtitle={tab === "money" || !org ? "Money in and invoices" : `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}`}
           actions={
             tab === "money" ? (
@@ -294,7 +294,7 @@ const PaymentsPage = () => {
         />
 
         {org ? (
-          <div className={inlineSeg} role="tablist" aria-label="Business">
+          <div className={inlineSeg} role="tablist" aria-label="My Business">
             {ORG_TABS.map(([k, l]) => (
               <button
                 key={k}

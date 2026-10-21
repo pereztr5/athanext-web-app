@@ -1,11 +1,11 @@
 /**
- * Create session (ATH-71, Working Copy 2 coach7.js): 1-on-1 or group, day, time, where, and an
- * optional weekly repeat. Open 1-on-1 slots repeat every week with no end; offered and group
+ * Create session (ATH-71, Working Copy 2 coach7.js): 1-on-1, group or camp (camp opens the camp
+ * editor), day, time, where, and an optional weekly repeat. Open 1-on-1 slots repeat every week with no end; offered and group
  * sessions can repeat for 4, 8 or 12 weeks. Offered and group sessions then go to the share step.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { ChevronLeft, ChevronRight, Globe, MapPin, Minus, Plus, Repeat, TriangleAlert, User, Users, Video, X } from "@/components/icons";
+import { CalendarDays, ChevronLeft, ChevronRight, Globe, MapPin, Minus, Plus, Repeat, TriangleAlert, User, Users, Video, X } from "@/components/icons";
 import { coachesAPI } from "@/api";
 import { ToastAction } from "@/components/ui/toast";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -14,6 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { money } from "@/utils/booking";
 import { zonedWallTimeToUtc } from "@/utils/dateHelpers";
+import { lengthLabel, lengthOptions, missingFields, plainError } from "@/utils/sessionForm";
 import {
   ALL_START_MINUTES,
   addDaysISO,
@@ -32,6 +33,7 @@ import {
   WEEKDAY_NAMES,
 } from "@/utils/schedule";
 import { ShareSession } from "./ShareSession";
+import { FieldHint, MissingNote } from "./create/parts";
 import {
   addChip,
   chip,
@@ -69,14 +71,25 @@ type Kind = "individual" | "group";
 type Who = "open" | "offered";
 type Place = { key: string; label: string; location: "online" | "in-person"; place: string | null };
 
-const LENGTHS = [45, 60, 75, 90, 120];
 const GROUP_PRICE = "35";
 /** Time tiles shown before "Other" (Working Copy shows 11). */
 const TILES = 11;
 const arrowButton = cn(iconButton, "size-[30px] bg-light-300");
 
 /** `.affix`: "$" and the input read as one box. */
-const PriceField = ({ label: text, value, onChange, white }: { label: string; value: string; onChange: (v: string) => void; white?: boolean }) => (
+const PriceField = ({
+  label: text,
+  value,
+  onChange,
+  white,
+  hint,
+}: {
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+  white?: boolean;
+  hint?: string | null;
+}) => (
   <label className="flex min-w-0 flex-col gap-1.5">
     <span className={label}>{text}</span>
     <span className={cn("flex h-[38px] items-center rounded-control border border-dark-250 bg-light focus-within:outline focus-within:outline-2 focus-within:-outline-offset-1 focus-within:outline-primary", white && whiteInput)}>
@@ -87,9 +100,11 @@ const PriceField = ({ label: text, value, onChange, white }: { label: string; va
         min={0}
         inputMode="decimal"
         value={value}
+        aria-invalid={hint ? true : undefined}
         onChange={(e) => onChange(e.target.value)}
       />
     </span>
+    <FieldHint>{hint}</FieldHint>
   </label>
 );
 
@@ -97,9 +112,9 @@ const LengthField = ({ value, onChange, white }: { value: number; onChange: (v: 
   <label className="flex min-w-0 flex-col gap-1.5">
     <span className={label}>Length</span>
     <select className={cn(input, white && whiteInput)} value={value} onChange={(e) => onChange(Number(e.target.value))}>
-      {LENGTHS.map((l) => (
+      {lengthOptions(value).map((l) => (
         <option key={l} value={l}>
-          {l === 120 ? "2 hours" : `${l} min`}
+          {lengthLabel(l)}
         </option>
       ))}
     </select>
@@ -115,6 +130,7 @@ export const CreateSessionDialog = ({
   rules,
   coachId,
   coachName,
+  onPickCamp,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
@@ -125,6 +141,8 @@ export const CreateSessionDialog = ({
   rules: ScheduleRules;
   coachId: string;
   coachName: string;
+  /** Camp in the type picker: closes this sheet and opens the camp editor. */
+  onPickCamp?: () => void;
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -215,7 +233,7 @@ export const CreateSessionDialog = ({
         ),
       });
     } catch (err) {
-      toast({ title: "Couldn't remove it", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      toast({ title: "Couldn't remove it", description: plainError(err), variant: "destructive" });
     }
   };
 
@@ -233,7 +251,7 @@ export const CreateSessionDialog = ({
       setNewPlace("");
       if (!existing) toast({ title: `${location} added to your locations` });
     } catch (err) {
-      toast({ title: "Couldn't save it", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      toast({ title: "Couldn't save it", description: plainError(err), variant: "destructive" });
     }
   };
 
@@ -317,7 +335,7 @@ export const CreateSessionDialog = ({
   const priceNumber = Number(price);
   const weekday = WEEKDAY_NAMES[isoWeekday(day) - 1];
   const shortWeekday = formatDayISO(day, { weekday: "short" });
-  const tail = ` · ${length} min${price ? ` · ${money(priceNumber)}${group ? " per athlete" : ""}` : ""}`;
+  const tail = ` · ${lengthLabel(length)}${price ? ` · ${money(priceNumber)}${group ? " per athlete" : ""}` : ""}`;
 
   const repeatMode: CreateSessionsInput["repeat"] = repeat ? (openSlots ? "weekly" : "weeks") : "none";
   const eastern = useMemo(() => picked.map((m) => viewerToEastern(day, m, timeZone)), [picked, day, timeZone]);
@@ -382,14 +400,19 @@ export const CreateSessionDialog = ({
       const fresh = await scheduleAPI.get(addDaysISO(day, -1), addDaysISO(day, repeat ? weeks * 7 + 1 : 2));
       setCreated(fresh.sessions.filter((s) => result.created.includes(s.id)));
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't create the session."),
+    onError: (err: unknown) => setError(plainError(err, "Couldn't create the session. Try again.")),
   });
+
+  const priceBad = price.trim() !== "" && !(priceNumber >= 0);
+  const missing = missingFields([
+    ["a time", picked.length > 0],
+    ["a name for the group", !group || Boolean(name.trim())],
+    ["a price", price.trim() !== "" && !priceBad],
+  ]);
 
   const submit = () => {
     setError(null);
-    if (!picked.length) return setError("Pick a time.");
-    if (group && !name.trim()) return setError("Name the group session.");
-    if (price.trim() === "" || !(priceNumber >= 0)) return setError("Add a price.");
+    if (missing.length) return;
     create.mutate();
   };
 
@@ -450,6 +473,12 @@ export const CreateSessionDialog = ({
                   <Users strokeWidth={1.5} aria-hidden="true" />
                   Group
                 </button>
+                {onPickCamp ? (
+                  <button type="button" className={segButton(false)} aria-pressed={false} onClick={onPickCamp}>
+                    <CalendarDays strokeWidth={1.5} aria-hidden="true" />
+                    Camp
+                  </button>
+                ) : null}
               </div>
 
               {!group ? (
@@ -653,6 +682,7 @@ export const CreateSessionDialog = ({
                       onChange={(e) => setName(e.target.value)}
                       placeholder="For example, Finishing small group"
                     />
+                    <FieldHint>{!name.trim() && picked.length ? "Name the group so families know what it is." : null}</FieldHint>
                   </label>
                   <div className="grid grid-cols-2 gap-2.5 md:grid-cols-3">
                     <LengthField value={length} onChange={setLength} white />
@@ -668,14 +698,14 @@ export const CreateSessionDialog = ({
                         </button>
                       </span>
                     </div>
-                    <PriceField label="Price" value={price} onChange={setPrice} white />
+                    <PriceField label="Price" value={price} onChange={setPrice} white hint={priceBad ? "Enter a price of $0 or more." : null} />
                   </div>
                 </div>
               ) : (
                 // The app has no per-service length and price yet, so 1-on-1s keep these two fields.
                 <div className="grid grid-cols-2 gap-2.5">
                   <LengthField value={length} onChange={setLength} />
-                  <PriceField label="Price" value={price} onChange={setPrice} />
+                  <PriceField label="Price" value={price} onChange={setPrice} hint={priceBad ? "Enter a price of $0 or more." : null} />
                 </div>
               )}
 
@@ -733,11 +763,12 @@ export const CreateSessionDialog = ({
               ) : null}
             </div>
 
-            <div className={sheetFooter}>
+            <div className={cn(sheetFooter, "flex-col")}>
+              <MissingNote missing={missing} />
               <button
                 type="button"
                 className={cn(primaryButton, sheetButton)}
-                disabled={!picked.length || allClash || create.isPending}
+                disabled={missing.length > 0 || allClash || create.isPending}
                 onClick={submit}
               >
                 {create.isPending ? "Creating…" : createLabel}

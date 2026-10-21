@@ -1,6 +1,7 @@
-/** Avatar and summary card for the Create session sheet (Working Copy 2 `.av`, `.cs-ready`). */
+/** Avatar, summary card and form hints for the Create session sheet (Working Copy 2 `.av`, `.cs-ready`). */
 import type { ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { missingLine } from "@/utils/sessionForm";
 
 const initials = (name: string) =>
   name
@@ -37,3 +38,19 @@ export const ReadyCard = ({ icon, title, caption }: { icon: ReactNode; title: st
     </span>
   </div>
 );
+
+/** The line above a disabled primary button: what's still missing. */
+export const MissingNote = ({ missing, className }: { missing: string[]; className?: string }) =>
+  missing.length ? (
+    <p className={cn("text-caption text-dark-300", className)} aria-live="polite">
+      {missingLine(missing)}
+    </p>
+  ) : null;
+
+/** A field's own message: what to fix in it. */
+export const FieldHint = ({ children, id }: { children: ReactNode; id?: string }) =>
+  children ? (
+    <span id={id} className="text-caption text-error-700">
+      {children}
+    </span>
+  ) : null;
