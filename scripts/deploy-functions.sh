@@ -30,6 +30,7 @@ guardian-invite               guardian-invite               on
 org-coach-removal             org-coach-removal             on
 organization-email            organization-email            on
 reconcile-package-payment     reconcile-package-payment     on
+report-session-issue          report-session-issue          on
 send-booking-notifications    send-booking-notifications    on
 send-conversation-email       send-conversation-email       on
 send-email                    send-email                    on

@@ -98,3 +98,40 @@ export function hasValidLocationData(locationInfo: LocationInfo | null): boolean
     (locationInfo.country && locationInfo.country.trim() !== '')
   );
 }
+
+export interface ZipPoint {
+  lat: number;
+  lng: number;
+  /** "Austin, TX" */
+  label: string;
+}
+
+const zipPoints = new Map<string, Promise<ZipPoint | null>>();
+
+/**
+ * The center of a 5-digit US ZIP (zippopotam.us), or null when it can't be found. Cached for
+ * the session; never throws.
+ */
+export function fetchZipPoint(zip: string): Promise<ZipPoint | null> {
+  if (!/^\d{5}$/.test(zip)) return Promise.resolve(null);
+  const cached = zipPoints.get(zip);
+  if (cached) return cached;
+  const lookup = fetch(`https://api.zippopotam.us/us/${zip}`)
+    .then(async (response) => {
+      if (!response.ok) return null;
+      const data = await response.json();
+      const place = data?.places?.[0];
+      const lat = Number(place?.latitude);
+      const lng = Number(place?.longitude);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) return null;
+      const city = place?.["place name"] as string | undefined;
+      const state = (place?.["state abbreviation"] as string | undefined) || (data?.state as string | undefined);
+      return { lat, lng, label: [city, state].filter(Boolean).join(", ") };
+    })
+    .catch(() => null);
+  zipPoints.set(zip, lookup);
+  lookup.then((point) => {
+    if (!point) zipPoints.delete(zip);
+  });
+  return lookup;
+}

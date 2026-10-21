@@ -76,6 +76,18 @@ export const athleteHomeAPI = {
     };
   },
 
+  /** Removes a coach from the family's Coaches card. Booking them again brings them back. */
+  async hideCoach(coachId: string): Promise<void> {
+    const { error } = await supabase.rpc("hide_coach" as never, { p_coach_id: coachId } as never);
+    if (error) throw error;
+  },
+
+  /** Undo for hideCoach. */
+  async unhideCoach(coachId: string): Promise<void> {
+    const { error } = await supabase.rpc("unhide_coach" as never, { p_coach_id: coachId } as never);
+    if (error) throw error;
+  },
+
   async save(athleteId: string, edit: AthleteProfileEdit): Promise<void> {
     const clean = (v: string) => v.trim() || null;
     const { error } = await supabase

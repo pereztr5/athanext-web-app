@@ -6,12 +6,15 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { CalendarPlus, ChevronRight, Lock, Pencil, Plus, Video } from "@/components/icons";
+import { CalendarPlus, ChevronRight, Lock, MoreHorizontal, Pencil, Plus, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
-import { athleteHomeAPI, type AthleteProfileEdit } from "@/api/athleteHome";
+import { athleteHomeAPI, type AthleteProfileEdit, type HomeData } from "@/api/athleteHome";
+import { QuickBookDialog } from "@/components/home/QuickBookDialog";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
+import { ToastAction } from "@/components/ui/toast";
 import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { card, dialogContent, input, label, meta, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
+import { card, dangerButton, dialogContent, iconButton, input, label, meta, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { PATHWAY_TAGS } from "@/constants/pathwayTags";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
@@ -20,6 +23,7 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { ageOn, playerLine, profileItems, sportLabel, type HomeAthlete, type ProfileItemKey } from "@/utils/athleteHome";
 import { coachProfilePath } from "@/utils/coachSlug";
+import { REMOVE_COACH_NOTE, firstNameOf, removeCoachQuestion, withoutCoach } from "@/utils/myCoaches";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatDayISO, plural } from "@/utils/schedule";
 import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
@@ -56,6 +60,9 @@ export const AthleteHome = () => {
   const whose = isParent ? `${first}'s` : "your";
   const items = useMemo(() => (a ? profileItems(a) : []), [a]);
   const done = items.filter((i) => i.done).length;
+  const [booking, setBooking] = useState<{ id: string; name: string } | null>(null);
+  const [removing, setRemoving] = useState<{ id: string; name: string } | null>(null);
+  const remove = useRemoveCoach(() => setRemoving(null));
 
   if (home.isLoading) {
     return <div className="px-4 py-10 md:px-5"><p className={meta}>Loading…</p></div>;
@@ -176,27 +183,42 @@ export const AthleteHome = () => {
           <section className={card}>
             <div className="flex items-center justify-between">
               <span className={h3}>Coaches</span>
-              <Link to={ROUTES.COACHES} className={textButton}>Find a coach</Link>
+              <Link to={ROUTES.COACHES} className={textButton}>Find a new coach</Link>
             </div>
             {coaches.length ? (
               <ul className="flex flex-col divide-y divide-light-525">
                 {coaches.map((c) => (
-                  <li key={c.id}>
-                    <Link to={coachProfilePath(c.slug || c.id)} className="flex items-center gap-3 py-2.5 hover:opacity-90">
+                  <li key={c.id} className="flex items-center gap-2 py-2.5">
+                    <Link to={coachProfilePath(c.slug || c.id)} className="flex min-w-0 flex-1 items-center gap-3 hover:opacity-90">
                       <Avatar name={c.name} photo={c.photo} size={36} />
                       <span className="flex min-w-0 flex-1 flex-col">
                         <b className="truncate text-label-sm">{c.name}</b>
                         <span className={meta}>
                           {c.nextDate ? `Next: ${formatDayISO(c.nextDate, { weekday: "short", month: "short", day: "numeric" })}` : "No session booked"}
+                          {c.creditsLeft ? ` · ${plural(c.creditsLeft, "session")} left` : ""}
                         </span>
                       </span>
-                      {c.creditsLeft ? <span className={meta}>{plural(c.creditsLeft, "session")} left</span> : null}
                     </Link>
+                    <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => setBooking({ id: c.id, name: c.name })}>
+                      Book
+                    </button>
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <button type="button" className={cn(iconButton, "size-control-sm")} aria-label={`More for ${c.name}`}>
+                          <MoreHorizontal strokeWidth={1.5} aria-hidden="true" />
+                        </button>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end">
+                        <DropdownMenuItem onSelect={() => setRemoving({ id: c.id, name: c.name })}>
+                          Remove from my coaches
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
                   </li>
                 ))}
               </ul>
             ) : (
-              <p className={meta}>No coaches yet. Browse coaches near you and book a first session.</p>
+              <p className={meta}>No coaches yet. Find a coach near you and book a first session.</p>
             )}
           </section>
         </div>
@@ -242,6 +264,31 @@ export const AthleteHome = () => {
         </section>
       </div>
 
+      <QuickBookDialog
+        coach={booking}
+        athleteId={a.id}
+        athleteFirst={isParent ? first : null}
+        timeZone={timeZone}
+        onClose={() => setBooking(null)}
+      />
+
+      <Dialog open={Boolean(removing)} onOpenChange={(o) => !o && !remove.isPending && setRemoving(null)}>
+        <DialogContent className={dialogContent}>
+          <DialogHeader className="px-5 pb-3 pt-5 pr-14 text-left sm:px-[25px]">
+            <DialogTitle className="text-section">{removing ? removeCoachQuestion(removing.name) : ""}</DialogTitle>
+            <DialogDescription className="text-body-m text-dark-300">{REMOVE_COACH_NOTE}</DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-end gap-2 px-5 pb-5 sm:px-[25px]">
+            <button type="button" className={secondaryButton} onClick={() => setRemoving(null)} disabled={remove.isPending}>
+              Keep
+            </button>
+            <button type="button" className={dangerButton} disabled={remove.isPending} onClick={() => removing && remove.mutate(removing)}>
+              {remove.isPending ? "Removing…" : "Remove"}
+            </button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <EditProfileDialog
         athlete={a}
         focus={editing}
@@ -256,6 +303,42 @@ export const AthleteHome = () => {
       />
     </div>
   );
+};
+
+/** Remove a coach from Home, with Undo in the toast. */
+const useRemoveCoach = (onDone: () => void) => {
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const refresh = () => {
+    queryClient.invalidateQueries({ queryKey: ["athlete-home"] });
+    queryClient.invalidateQueries({ queryKey: ["my-coaches"] });
+  };
+  return useMutation({
+    mutationFn: (coach: { id: string; name: string }) => athleteHomeAPI.hideCoach(coach.id),
+    onSuccess: (_, coach) => {
+      queryClient.setQueryData<HomeData>(["athlete-home"], (cur) => (cur ? { ...cur, coaches: withoutCoach(cur.coaches, coach.id) } : cur));
+      refresh();
+      onDone();
+      toast({
+        title: `${firstNameOf(coach.name)} removed from your coaches`,
+        action: (
+          <ToastAction
+            altText={`Bring back ${coach.name}`}
+            onClick={() =>
+              void athleteHomeAPI
+                .unhideCoach(coach.id)
+                .then(refresh)
+                .catch(() => toast({ title: "Couldn't undo. Try again", variant: "destructive" }))
+            }
+          >
+            Undo
+          </ToastAction>
+        ),
+      });
+    },
+    onError: (err: unknown) =>
+      toast({ title: "Couldn't remove the coach", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+  });
 };
 
 const toUrl = (value: string) => (/^https?:\/\//i.test(value) ? value : `https://${value}`);

@@ -15,6 +15,7 @@ import { startOccurrenceCheckout } from "@/api/bookings";
 import { InfoBox } from "@/components/book/checkoutParts";
 import { RescheduleDialog } from "@/components/athlete-session/RescheduleDialog";
 import { SessionHeader } from "@/components/session/SessionHeader";
+import { ReportIssueButton, ReportIssueDialog } from "@/components/session/ReportIssueDialog";
 import { card, dangerButton, dangerTextButton, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { buildIcs, downloadIcs } from "@/utils/ics";
 import { scoreWord } from "@/utils/feedback";
@@ -28,6 +29,7 @@ import { coachProfilePath } from "@/utils/coachSlug";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, plural, sessionEnd, sessionStart } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
+import { helpLinkFrom } from "@/utils/helpBack";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
@@ -47,6 +49,7 @@ const AthleteSessionPage = () => {
   const [confirmWithdraw, setConfirmWithdraw] = useState(false);
   const [rescheduleOpen, setRescheduleOpen] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [reporting, setReporting] = useState(false);
 
   const refresh = () => {
     queryClient.invalidateQueries({ queryKey: ["athlete-session", id] });
@@ -344,11 +347,14 @@ const AthleteSessionPage = () => {
           <section className={card}>
             <h2 className="text-subtitle">Need help?</h2>
             <p className="text-body-m text-dark-300">
-              Questions about this session go to {coachFirst}. Billing questions go to AthaNext support.
+              Questions about this session go to {coachFirst}. For a safety, no-show or payment problem, report an issue and the AthaNext team follows up.
             </p>
-            <Link to={ROUTES.HELP} className={cn(secondaryButton, "self-start")}>
-              Get help
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link to={helpLinkFrom(`/sessions/${id}`)} className={secondaryButton}>
+                Get help
+              </Link>
+              <ReportIssueButton onClick={() => setReporting(true)} />
+            </div>
           </section>
         </div>
 
@@ -376,6 +382,12 @@ const AthleteSessionPage = () => {
         onError={(err) =>
           toast({ title: "Couldn't reschedule", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" })
         }
+      />
+
+      <ReportIssueDialog
+        bookingId={reporting ? s.booking.id : null}
+        sessionLabel={`${title}, ${dayLabel}`}
+        onClose={() => setReporting(false)}
       />
 
       <Dialog open={confirmWithdraw} onOpenChange={setConfirmWithdraw}>

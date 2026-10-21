@@ -27,7 +27,7 @@ export const ATHLETE_NAV: NavItem[] = [
   { title: "Home", short: "Home", url: ROUTES.DASHBOARD, icon: House },
   { title: "Book a session", short: "Book", url: ROUTES.BOOK, icon: CalendarPlus, also: [ROUTES.BOOKING_CONFIRMATION] },
   { title: "My sessions", short: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
-  { title: "Coaches", short: "Coaches", url: ROUTES.COACHES, icon: Search, also: [ROUTES.MY_COACHES, "/coach/", "/organizations/"] },
+  { title: "View All Coaches", short: "Coaches", url: ROUTES.COACHES, icon: Search, also: [ROUTES.MY_COACHES, "/coach/", "/organizations/"] },
   { title: "Gear", short: "Gear", url: ROUTES.GEAR, icon: ShoppingBag },
 ];
 

@@ -1,4 +1,5 @@
 import { coachesAPI } from "@/api";
+import { coachLocationAPI } from "@/api/coachLocation";
 import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { ProfileSkeleton } from "@/components/athlete-profile";
@@ -324,6 +325,9 @@ const Profile = () => {
                 if (Object.keys(userProfileUpdates).length > 0) {
                     await updateProfile(userProfileUpdates);
                 }
+
+                // Store the ZIP's center for distance on View All Coaches. Best effort.
+                void coachLocationAPI.saveMine(editedCoach.zip_code ?? coach.zip_code);
 
                 // Update auth context AFTER database update completes
                 if (uploadedImageUrl) {

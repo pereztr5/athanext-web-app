@@ -3,6 +3,7 @@
  * and a Message support sheet. Content is the prototype placeholder set.
  */
 import { useMemo, useState } from "react";
+import { useSearchParams } from "react-router-dom";
 import { BookOpen, ChevronDown, MessageCircle, Search } from "@/components/icons";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { LegalCard } from "@/components/legal/LegalLinks";
@@ -14,6 +15,7 @@ import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { HELP_ARTICLES } from "@/utils/helpArticles";
+import { helpBackLink } from "@/utils/helpBack";
 
 const TOPICS = {
   coach: ["A payment or refund", "A booking", "Payouts", "My account", "Something else"],
@@ -29,6 +31,8 @@ const Help = () => {
   const { isCoach } = useRole();
   const { user, userName } = useAuth();
   const { toast } = useToast();
+  const [params] = useSearchParams();
+  const back = helpBackLink(params.get("from"));
   const { submitContactForm, isSubmitting } = useContactSubmission();
   const role = isCoach ? "coach" : "athlete";
   const list = HELP_ARTICLES[role];
@@ -83,6 +87,7 @@ const Help = () => {
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
         <PageHeader
           title="Help"
+          back={back ?? undefined}
           subtitle={isCoach ? "Answers for running your coaching business on AthaNext" : "Answers about booking, payments and your account"}
         />
 

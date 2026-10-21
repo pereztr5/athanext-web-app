@@ -1,7 +1,7 @@
 import { useState, useEffect, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { Building2, Search, Users } from "@/components/icons";
+import { Building2, MapPin, Search, Users } from "@/components/icons";
 import { supabase } from "@/integrations/supabase/client";
 import type { Tables } from "@/integrations/supabase/types";
 import CoachCard from "@/components/coach/CoachCard";
@@ -36,12 +36,24 @@ import {
 import { organizationPartners } from "@/utils/brands";
 import { getCoachSport } from "@/utils/coachSport";
 import { useBrandsByCoach } from "@/hooks/useBrands";
-import { fetchLocationFromZipCode, formatLocationDisplay } from "@/utils/geolocation";
+import { fetchZipPoint } from "@/utils/geolocation";
+import { coachLocationAPI } from "@/api/coachLocation";
 import { cn } from "@/lib/utils";
 import { BrowseCoachCard } from "@/components/browse/BrowseCoachCard";
 import { FilterSelect } from "@/components/browse/FilterSelect";
 import { useIntroEnabledCoachIds } from "@/components/intro-calls";
-import { areaOptions, matchesArea, usableZip, zipDistanceRank, type BrowseArea } from "@/components/browse/area";
+import {
+  RADIUS_OPTIONS,
+  cleanZipInput,
+  coachDistance,
+  coachPoint,
+  distanceLabel,
+  distanceSortValue,
+  usableZip,
+  withinRadius,
+  type CoachDistance,
+  type Radius,
+} from "@/components/browse/area";
 
 // Public coach type without email for privacy
 
@@ -126,6 +138,9 @@ const matchesSearch = (coach: Coach, query: string) => {
 const matchesSessionType = (coach: Coach, type: SessionFilter) =>
   type === "any" || (coach.session_types ?? []).some((t) => t.toLowerCase().replace(/\s+/g, "-") === type);
 
+/** Nearest first; two unknown distances tie. */
+const compareNear = (a: number, b: number) => (a === b ? 0 : a - b);
+
 const sportRank = (sport: string) => (sport === "soccer" ? 0 : sport === "rowing" ? 1 : 2);
 
 /**
@@ -168,24 +183,29 @@ const AllCoaches = () => {
   const [sessionType, setSessionType] = useState<SessionFilter>("any");
   const [sortBy, setSortBy] = useState<SortKey>("recommended");
 
-  // Families near a known ZIP see their city and the distance options; everyone else gets "Any area".
-  const homeZip = isAthleteLike ? usableZip(userProfile?.zip_code) : "";
-  const [area, setArea] = useState<BrowseArea>("any");
-  const [city, setCity] = useState("");
+  // ZIP filter: prefilled from the family's profile ZIP; coaches sort nearest first and a radius
+  // narrows the list. Distance uses ZIP centers, or ZIP prefixes when a center isn't known.
+  const profileZip = isAthleteLike ? usableZip(userProfile?.zip_code) : "";
+  const [zipInput, setZipInput] = useState(profileZip);
+  const [zipEdited, setZipEdited] = useState(false);
+  const [radius, setRadius] = useState<Radius>("any");
   useEffect(() => {
-    setArea(homeZip ? "near" : "any");
-    if (!homeZip) {
-      setCity("");
-      return;
-    }
-    let cancelled = false;
-    fetchLocationFromZipCode(homeZip).then((info) => {
-      if (!cancelled) setCity(info ? formatLocationDisplay(info) : "");
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [homeZip]);
+    if (!zipEdited) setZipInput(profileZip);
+  }, [profileZip, zipEdited]);
+  const homeZip = /^\d{5}$/.test(zipInput) ? zipInput : "";
+  const homePointQuery = useQuery({
+    queryKey: ["zip-point", homeZip],
+    enabled: Boolean(homeZip),
+    staleTime: Infinity,
+    queryFn: () => fetchZipPoint(homeZip),
+  });
+  const homePoint = homeZip ? (homePointQuery.data ?? null) : null;
+  const city = homePoint?.label ?? "";
+  const coachPointsQuery = useQuery({
+    queryKey: ["coach-coordinates"],
+    staleTime: 10 * 60 * 1000,
+    queryFn: () => coachLocationAPI.points(),
+  });
 
   // Organization pages link here with ?academy=<name>. Show all clears it.
   const [selectedAcademy, setSelectedAcademy] = useState(searchParams.get("academy") ?? ALL_ACADEMIES);
@@ -266,6 +286,18 @@ const AllCoaches = () => {
   };
 
   const query = searchQuery.toLowerCase().trim();
+  const distances = useMemo(() => {
+    const map = new Map<string, CoachDistance>();
+    if (!homeZip) return map;
+    const points = coachPointsQuery.data ?? new Map();
+    for (const coach of coaches) {
+      if (!coach) continue;
+      map.set(coach.id, coachDistance(coach.zip_code, coachPoint(coach.id, coach.zip_code, points), homeZip, homePoint));
+    }
+    return map;
+  }, [coaches, coachPointsQuery.data, homeZip, homePoint]);
+  const distanceOf = (coachId: string) => distances.get(coachId);
+
   const filteredCoaches = useMemo(() => {
     const target = selectedSport.toLowerCase();
     const list = coaches.filter(
@@ -276,8 +308,9 @@ const AllCoaches = () => {
         matchesSessionType(coach, sessionType) &&
         (selectedAgeGroup === ANY_AGE || matchesAgeGroup(coach, selectedAgeGroup)) &&
         (selectedAcademy === ALL_ACADEMIES || matchesAcademy(coach.company, selectedAcademy)) &&
-        matchesArea(coach, area, homeZip)
+        (!homeZip || radius === "any" || withinRadius(distances.get(coach.id) ?? { miles: null, rank: 3 }, radius))
     );
+    const near = (coach: Coach) => (homeZip ? distanceSortValue(distances.get(coach.id) ?? { miles: null, rank: 3 }) : 0);
     const price = (coach: Coach) => Number(coach.hourly_rate) || 0;
     return list.sort((a, b) => {
       switch (sortBy) {
@@ -290,14 +323,14 @@ const AllCoaches = () => {
         default:
           // Recommended: closest first, then Soccer, Rowing, others, then rating.
           return (
-            (homeZip && area !== "online" ? zipDistanceRank(a.zip_code, homeZip) - zipDistanceRank(b.zip_code, homeZip) : 0) ||
+            (homeZip ? compareNear(near(a), near(b)) : 0) ||
             sportRank(getCoachSport(a)) - sportRank(getCoachSport(b)) ||
             (b.rating || 0) - (a.rating || 0) ||
             (a.name || "").localeCompare(b.name || "")
           );
       }
     });
-  }, [coaches, query, selectedSport, sessionType, selectedAgeGroup, selectedAcademy, area, homeZip, sortBy]);
+  }, [coaches, query, selectedSport, sessionType, selectedAgeGroup, selectedAcademy, radius, homeZip, distances, sortBy]);
 
   const handleSendMessage = async (coach: Coach) => {
     if (!coach?.id) return;
@@ -360,6 +393,7 @@ const AllCoaches = () => {
     setSelectedAgeGroup(ANY_AGE);
     setSessionType("any");
     setSelectedAcademy(ALL_ACADEMIES);
+    setRadius("any");
   };
 
   const verifiedCoachesCount = coaches.filter((coach) => coach?.is_verified).length;
@@ -400,14 +434,15 @@ const AllCoaches = () => {
   const viewCounts: Record<DirectoryView, number> = { coaches: coaches.length, organizations: allOrganizations.length };
 
   const sportWord = selectedSport === "All Sports" ? "" : selectedSport;
-  const subtitle = city && area !== "online"
-    ? `${sportWord || "Sports"} coaching near ${city}`
+  const place = city || homeZip;
+  const subtitle = place
+    ? `${sportWord || "Sports"} coaching near ${place}`
     : `${sportWord ? `${sportWord} coaching` : "Coaching"} in person and online`;
-  const where = area === "online" ? " online" : city && area !== "any" ? ` near ${city}` : "";
+  const where = place ? (radius === "any" ? ` near ${place}` : ` within ${radius} miles of ${place}`) : "";
   const countLabel = showOrganizations
     ? `${organizations.length} ${organizations.length === 1 ? "organization" : "organizations"}${where}`
     : `${filteredCoaches.length} ${filteredCoaches.length === 1 ? "coach" : "coaches"}${where}`;
-  const filtersOn = Boolean(query) || selectedAgeGroup !== ANY_AGE || sessionType !== "any";
+  const filtersOn = Boolean(query) || selectedAgeGroup !== ANY_AGE || sessionType !== "any" || (Boolean(homeZip) && radius !== "any");
 
   const caption = "text-caption text-dark-300";
   const emptyCard = "flex flex-col items-center gap-[15px] rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center sm:col-span-2 lg:col-span-3";
@@ -444,10 +479,10 @@ const AllCoaches = () => {
 
       <div className={cn("mx-auto flex w-full max-w-wrapper flex-col gap-4", !isAuthenticated && "px-4 pb-16 pt-10 md:px-0")}>
         {isAuthenticated ? (
-          <PageHeader title="Browse coaches" subtitle={subtitle} />
+          <PageHeader title="View All Coaches" subtitle={subtitle} />
         ) : (
           <div className="flex flex-col gap-2.5">
-            <h2 className="text-section text-dark">Browse coaches</h2>
+            <h2 className="text-section text-dark">View All Coaches</h2>
             <p className="text-body-m text-dark-300">{subtitle}</p>
           </div>
         )}
@@ -487,7 +522,37 @@ const AllCoaches = () => {
               onChange={(value) => setSelectedSport(value)}
             />
           ) : null}
-          <FilterSelect label="Area" value={area} options={areaOptions(city, homeZip)} onChange={(value) => setArea(value)} />
+          <label className="relative w-[118px] flex-none">
+            <span className="sr-only">ZIP code</span>
+            <MapPin className="pointer-events-none absolute left-3 top-[11px] size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+            <input
+              value={zipInput}
+              onChange={(e) => {
+                setZipEdited(true);
+                setZipInput(cleanZipInput(e.target.value));
+              }}
+              inputMode="numeric"
+              autoComplete="postal-code"
+              placeholder="ZIP code"
+              aria-label="ZIP code"
+              className="h-[38px] w-full rounded-control border border-dark-250 bg-light pl-9 pr-3 text-body-m tabular-nums text-dark placeholder:text-dark-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+            />
+          </label>
+          {homeZip ? (
+            <div role="group" aria-label="Distance" className={cn(segGroup, "inline-flex max-w-full flex-none overflow-x-auto [scrollbar-width:none]")}>
+              {RADIUS_OPTIONS.map((option) => (
+                <button
+                  key={option.value}
+                  type="button"
+                  aria-pressed={radius === option.value}
+                  onClick={() => setRadius(option.value)}
+                  className={cn(segButton(radius === option.value), "flex-none")}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          ) : null}
           {!showOrganizations ? (
             <>
               <FilterSelect label="Age group" value={selectedAgeGroup} options={AGE_OPTIONS} onChange={(value) => setSelectedAgeGroup(value)} />
@@ -547,11 +612,7 @@ const AllCoaches = () => {
               </div>
               <button
                 type="button"
-                onClick={() => {
-                  clearFilters();
-                  if (homeZip) setArea("near");
-                  else setArea("any");
-                }}
+                onClick={clearFilters}
                 className={cn(secondaryButton, smallButton)}
               >
                 Clear filters
@@ -583,7 +644,7 @@ const AllCoaches = () => {
                   role={normalizePosition(sport, coach.coach_position || coach.positions?.[0] || "") || "Coach"}
                   rating={isPublicCoachRatingVisible(coach.total_reviews, coach.rating) ? publicCoachRatingLabel(coach.rating, coach.total_reviews) : null}
                   reviewCount={coach.total_reviews ?? 0}
-                  area={coach.locations?.[0] || ""}
+                  area={[coach.locations?.[0], distanceLabel(distanceOf(coach.id) ?? { miles: null, rank: 3 })].filter(Boolean).join(" · ")}
                   pillars={(coach.specialties ?? []).filter(Boolean).slice(0, 3)}
                   agePill={agePillLabel(coach)}
                   price={Number(coach.hourly_rate) || null}

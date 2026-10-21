@@ -85,7 +85,7 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do I find a new coach?",
-          body: "Use Browse coaches to search coaches and organizations near you, then view a profile and request a session.",
+          body: "Use View All Coaches to search coaches and organizations near you, then view a profile and request a session.",
         },
         {
           title: "Where are session notes?",

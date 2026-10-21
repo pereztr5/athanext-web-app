@@ -82,3 +82,7 @@ content_path = "./supabase/templates/email_change.html"
 [auth.email.template.magic_link]
 subject = "Your AthaNext sign-in link"
 content_path = "./supabase/templates/magic_link.html"
+
+# Report an issue: emails support and the family. Called by the signed-in family.
+[functions.report-session-issue]
+verify_jwt = true

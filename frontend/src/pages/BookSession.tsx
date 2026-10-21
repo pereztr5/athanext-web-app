@@ -312,8 +312,7 @@ const BookSessionPage = () => {
                 <span className="flex size-[60px] items-center justify-center rounded-full border border-dashed border-light-600 text-dark-300">
                   <Plus className="size-5" strokeWidth={1.5} aria-hidden="true" />
                 </span>
-                <b className="text-label-sm">Add coach</b>
-                <small className="text-caption text-dark-300">Browse</small>
+                <b className="text-label-sm">Find a new coach</b>
               </Link>
             </div>
           </section>
