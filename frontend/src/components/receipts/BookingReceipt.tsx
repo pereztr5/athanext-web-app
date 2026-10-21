@@ -4,6 +4,7 @@ import { strings } from "@/config/strings";
 import { CalendarPlus, Mail } from "@/components/icons";
 import { secondaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
+import { feeRows, toCents } from "@/utils/fees";
 import { formatMoney, type ReceiptModel } from "./receiptModel";
 
 const labelClass = "text-label-xsm text-dark-300";
@@ -77,18 +78,18 @@ const BookingReceipt = ({
               <span className="tabular-nums">{model.credits}</span>
             </div>
           ) : null}
-          {model.fees ? (
-            <div className={`flex justify-between ${valueClass}`}>
-              <span className="text-dark-300">Platform fee</span>
-              <span className="tabular-nums">{formatMoney(model.fees)}</span>
+          {feeRows({ platformCents: toCents(model.platformFees), processingCents: toCents(model.processingFees) }).map((r) => (
+            <div key={r.label} className={`flex justify-between ${valueClass}`}>
+              <span className="text-dark-300">{r.label}</span>
+              <span className="tabular-nums">{formatMoney(r.cents / 100)}</span>
             </div>
-          ) : null}
+          ))}
           {model.isReceipt || model.credits ? (
             <>
               <div className="h-px bg-light-525" />
               <div className="flex items-baseline justify-between">
                 <span className="text-subtitle">Total paid</span>
-                <span className="text-highlight tabular-nums">{formatMoney(model.total)}</span>
+                <span className="text-highlight tabular-nums">{model.amountsKnown ? formatMoney(model.total) : "…"}</span>
               </div>
               <div className="flex items-center justify-between gap-2">
                 <span className="text-caption text-dark-300">

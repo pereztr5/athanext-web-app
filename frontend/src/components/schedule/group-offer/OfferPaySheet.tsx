@@ -10,6 +10,7 @@ import { bookAPI } from "@/api/book";
 import type { GroupOffer, GroupOfferSession } from "@/api/schedule";
 import { canApplePay } from "@/components/book/applePay";
 import { FeeLines } from "@/components/book/FeeLines";
+import { cardRateText, feeAmountText } from "@/utils/feeDisplay";
 import { ApplePayButton, sheetBody, sheetContent, sheetFooter, sheetHeader, sheetTitle, stat28 } from "@/components/book/checkoutParts";
 import { CheckoutTermsLine } from "@/components/legal/LegalLinks";
 import { meta, primaryButton, textButton } from "@/components/schedule/styles";
@@ -89,6 +90,9 @@ export const OfferPaySheet = ({
   const canOff = Boolean(offlineCard.data?.offline_pay_available) && !offer.coachPaysDirect;
   const direct = offline || offer.coachPaysDirect;
   const total = direct ? plan.payDirect || plan.subtotal : plan.dueNow;
+  // A card total waits for the fee rates, so the amount shown is what is charged.
+  const totalText = direct ? money2(total) : feeAmountText(plan.feesReady, plan.feesError, money2(total));
+  const cardBlocked = !direct && !plan.feesReady;
 
   const pay = useMutation({
     mutationFn: () => bookAPI.checkout(
@@ -153,11 +157,11 @@ export const OfferPaySheet = ({
                   <span className="text-dark-300">{sessions.length > 1 ? "Sessions" : "Session"}</span>
                   <span className="tabular-nums">{money2(plan.subtotal)}</span>
                 </div>
-                <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
+                <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} ready={plan.feesReady} error={plan.feesError} />
                 <div className="h-px bg-light-525" />
                 <div className="flex items-baseline justify-between gap-3">
                   <span className="text-subtitle">Total</span>
-                  <span className={stat28}>{money2(total)}</span>
+                  <span className={stat28}>{totalText}</span>
                 </div>
               </>
             )}
@@ -175,10 +179,10 @@ export const OfferPaySheet = ({
               Book {plural(sessions.length, "session")}
             </button>
           ) : apple ? (
-            <ApplePayButton label={`Pay ${money2(total)} with`} className="h-[48px] w-full" disabled={!user} onClick={() => pay.mutate()} />
+            <ApplePayButton label={`Pay ${totalText} with`} className="h-[48px] w-full" disabled={!user || cardBlocked} onClick={() => pay.mutate()} />
           ) : (
-            <button type="button" className={cn(primaryButton, "h-[48px] w-full")} disabled={!user} onClick={() => pay.mutate()}>
-              Pay {money2(total)}
+            <button type="button" className={cn(primaryButton, "h-[48px] w-full")} disabled={!user || cardBlocked} onClick={() => pay.mutate()}>
+              Pay {totalText}
             </button>
           )}
           {!direct ? <CheckoutTermsLine /> : null}
@@ -189,7 +193,7 @@ export const OfferPaySheet = ({
           ) : null}
           {offline ? (
             <span className={cn(meta, "text-center")}>
-              Card adds a payment processing fee of {fees.stripePerc}% + ${Number(fees.stripeFixed ?? 0).toFixed(2)}, Stripe&apos;s rate.
+              Card adds card processing of {cardRateText(fees.config)}, Stripe&apos;s rate.
             </span>
           ) : null}
         </div>

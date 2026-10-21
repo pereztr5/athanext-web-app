@@ -1,47 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
-import { getNumericConfiguration } from "@/api/configurations";
+import { supabase } from "@/integrations/supabase/client";
+import { FEE_CONFIG_KEYS, parseFeeConfig, type FeeConfig } from "@/utils/fees";
 
-interface FeeConfig {
-  platformFeePerc: number;
-  stripeFeePerc: number;
-  stripeFeeFixed: number;
+export interface FeeConfigState {
+  /** Null until the rates are loaded, and when they can't be: never show a price without them. */
+  config: FeeConfig | null;
   loading: boolean;
+  error: boolean;
 }
 
-interface FeeConfigData {
-  platformFeePerc: number;
-  stripeFeePerc: number;
-  stripeFeeFixed: number;
-}
-
-export const useFeeConfig = (): FeeConfig => {
-  const query = useQuery<FeeConfigData>({
+/** The fee rates every shown price uses (the same rows the payment functions charge with). */
+export const useFeeConfig = (): FeeConfigState => {
+  const query = useQuery<FeeConfig>({
     queryKey: ["fee-config"],
     queryFn: async () => {
-      try {
-        const [platformResp, stripeResp, fixedResp] = await Promise.all([
-          getNumericConfiguration("platform_fees"),
-          getNumericConfiguration("stripe_fees"),
-          getNumericConfiguration("stripe_fee_fixed"),
-        ]);
-
-        return {
-          platformFeePerc: platformResp.data ?? 0,
-          stripeFeePerc: stripeResp.data ?? 0,
-          stripeFeeFixed: fixedResp.data ?? 0,
-        };
-      } catch {
-        // ignore errors; defaults remain 0
-        return { platformFeePerc: 0, stripeFeePerc: 0, stripeFeeFixed: 0 };
-      }
+      const { data, error } = await supabase.from("configurations").select("key,value").in("key", FEE_CONFIG_KEYS);
+      if (error) throw error;
+      return parseFeeConfig(data);
     },
     staleTime: Infinity,
   });
 
-  return {
-    platformFeePerc: query.data?.platformFeePerc ?? 0,
-    stripeFeePerc: query.data?.stripeFeePerc ?? 0,
-    stripeFeeFixed: query.data?.stripeFeeFixed ?? 0,
-    loading: query.isLoading,
-  };
+  return { config: query.data ?? null, loading: query.isLoading, error: query.isError };
 };

@@ -25,7 +25,9 @@ import { addDaysISO, formatDayISO, formatMinutes, plural, viewerToEastern } from
 import { formatInstantSpan } from "@/utils/viewerTime";
 import { input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { canApplePay } from "./applePay";
+import { cardRateText } from "@/utils/feeDisplay";
 import { FeeLines } from "./FeeLines";
+import { planMoney } from "./bookSummary";
 import {
   ApplePayButton,
   InfoBox,
@@ -201,8 +203,10 @@ export const ReviewDialog = ({
   const charged = plan.dueNow > 0;
   const directName = coachNames(plan.direct).join(" and ");
   const directNote = plan.direct.map((s) => coaches[s.coachId]?.payNote).find(Boolean);
-  const disabled = !picked.length || !athleteId || book.isPending;
-  const payLabel = `Pay ${money(plan.dueNow)}`;
+  // Card payments and card holds wait for the fee rates, so the amount on the button is what is charged.
+  const needsFees = plan.subtotal > 0 || requests.length > 0;
+  const disabled = !picked.length || !athleteId || book.isPending || (needsFees && !plan.feesReady);
+  const payLabel = `Pay ${planMoney(plan, plan.dueNow)}`;
   const confirmLabel = now.length
     ? `${plan.covered.size && !plan.direct.length ? `Confirm with ${plural(plan.covered.size, "credit")}` : "Confirm booking"}${
         requests.length ? ` and send ${plural(requests.length, "request")}` : ""
@@ -256,7 +260,7 @@ export const ReviewDialog = ({
                   <div className="flex flex-col gap-2.5">{requests.map((s) => row(s, true))}</div>
                   <InfoBox icon={UserCheck}>
                     {coachNames(requests).join(" and ")} {coachNames(requests).length > 1 ? "approve" : "approves"} new families first. Times are held
-                    for 24 hours, and you're only charged {money(plan.ifAccepted)} if accepted.
+                    for 24 hours, and you're only charged {planMoney(plan, plan.ifAccepted)} if accepted.
                   </InfoBox>
                 </>
               ) : null}
@@ -288,11 +292,11 @@ export const ReviewDialog = ({
                         <span className="text-dark-300">{plan.direct.length ? "Paid in AthaNext" : plan.instant.length > 1 ? "Sessions" : "Session"}</span>
                         <span className="tabular-nums">{money(plan.subtotal)}</span>
                       </div>
-                      <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
+                      <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} ready={plan.feesReady} error={plan.feesError} />
                       <div className="h-px bg-light-525" />
                       <div className="flex items-baseline justify-between gap-3">
                         <span className="text-subtitle">{requests.length || plan.direct.length ? "Due now" : "Total"}</span>
-                        <span className={stat28}>{money(plan.dueNow)}</span>
+                        <span className={stat28}>{planMoney(plan, plan.dueNow)}</span>
                       </div>
                     </>
                   ) : null}
@@ -369,7 +373,7 @@ export const ReviewDialog = ({
                         </button>
                         {offline ? (
                           <span className={cn(meta, "text-right")}>
-                            Card adds a payment processing fee of {fees.stripePerc}% + ${Number(fees.stripeFixed ?? 0).toFixed(2)}, Stripe&apos;s rate.
+                            Card adds card processing of {cardRateText(fees.config)}, Stripe&apos;s rate.
                           </span>
                         ) : null}
                       </span>

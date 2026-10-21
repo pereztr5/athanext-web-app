@@ -7,6 +7,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { loadFeeConfig } from "../_shared/fee_config.ts";
+import { feeLine, toCents } from "../_shared/fees.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -162,21 +164,9 @@ serve(async (req) => {
       if (body.action === "verify") return json({ status: await settle(admin, invoiceId) });
       if (inv.status !== "open") return json({ error: "This invoice is already settled" }, 400);
 
-      const { data: feeRows } = await admin
-        .from("configurations")
-        .select("key,value")
-        .in("key", ["stripe_fees", "stripe_fee_fixed"]);
-      let stripeFeePerc = 0;
-      let stripeFeeFixed = 0;
-      feeRows?.forEach((row) => {
-        const v = Number.parseFloat(row.value);
-        if (!Number.isFinite(v)) return;
-        if (row.key === "stripe_fees") stripeFeePerc = v;
-        if (row.key === "stripe_fee_fixed") stripeFeeFixed = v;
-      });
-      const amount = Number(inv.amount);
-      // Invoices are for a coach's own families: processing only, no marketplace fee.
-      const fee = Math.round((amount * stripeFeePerc / 100 + stripeFeeFixed) * 100) / 100;
+      // Invoices are for a coach's own families: card processing only, no platform fee.
+      const fees = feeLine(toCents(Number(inv.amount)), "invoice", await loadFeeConfig(admin));
+      const fee = fees.processingCents / 100;
       const session = await stripe().checkout.sessions.create({
         mode: "payment",
         customer_email: user.email ?? undefined,
@@ -185,7 +175,7 @@ serve(async (req) => {
             quantity: 1,
             price_data: {
               currency: "usd",
-              unit_amount: Math.round((amount + fee) * 100),
+              unit_amount: fees.totalCents,
               product_data: { name: `${inv.service} with ${inv.coach}`, description: fee ? `Includes ${usd(fee)} card processing` : undefined },
             },
           },

@@ -456,7 +456,7 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
         <span className="flex min-w-0 grow flex-col gap-1">
           <b className="text-label-sm">Card and Apple Pay</b>
           <span className={meta}>
-            Families pay when they book. A payment processing fee of 2.9% + $0.30 is added at checkout as its own line. Stripe pays you out.
+            Families pay when they book. Card processing (2.9% + $0.30, Stripe&apos;s rate) is added at checkout as its own line, apart from the platform fee. Stripe pays you out.
           </span>
         </span>
         <BrandPill tone="neutral" className="shrink-0">Always on</BrandPill>
@@ -466,7 +466,7 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
         <span className="flex min-w-0 grow flex-col gap-1">
           <b className="text-label-sm">Offline payment</b>
           <span className={meta}>
-            Let your existing clients choose to pay you directly. They pay your price with no processing fee, and AthaNext doesn&apos;t handle the
+            Let your existing clients choose to pay you directly. They pay your price with no card processing fee, and AthaNext doesn&apos;t handle the
             money.
           </span>
         </span>

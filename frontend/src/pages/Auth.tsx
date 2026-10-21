@@ -248,7 +248,7 @@ const Auth = () => {
               <div className="mb-4 rounded-control border border-primary-300 bg-primary-50 p-3 text-body-m text-dark">
                 <span className="font-medium">Coach {inviteCoachName}</span>{" "}
                 invited you to {strings.brand.name}. Use the email the invite was sent to
-                ({pendingInvite?.masked_email}) to book with them with no platform service fee.
+                ({pendingInvite?.masked_email}) to book with them with no platform fee.
               </div>
             )}
             <Tabs value={activeTab} onValueChange={(value) => {

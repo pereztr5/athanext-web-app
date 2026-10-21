@@ -1,6 +1,8 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { loadFeeConfig } from "../_shared/fee_config.ts";
+import { feeConfigMetadata, feeLine, toCents } from "../_shared/fees.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -9,31 +11,6 @@ const corsHeaders = {
 
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
-
-type FeeConfig = { platformFeePerc: number; stripeFeePerc: number; stripeFeeFixed: number };
-
-const fetchFees = async (admin: ReturnType<typeof createClient>): Promise<FeeConfig> => {
-  let platformFeePerc = 0;
-  let stripeFeePerc = 0;
-  let stripeFeeFixed = 0;
-  const { data } = await admin
-    .from("configurations")
-    .select("key,value")
-    .in("key", ["platform_fees", "stripe_fees", "stripe_fee_fixed"]);
-  data?.forEach((row) => {
-    const v = Number.parseFloat(String(row.value ?? ""));
-    if (!Number.isFinite(v)) return;
-    const key = String(row.key ?? "");
-    if (key === "platform_fees") platformFeePerc = v;
-    if (key === "stripe_fees") stripeFeePerc = v;
-    if (key === "stripe_fee_fixed") stripeFeeFixed = v;
-  });
-  return { platformFeePerc, stripeFeePerc, stripeFeeFixed };
-};
-
-/** List price in dollars → Checkout unit_amount in cents (percent + $0.30 once). */
-const chargeCents = (listDollars: number, platformPerc: number, stripePerc: number, fixedDollars: number) =>
-  Math.round(listDollars * (1 + platformPerc / 100 + stripePerc / 100) * 100) + Math.round(Math.max(0, fixedDollars) * 100);
 
 serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -85,7 +62,7 @@ serve(async (req) => {
       return json({ canceled: true, cancel_at_period_end: true });
     }
 
-    const fees = await fetchFees(admin as ReturnType<typeof createClient>);
+    const fees = await loadFeeConfig(admin);
     const { package_id, coach_id, org_package_id } = body as {
       package_id?: string;
       coach_id?: string;
@@ -110,8 +87,8 @@ serve(async (req) => {
       const expiry = new Date();
       expiry.setDate(expiry.getDate() + days);
       const listPrice = Number(pkg.price);
-      // Academy packages always charge the marketplace fee (no referral waiver).
-      const unitAmount = chargeCents(listPrice, fees.platformFeePerc, fees.stripeFeePerc, fees.stripeFeeFixed);
+      // Academy packages: the platform fee only, card processing absorbed (no referral waiver).
+      const unitAmount = feeLine(toCents(listPrice), "org_package", fees).totalCents;
       const metadata = {
         type: "package_purchase",
         org_package_id: pkg.id,
@@ -121,9 +98,7 @@ serve(async (req) => {
         validity_days: String(days),
         expiry_date: expiry.toISOString(),
         list_price: String(listPrice),
-        platform_fee_perc: String(fees.platformFeePerc),
-        stripe_fee_perc: String(fees.stripeFeePerc),
-        stripe_fee_fixed: String(fees.stripeFeeFixed),
+        ...feeConfigMetadata(fees),
         platform_waived: "0",
       };
       const priceData = {
@@ -205,7 +180,7 @@ serve(async (req) => {
     const campLine = [packageData.camp_location, campWhen].filter(Boolean).join(" · ");
 
     // Same referral waiver as booking: confirmed coach-client pair for an athlete the caller owns.
-    let platformPerc = fees.platformFeePerc;
+    let platformWaived = false;
     const { data: athleteRows } = await supabaseClient.from("athlete_profiles").select("id").eq("user_id", user.id).limit(20);
     const athleteIds = (athleteRows ?? []).map((a) => a.id as string);
     if (athleteIds.length) {
@@ -216,12 +191,12 @@ serve(async (req) => {
         .in("athlete_id", athleteIds)
         .eq("status", "confirmed")
         .limit(1);
-      if (waiverRows?.length) platformPerc = 0;
+      if (waiverRows?.length) platformWaived = true;
     }
 
     // coach_packages.total_price is stored in cents.
     const listPrice = Number(packageData.total_price) / 100;
-    const unitAmount = chargeCents(listPrice, platformPerc, fees.stripeFeePerc, fees.stripeFeeFixed);
+    const unitAmount = feeLine(toCents(listPrice), "package", fees, platformWaived).totalCents;
 
     let customer;
     const existingCustomers = await stripe.customers.list({
@@ -274,10 +249,9 @@ serve(async (req) => {
         expiry_date: expiryDate.toISOString(),
         type: "package_purchase",
         list_price: String(listPrice),
-        platform_fee_perc: String(platformPerc),
-        stripe_fee_perc: String(fees.stripeFeePerc),
-        stripe_fee_fixed: String(fees.stripeFeeFixed),
-        platform_waived: platformPerc === 0 ? "1" : "0",
+        ...feeConfigMetadata(fees),
+        ...(platformWaived ? { platform_fee_perc: "0" } : {}),
+        platform_waived: platformWaived ? "1" : "0",
       },
     });
 

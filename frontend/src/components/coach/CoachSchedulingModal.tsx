@@ -26,7 +26,9 @@ import { formatLocationSentence, formatTimeSpan } from "@/utils/sessionFormattin
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { useReferralWaiver } from "@/hooks/useReferrals";
-import { computeSessionPrice, formatPriceBreakdown } from "@/utils/referralHelpers";
+import { useFeeConfig } from "@/hooks/useFeeConfig";
+import { feeAmountText, formatFeeBreakdown } from "@/utils/feeDisplay";
+import { feeLine, toCents } from "@/utils/fees";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDateInZone, formatSlotForViewer } from "@/utils/viewerTime";
 import { functionPaymentError, paymentErrorMessage } from "@/utils/paymentErrors";
@@ -83,9 +85,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const queryClient = useQueryClient();
   const isFreeConsultation = serviceType === BookingType.FreeConsultation;
   const slotPrice = prefillSlot?.slot?.price ?? undefined;
-  const [platformFeePerc, setPlatformFeePerc] = useState(0);
-  const [stripeFeePerc, setStripeFeePerc] = useState(0);
-  const [stripeFeeFixed, setStripeFeeFixed] = useState(0);
+  const { config: feeConfig, error: feeError } = useFeeConfig();
   const [selectedDate, setSelectedDate] = useState<Date>();
   const [selectedTime, setSelectedTime] = useState("");
   const [selectedLocation, setSelectedLocation] = useState("");
@@ -185,31 +185,6 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       setSelectedTime(normalizeTimeValue(prefillSlot.slot.start_time));
       setSelectedLocation(prefillSlot.slot.location);
       setDuration(prefillSlot.slot.duration_minutes.toString());
-    }
-
-    // Load fee configuration when modal opens
-    const fetchFees = async () => {
-      try {
-        const { data, error } = await supabase
-          .from('configurations')
-          .select('key,value')
-          .in('key', ['platform_fees', 'stripe_fees', 'stripe_fee_fixed']);
-        if (error) return;
-        (data as any[])?.forEach((row: any) => {
-          const v = Number.parseFloat(row.value);
-          if (Number.isFinite(v)) {
-            if (row.key === 'platform_fees') setPlatformFeePerc(v);
-            if (row.key === 'stripe_fees') setStripeFeePerc(v);
-            if (row.key === 'stripe_fee_fixed') setStripeFeeFixed(v);
-          }
-        });
-      } catch {
-        // ignore fee load errors in UI
-      }
-    };
-
-    if (isOpen) {
-      fetchFees();
     }
   }, [prefillSlot, isOpen]);
 
@@ -467,8 +442,10 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
     : typeof slotPrice === 'number'
       ? slotPrice
       : Math.round((hourlyRate / 60) * parseInt(duration));
-  const sessionPrice = computeSessionPrice(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived, stripeFeeFixed);
-  const totalWithFees = isFreeConsultation ? 0 : sessionPrice.total;
+  // What create-booking-payment charges for this one session (shared fee math).
+  const sessionFees = feeConfig ? feeLine(toCents(sessionCost), "session", feeConfig, platformFeeWaived) : null;
+  const feesPending = !isFreeConsultation && !sessionFees;
+  const totalText = feeAmountText(!feesPending, feeError, formatCurrency((sessionFees?.totalCents ?? 0) / 100));
 
   const displayDateValue = selectedDate
     ? selectedDate
@@ -518,7 +495,9 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
   const sportLabel = coach.sport?.trim();
   const priceBreakdown = isFreeConsultation
     ? "Free"
-    : formatPriceBreakdown(sessionCost, platformFeePerc, stripeFeePerc, platformFeeWaived, stripeFeeFixed);
+    : sessionFees
+      ? formatFeeBreakdown(sessionFees, "session", platformFeeWaived)
+      : feeAmountText(false, feeError, "");
   const hideSelectionFields = Boolean(prefillSlot);
 
   const modalSurface =
@@ -597,13 +576,13 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
               </div>
               <div className="flex flex-none flex-col items-end gap-1.5 text-right">
                 <p className="text-stat text-dark">
-                  {isFreeConsultation ? "Free" : formatCurrency(totalWithFees)}
+                  {isFreeConsultation ? "Free" : totalText}
                 </p>
                 <p className="text-caption text-dark-300">
                   {isFreeConsultation ? "Total" : "Total, fees included"}
                 </p>
                 {!isFreeConsultation && platformFeeWaived ? (
-                  <BrandPill tone="green">No service fee</BrandPill>
+                  <BrandPill tone="green">No platform fee</BrandPill>
                 ) : null}
               </div>
             </div>
@@ -762,14 +741,14 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
                 Sign in to book
               </Button>
             ) : (
-              <Button onClick={handleBookSession} className={primaryButton} disabled={isBooking}>
+              <Button onClick={handleBookSession} className={primaryButton} disabled={isBooking || (feesPending && !needsCoachConfirmation)}>
                 {isBooking
                   ? strings.appointments.processing
                   : isFreeConsultation
                   ? "Book free consultation"
                   : needsCoachConfirmation
                   ? "Request session"
-                  : `Book and pay ${formatCurrency(totalWithFees)}`}
+                  : `Book and pay ${totalText}`}
               </Button>
             )}
           </div>

@@ -18,7 +18,9 @@ import {
   sessionsByDay,
   type BookFormat,
 } from "@/utils/booking";
-import { feeFor, type PlanFees } from "@/utils/bookPlan";
+import { sessionFees, type PlanFees } from "@/utils/bookPlan";
+import { feeRows } from "@/utils/fees";
+import { feeAmountText } from "@/utils/feeDisplay";
 import { addDaysISO, formatClock, formatDayISO, plural } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
 import { card, dayTile, dayTileNumber, dayTileWeekday, iconButton, meta, primaryButton, segButton, segGroup, textButton, timeTile, timeTileNote } from "@/components/schedule/styles";
@@ -55,7 +57,7 @@ export const TimePicker = ({
   onRequestTime: () => void;
   /** Name of another coach the family has picks with; times here can't be added until those are done. */
   lockedBy: string | null;
-  fees?: PlanFees;
+  fees: PlanFees;
   useCredits?: boolean;
   /** Parent accounts: "Just Ava and Riley". Self-managed: "Just you and Riley". */
   athleteFirst?: string | null;
@@ -306,7 +308,7 @@ export const TimePicker = ({
                     </div>
                   );
                 }
-                const fee = feeFor(s.price, coach.id, fees);
+                const line = sessionFees(s.price, coach.id, fees);
                 const credit = !group && Boolean(useCredits && coach.credits > 0);
                 return (
                   <Fragment key={s.id}>
@@ -330,7 +332,7 @@ export const TimePicker = ({
                           </span>
                         </span>
                         <span className="text-label-sm text-dark">
-                          {credit ? "1 credit" : money(s.price + (credit ? 0 : fee))}
+                          {credit ? "1 credit" : feeAmountText(Boolean(line), fees.error, money((line?.totalCents ?? 0) / 100))}
                         </span>
                       </span>
                       <span
@@ -574,7 +576,7 @@ const SessionDetails = ({
   coach: BookingCoach;
   pillar: string | null;
   timeZone: string;
-  fees?: PlanFees;
+  fees: PlanFees;
   useCredits?: boolean;
   athleteFirst?: string | null;
   col: number;
@@ -590,7 +592,9 @@ const SessionDetails = ({
   const online = session.location === "online";
   const about = session.details.about?.length ? session.details.about : group ? ["Warm-up and skill work", "Game-based practice", "Cool-down and feedback"] : null;
   const credit = !group && Boolean(useCredits && coach.credits > 0);
-  const fee = credit ? 0 : feeFor(session.price, coach.id, fees);
+  const line = credit ? null : sessionFees(session.price, coach.id, fees);
+  // "Includes $6 platform fee and $2.28 card processing."
+  const included = line ? feeRows(line).map((r) => `${money(r.cents / 100)} ${r.label.toLowerCase()}`).join(" and ") : "";
   const who = athleteFirst || "you";
   const ages = session.details.ages ? `Ages ${session.details.ages}, any level` : "Any level";
   const row = (Icon: typeof Clock, a: string, b: string) => (
@@ -659,10 +663,12 @@ const SessionDetails = ({
       <span className={meta}>Bring: {(session.details.bring ?? copy.bring).toLowerCase()}</span>
       <div className="flex items-center justify-between gap-3">
         <span className="flex flex-col gap-1">
-          <b className="text-highlight">{credit ? "1 credit" : money(session.price + fee)}</b>
+          <b className="text-highlight">
+            {credit ? "1 credit" : feeAmountText(Boolean(line), fees.error, money((line?.totalCents ?? 0) / 100))}
+          </b>
           <span className={meta}>
             {group ? "Per athlete. " : ""}
-            {fee ? `Includes ${money(fee)} platform fee. ` : ""}
+            {included ? `Includes ${included}. ` : ""}
             {coach.needsRequest ? `Charged only if ${first} accepts` : "Charged when you check out"}
           </span>
         </span>

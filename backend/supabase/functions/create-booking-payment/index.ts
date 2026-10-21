@@ -2,6 +2,8 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient as SupabaseClientOf } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { checkoutExpiry, idempotencyKey, idsFromMetadata } from "../_shared/checkout.ts";
+import { loadFeeConfig } from "../_shared/fee_config.ts";
+import { checkoutFees, type FeeConfig, feeConfigFromMetadata, feeConfigMetadata, toCents } from "../_shared/fees.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -52,34 +54,6 @@ const extractPaymentIntentId = (session: Stripe.Checkout.Session): string | null
   return null;
 };
 
-const parsePercent = (value: unknown): number | null => {
-  const num = Number.parseFloat(String(value ?? ""));
-  return Number.isFinite(num) ? num : null;
-};
-
-const fetchFeePercents = async (client: SupabaseClient) => {
-  let platformFeePerc = 0;
-  let stripeFeePerc = 0;
-  let stripeFeeFixed = 0;
-  const { data: feeRows, error: feeErr } = await client
-    .from("configurations" as any)
-    .select("key,value")
-    .in("key", ["platform_fees", "stripe_fees", "stripe_fee_fixed"]);
-
-  if (feeErr) throw feeErr;
-
-  feeRows?.forEach((row) => {
-    const v = Number.parseFloat(row.value);
-    if (Number.isFinite(v)) {
-      if (row.key === "platform_fees") platformFeePerc = v;
-      if (row.key === "stripe_fees") stripeFeePerc = v;
-      if (row.key === "stripe_fee_fixed") stripeFeeFixed = v;
-    }
-  });
-
-  return { platformFeePerc, stripeFeePerc, stripeFeeFixed };
-};
-
 const fetchDefaultGroupCapacity = async (client: SupabaseClient): Promise<number> => {
   try {
     const { data, error } = await client
@@ -99,25 +73,9 @@ const fetchDefaultGroupCapacity = async (client: SupabaseClient): Promise<number
 const waivedCoachesOf = (session: Stripe.Checkout.Session) =>
   new Set(String((session.metadata as any)?.waived_coaches ?? "").split(",").filter(Boolean));
 
-const resolveFeePercents = async (
-  session: Stripe.Checkout.Session,
-  client: SupabaseClient,
-): Promise<{ platformFeePerc: number; stripeFeePerc: number; stripeFeeFixed: number }> => {
-  const metaPlatform = parsePercent((session.metadata as any)?.platform_fee_perc);
-  const metaStripe = parsePercent((session.metadata as any)?.stripe_fee_perc);
-  const metaFixed = parsePercent((session.metadata as any)?.stripe_fee_fixed);
-
-  if (metaPlatform != null && metaStripe != null && metaFixed != null) {
-    return { platformFeePerc: metaPlatform, stripeFeePerc: metaStripe, stripeFeeFixed: metaFixed };
-  }
-
-  const fallback = await fetchFeePercents(client);
-  return {
-    platformFeePerc: metaPlatform ?? fallback.platformFeePerc,
-    stripeFeePerc: metaStripe ?? fallback.stripeFeePerc,
-    stripeFeeFixed: metaFixed ?? fallback.stripeFeeFixed,
-  };
-};
+/** The rates the Checkout was created with (its metadata), else today's rates. */
+const resolveFeeConfig = async (session: Stripe.Checkout.Session, client: SupabaseClient): Promise<FeeConfig> =>
+  feeConfigFromMetadata(session.metadata) ?? (await loadFeeConfig(client));
 
 /** Payment rows (fees per booking) for the bookings a Checkout covers. */
 const buildPaymentRows = async (
@@ -126,7 +84,7 @@ const buildPaymentRows = async (
   bookingIds: string[],
 ) => {
   if (!bookingIds.length) return [];
-  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = await resolveFeePercents(session, client);
+  const feeConfig = await resolveFeeConfig(session, client);
 
   const { data: bookings, error: bookingFetchErr } = await client
     .from("coach_slot_bookings" as any)
@@ -147,33 +105,30 @@ const buildPaymentRows = async (
   const occurrenceById = new Map((occurrences || []).map((occ: any) => [occ.id, occ]));
   const waived = waivedCoachesOf(session);
 
-  let fixedApplied = false;
-  return bookings
-    .map((booking: any) => {
-      const occ = occurrenceById.get(booking.occurrence_id);
-      if (!occ) return null;
-      const baseAmount = Number(occ.price || 0);
-      // Coaches' own clients pay no platform fee (one checkout can cover several coaches).
-      const platformPerc = waived.has(booking.coach_id) ? 0 : platformFeePerc;
-      const platformFeeAmount = Number((baseAmount * platformPerc / 100).toFixed(2));
-      // Percent processing on every line; the $0.30 once-per-Checkout sits on the first row.
-      const percentStripe = Number((baseAmount * stripeFeePerc / 100).toFixed(2));
-      const fixed = !fixedApplied && stripeFeeFixed > 0 ? Number(stripeFeeFixed.toFixed(2)) : 0;
-      if (fixed) fixedApplied = true;
-      const stripeFeeAmount = Number((percentStripe + fixed).toFixed(2));
-      const totalAmount = Number((baseAmount + platformFeeAmount + stripeFeeAmount).toFixed(2));
-      return {
-        booking_id: booking.id,
-        slot_id: booking.occurrence_id,
-        coach_offer_amount: baseAmount,
-        platform_fee_amount: platformFeeAmount,
-        stripe_price_amount: stripeFeeAmount,
-        total_amount: totalAmount,
-        currency: "USD",
-        type: "booking_credit",
-      };
-    })
-    .filter(Boolean);
+  const charged = (bookings as any[]).filter((booking) => occurrenceById.has(booking.occurrence_id));
+  // Same fee math as the Checkout: coaches' own clients pay no platform fee (one checkout can
+  // cover several coaches) and processing is spread over the rows so they add up to the charge.
+  const fees = checkoutFees(
+    charged.map((booking) => ({
+      listCents: toCents(Number((occurrenceById.get(booking.occurrence_id) as any).price || 0)),
+      kind: "session" as const,
+      platformWaived: waived.has(booking.coach_id),
+    })),
+    feeConfig,
+  );
+  return charged.map((booking, i) => {
+    const line = fees.lines[i];
+    return {
+      booking_id: booking.id,
+      slot_id: booking.occurrence_id,
+      coach_offer_amount: line.listCents / 100,
+      platform_fee_amount: line.platformCents / 100,
+      stripe_price_amount: line.processingCents / 100,
+      total_amount: line.totalCents / 100,
+      currency: "USD",
+      type: "booking_credit",
+    };
+  });
 };
 
 /**
@@ -474,15 +429,22 @@ const settleRequestHold = async (sessionId: string, client: SupabaseClient, stri
 
   const session = await stripe.checkout.sessions.retrieve(sessionId);
   if (intent.status === "requires_capture") {
-    const { platformFeePerc, stripeFeePerc } = await resolveFeePercents(session, client);
+    const feeConfig = await resolveFeeConfig(session, client);
     const waived = waivedCoachesOf(session);
-    const factorFor = (coachId: string) => 1 + (waived.has(coachId) ? 0 : platformFeePerc) / 100 + stripeFeePerc / 100;
     const { data: occs } = await client
       .from("coach_availability_slot_occurrences" as any)
       .select("id, price")
       .in("id", accepted.map((r) => r.occurrence_id));
     const priceOf = new Map(((occs ?? []) as any[]).map((o) => [o.id, Number(o.price || 0)]));
-    const amount = accepted.reduce((sum, r) => sum + Math.round((priceOf.get(r.occurrence_id) ?? 0) * factorFor(r.coach_id) * 100), 0);
+    // What the accepted requests would have cost as their own Checkout (same as the payment rows).
+    const amount = checkoutFees(
+      accepted.map((r) => ({
+        listCents: toCents(priceOf.get(r.occurrence_id) ?? 0),
+        kind: "session" as const,
+        platformWaived: waived.has(r.coach_id),
+      })),
+      feeConfig,
+    ).totalCents;
     await stripe.paymentIntents.capture(
       intentId,
       { amount_to_capture: Math.min(amount, intent.amount_capturable) },
@@ -1269,7 +1231,7 @@ serve(async (req) => {
     // Before credits are counted, so credits held by the replaced Checkout count again.
     if (!coversAllPending) await releaseOwnHolds();
 
-    const { platformFeePerc: basePlatformFeePerc, stripeFeePerc, stripeFeeFixed } = await fetchFeePercents(supabaseClient);
+    const feeConfig = await loadFeeConfig(supabaseClient);
 
     // Platform fee waiver: confirmed offline coach-client relationship for this exact
     // (coach, athlete) pair, and only when it is the caller's own athlete profile; otherwise
@@ -1313,8 +1275,8 @@ serve(async (req) => {
       /** pending_offline until the coach confirms; legacy booking-only stays direct. */
       offlinePending: boolean;
       directRequest: boolean;
-      platformFeePerc: number;
-      feeFactor: number;
+      /** Existing client of this coach: no platform fee. */
+      platformWaived: boolean;
       credits: number;
       /** Credits by kind: the coach's own (any session), academy 1-on-1 and academy group passes. */
       creditCounts: { own: number; individual: number; group: number };
@@ -1332,7 +1294,7 @@ serve(async (req) => {
             .eq("status", "confirmed")
             .limit(1)
         : { data: [] };
-      const platformFeePerc = waiverRows?.length ? 0 : basePlatformFeePerc;
+      const platformWaived = Boolean(waiverRows?.length);
 
       // A family already trains with the coach when they have a booked or completed session,
       // or a confirmed referral (ATH-71). Only those families can book "clients" sessions,
@@ -1396,8 +1358,7 @@ serve(async (req) => {
         mode,
         offlinePending: offlineOk && !legacyDirect,
         directRequest: legacyDirect && needsRequest,
-        platformFeePerc,
-        feeFactor: 1 + platformFeePerc / 100 + stripeFeePerc / 100,
+        platformWaived,
         credits,
         creditCounts,
       });
@@ -1410,25 +1371,18 @@ serve(async (req) => {
     const firstCoachId = plans[0].coachId;
     const planFor = (cid: string) => plans.find((p) => p.coachId === cid)!;
     // Coaches whose fee is waived for this family (their own clients); payment rows use it.
-    const waivedCoaches = plans.filter((p) => p.platformFeePerc === 0).map((p) => p.coachId).join(",");
-    const fixedCents = Math.round(Math.max(0, stripeFeeFixed) * 100);
-    // Percent on every line; the fixed $0.30 is added once on the first paid line (index 0).
-    const lineItem = (occ: (typeof occurrences)[number], note = "", index = 0) => {
-      const unit =
-        Math.round(Number(occ.price || 0) * planFor(occ.coach_id).feeFactor * 100) +
-        (index === 0 ? fixedCents : 0);
-      return {
-        price_data: {
-          currency: "usd",
-          unit_amount: unit,
-          product_data: {
-            name: occ.session_name || "Coaching Session",
-            description: `${occ.session_type || "session"} on ${occ.occurrence_date}${note}`,
-          },
+    const waivedCoaches = plans.filter((p) => p.platformWaived).map((p) => p.coachId).join(",");
+    const lineItem = (occ: (typeof occurrences)[number], unit: number, note = "") => ({
+      price_data: {
+        currency: "usd",
+        unit_amount: unit,
+        product_data: {
+          name: occ.session_name || "Coaching Session",
+          description: `${occ.session_type || "session"} on ${occ.occurrence_date}${note}`,
         },
-        quantity: 1,
-      };
-    };
+      },
+      quantity: 1,
+    });
     const origin = req.headers.get("origin");
     const json = (body: unknown) =>
       new Response(JSON.stringify(body), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
@@ -1485,12 +1439,19 @@ serve(async (req) => {
     const FREE_PAYMENT_STATUS = "outside";
     const expiry = checkoutExpiry(Date.now());
     const checkoutTotal = (occs: typeof occurrences, note = "") => {
-      const lines = occs.map((occ, i) => lineItem(occ, note, i));
-      const cents = lines.reduce((sum, line) => sum + line.price_data.unit_amount, 0);
-      if (cents < MIN_CHARGE_CENTS) {
+      // The shared fee math; the lines add up to its total, which is what the family was shown.
+      const fees = checkoutFees(
+        occs.map((occ) => ({
+          listCents: toCents(Number(occ.price || 0)),
+          kind: "session" as const,
+          platformWaived: planFor(occ.coach_id).platformWaived,
+        })),
+        feeConfig,
+      );
+      if (fees.totalCents < MIN_CHARGE_CENTS) {
         throw new Error("This total is below the $0.50 card minimum, so it can't be paid by card. Ask the coach to check the price.");
       }
-      return lines;
+      return occs.map((occ, i) => lineItem(occ, fees.lines[i].totalCents, note));
     };
 
     // In-app requests (ATH-85): the family's card is held on Stripe's page and charged only
@@ -1527,9 +1488,7 @@ serve(async (req) => {
             athlete_id: athleteId,
             user_id: user.id,
             notes: String(notes || "").slice(0, 450),
-            platform_fee_perc: basePlatformFeePerc.toString(),
-            stripe_fee_perc: stripeFeePerc.toString(),
-            stripe_fee_fixed: stripeFeeFixed.toString(),
+            ...feeConfigMetadata(feeConfig),
             waived_coaches: waivedCoaches,
           },
         },
@@ -1663,9 +1622,7 @@ serve(async (req) => {
             availability_id: toPay[0].availability_id ?? "",
             weekly_slot_id: toPay[0].weekly_slot_id ?? "",
             athlete_id: athleteId,
-            platform_fee_perc: basePlatformFeePerc.toString(),
-            stripe_fee_perc: stripeFeePerc.toString(),
-            stripe_fee_fixed: stripeFeeFixed.toString(),
+            ...feeConfigMetadata(feeConfig),
             waived_coaches: waivedCoaches,
             credit_booking_ids: metadataList(creditIds),
           },

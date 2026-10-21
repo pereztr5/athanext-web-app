@@ -1,5 +1,6 @@
 import type { BookingReceiptData, ReceiptBooking } from "@/api/receipts";
-import { feeFor, type PlanFees } from "@/utils/bookPlan";
+import type { PlanFees } from "@/utils/bookPlan";
+import { checkoutFees, feeRows, toCents } from "@/utils/fees";
 import { zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import type { CalendarEvent } from "@/utils/ics";
 import { formatLocationSentence } from "@/utils/sessionFormatting";
@@ -36,8 +37,11 @@ export interface ReceiptModel {
   /** Base price of the sessions paid in the app. */
   sessions: number;
   credits: number;
-  fees: number;
+  platformFees: number;
+  processingFees: number;
   total: number;
+  /** False when an unrecorded card payment can't be priced yet (fee rates not loaded): show no amounts. */
+  amountsKnown: boolean;
   direct: DirectPayment[];
   /** A Stripe payment that hasn't been confirmed yet. */
   pending: boolean;
@@ -83,16 +87,30 @@ export const buildReceiptModel = (data: BookingReceiptData, timeZone: string, fe
     };
   });
 
+  // Recorded payment rows are what was charged; card payments not recorded yet are priced as
+  // one Checkout with the shared fee math (what create-booking-payment charges).
+  const cardPaid = data.bookings.filter(isCardPaid);
+  const unrecorded = cardPaid.filter((b) => b.charged == null);
+  const estimate =
+    unrecorded.length && fees?.config
+      ? checkoutFees(
+          unrecorded.map((b) => ({ listCents: toCents(b.price), kind: "session" as const, platformWaived: fees.waived.has(b.coach.id) })),
+          fees.config
+        )
+      : null;
   let sessions = 0;
-  let feeTotal = 0;
-  let total = 0;
+  let platformFees = (estimate?.platformCents ?? 0) / 100;
+  let processingFees = (estimate?.processingCents ?? 0) / 100;
+  let total = (estimate?.totalCents ?? 0) / 100;
   const direct = new Map<string, DirectPayment>();
   data.bookings.forEach((b) => {
     if (isCardPaid(b)) {
-      const fee = b.fee ?? feeFor(b.price, b.coach.id, fees);
       sessions += b.price;
-      feeTotal += fee;
-      total += b.charged ?? b.price + fee;
+      if (b.charged != null) {
+        platformFees += b.platformFee ?? 0;
+        processingFees += b.processingFee ?? 0;
+        total += b.charged;
+      }
     } else if (!isRequest(b) && b.paymentStatus === "direct") {
       const entry = direct.get(b.coach.id) ?? {
         coachId: b.coach.id,
@@ -120,11 +138,13 @@ export const buildReceiptModel = (data: BookingReceiptData, timeZone: string, fe
     requests,
     sessions: cents(sessions),
     credits,
-    fees: cents(feeTotal),
+    platformFees: cents(platformFees),
+    processingFees: cents(processingFees),
     total: cents(total),
+    amountsKnown: !unrecorded.length || Boolean(estimate),
     direct: [...direct.values()],
     pending: data.bookings.some((b) => b.status === "pending_payment" || (isCardPaid(b) && b.paymentStatus === "unpaid")),
-    isReceipt: total > 0 || credits > 0,
+    isReceipt: total > 0 || unrecorded.some((b) => b.price > 0) || credits > 0,
   };
 };
 
@@ -149,8 +169,12 @@ export const receiptText = (model: ReceiptModel, supportEmail?: string) => {
   if (model.isReceipt) {
     if (model.sessions) rows.push(`Sessions: ${formatMoney(model.sessions)}`);
     if (model.credits) rows.push(`Package credits used: ${model.credits}`);
-    if (model.fees) rows.push(`Platform fee: ${formatMoney(model.fees)}`);
-    rows.push(`Total paid: ${formatMoney(model.total)}`, "");
+    if (model.amountsKnown) {
+      feeRows({ platformCents: toCents(model.platformFees), processingCents: toCents(model.processingFees) }).forEach((r) =>
+        rows.push(`${r.label}: ${formatMoney(r.cents / 100)}`)
+      );
+      rows.push(`Total paid: ${formatMoney(model.total)}`, "");
+    }
   }
   model.direct.forEach((d) => rows.push(`Pay ${d.firstName} directly: ${formatMoney(d.amount)}. ${d.note || "Not charged in AthaNext."}`, ""));
   if (supportEmail) rows.push(`Questions go to ${supportEmail}`);

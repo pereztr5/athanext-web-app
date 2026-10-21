@@ -13,7 +13,9 @@ import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useToast } from "@/hooks/use-toast";
 import { cn, getInitials } from "@/lib/utils";
 import { packageSaving, savingLine, type PackageSaving } from "@/utils/organizations";
-import { computeSessionPrice } from "@/utils/referralHelpers";
+import { money } from "@/utils/booking";
+import { feeAmountText } from "@/utils/feeDisplay";
+import { FEE_LABELS, feeLine, toCents } from "@/utils/fees";
 
 export type PackageCoach = { id: string; name: string; price: number; photo?: string | null };
 
@@ -65,8 +67,9 @@ export const OrgPackageCard = ({
   onBuy: () => void;
   buying?: boolean;
 }) => {
-  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
-  const due = computeSessionPrice(pkg.price, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
+  // Academy packages: list price + the platform fee only (card processing is absorbed).
+  const { config, error } = useFeeConfig();
+  const fees = config ? feeLine(toCents(pkg.price), "org_package", config) : null;
   const k = packageSaving(pkg, coaches, groupPrices);
   const who = coaches.filter((c) => pkg.coachIds.includes(c.id));
   const line = savingLine(k);
@@ -81,9 +84,11 @@ export const OrgPackageCard = ({
           </span>
         </span>
         <span className="flex min-w-0 flex-col items-end gap-0.5">
-          <span className="flex-none text-highlight">{dollars(due)}</span>
-          {due !== pkg.price ? (
-            <span className="text-caption text-dark-300">list {dollars(pkg.price)} + fees</span>
+          <span className="flex-none text-highlight">{feeAmountText(Boolean(fees), error, money((fees?.totalCents ?? 0) / 100))}</span>
+          {fees?.platformCents ? (
+            <span className="text-caption text-dark-300">
+              list {money(fees.listCents / 100)} + {money(fees.platformCents / 100)} {FEE_LABELS.platform.toLowerCase()}
+            </span>
           ) : null}
         </span>
       </div>

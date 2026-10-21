@@ -81,7 +81,7 @@ const InviteClaim = () => {
       <Shell>
         <h1 className={titleClass}>You're all set with {coachLabel}</h1>
         <p className={bodyClass}>
-          Sessions you book with {coachLabel} have no platform service fee. Card processing still applies.
+          Sessions you book with {coachLabel} have no platform fee. Card processing still applies.
         </p>
         <div className="flex flex-wrap gap-[10px]">
           <Button asChild size="lg"><Link to={coachPath}>Book {coachLabel}</Link></Button>
@@ -134,7 +134,7 @@ const InviteClaim = () => {
         {coachLabel} invited you to AthaNext
       </h1>
       <p className={bodyClass}>
-        As an existing client, you book {coachLabel} with no platform service fee. This invite is for{" "}
+        As an existing client, you book {coachLabel} with no platform fee. This invite is for{" "}
         <span className="font-medium text-dark">{invite.masked_email}</span>.
       </p>
     </>

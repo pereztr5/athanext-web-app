@@ -35,7 +35,8 @@ import { useToast } from "@/hooks/use-toast";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useMyReferrals } from "@/hooks/useReferrals";
-import { computeSessionPrice } from "@/utils/referralHelpers";
+import { feeAmountText } from "@/utils/feeDisplay";
+import { feeLine, toCents, type FeeConfig } from "@/utils/fees";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
@@ -230,32 +231,15 @@ const PayNowAction = ({
   </span>
 );
 
-const calculatePlatformFee = (
-  rate: number | null | undefined,
-  platformFeePerc = 0,
-  stripeFeePerc = 0,
-  waived = false,
-  stripeFeeFixed = 0,
-) => {
-  // Same total create-booking-payment sends to Stripe (platform fee waived for existing clients).
-  const p = computeSessionPrice(Number(rate) || 0, platformFeePerc || 0, stripeFeePerc || 0, waived, stripeFeeFixed || 0);
-  return { baseRate: p.base, platformFee: p.platformFee + p.stripeFee, totalRate: p.total };
-};
+/** What one athlete pays for a session (shared fee math, no platform fee for existing clients); null until the rates load. */
+const athletePrice = (rate: number | null | undefined, fees: FeeConfig | null, waived = false) =>
+  fees ? feeLine(toCents(Number(rate) || 0), "session", fees, waived).totalCents / 100 : null;
 
-const sessionPriceLabel = (
-  session: UISession,
-  role: UserRole,
-  platformFeePerc: number,
-  stripeFeePerc: number,
-  waived = false,
-  stripeFeeFixed = 0,
-) =>
-  formatWholePrice(
-    role === PROFILE_TYPE.athlete
-      ? calculatePlatformFee(session.rate, platformFeePerc, stripeFeePerc, waived, stripeFeeFixed).totalRate
-      : session.rate,
-    session.currency
-  );
+const sessionPriceLabel = (session: UISession, role: UserRole, fees: FeeConfig | null, waived = false) => {
+  if (role !== PROFILE_TYPE.athlete) return formatWholePrice(session.rate, session.currency);
+  const price = athletePrice(session.rate, fees, waived);
+  return feeAmountText(price != null, false, formatWholePrice(price ?? 0, session.currency));
+};
 
 const PriceBlock = ({ price }: { price: string }) => (
   <div className="flex flex-col items-start gap-1.5 md:items-end">
@@ -285,8 +269,7 @@ const SessionCard = ({
   now,
   onSelect,
   role,
-  platformFeePerc = 0,
-  stripeFeePerc = 0,
+  feeConfig = null,
   waived = false,
   canPay = false,
   paying = false,
@@ -296,8 +279,7 @@ const SessionCard = ({
   now: Date;
   onSelect: (session: UISession) => void;
   role: UserRole;
-  platformFeePerc?: number;
-  stripeFeePerc?: number;
+  feeConfig?: FeeConfig | null;
   waived?: boolean;
   canPay?: boolean;
   paying?: boolean;
@@ -313,7 +295,7 @@ const SessionCard = ({
       : startMeta?.startsIn && soon
         ? `Starts in ${startMeta.startsIn}`
         : null;
-  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
+  const price = sessionPriceLabel(session, role, feeConfig, waived);
   const showPay = canPay && Boolean(onPay);
 
   return (
@@ -322,7 +304,7 @@ const SessionCard = ({
         <SessionTitleRow session={session}>
           {statusLabel ? <BrandPill tone="amber">{statusLabel}</BrandPill> : null}
           {role !== PROFILE_TYPE.coach ? <BookingStatePill session={session} /> : null}
-          {role === PROFILE_TYPE.athlete && waived ? <BrandPill tone="green">No service fee</BrandPill> : null}
+          {role === PROFILE_TYPE.athlete && waived ? <BrandPill tone="green">No platform fee</BrandPill> : null}
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
           <CardField label="Date" value={formatWeekdayDate(session.start, now, timeZone)} />
@@ -353,8 +335,7 @@ const PastDraftCard = ({
   role,
   hasFeedbackSubmitted,
   showFeedbackAction,
-  platformFeePerc = 0,
-  stripeFeePerc = 0,
+  feeConfig = null,
   waived = false,
   canPay = false,
   paying = false,
@@ -366,15 +347,14 @@ const PastDraftCard = ({
   role: 'coach' | 'athlete' | null;
   hasFeedbackSubmitted: boolean;
   showFeedbackAction: boolean;
-  platformFeePerc?: number;
-  stripeFeePerc?: number;
+  feeConfig?: FeeConfig | null;
   waived?: boolean;
   canPay?: boolean;
   paying?: boolean;
   onPay?: () => void;
 }) => {
   const timeZone = useViewerTimeZone();
-  const price = sessionPriceLabel(session, role, platformFeePerc, stripeFeePerc, waived);
+  const price = sessionPriceLabel(session, role, feeConfig, waived);
   const showPay = canPay && Boolean(onPay);
   // Coaches open the session page for every session; it has Add or Edit feedback (ATH-80).
   const openDetails = () => onSelect(session);
@@ -516,7 +496,7 @@ const MySessions = () => {
     edit_count: number | null;
   } | null>(null);
   const [isLoadingExistingFeedback, setIsLoadingExistingFeedback] = useState(false);
-  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
+  const { config: feeConfig, error: feeError } = useFeeConfig();
 
   const { toast } = useToast();
   const [payingBookingId, setPayingBookingId] = useState<string | null>(null);
@@ -1121,16 +1101,12 @@ const MySessions = () => {
           {selectedSessionSafe && (() => {
             const isAthleteView = role === PROFILE_TYPE.athlete;
             const perAthleteRate = isAthleteView
-              ? calculatePlatformFee(
-                  selectedSessionSafe.rate,
-                  platformFeePerc,
-                  stripeFeePerc,
-                  waivedCoachIds.has(selectedSessionSafe.coachId),
-                  stripeFeeFixed,
-                ).totalRate
+              ? athletePrice(selectedSessionSafe.rate, feeConfig, waivedCoachIds.has(selectedSessionSafe.coachId))
               : Number(selectedSessionSafe.rate) || 0;
+            const priceText = (amount: number) =>
+              feeAmountText(perAthleteRate != null, feeError, formatWholePrice(amount, selectedSessionSafe.currency));
             const athleteCount = Number(selectedSessionSafe.totalAthletes) || 0;
-            const totalLabel = `${formatWholePrice(perAthleteRate * athleteCount, selectedSessionSafe.currency)} for ${athleteCount} ${
+            const totalLabel = `${priceText((perAthleteRate ?? 0) * athleteCount)} for ${athleteCount} ${
               athleteCount === 1 ? "athlete" : "athletes"
             }`;
             const PillarIcon = selectedSessionSafe.pillarSlot
@@ -1184,7 +1160,7 @@ const MySessions = () => {
                     </div>
                     <div className="flex flex-none flex-col items-end gap-1.5 text-right">
                       <p className="text-stat tabular-nums">
-                        {formatWholePrice(perAthleteRate, selectedSessionSafe.currency)}
+                        {priceText(perAthleteRate ?? 0)}
                       </p>
                       <p className="text-caption text-dark-300">per athlete</p>
                     </div>

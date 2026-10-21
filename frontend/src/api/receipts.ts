@@ -25,8 +25,9 @@ export interface ReceiptBooking {
   price: number;
   /** Fee-inclusive amount charged, once the payment row is recorded. */
   charged: number | null;
-  /** Platform + processing fee, once the payment row is recorded. */
-  fee: number | null;
+  /** Platform fee and card processing, once the payment row is recorded. */
+  platformFee: number | null;
+  processingFee: number | null;
 }
 
 export interface BookingReceiptData {
@@ -46,8 +47,6 @@ type Row = Record<string, any>;
 const num = (value: unknown): number | null => (value == null || value === "" ? null : Number(value));
 
 const toBooking = (row: Row): ReceiptBooking => {
-  const platform = num(row.platform_fee);
-  const processing = num(row.processing_fee);
   return {
     id: row.id,
     athleteId: row.athlete_id,
@@ -72,7 +71,8 @@ const toBooking = (row: Row): ReceiptBooking => {
     place: row.place?.trim() || null,
     price: Number(row.price) || 0,
     charged: num(row.charged),
-    fee: platform == null && processing == null ? null : (platform ?? 0) + (processing ?? 0),
+    platformFee: num(row.platform_fee),
+    processingFee: num(row.processing_fee),
   };
 };
 

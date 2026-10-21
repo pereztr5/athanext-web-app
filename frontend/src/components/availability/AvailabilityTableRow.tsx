@@ -13,7 +13,8 @@ import { formatTimeSpan, formatWholePrice } from '@/utils/sessionFormatting';
 import { formatSlotForViewer } from '@/utils/viewerTime';
 import { useViewerTimeZone } from '@/hooks/useViewerTimeZone';
 import { getTodayISODate, isBookingWindowClosed, parseISODateLocal } from '@/utils/dateHelpers';
-import { computeSessionPrice } from "@/utils/referralHelpers";
+import { feeAmountText } from "@/utils/feeDisplay";
+import { feeLine, toCents, type FeeConfig } from "@/utils/fees";
 
 interface AvailabilityTableRowProps {
   slot: CoachAvailabilitySlot;
@@ -22,9 +23,9 @@ interface AvailabilityTableRowProps {
   showActions?: boolean;
   slotStatus?: SlotBookingStatus;
   isStatusLoading?: boolean;
-  platformFeePerc?: number;
-  stripeFeePerc?: number;
-  stripeFeeFixed?: number;
+  /** Fee rates for the athlete price (null while loading). */
+  feeConfig?: FeeConfig | null;
+  feeError?: boolean;
   /** Confirmed coach-client pair: no platform fee (card processing still applies). */
   platformFeeWaived?: boolean;
   appearance: "athlete" | "coach";
@@ -38,9 +39,8 @@ export function AvailabilityTableRow({
   showActions = true,
   slotStatus,
   isStatusLoading = false,
-  platformFeePerc = 0,
-  stripeFeePerc = 0,
-  stripeFeeFixed = 0,
+  feeConfig = null,
+  feeError = false,
   platformFeeWaived = false,
   appearance,
   onDelete,
@@ -69,10 +69,11 @@ export function AvailabilityTableRow({
     ? parseISODateLocal(slot.occurrence_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
     : '';
   const basePrice = Number(slot.price) || 0;
-  // Athletes see what Stripe will charge; coaches managing slots see their base price.
-  const displayPrice = onBookSlot
-    ? computeSessionPrice(basePrice, platformFeePerc || 0, stripeFeePerc || 0, platformFeeWaived, stripeFeeFixed || 0).total
-    : basePrice;
+  // Athletes see what Stripe will charge (shared fee math); coaches managing slots see their base price.
+  const athleteFees = onBookSlot && feeConfig ? feeLine(toCents(basePrice), "session", feeConfig, platformFeeWaived) : null;
+  const priceLabel = onBookSlot
+    ? feeAmountText(Boolean(athleteFees), feeError, formatWholePrice((athleteFees?.totalCents ?? 0) / 100))
+    : formatWholePrice(basePrice);
 
   let disableBooking = isDisabled || isChecking;
   let bookLabel = "Book";
@@ -130,9 +131,9 @@ export function AvailabilityTableRow({
         {slot.pillar_slot || '-'}
       </TableCell>
       <TableCell className={textCell}>
-        {formatWholePrice(displayPrice)}
+        {priceLabel}
         {onBookSlot && platformFeeWaived ? (
-          <div className="mt-[2px] text-caption text-success-700">No service fee</div>
+          <div className="mt-[2px] text-caption text-success-700">No platform fee</div>
         ) : null}
       </TableCell>
       <TableCell className={`${textCell} whitespace-nowrap`}>

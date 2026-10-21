@@ -8,6 +8,7 @@ import { Table, TableBody, TableRow, TableCell } from '@/components/ui/table';
 import { AvailabilityTableHeader } from '@/components/availability/AvailabilityTableHeader';
 import { AvailabilityTableRow } from '@/components/availability/AvailabilityTableRow';
 import { CoachAvailabilitySlot, SlotBookingStatus } from '@/types/availability';
+import type { FeeConfig } from '@/utils/fees';
 
 interface AvailabilityTableProps {
   slots: CoachAvailabilitySlot[];
@@ -16,9 +17,9 @@ interface AvailabilityTableProps {
   showActions?: boolean;
   slotStatusMap?: Record<string, SlotBookingStatus>;
   slotStatusLoading?: boolean;
-  platformFeePerc?: number;
-  stripeFeePerc?: number;
-  stripeFeeFixed?: number;
+  /** Fee rates for the athlete price (null while loading). */
+  feeConfig?: FeeConfig | null;
+  feeError?: boolean;
   platformFeeWaived?: boolean;
   appearance: "athlete" | "coach";
   onDelete?: (slot: CoachAvailabilitySlot) => void;
@@ -31,9 +32,8 @@ export const AvailabilityTable = ({
   showActions = true,
   slotStatusMap,
   slotStatusLoading = false,
-  platformFeePerc = 0,
-  stripeFeePerc = 0,
-  stripeFeeFixed = 0,
+  feeConfig = null,
+  feeError = false,
   platformFeeWaived = false,
   appearance,
   onDelete,
@@ -56,9 +56,8 @@ export const AvailabilityTable = ({
               showActions={hasActions}
               slotStatus={slotStatusMap?.[slot.id]}
               isStatusLoading={slotStatusLoading && slotStatusMap?.[slot.id] === undefined}
-              platformFeePerc={platformFeePerc}
-              stripeFeePerc={stripeFeePerc}
-              stripeFeeFixed={stripeFeeFixed}
+              feeConfig={feeConfig}
+              feeError={feeError}
               platformFeeWaived={platformFeeWaived}
               appearance={appearance}
               onDelete={onDelete}

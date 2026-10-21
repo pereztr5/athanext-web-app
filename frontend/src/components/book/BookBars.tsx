@@ -9,7 +9,7 @@ import { bookableStart, money } from "@/utils/booking";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO } from "@/utils/schedule";
 import { meta, primaryButton } from "@/components/schedule/styles";
-import { bookSum, dueCaption, dueText, firstName, reviewLabel, type BookingPlan } from "./bookSummary";
+import { bookSum, dueCaption, dueText, firstName, planMoney, reviewLabel, type BookingPlan } from "./bookSummary";
 
 /** Phone tab bar is fixed, so these bars are too — sticky would sit behind it (or below the fold). Tablet has no tab bar. */
 const stickyBottom =
@@ -118,8 +118,8 @@ export const PickFoot = ({
       <span className={meta}>
         {count
           ? plan.dueNow || !plan.requests.length
-            ? `Total ${money(plan.dueNow)}`
-            : `${money(plan.ifAccepted)}, charged only if accepted`
+            ? `Total ${planMoney(plan, plan.dueNow)}`
+            : `${planMoney(plan, plan.ifAccepted)}, charged only if accepted`
           : "Times are in your time zone. Free cancellation up to 24 hours before."}
       </span>
     </span>

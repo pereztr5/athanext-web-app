@@ -42,54 +42,6 @@ export type ReferralStatus =
   | "confirmed"
   | "declined";
 
-const round2 = (n: number) => Number(n.toFixed(2));
-
-/**
- * What the family pays for one list price. Percent fees apply to the base;
- * `stripeFeeFixed` is the once-per-Checkout amount (pass it for a single-item
- * charge; leave 0 when the fixed fee is added on the Checkout total instead).
- * The Stripe fee absorbs any rounding cent so the parts add up to `total`.
- */
-export const computeSessionPrice = (
-  base: number,
-  platformFeePerc: number,
-  stripeFeePerc: number,
-  platformFeeWaived = false,
-  stripeFeeFixed = 0,
-) => {
-  const effectivePlatformPerc = platformFeeWaived ? 0 : platformFeePerc;
-  const fixed = round2(Math.max(0, stripeFeeFixed));
-  const total = round2(
-    Math.round(base * (1 + effectivePlatformPerc / 100 + stripeFeePerc / 100) * 100) / 100 + fixed,
-  );
-  const platformFee = round2((base * effectivePlatformPerc) / 100);
-  const stripeFee = round2(total - base - platformFee);
-  return { base, platformFee, stripeFee, stripeFeeFixed: fixed, total };
-};
-
-/**
- * "$50.00 session + $5.00 platform fee + $1.65 processing fee", adding up to
- * computeSessionPrice's total: the last fee shown absorbs any rounding cent.
- */
-export const formatPriceBreakdown = (
-  base: number,
-  platformFeePerc: number,
-  stripeFeePerc: number,
-  platformFeeWaived = false,
-  stripeFeeFixed = 0,
-) => {
-  const money = (value: number) => `$${value.toFixed(2)}`;
-  const roundCents = (value: number) => Math.round(value * 100) / 100;
-  const price = computeSessionPrice(base, platformFeePerc, stripeFeePerc, platformFeeWaived, stripeFeeFixed);
-  const hasProcessingFee = stripeFeePerc > 0 || stripeFeeFixed > 0;
-  const platformFee = hasProcessingFee ? price.platformFee : roundCents(price.total - base);
-  const platformPart = platformFeeWaived ? "no platform fee (existing client)" : `${money(platformFee)} platform fee`;
-  const processingPart = hasProcessingFee
-    ? ` + ${money(roundCents(price.total - base - price.platformFee))} processing fee`
-    : "";
-  return `${money(base)} session + ${platformPart}${processingPart}`;
-};
-
 export const REFERRAL_STATUS_LABELS: Record<ReferralStatus, string> = {
   invited: "Invited",
   pending_confirmation: "Pending confirmation",

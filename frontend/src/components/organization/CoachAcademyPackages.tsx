@@ -11,7 +11,9 @@ import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { packageSaving, savingLine } from "@/utils/organizations";
-import { computeSessionPrice } from "@/utils/referralHelpers";
+import { money } from "@/utils/booking";
+import { feeAmountText } from "@/utils/feeDisplay";
+import { FEE_LABELS, feeLine, toCents } from "@/utils/fees";
 
 const dollars = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 
@@ -28,7 +30,7 @@ const saving = (p: OrgPackage) =>
 export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; canBuy: boolean }) => {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
+  const { config, error } = useFeeConfig();
   const [buying, setBuying] = useState<string | null>(null);
   const query = useQuery({ queryKey: ["coach-org-packages", coachId], queryFn: () => orgPackagesAPI.forCoach(coachId), enabled: Boolean(coachId) });
   const packages = query.data ?? [];
@@ -59,7 +61,8 @@ export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; can
               .filter((p) => (p.orgName ?? "Academy") === org)
               .map((p) => {
                 const line = saving(p);
-                const due = computeSessionPrice(p.price, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
+                // Academy packages: list price + the platform fee only (card processing is absorbed).
+                const fees = config ? feeLine(toCents(p.price), "org_package", config) : null;
                 return (
                   <div key={p.id} className="flex flex-col gap-1.5 rounded-card border border-light-525 bg-light px-3.5 py-4">
                     <b className="text-label-sm">{p.name}</b>
@@ -70,9 +73,11 @@ export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; can
                     {line ? <span className="text-label-xsm text-success-700">{line}</span> : null}
                     <div className="mt-1 flex items-end justify-between gap-2">
                       <span className="flex flex-col">
-                        <span className="text-highlight">{dollars(due)}</span>
-                        {due !== p.price ? (
-                          <span className="text-caption text-dark-300">list {dollars(p.price)} + fees</span>
+                        <span className="text-highlight">{feeAmountText(Boolean(fees), error, money((fees?.totalCents ?? 0) / 100))}</span>
+                        {fees?.platformCents ? (
+                          <span className="text-caption text-dark-300">
+                            list {money(fees.listCents / 100)} + {money(fees.platformCents / 100)} {FEE_LABELS.platform.toLowerCase()}
+                          </span>
                         ) : null}
                       </span>
                       {canBuy ? (

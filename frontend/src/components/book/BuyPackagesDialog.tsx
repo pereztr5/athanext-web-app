@@ -18,7 +18,8 @@ import { useStartCoachChat } from "@/hooks/useStartCoachChat";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import { money } from "@/utils/booking";
-import { computeSessionPrice, formatPriceBreakdown } from "@/utils/referralHelpers";
+import { feeAmountText, formatFeeBreakdown } from "@/utils/feeDisplay";
+import { feeLine, toCents } from "@/utils/fees";
 import { plural } from "@/utils/schedule";
 import { PROFILE_TYPE } from "@/utils/db";
 import { CheckoutTermsLine } from "@/components/legal/LegalLinks";
@@ -52,7 +53,7 @@ export const BuyPackagesDialog = ({
   const { profile } = useProfile();
   const navigate = useNavigate();
   const chat = useStartCoachChat();
-  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
+  const { config: feeConfig, error: feeError } = useFeeConfig();
   const athleteId =
     profile?.type === PROFILE_TYPE.athlete && profile?.data ? ((profile.data as { id?: string }).id ?? undefined) : undefined;
   const { data: referrals } = useMyReferrals(athleteId);
@@ -96,12 +97,10 @@ export const BuyPackagesDialog = ({
   const waived = Boolean(
     shown && (referrals ?? []).some((r) => r.coach_id === shown.id && r.status === "confirmed"),
   );
-  const chosenCharge = chosen
-    ? computeSessionPrice(chosen.total_price / 100, platformFeePerc, stripeFeePerc, waived, stripeFeeFixed)
-    : null;
-  const chosenBreakdown = chosen
-    ? formatPriceBreakdown(chosen.total_price / 100, platformFeePerc, stripeFeePerc, waived, stripeFeeFixed)
-    : null;
+  // What create-package-payment charges (shared fee math); nothing to pay until the rates are loaded.
+  const chosenFees = chosen && feeConfig ? feeLine(toCents(chosen.total_price / 100), "package", feeConfig, waived) : null;
+  const chosenTotal = feeAmountText(Boolean(chosenFees), feeError, money((chosenFees?.totalCents ?? 0) / 100));
+  const chosenBreakdown = chosenFees ? formatFeeBreakdown(chosenFees, "package", waived) : null;
 
   const pay = async () => {
     if (!coach || !chosen) return;
@@ -155,10 +154,10 @@ export const BuyPackagesDialog = ({
             </span>
           </span>
           <span className="text-stat tabular-nums">
-            {money(chosenCharge?.total ?? chosen.total_price / 100)}
+            {chosenTotal}
           </span>
         </div>
-        {chosenBreakdown ? <p className={meta}>{chosenBreakdown.replace(" session", " package")}</p> : null}
+        {chosenBreakdown ? <p className={meta}>{chosenBreakdown}</p> : null}
         <div className="flex flex-col gap-2">
           <span className={label}>Pay with</span>
           <PayMethodList name="package-pay" value={method} onChange={setMethod} applePay={applePay} />
@@ -179,13 +178,14 @@ export const BuyPackagesDialog = ({
         </button>
         {method === "apple" && !paying ? (
           <ApplePayButton
-            label={`Pay ${money(chosenCharge?.total ?? chosen.total_price / 100)} with`}
+            label={`Pay ${chosenTotal} with`}
             className="flex-1 sm:flex-none"
+            disabled={!chosenFees}
             onClick={pay}
           />
         ) : (
-          <button type="button" className={cn(primaryButton, "h-[44px] flex-1 sm:flex-none")} disabled={paying} onClick={pay}>
-            {paying ? "Opening…" : `Pay ${money(chosenCharge?.total ?? chosen.total_price / 100)}`}
+          <button type="button" className={cn(primaryButton, "h-[44px] flex-1 sm:flex-none")} disabled={paying || !chosenFees} onClick={pay}>
+            {paying ? "Opening…" : `Pay ${chosenTotal}`}
           </button>
         )}
       </div>

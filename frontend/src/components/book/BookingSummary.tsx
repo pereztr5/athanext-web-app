@@ -9,7 +9,7 @@ import { bookableStart, money } from "@/utils/booking";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, plural } from "@/utils/schedule";
 import { FeeLines } from "./FeeLines";
-import { firstName, reviewLabel, type BookingPlan } from "./bookSummary";
+import { firstName, planMoney, reviewLabel, type BookingPlan } from "./bookSummary";
 
 const between = "flex items-center justify-between gap-3";
 const total28 = "text-highlight tabular-nums text-dark";
@@ -126,14 +126,14 @@ export const BookingSummary = ({
             {plan.requests.length ? (
               <div className={between}>
                 <span className="text-body-m text-dark-300">{plural(plan.requests.length, "request")}, not charged yet</span>
-                <span className="text-body-m tabular-nums text-dark-200">{money(plan.ifAccepted)}</span>
+                <span className="text-body-m tabular-nums text-dark-200">{planMoney(plan, plan.ifAccepted)}</span>
               </div>
             ) : null}
-            <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} />
+            <FeeLines platformFees={plan.platformFees} processingFees={plan.processingFees} ready={plan.feesReady} error={plan.feesError} />
             <div className="h-px bg-light-525" />
             <div className={cn(between, "items-baseline")}>
               <span className="text-subtitle">{plan.direct.length ? "Due now" : "Total"}</span>
-              <span className={total28}>{money(plan.dueNow)}</span>
+              <span className={total28}>{planMoney(plan, plan.dueNow)}</span>
             </div>
             {plan.direct.length ? (
               <div className={cn(between, "items-baseline")}>

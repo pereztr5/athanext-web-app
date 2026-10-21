@@ -9,7 +9,11 @@ import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { ROUTES } from "@/routes";
 import { BrandPill } from "@/components/brand";
-import { computeSessionPrice } from "@/utils/referralHelpers";
+import { useProfile } from "@/contexts/ProfileContext";
+import { useReferralWaiver } from "@/hooks/useReferrals";
+import { PROFILE_TYPE } from "@/utils/db";
+import { feeAmountText } from "@/utils/feeDisplay";
+import { feeLine, toCents } from "@/utils/fees";
 
 type VerificationStatus = "verifying" | "pending" | "success" | "error";
 
@@ -31,7 +35,12 @@ const PackageConfirmation = () => {
 
   const coachId = pkg?.coach_id || coachIdParam || "";
   const { coach } = useCoachDetails(coachId);
-  const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = useFeeConfig();
+  const { config: feeConfig, error: feeError } = useFeeConfig();
+  const { profile } = useProfile();
+  const athleteId =
+    profile?.type === PROFILE_TYPE.athlete && profile?.data ? ((profile.data as { id?: string }).id ?? undefined) : undefined;
+  // Existing client of this coach: create-package-payment charged no platform fee.
+  const { waived } = useReferralWaiver(athleteId, coachId || undefined);
 
   useEffect(() => {
     if (!sessionId) {
@@ -130,9 +139,9 @@ const PackageConfirmation = () => {
   const coachName = coach?.name || "Your coach";
   const priceLabel = useMemo(() => {
     if (!pkg) return "-";
-    const due = computeSessionPrice(pkg.total_price / 100, platformFeePerc, stripeFeePerc, false, stripeFeeFixed).total;
-    return `$${due.toFixed(2)}`;
-  }, [pkg, platformFeePerc, stripeFeePerc, stripeFeeFixed]);
+    const fees = feeConfig ? feeLine(toCents(pkg.total_price / 100), "package", feeConfig, waived) : null;
+    return feeAmountText(Boolean(fees), feeError, `$${((fees?.totalCents ?? 0) / 100).toFixed(2)}`);
+  }, [pkg, feeConfig, feeError, waived]);
 
   const coachEmail = useMemo(() => {
     if (coach && typeof (coach as any).email === "string") {

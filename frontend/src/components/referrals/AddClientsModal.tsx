@@ -74,7 +74,7 @@ export const AddClientsModal = ({ open, onClose, coachId }: AddClientsModalProps
               ? "Send each client their link. It only works for the email you entered and expires in 14 days."
               : coachId
                 ? "Admin override: clients with an account are confirmed now; others confirm when they sign up with this email."
-                : "Your existing clients book you with no platform service fee once they accept their invite."}
+                : "Your existing clients book you with no platform fee once they accept their invite."}
           </DialogDescription>
         </DialogHeader>
 
