@@ -28,7 +28,8 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
   }
 
   if (!isProfileComplete) {
-    return <Navigate to="/auth?mode=complete-profile" replace />;
+    // Every unfinished account finishes in the sign-up flow (questions, then phone and terms).
+    return <Navigate to="/auth?mode=signup" replace />;
   }
 
   if (requireAdmin) {

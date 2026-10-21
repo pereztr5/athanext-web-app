@@ -36,3 +36,23 @@ test("sign in: a wrong password shows an error and the page stays usable", async
   await expect(page.getByRole("button", { name: /^sign in$/i })).toBeEnabled({ timeout: 15_000 });
   await expect(page).toHaveURL(/\/auth/);
 });
+
+test("forgot password: sending shows Check your email with a resend cooldown", async ({ page }) => {
+  // Answer the reset request here so no email is ever sent.
+  await page.route("**/auth/v1/recover**", (route) =>
+    route.fulfill({ status: 200, contentType: "application/json", body: "{}" })
+  );
+  await page.goto("/forgot-password");
+  await page.locator("#reset-email").fill("nobody@example.com");
+  await page.getByRole("button", { name: /send reset link/i }).click();
+  await expect(page.getByText(/check your email/i).first()).toBeVisible();
+  await expect(page.getByText("nobody@example.com")).toBeVisible();
+  await expect(page.getByRole("button", { name: /resend link in/i })).toBeDisabled();
+  await expect(page.getByRole("button", { name: /back to sign in/i })).toBeVisible();
+  await expectNoSidewaysScroll(page, "forgot password sent");
+});
+
+test("sign in: a password-updated link shows the success notice", async ({ page }) => {
+  await page.goto("/auth?mode=signin&message=password-updated");
+  await expect(page.getByText(/password updated/i)).toBeVisible();
+});

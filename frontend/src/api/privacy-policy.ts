@@ -20,7 +20,11 @@ export interface PrivacyPolicyContent {
  */
 export interface PrivacyPolicyResponse {
   policy: PrivacyPolicyContent;
-  version: number;
+  /**
+   * The published policy's version. privacy_policy has no version column, so its
+   * last_updated date is the version (the terms version is a date too). Null for the demo copy.
+   */
+  version: string | null;
   cached: boolean;
 }
 
@@ -134,7 +138,7 @@ export async function getPrivacyPolicyContent(): Promise<ApiResponse<PrivacyPoli
     return {
       data: {
         policy: policyData,
-        version: 1,
+        version: isFromDatabase ? policyData.last_updated || null : null,
         cached: false,
       },
       error: null,
@@ -147,7 +151,7 @@ export async function getPrivacyPolicyContent(): Promise<ApiResponse<PrivacyPoli
     return {
       data: {
         policy: DEMO_PRIVACY_POLICY,
-        version: 1,
+        version: null,
         cached: false,
       },
       error: null, // Don't show error to user - we have fallback

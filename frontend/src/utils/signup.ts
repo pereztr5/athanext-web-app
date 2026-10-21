@@ -1,7 +1,7 @@
 /**
  * Sign up (WC4 one-question flow): answers collected before the account exists, then
- * written into the profile. Session flags keep Auth from sending a half-finished
- * account to the old complete-profile form.
+ * written into the profile. Every unfinished account (email, Google from either tab,
+ * imported users) finishes here. Answers live in per-tab sessionStorage.
  */
 import { LEVEL_OPTIONS } from "@/constants/pathwayTags";
 
@@ -117,6 +117,40 @@ export const clearSignupSession = () => {
     // ignore
   }
 };
+
+type SignedInUser = {
+  email?: string | null;
+  user_metadata?: Record<string, unknown> | null;
+  app_metadata?: Record<string, unknown> | null;
+  identities?: { provider?: string | null }[] | null;
+};
+
+export const isGoogleUser = (user: SignedInUser | null | undefined) =>
+  user?.app_metadata?.provider === "google" ||
+  Boolean(user?.identities?.some((identity) => identity?.provider === "google"));
+
+/**
+ * Fills the account fields an existing (signed-in) account already has, so the account step
+ * only asks for what's missing. Answers already typed win.
+ */
+export const prefillFromUser = (answers: SignupAnswers, user: SignedInUser): SignupAnswers => {
+  const meta = user.user_metadata ?? {};
+  const fullName = String(meta.full_name ?? meta.name ?? "").trim();
+  const [first = "", ...rest] = fullName.split(/\s+/).filter(Boolean);
+  const phone = typeof meta.phone_number === "string" ? meta.phone_number : "";
+  return {
+    ...answers,
+    first: answers.first || first,
+    last: answers.last || rest.join(" "),
+    email: user.email || answers.email,
+    phone: answers.phone || phone,
+    google: answers.google || isGoogleUser(user) || undefined,
+  };
+};
+
+/** Where the flow opens: a signed-in account with saved answers goes straight to the account step. */
+export const initialSignupStep = (signedIn: boolean, saved: Pick<SignupAnswers, "who"> | null): "who" | "account" =>
+  signedIn && saved?.who ? "account" : "who";
 
 /** Map sign-up level labels onto pathway_tags stored in the DB (shared with the coach profile). */
 export const LEVEL_TO_PATHWAY: Record<string, string> = Object.fromEntries(LEVEL_OPTIONS.map((o) => [o.label, o.tag]));

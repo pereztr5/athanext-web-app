@@ -1,6 +1,6 @@
 /**
  * Athlete Home (ATH-92): the athlete's dashboard and profile in one. Player card with Book a
- * session and Edit profile, a "Finish profile" checklist until it's complete, the next
+ * session and Edit profile (photo included), a "Finish profile" checklist until it's complete, the next
  * session with what they're working on, their coaches, and About.
  */
 import { useEffect, useMemo, useState } from "react";
@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, ChevronRight, Lock, Pencil, Plus, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { athleteHomeAPI, type AthleteProfileEdit } from "@/api/athleteHome";
+import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { card, dialogContent, input, label, meta, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { PATHWAY_TAGS } from "@/constants/pathwayTags";
@@ -348,6 +349,17 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
           </DialogDescription>
         </DialogHeader>
         <div className="flex flex-col gap-3 px-5 pb-5 sm:px-[25px]">
+          <div className="flex items-center gap-3">
+            <Avatar name={athlete.fullName} photo={athlete.photo} size={56} />
+            <EditPhotoButton
+              athleteId={athlete.id}
+              photo={athlete.photo}
+              isParent={isParent}
+              className={cn(secondaryButton, smallButton)}
+            >
+              {athlete.photo ? "Change photo" : "Add a photo"}
+            </EditPhotoButton>
+          </div>
           <div className="grid grid-cols-2 gap-3">
             {field("fullName", "First name", (
               <input

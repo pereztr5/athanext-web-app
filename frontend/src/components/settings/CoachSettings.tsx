@@ -22,6 +22,7 @@ import { PayoutsCard } from "@/components/settings/PayoutsCard";
 import { useAuth } from "@/contexts/AuthContext";
 import { PasswordRequirements } from "@/components/password/PasswordRequirements";
 import { PASSWORD_RULE_MESSAGE, usePasswordValidation } from "@/hooks/usePasswordValidation";
+import { PASSWORD_FALLBACK_MESSAGE } from "@/utils/passwordErrors";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { useToast } from "@/hooks/use-toast";
@@ -642,11 +643,10 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
 
   const updatePassword = useMutation({
     mutationFn: async () => {
+      // changePassword already turns Supabase's error into plain copy (wrong password, same
+      // password, too weak); anything else keeps Supabase's own message.
       const { error } = await changePassword(current, next);
-      if (error) {
-        const message = error instanceof Error ? error.message : "";
-        throw new Error(message === "That password isn't right" ? message : "Couldn't update your password. Try again.");
-      }
+      if (error) throw error instanceof Error ? error : new Error(PASSWORD_FALLBACK_MESSAGE);
     },
     onSuccess: () => {
       resetPw();
@@ -657,10 +657,7 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
         navigate(ROUTES.AUTH);
       }, 2500);
     },
-    onError: (err) => {
-      const message = err instanceof Error ? err.message : "";
-      setPwError(message === "That password isn't right" ? message : "Couldn't update your password. Try again.");
-    },
+    onError: (err) => setPwError(err instanceof Error && err.message ? err.message : PASSWORD_FALLBACK_MESSAGE),
   });
 
   const submitPassword = () => {

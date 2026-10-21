@@ -1,8 +1,8 @@
 import { User } from "@supabase/supabase-js";
 import { QueryClient } from "@tanstack/react-query";
 import { authAPI, apiClient } from "@/api";
-import { strings } from "@/config/strings";
 import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
+import { friendlyPasswordError } from "@/utils/passwordErrors";
 
 // Toast type definition
 export interface ToastFunction {
@@ -13,101 +13,52 @@ export interface ToastFunction {
   }): void;
 }
 
-// Cache for user profiles to prevent duplicate fetches
-const userProfileCache = new Map<string, UserProfile>();
-const profileFetchPromises = new Map<string, Promise<void>>();
+// In-flight profile fetches, so parallel callers share one request. Results are not cached:
+// a stale profile could send a finished account back to sign-up.
+const profileFetchPromises = new Map<string, Promise<UserProfile | null | undefined>>();
 
 /**
- * Fetches user profile from user_profiles table with caching
+ * Fetches user profile from user_profiles table. With `quiet`, a failed fetch keeps the
+ * current profile instead of clearing it (background refreshes).
  */
 export const fetchUserProfile = async (
   userId: string,
-  setUserProfile: (profile: UserProfile | null) => void
+  setUserProfile: (profile: UserProfile | null) => void,
+  options: { quiet?: boolean } = {}
 ): Promise<void> => {
-  // Check cache first
-  const cached = userProfileCache.get(userId);
-  if (cached) {
-    setUserProfile(cached);
-    return;
-  }
-
-  // Check if already fetching
-  const existingPromise = profileFetchPromises.get(userId);
-  if (existingPromise) {
-    await existingPromise;
-    const cachedAfterWait = userProfileCache.get(userId);
-    if (cachedAfterWait) {
-      setUserProfile(cachedAfterWait);
-    }
-    return;
-  }
-
-  const fetchPromise = (async () => {
-    try {
-      const response = await userProfilesAPI.getUserProfile(userId);
-      if (!response.error && response.data) {
-        userProfileCache.set(userId, response.data);
-        setUserProfile(response.data);
-      } else {
-        setUserProfile(null);
+  let fetchPromise = profileFetchPromises.get(userId);
+  if (!fetchPromise) {
+    // undefined = the fetch failed; null = no profile row yet.
+    fetchPromise = (async () => {
+      try {
+        const response = await userProfilesAPI.getUserProfile(userId);
+        if (response.error) return undefined;
+        return response.data ?? null;
+      } catch (err) {
+        console.error("Error fetching user profile:", err);
+        return undefined;
+      } finally {
+        profileFetchPromises.delete(userId);
       }
-    } catch (err) {
-      console.error("Error fetching user profile:", err);
-      setUserProfile(null);
-    } finally {
-      profileFetchPromises.delete(userId);
-    }
-  })();
+    })();
+    profileFetchPromises.set(userId, fetchPromise);
+  }
 
-  profileFetchPromises.set(userId, fetchPromise);
-  await fetchPromise;
+  const profile = await fetchPromise;
+  if (profile === undefined && options.quiet) return;
+  setUserProfile(profile ?? null);
 };
 
 /**
- * Refreshes the current user's profile by clearing cache and re-fetching
+ * Refreshes the current user's profile
  */
 export const refreshUserProfile = async (
   user: User | null,
   setUserProfile: (profile: UserProfile | null) => void
 ): Promise<void> => {
   if (user?.id) {
-    userProfileCache.delete(user.id);
-    await fetchUserProfile(user.id, setUserProfile);
+    await fetchUserProfile(user.id, setUserProfile, { quiet: true });
   }
-};
-
-/**
- * Signs up a new user with email and password
- */
-export const signUp = async (
-  email: string,
-  password: string,
-  toast: ToastFunction,
-  name?: string
-): Promise<{ error: any }> => {
-  const response = await authAPI.signUp({
-    email,
-    password,
-    name: name || email.split("@")[0],
-    emailRedirectTo: `${window.location.origin}/auth?mode=complete-profile`,
-  });
-
-  if (response.error) {
-    toast({
-      title: "Sign up failed",
-      description: response.error.message,
-      variant: "destructive",
-    });
-    return { error: response.error };
-  }
-
-  toast({
-    title: "Check your email",
-    description:
-      "We've sent you a confirmation link to complete your signup.",
-  });
-
-  return { error: null };
 };
 
 /**
@@ -166,9 +117,6 @@ export const signOut = async (
 ): Promise<{ error: any }> => {
   const response = await authAPI.signOut();
 
-  if (user?.id) {
-    userProfileCache.delete(user.id);
-  }
   profileFetchPromises.clear();
 
   // Clear all React Query caches (reviews, coach details, profile, etc.) on sign-out
@@ -200,51 +148,24 @@ export const signOut = async (
  * Requests a password reset email for the given email address
  */
 export const requestPasswordReset = async (
-  email: string,
-  toast: ToastFunction
+  email: string
 ): Promise<{ error: any }> => {
+  // The page shows the result in place (Check your email), so no toast here.
   const response = await authAPI.requestPasswordReset(email);
-
-  if (response.error) {
-    toast({
-      title: "Password reset failed",
-      description: response.error.message,
-      variant: "destructive",
-    });
-    return { error: response.error };
-  }
-
-  toast({
-    title: "Check your email",
-    description: strings.success.checkEmail,
-  });
-
-  return { error: null };
+  return { error: response.error ?? null };
 };
 
 /**
  * Updates the user's password (for password reset flow)
  */
 export const updatePassword = async (
-  newPassword: string,
-  toast: ToastFunction
+  newPassword: string
 ): Promise<{ error: any }> => {
+  // The reset page shows the error next to the form.
   const response = await authAPI.updatePassword(newPassword);
-
   if (response.error) {
-    toast({
-      title: "Could not update password",
-      description: response.error.message,
-      variant: "destructive",
-    });
-    return { error: response.error };
+    return { error: new Error(friendlyPasswordError(response.error.originalError ?? response.error)) };
   }
-
-  toast({
-    title: "Password updated",
-    description: "You can now sign in with your new password.",
-  });
-
   return { error: null };
 };
 
@@ -275,34 +196,19 @@ export const changePassword = async (
     });
 
   if (verifyError) {
-    const text = verifyError.message?.toLowerCase() ?? "";
-    const wrongPassword =
-      verifyError.status === 400 ||
-      text.includes("invalid login") ||
-      text.includes("invalid credentials");
-    return {
-      error: new Error(wrongPassword ? "That password isn't right" : "Couldn't update your password. Try again."),
-    };
+    return { error: new Error(friendlyPasswordError(verifyError)) };
   }
 
   const response = await authAPI.updatePassword(newPassword);
   if (response.error) {
-    return { error: new Error("Couldn't update your password. Try again.") };
+    return { error: new Error(friendlyPasswordError(response.error.originalError ?? response.error)) };
   }
   return { error: null };
 };
 
 /**
- * Clears the user profile cache for a specific user
- */
-export const clearUserProfileCache = (userId: string): void => {
-  userProfileCache.delete(userId);
-};
-
-/**
- * Clears all cached user profiles
+ * Drops any in-flight profile fetches (sign-out)
  */
 export const clearAllUserProfileCaches = (): void => {
-  userProfileCache.clear();
   profileFetchPromises.clear();
 };

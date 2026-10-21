@@ -49,9 +49,10 @@ export async function getTermsAndConditionsContent(): Promise<
     // Table doesn't exist or no data - that's OK, use fallback
   }
 
-  // Return fallback data so page doesn't crash
+  // Return fallback data so page doesn't crash. The demo copy has no version, so sign-up
+  // never records acceptance of text that isn't the published terms.
   return {
-    data: TERMS_AND_CONDITIONS_DATA as TermsAndConditions,
+    data: { ...(TERMS_AND_CONDITIONS_DATA as TermsAndConditions), version: undefined },
     error: null,
   };
 }

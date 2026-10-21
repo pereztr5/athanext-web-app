@@ -4,6 +4,8 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { HomeAthlete } from "@/utils/athleteHome";
+import { ATHLETE_IMAGE_LIMITS } from "@/utils/db";
+import { getStoragePathFromPublicUrl } from "@/utils/storage";
 import { sessionInstantISO } from "@/utils/viewerTime";
 
 type Row = Record<string, any>;
@@ -92,5 +94,44 @@ export const athleteHomeAPI = {
       })
       .eq("id", athleteId);
     if (error) throw error;
+  },
+  /**
+   * Uploads a new athlete photo to athalink-images/athlete-profiles/<user id>-<time>.<ext>
+   * (the storage policy only allows names starting with the uploader's id). An athlete's own
+   * photo is also their account photo; a parent keeps their own.
+   */
+  async uploadPhoto(
+    athleteId: string,
+    file: File,
+    { previousUrl, isAccountPhoto }: { previousUrl: string | null; isAccountPhoto: boolean }
+  ): Promise<string> {
+    if (!file.type.startsWith("image/")) throw new Error("Choose a JPG, PNG or WebP image.");
+    if (file.size > ATHLETE_IMAGE_LIMITS.MAX_PROFILE_IMAGE_SIZE) throw new Error("The photo must be under 8 MB.");
+    const { data: auth } = await supabase.auth.getUser();
+    const userId = auth.user?.id;
+    if (!userId) throw new Error("Sign in again to change the photo.");
+
+    const ext = (file.name.split(".").pop() || "jpg").toLowerCase();
+    const path = `athlete-profiles/${userId}-${Date.now()}.${ext}`;
+    const { error: uploadError } = await supabase.storage
+      .from("athalink-images")
+      .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
+    if (uploadError) throw uploadError;
+    const url = `${supabase.storage.from("athalink-images").getPublicUrl(path).data.publicUrl}?v=${Date.now()}`;
+
+    const { error } = await supabase
+      .from("athlete_profiles")
+      .update({ profile_image_url: url, updated_at: new Date().toISOString() })
+      .eq("id", athleteId);
+    if (error) throw error;
+    if (isAccountPhoto) {
+      const { error: accountError } = await supabase.from("user_profiles").update({ image_url: url }).eq("id", userId);
+      if (accountError) throw accountError;
+    }
+
+    // Best effort: the old file only takes space. Older uploads may not be removable.
+    const oldPath = getStoragePathFromPublicUrl(previousUrl);
+    if (oldPath && oldPath !== path) await supabase.storage.from("athalink-images").remove([oldPath]);
+    return url;
   },
 };

@@ -1,13 +1,14 @@
 /**
- * Athlete Account (Working Copy `a-account`): opened from the avatar. Profile card with View
- * and Edit, then Settings, Help and Sign out.
+ * Athlete Account (Working Copy `a-account`): opened from the avatar. Profile card with Edit
+ * photo, View and Edit, then Settings, Help and Sign out.
  */
 import type { ReactNode } from "react";
 import { Link, Navigate, useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ChevronRight, CircleHelp, Eye, LogOut, Pencil, Settings } from "@/components/icons";
 import { athleteHomeAPI } from "@/api/athleteHome";
-import { card, secondaryButton } from "@/components/schedule/styles";
+import { card, secondaryButton, textButton } from "@/components/schedule/styles";
+import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { PageHeader } from "@/components/ui/page-header";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -86,6 +87,9 @@ const AccountPage = () => {
               {sub ? <span className="text-caption text-dark-300">{sub}</span> : null}
               {isParent && parentName ? (
                 <span className="text-caption text-dark-300">Managed by {parentName}, parent</span>
+              ) : null}
+              {a ? (
+                <EditPhotoButton athleteId={a.id} photo={a.photo} isParent={isParent} className={cn(textButton, "self-start")} />
               ) : null}
             </div>
           </div>

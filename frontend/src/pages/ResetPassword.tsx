@@ -9,6 +9,8 @@ import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import logo from "@/assets/AthaNext-Logo.svg";
+import { PasswordRequirements } from "@/components/password/PasswordRequirements";
+import { PASSWORD_RULE_MESSAGE, usePasswordValidation } from "@/hooks/usePasswordValidation";
 
 type ResetState = "checking" | "ready" | "error";
 
@@ -22,6 +24,8 @@ const ResetPassword = () => {
   const [statusMessage, setStatusMessage] = useState("Checking your reset link…");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const { updatePassword } = useAuth();
+  // The same rules as sign-up and settings: upper, lower, number, symbol, 8+.
+  const { items: passwordRules, allValid: meetsRules } = usePasswordValidation(newPassword);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -85,11 +89,35 @@ const ResetPassword = () => {
           return;
         }
 
+        // Supabase normally signs the link in by itself (hash tokens or ?code=). These are the
+        // fallbacks: a token_hash link (custom email template), raw hash tokens, or an error.
         const hashParams = getRecoveryParams();
-        const type = hashParams.get("type");
+        const searchParams = new URL(window.location.href).searchParams;
+        const tokenHash = searchParams.get("token_hash") ?? hashParams.get("token_hash");
         const accessToken = hashParams.get("access_token");
+        const refreshToken = hashParams.get("refresh_token");
+        const linkError = hashParams.get("error_code") ?? searchParams.get("error_code");
 
-        if (type !== "recovery" || !accessToken) {
+        if (linkError) {
+          if (isMounted) {
+            setStatus("error");
+            setStatusMessage(
+              linkError === "otp_expired"
+                ? "This reset link has expired. Request a new one."
+                : "This reset link is invalid or has already been used."
+            );
+          }
+          return;
+        }
+
+        let verified = false;
+        if (tokenHash) {
+          const { data, error } = await supabase.auth.verifyOtp({ token_hash: tokenHash, type: "recovery" });
+          verified = !error && Boolean(data.session);
+        } else if (accessToken && refreshToken) {
+          const { data, error } = await supabase.auth.setSession({ access_token: accessToken, refresh_token: refreshToken });
+          verified = !error && Boolean(data.session);
+        } else {
           if (isMounted) {
             setStatus("error");
             setStatusMessage("This reset link is invalid or has already been used.");
@@ -97,15 +125,9 @@ const ResetPassword = () => {
           return;
         }
 
-        // Verify the recovery token by exchanging it for a session
-        const { data, error } = await supabase.auth.verifyOtp({
-          token_hash: accessToken,
-          type: "recovery",
-        });
-
         if (!isMounted) return;
 
-        if (error || !data.session) {
+        if (!verified) {
           setStatus("error");
           setStatusMessage("We couldn't verify this link. Request a new reset email.");
           return;
@@ -144,8 +166,8 @@ const ResetPassword = () => {
     event.preventDefault();
     setFormError(null);
 
-    if (newPassword.length < 8) {
-      setFormError(strings.form.validation.passwordTooShort);
+    if (!meetsRules) {
+      setFormError(PASSWORD_RULE_MESSAGE);
       return;
     }
 
@@ -218,6 +240,7 @@ const ResetPassword = () => {
               {showNew ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
             </button>
           </div>
+          {newPassword ? <PasswordRequirements items={passwordRules} /> : null}
         </div>
         <div className="space-y-1.5">
           <Label htmlFor="confirm-password" className="text-label-xsm text-dark-300">

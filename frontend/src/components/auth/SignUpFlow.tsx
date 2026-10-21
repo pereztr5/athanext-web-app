@@ -4,7 +4,7 @@
  * 6-digit email code → families see match cards, coaches see a draft profile.
  * Athletes under 18 email a parent instead. No background-check / admin-review step.
  */
-import { useEffect, useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import {
   ArrowRight,
@@ -57,6 +57,8 @@ import {
   clearSignupSession,
   dobFromAgeTile,
   emptySignupAnswers,
+  initialSignupStep,
+  prefillFromUser,
   readSignupAnswers,
   roleFromWho,
   writeSignupAnswers,
@@ -69,15 +71,55 @@ import {
 const signupCta = cn(buttonVariants({ variant: "default", size: "lg" }), "w-full");
 const wideSecondary = cn(buttonVariants({ variant: "secondary", size: "lg" }), "w-full");
 
+/** Records the Terms and Privacy versions live in the database when the box was ticked. */
 const legalAcceptanceFields = async () => {
   const [termsRes, privacyRes] = await Promise.all([getTermsAndConditionsContent(), getPrivacyPolicyContent()]);
   const acceptedAt = new Date().toISOString();
   return {
-    terms_version: String(termsRes.data?.version ?? "1"),
+    terms_version: termsRes.data?.version ?? null,
     terms_accepted_at: acceptedAt,
-    privacy_version: String(privacyRes.data?.version ?? "1"),
+    privacy_version: privacyRes.data?.version ?? null,
     privacy_accepted_at: acceptedAt,
   };
+};
+
+const escapeLike = (value: string) => value.replace(/[\\%_]/g, "\\$&");
+
+/**
+ * Imported and half-finished accounts can already have a coach row. Reuse the one the profile
+ * links to, or an unclaimed row with the same email, instead of inserting a duplicate.
+ */
+const findExistingCoachId = async (linked: string | null | undefined, email: string | null | undefined, userId: string) => {
+  if (linked) return linked;
+  if (!email) return null;
+  const { data: coach } = await supabase
+    .from("coaches")
+    .select("id")
+    .ilike("email", escapeLike(email.trim()))
+    .limit(1)
+    .maybeSingle();
+  if (!coach) return null;
+  const { data: owner } = await supabase
+    .from("user_profiles")
+    .select("id")
+    .eq("coach_id", coach.id)
+    .neq("id", userId)
+    .limit(1)
+    .maybeSingle();
+  return owner ? null : coach.id;
+};
+
+/** Same for athletes: the linked athlete row, else the first one this account created. */
+const findExistingAthleteId = async (linked: string | null | undefined, userId: string) => {
+  if (linked) return linked;
+  const { data } = await supabase
+    .from("athlete_profiles")
+    .select("id")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: true })
+    .limit(1)
+    .maybeSingle();
+  return data?.id ?? null;
 };
 
 type StepId =
@@ -201,18 +243,29 @@ const Tile = ({
   </button>
 );
 
-export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string | null; joinCoachId: string | null }) => {
-  const { user, refreshUserProfile } = useAuth();
+export const SignUpFlow = ({
+  inviteToken,
+  joinCoachId,
+  onSaving,
+}: {
+  inviteToken: string | null;
+  joinCoachId: string | null;
+  /** Called before the account is verified or saved, so Auth doesn't navigate away mid-save. */
+  onSaving?: () => void;
+}) => {
+  const { user, refreshUserProfile, signOut } = useAuth();
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  const saved = readSignupAnswers();
-  const [answers, setAnswers] = useState<SignupAnswers>(() => saved ?? emptySignupAnswers());
-  const [step, setStep] = useState<StepId>(() => {
-    if (user && saved?.google) return "account";
-    if (user && saved?.who) return saved.who === "coach" ? "cprofile" : "matches";
-    return "who";
+  // A signed-in account that isn't finished (Google from either tab, an imported user) lands
+  // here too. Saved answers skip to the account step; otherwise the questions start with the
+  // name and email filled in.
+  const [answers, setAnswers] = useState<SignupAnswers>(() => {
+    const base = readSignupAnswers() ?? emptySignupAnswers();
+    return user ? prefillFromUser(base, user) : base;
   });
+  const [step, setStep] = useState<StepId>(() => initialSignupStep(Boolean(user), readSignupAnswers()));
+  const prefilledFor = useRef<string | null>(user?.id ?? null);
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -241,15 +294,15 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
     setErrors({});
   }, [step]);
 
-  // Google return: land on Almost done when the account already exists.
+  // Signed in after the flow opened (session restored, Google return): prefill once per account
+  // and land on Almost done when the questions were already answered.
   useEffect(() => {
-    if (!user) return;
+    if (!user || prefilledFor.current === user.id) return;
+    prefilledFor.current = user.id;
+    if (step !== "who") return;
     const stored = readSignupAnswers();
-    if (!stored?.who) return;
-    if (stored.google && step === "who") {
-      setAnswers({ ...stored, first: stored.first || (user.user_metadata?.name as string)?.split(" ")[0] || "", last: stored.last || (user.user_metadata?.name as string)?.split(" ").slice(1).join(" ") || "", email: user.email ?? stored.email });
-      setStep("account");
-    }
+    setAnswers((cur) => prefillFromUser(stored ?? cur, user));
+    if (stored?.who) setStep("account");
   }, [user, step]);
 
   const patch = (partial: Partial<SignupAnswers>) => setAnswers((cur) => ({ ...cur, ...partial }));
@@ -371,6 +424,7 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
     }
     setBusy(true);
     writeSignupRole(roleFromWho(answers.who));
+    onSaving?.();
     const { error } = await supabase.auth.verifyOtp({
       email: answers.email.trim().toLowerCase(),
       token: answers.code.trim(),
@@ -427,16 +481,19 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
       me.email?.split("@")[0] ||
       "";
     const sportKey = (answers.sport ?? "Soccer").toLowerCase() as "soccer" | "rowing";
+    const accountEmail = me.email ?? answers.email;
 
+    onSaving?.();
     setBusy(true);
     try {
+      // A partial profile (imported or earlier attempt) may already link a coach or athlete row.
+      const { data: existing } = await userProfilesAPI.getUserProfile(me.id);
+
       if (isCoach) {
         const coachPositions = answers.cpos.map((p) => COACH_POS_TO_DB[p] ?? p);
         const pathway = answers.clevels.map((l) => LEVEL_TO_PATHWAY[l] ?? l).filter(Boolean);
         const sessionTypes = answers.video ? ["in-person", "virtual"] : ["in-person"];
-        const { data: coach, error: coachError } = await coachesAPI.createCoach({
-          name: accountName,
-          email: me.email ?? answers.email,
+        const coachFields = {
           specialties: answers.pillars,
           locations: answers.zip ? [answers.zip] : [],
           position: coachPositions.join(", "),
@@ -444,19 +501,43 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           favourite_positions: coachPositions,
           pathway_tags: pathway,
           session_types: sessionTypes,
-          listed: false,
-          status: "active",
-          // Keep is_verified as DB default (false). No admin-review / Checkr gate in this flow.
-          is_verified: false,
-        });
-        if (coachError || !coach) throw new Error(coachError?.message ?? "Couldn't create your coaching profile");
+        };
+
+        let coachId = await findExistingCoachId(existing?.coach_id, accountEmail, me.id);
+        if (coachId) {
+          if (!existing?.coach_id) {
+            // Link first: a coach can only update the row their profile points at.
+            const { error: linkError } = await userProfilesAPI.upsertUserProfile({
+              id: me.id,
+              email: accountEmail,
+              name: existing?.name || accountName,
+              coach_id: coachId,
+            } as Parameters<typeof userProfilesAPI.upsertUserProfile>[0]);
+            if (linkError) throw new Error(linkError.message);
+          }
+          // Keep the existing row's name, listing and status; only fill in the answers.
+          const { error: updateError } = await coachesAPI.updateCoach(coachId, coachFields);
+          if (updateError) throw new Error(updateError.message);
+        } else {
+          const { data: coach, error: coachError } = await coachesAPI.createCoach({
+            name: accountName,
+            email: accountEmail,
+            ...coachFields,
+            listed: false,
+            status: "active",
+            // Keep is_verified as DB default (false). No admin-review / Checkr gate in this flow.
+            is_verified: false,
+          });
+          if (coachError || !coach) throw new Error(coachError?.message ?? "Couldn't create your coaching profile");
+          coachId = coach.id;
+        }
 
         try {
           const pillarsRes = await getSportPillars(sportKey);
           const ids = (pillarsRes.data?.sportPillars ?? [])
             .filter((p) => answers.pillars.some((t) => t.toLowerCase() === p.title.toLowerCase()))
             .map((p) => p.id);
-          if (ids.length) await setSportPillars(coach.id, sportKey, ids);
+          if (ids.length) await setSportPillars(coachId, sportKey, ids);
         } catch {
           // Pillars can be set later on the profile.
         }
@@ -464,19 +545,19 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         const legalAccept = await legalAcceptanceFields();
         const { error: profileError } = await userProfilesAPI.upsertUserProfile({
           id: me.id,
-          email: me.email ?? answers.email,
+          email: accountEmail,
           name: accountName,
           persona_type: "coach",
           sport: sportKey,
           position: coachPositions.join(", "),
           phone_number: answers.phone,
           zip_code: answers.zip || null,
-          coach_id: coach.id,
+          coach_id: coachId,
           is_profile_completed: true,
           ...legalAccept,
         } as Parameters<typeof userProfilesAPI.upsertUserProfile>[0]);
         if (profileError) throw new Error(profileError.message);
-        await supabase.auth.updateUser({ data: { persona_type: "coach", coach_id: coach.id } });
+        await supabase.auth.updateUser({ data: { persona_type: "coach", coach_id: coachId } });
         clearSignupSession();
         await refreshUserProfile();
         go("cprofile");
@@ -485,27 +566,42 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         const athLast = isParent ? answers.last.trim() : answers.last.trim();
         const dob = dobFromAgeTile(answers.age);
         const pathway = answers.level ? [LEVEL_TO_PATHWAY[answers.level] ?? answers.level] : [];
-        const { data: athlete, error: athleteError } = await supabase
-          .from("athlete_profiles")
-          .insert({
-            user_id: me.id,
-            full_name: `${athFirst} ${athLast}`.trim(),
-            date_of_birth: dob,
-            sport: sportKey,
-            position: answers.pos,
-            tags: answers.pillars,
-            pathway_tags: pathway,
-            phone_number: answers.phone,
-          })
-          .select("id")
-          .single();
-        if (athleteError) throw athleteError;
+        const athleteFields = {
+          full_name: `${athFirst} ${athLast}`.trim(),
+          date_of_birth: dob,
+          sport: sportKey,
+          position: answers.pos,
+          tags: answers.pillars,
+          pathway_tags: pathway,
+          phone_number: answers.phone,
+        };
+
+        let athleteId = await findExistingAthleteId(existing?.athlete_id, me.id);
+        if (athleteId) {
+          const { data: updated, error: updateError } = await supabase
+            .from("athlete_profiles")
+            .update(athleteFields)
+            .eq("id", athleteId)
+            .select("id");
+          if (updateError) throw updateError;
+          // Not this account's row (or gone): create a fresh one below.
+          if (!updated?.length) athleteId = null;
+        }
+        if (!athleteId) {
+          const { data: athlete, error: athleteError } = await supabase
+            .from("athlete_profiles")
+            .insert({ user_id: me.id, ...athleteFields })
+            .select("id")
+            .single();
+          if (athleteError) throw athleteError;
+          athleteId = athlete.id;
+        }
 
         const persona = isParent ? "parent" : "athlete";
         const legalAccept = await legalAcceptanceFields();
         const { error: profileError } = await userProfilesAPI.upsertUserProfile({
           id: me.id,
-          email: me.email ?? answers.email,
+          email: accountEmail,
           name: isParent ? accountName : `${athFirst} ${athLast}`.trim(),
           persona_type: persona,
           sport: sportKey,
@@ -513,13 +609,13 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
           date_of_birth: dob,
           phone_number: answers.phone,
           zip_code: answers.zip || null,
-          athlete_id: athlete.id,
+          athlete_id: athleteId,
           guardian_relationship: isParent ? "Parent" : null,
           is_profile_completed: true,
           ...legalAccept,
         } as Parameters<typeof userProfilesAPI.upsertUserProfile>[0]);
         if (profileError) throw new Error(profileError.message);
-        await supabase.auth.updateUser({ data: { persona_type: persona, athlete_id: athlete.id } });
+        await supabase.auth.updateUser({ data: { persona_type: persona, athlete_id: athleteId } });
         if (!inviteToken && joinCoachId) {
           await createAthleteInitiatedReferral(joinCoachId);
           clearJoinCoach();
@@ -707,12 +803,21 @@ export const SignUpFlow = ({ inviteToken, joinCoachId }: { inviteToken: string |
         <Tile on={answers.who === "coach"} title="I'm a coach" detail="Run your coaching business on AthaNext" icon={<ClipboardList className="size-5" strokeWidth={1.5} />} onClick={() => pickWho("coach")} />
         <Tile on={answers.who === "self"} title="I'm an athlete" detail="18 or older" icon={<User className="size-5" strokeWidth={1.5} />} onClick={() => pickWho("self")} />
         <Tile on={answers.who === "parent"} title="I'm a parent or guardian" detail="Of an athlete under 18" icon={<Users className="size-5" strokeWidth={1.5} />} onClick={() => pickWho("parent")} />
-        <p className={cn(meta, "text-center")}>
-          Already have an account?{" "}
-          <Link to={`${ROUTES.AUTH}?mode=signin`} className="font-medium text-primary hover:underline">
-            Sign in
-          </Link>
-        </p>
+        {user ? (
+          <p className={cn(meta, "text-center")}>
+            Signed in as {user.email}.{" "}
+            <button type="button" className="font-medium text-primary hover:underline" onClick={() => void signOut()}>
+              Use another account
+            </button>
+          </p>
+        ) : (
+          <p className={cn(meta, "text-center")}>
+            Already have an account?{" "}
+            <Link to={`${ROUTES.AUTH}?mode=signin`} className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
+          </p>
+        )}
       </div>
     );
   } else if (step === "sport") {

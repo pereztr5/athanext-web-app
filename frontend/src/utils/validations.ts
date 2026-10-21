@@ -6,11 +6,6 @@ import {
 } from "@/config/security";
 import { isValidE164 } from "@/utils/phone";
 import { ValidationResult } from "@/types/common";
-import { strings } from "@/config/strings";
-import { PERSONA_TYPES } from "@/utils/db";
-
-type PersonaType = typeof PERSONA_TYPES[number];
-
 // Constants with safety checks and fallback values
 export const MAX_FILE_SIZE = FILE_UPLOAD_CONFIG?.MAX_FILE_SIZE ?? 8388608; // 8MB default
 export const MAX_COVER_IMAGES = FILE_UPLOAD_CONFIG?.MAX_COVER_IMAGES ?? 3;
@@ -106,56 +101,4 @@ export const authSchema = z.object({
   name: z.string().min(1, "Name is required").optional(),
 });
 
-/**
- * Schema for sign up form validation
- */
-export const signupSchema = z.object({
-  persona: z.enum(PERSONA_TYPES, { message: "Please select who you are" }),
-  name: z.string().min(1, "Name is required"),
-  dateOfBirth: z.string()
-    .regex(/^\d{2}\/\d{2}\/\d{4}$/, { message: "Date must be in DD/MM/YYYY format" })
-    .refine((dateStr) => {
-      const [day, month, year] = dateStr.split('/').map(Number);
-      const date = new Date(year, month - 1, day);
-      // Check if date is valid
-      if (date.getDate() !== day || date.getMonth() !== month - 1 || date.getFullYear() !== year) {
-        return false;
-      }
-      // Check if date is in the past
-      return date < new Date();
-    }, { message: "Please enter a valid date in the past" })
-    .optional(),
-  sport: z.string().min(1, "Sport is required"),
-  position: z.string().min(1, "Position is required"),
-  // Same E.164 rule as the profile editor, so sign-up numbers stay editable there.
-  phone: profileSchema.shape.phoneNumber,
-  email: z
-    .string()
-    .trim()
-    .toLowerCase()
-    .email("Please enter a valid email address"),
-  password: z.string().min(8, strings.form.validation.passwordTooShort),
-});
-
-/**
- * Schema for profile completion validation
- */
-export const profileCompletionSchema = z.object({
-  persona: signupSchema.shape.persona,
-  name: signupSchema.shape.name,
-  dateOfBirth: signupSchema.shape.dateOfBirth,
-  sport: signupSchema.shape.sport,
-  position: signupSchema.shape.position,
-  phone: signupSchema.shape.phone,
-  gender: z.string().min(1, "Gender is required"),
-  zipCode: z
-    .string()
-    .max(20, "Zip code is too long")
-    .refine((value) => value.trim() === "" || value.trim().length >= 3, {
-      message: "Zip code must be at least 3 characters",
-    }),
-});
-
 export type AuthSchemaType = z.infer<typeof authSchema>;
-export type SignupSchemaType = z.infer<typeof signupSchema>;
-export type ProfileCompletionSchemaType = z.infer<typeof profileCompletionSchema>;

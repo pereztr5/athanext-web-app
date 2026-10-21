@@ -63,3 +63,22 @@ verify_jwt = true
 # Owner asks support to remove an org coach. The function checks the caller, then emails support.
 [functions.org-coach-removal]
 verify_jwt = true
+
+# Branded auth emails. Applied by hand in the dashboard (Authentication > Email Templates);
+# kept here so the copy is reviewed with the code. Sign-up asks for the 6-digit code, so the
+# confirmation email must keep {{ .Token }}.
+[auth.email.template.confirmation]
+subject = "Confirm your AthaNext email"
+content_path = "./supabase/templates/confirmation.html"
+
+[auth.email.template.recovery]
+subject = "Reset your AthaNext password"
+content_path = "./supabase/templates/recovery.html"
+
+[auth.email.template.email_change]
+subject = "Confirm your new AthaNext email"
+content_path = "./supabase/templates/email_change.html"
+
+[auth.email.template.magic_link]
+subject = "Your AthaNext sign-in link"
+content_path = "./supabase/templates/magic_link.html"

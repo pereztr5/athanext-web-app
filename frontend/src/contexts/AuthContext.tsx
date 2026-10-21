@@ -3,8 +3,9 @@ import { authAPI, apiClient } from "@/api";
 import { useToast } from "@/hooks/use-toast";
 import { User, Session } from "@supabase/supabase-js";
 import { type UserProfile } from "@/api/userProfiles";
-import { createContext, useContext, useState, useEffect, ReactNode, useCallback, useRef } from "react";
+import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import { planAuthEvent } from "@/utils/authEvents";
 
 // Helper to check if profile is complete based on required fields
 const isProfileCompleteHelper = (userProfile: UserProfile | null): boolean => {
@@ -26,7 +27,6 @@ interface AuthContextType {
   isProfileComplete: boolean;
   loading: boolean;
   initialCheckComplete: boolean;
-  signUp: (email: string, password: string, name?: string) => Promise<{ error: any }>;
   signIn: (email: string, password: string) => Promise<{ error: any }>;
   signOut: () => Promise<{ error: any }>;
   requestPasswordReset: (email: string) => Promise<{ error: any }>;
@@ -57,6 +57,16 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const lastSessionRefresh = useRef<number>(0);
 
   useEffect(() => {
+    // Keep the same user object when only the token changed, so pages that depend on `user`
+    // don't re-run their effects on every refresh.
+    const applySession = (next: Session | null) => {
+      setSession(next);
+      const nextUser = next?.user ?? null;
+      setUser((prev) =>
+        prev && nextUser && prev.id === nextUser.id && prev.updated_at === nextUser.updated_at ? prev : nextUser
+      );
+    };
+
     // Set up auth state listener using Supabase directly (for real-time updates)
     const {
       data: { subscription },
@@ -64,43 +74,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       .getSupabaseClient()
       .auth.onAuthStateChange((event, session) => {
         (async () => {
-          // Handle explicit sign out event
-          if (event === 'SIGNED_OUT') {
-            setLoading(false);
-            setProfileReady(true);
+          const nextUserId = session?.user?.id ?? null;
+          const previousUserId = previousUserIdRef.current;
+          const plan = planAuthEvent(event, previousUserId, nextUserId, initialCheckDone.current);
+
+          if (plan.clear) {
+            authActions.clearAllUserProfileCaches();
+            previousUserIdRef.current = null;
             setSession(null);
             setUser(null);
             setUserProfile(null);
-            previousUserIdRef.current = null;
+            setProfileReady(true);
+            setLoading(false);
+            return;
+          }
+
+          if (session) applySession(session);
+          if (!plan.fetchProfile || !nextUserId) return;
+          previousUserIdRef.current = nextUserId;
+
+          // Only a different signed-in user blocks the app. Everything else refreshes quietly.
+          if (!plan.blocking) {
+            await authActions.fetchUserProfile(nextUserId, setUserProfile, { quiet: true });
+            lastProfileFetch.current = Date.now();
             return;
           }
 
           setLoading(true);
           setProfileReady(false);
-          setSession(session);
-          const nextUserId = session?.user?.id ?? null;
-          setUser(session?.user ?? null);
-
-          const previousUserId = previousUserIdRef.current;
-          previousUserIdRef.current = nextUserId;
-
-          // Only fetch user profile for actual auth events (not window focus)
-          // and only if not fetched recently (within last 2 minutes) unless the user changed
-          const now = Date.now();
-          const userChanged = Boolean(nextUserId && nextUserId !== previousUserId);
-          const shouldFetchProfile =
-            nextUserId &&
-            initialCheckDone.current &&
-            (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') &&
-            (userChanged || now - lastProfileFetch.current > 120000); // 2 minutes
-
           try {
-            if (shouldFetchProfile) {
-              await authActions.fetchUserProfile(nextUserId, setUserProfile);
-              lastProfileFetch.current = now;
-            } else if (!session?.user?.id) {
-              setUserProfile(null);
-            }
+            await authActions.fetchUserProfile(nextUserId, setUserProfile);
+            lastProfileFetch.current = Date.now();
           } finally {
             setProfileReady(true);
             setLoading(false);
@@ -114,8 +118,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       setProfileReady(false);
       const response = await authAPI.getSession();
       if (!response.error && response.data) {
-        setSession(response.data);
-        setUser(response.data.user ?? null);
+        applySession(response.data);
+        previousUserIdRef.current = response.data.user?.id ?? null;
 
         // Fetch user profile if session exists
         if (response.data.user?.id) {
@@ -138,6 +142,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   }, []);
 
   useEffect(() => {
+    // Back on the tab: refresh the session and profile quietly, never behind a spinner.
     const refreshIfNeeded = async () => {
       if (!initialCheckDone.current) return;
       const now = Date.now();
@@ -149,10 +154,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         if (error || !data.session) {
           return;
         }
-        setSession(data.session);
-        setUser(data.user ?? data.session.user ?? null);
-        if (data.session.user?.id) {
-          await authActions.fetchUserProfile(data.session.user.id, setUserProfile);
+        // The TOKEN_REFRESHED event updates the session. Only the profile is refreshed here.
+        const userId = data.session.user?.id;
+        if (userId && now - lastProfileFetch.current > 60000) {
+          await authActions.fetchUserProfile(userId, setUserProfile, { quiet: true });
           lastProfileFetch.current = Date.now();
         }
       } catch (err) {
@@ -192,10 +197,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [userProfile, userName, userImg]);
 
-  const signUp = async (email: string, password: string, name?: string) => {
-    return authActions.signUp(email, password, toast, name);
-  };
-
   const signIn = async (email: string, password: string) => {
     return authActions.signIn(email, password, toast);
   };
@@ -218,11 +219,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   };
 
   const requestPasswordReset = async (email: string) => {
-    return authActions.requestPasswordReset(email, toast);
+    return authActions.requestPasswordReset(email);
   };
 
   const updatePassword = async (newPassword: string) => {
-    return authActions.updatePassword(newPassword, toast);
+    return authActions.updatePassword(newPassword);
   };
 
   const changePassword = async (currentPassword: string, newPassword: string) => {
@@ -245,7 +246,6 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         loading,
         profileReady,
         initialCheckComplete,
-        signUp,
         userImg,
         setUserImg,
         userName,

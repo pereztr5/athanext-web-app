@@ -56,7 +56,7 @@ const SignupConfirmation = ({
     setIsResending(true);
     const { error } = await authAPI.resendConfirmationEmail(
       currentEmail,
-      `${window.location.origin}${ROUTES.AUTH}?mode=complete-profile`
+      `${window.location.origin}${ROUTES.AUTH}?mode=signup`
     );
     setIsResending(false);
 
