@@ -3,6 +3,7 @@
  * that apply drafts, visibility, busy times and capacity for the signed-in family.
  */
 import { supabase } from "@/integrations/supabase/client";
+import { functionPaymentError, paymentErrorMessage } from "@/utils/paymentErrors";
 
 type Row = Record<string, any>;
 
@@ -174,12 +175,8 @@ export const bookAPI = {
         ...(payOffline ? { pay_offline: true } : {}),
       },
     });
-    if (error) {
-      const context = (error as { context?: Response }).context;
-      const message = context ? ((await context.json().catch(() => null)) as { error?: string } | null)?.error : null;
-      throw new Error(message || error.message);
-    }
-    if (data?.error) throw new Error(data.error);
+    if (error) throw new Error(await functionPaymentError(error, "Couldn't book these sessions. Please try again."));
+    if (data?.error) throw new Error(paymentErrorMessage(data.error, "Couldn't book these sessions. Please try again."));
     return {
       url: data?.url,
       requested: Boolean(data?.requested),

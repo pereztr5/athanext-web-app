@@ -8,7 +8,8 @@
 // POST { action: "connect_url", origin }   -> { url }       coach only
 // POST { action: "sync", coach_id? }       -> { synced }    own calendar, or any coach's (throttled)
 // POST { action: "disconnect" }            -> { ok }        coach only
-// POST { action: "add_event", booking_id } -> { added, reason? } coach only
+// POST { action: "add_event", booking_id } -> { added, reason? } coach only, or the service role
+//      (create-booking-payment adds paid / free / credit bookings for coaches with a connection)
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
 
@@ -262,6 +263,16 @@ serve(async (req) => {
   }
   if (req.method !== "POST") return json({ error: "Not found" }, 404);
   if (!CLIENT_ID || !CLIENT_SECRET) return json({ error: "Google Calendar isn't set up yet" }, 503);
+
+  // Server-side calls (booking paid or booked without the coach answering a request).
+  const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+  if (SERVICE_ROLE_KEY && bearer === SERVICE_ROLE_KEY) {
+    const body = (await req.json().catch(() => ({}))) as { action?: string; booking_id?: string };
+    if (body.action !== "add_event" || !body.booking_id) return json({ error: "Unknown action" }, 400);
+    const { data: booking } = await admin.from("coach_slot_bookings").select("coach_id").eq("id", body.booking_id).maybeSingle();
+    if (!booking?.coach_id) return json({ added: false, reason: "not_found" });
+    return json(await addEvent(admin, booking.coach_id as string, body.booking_id));
+  }
 
   const { userId, coachId } = await callerCoachId(req, admin);
   if (!userId) return json({ error: "Sign in first" }, 401);

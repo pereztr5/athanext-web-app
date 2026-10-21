@@ -8,6 +8,8 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { minuteBucket } from "../_shared/checkout.ts";
+import { subscriptionIdFromInvoice } from "./subscription.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -112,7 +114,7 @@ const coachPriceId = async (): Promise<string> => {
     productId = product.id;
   }
   const prices = await s.prices.list({ product: productId, active: true, type: "recurring", limit: 10 });
-  const match = prices.data.find((p) => p.unit_amount === 2900 && p.currency === "usd" && p.recurring?.interval === "month");
+  const match = prices.data.find((p: Stripe.Price) => p.unit_amount === 2900 && p.currency === "usd" && p.recurring?.interval === "month");
   if (match) return match.id;
   const price = await s.prices.create({
     product: productId,
@@ -130,7 +132,7 @@ const ensureCustomer = async (coach: CoachRow, email: string | undefined): Promi
   const admin = adminClient();
   if (email) {
     const found = await s.customers.list({ email, limit: 1 });
-    const existing = found.data.find((c) => c.metadata?.coach_id === coach.id) ?? found.data[0];
+    const existing = found.data.find((c: Stripe.Customer) => c.metadata?.coach_id === coach.id) ?? found.data[0];
     if (existing) {
       await admin.from("coaches").update({ stripe_customer_id: existing.id }).eq("id", coach.id);
       return existing.id;
@@ -150,7 +152,7 @@ const syncSubscription = async (
   coachId: string,
   sub: Stripe.Subscription,
 ) => {
-  await admin
+  const { error } = await admin
     .from("coaches")
     .update({
       stripe_customer_id: typeof sub.customer === "string" ? sub.customer : sub.customer.id,
@@ -159,7 +161,12 @@ const syncSubscription = async (
       updated_at: new Date().toISOString(),
     })
     .eq("id", coachId);
+  // Thrown so the webhook answers 500 and Stripe retries instead of losing the update.
+  if (error) throw error;
 };
+
+/** Only the coach plan's subscriptions belong here (family group passes use the same Stripe account). */
+const isCoachPlan = (sub: Stripe.Subscription) => !sub.metadata?.type || sub.metadata.type === "coach_plan";
 
 const coachIdFromSub = async (admin: SupabaseClient, sub: Stripe.Subscription): Promise<string | null> => {
   const fromMeta = sub.metadata?.coach_id;
@@ -182,13 +189,21 @@ serve(async (req) => {
   const stripeSignature = req.headers.get("stripe-signature");
   const rawBody = await req.text();
 
-  // Webhooks: Stripe signs the body; no user JWT.
+  // Webhooks: Stripe signs the body; no user JWT. This endpoint has its own signing secret.
   if (stripeSignature) {
+    const webhookSecret = Deno.env.get("STRIPE_COACH_BILLING_WEBHOOK_SECRET");
+    if (!webhookSecret) {
+      console.error("STRIPE_COACH_BILLING_WEBHOOK_SECRET is not set: coach plan webhooks can't be verified");
+      return json({ error: "Webhook secret not configured" }, 500);
+    }
+    let event: Stripe.Event;
     try {
-      const webhookSecret =
-        Deno.env.get("STRIPE_COACH_BILLING_WEBHOOK_SECRET") ?? Deno.env.get("STRIPE_CHECKOUT_WEBHOOK_SECRET");
-      if (!webhookSecret) return json({ error: "Webhook secret not configured" }, 500);
-      const event = await stripe().webhooks.constructEventAsync(rawBody, stripeSignature, webhookSecret);
+      event = await stripe().webhooks.constructEventAsync(rawBody, stripeSignature, webhookSecret);
+    } catch (err) {
+      console.error("coach-billing webhook signature check failed:", err);
+      return json({ error: "Invalid signature" }, 400);
+    }
+    try {
       const admin = adminClient();
 
       if (event.type === "checkout.session.completed") {
@@ -208,17 +223,20 @@ serve(async (req) => {
         event.type === "customer.subscription.created"
       ) {
         const sub = event.data.object as Stripe.Subscription;
-        const coachId = await coachIdFromSub(admin, sub);
+        const coachId = isCoachPlan(sub) ? await coachIdFromSub(admin, sub) : null;
         if (coachId) {
           if (event.type === "customer.subscription.deleted") {
-            await admin
+            const { error } = await admin
               .from("coaches")
               .update({
                 stripe_subscription_id: sub.id,
                 subscription_status: "canceled",
                 updated_at: new Date().toISOString(),
               })
-              .eq("id", coachId);
+              .eq("id", coachId)
+              // A newer subscription may already be active; only the coach's current one ends here.
+              .or(`stripe_subscription_id.is.null,stripe_subscription_id.eq.${sub.id}`);
+            if (error) throw error;
           } else {
             await syncSubscription(admin, coachId, sub);
           }
@@ -227,14 +245,11 @@ serve(async (req) => {
       }
 
       if (event.type === "invoice.paid" || event.type === "invoice.payment_failed") {
-        const invoice = event.data.object as Stripe.Invoice;
-        const subRef =
-          typeof (invoice as { subscription?: string | { id: string } }).subscription === "string"
-            ? (invoice as { subscription: string }).subscription
-            : (invoice as { subscription?: { id: string } }).subscription?.id;
+        // API 2025-08-27.basil moved the subscription to invoice.parent.subscription_details.
+        const subRef = subscriptionIdFromInvoice(event.data.object as Parameters<typeof subscriptionIdFromInvoice>[0]);
         if (subRef) {
           const sub = await stripe().subscriptions.retrieve(subRef);
-          const coachId = await coachIdFromSub(admin, sub);
+          const coachId = isCoachPlan(sub) ? await coachIdFromSub(admin, sub) : null;
           if (coachId) await syncSubscription(admin, coachId, sub);
         }
         return json({ received: true });
@@ -243,7 +258,8 @@ serve(async (req) => {
       return json({ received: true });
     } catch (err) {
       console.error("coach-billing webhook error:", err);
-      return json({ error: err instanceof Error ? err.message : "Webhook failed" }, 400);
+      // 500 so Stripe retries; every branch is safe to repeat.
+      return json({ error: err instanceof Error ? err.message : "Webhook failed" }, 500);
     }
   }
 
@@ -276,7 +292,7 @@ serve(async (req) => {
             status: "all",
             limit: 5,
           });
-          const live = listed.data.find((s) => PAID.has(s.status));
+          const live = listed.data.find((s: Stripe.Subscription) => PAID.has(s.status));
           if (live) {
             await syncSubscription(admin, current.id, live);
             current = (await coachForUser(admin, user.id)) ?? current;
@@ -295,18 +311,27 @@ serve(async (req) => {
       const site = resolveSiteUrl(body.origin);
       const customerId = await ensureCustomer(coach, user.email);
       const priceId = await coachPriceId();
-      const session = await stripe().checkout.sessions.create({
-        customer: customerId,
-        mode: "subscription",
-        line_items: [{ price: priceId, quantity: 1 }],
-        success_url: `${site}/settings?tab=plan&billing=success&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${site}/settings?tab=plan&billing=cancel`,
-        client_reference_id: coach.id,
-        subscription_data: {
+      // Subscribing during the free period keeps the rest of it: billing starts when it ends.
+      // Stripe needs a trial end at least 48 hours away.
+      const trialEnd = coach.trial_ends_at ? Math.floor(new Date(coach.trial_ends_at).getTime() / 1000) : 0;
+      const keepTrial = trialEnd > Math.floor(Date.now() / 1000) + 48 * 60 * 60;
+      const session = await stripe().checkout.sessions.create(
+        {
+          customer: customerId,
+          mode: "subscription",
+          line_items: [{ price: priceId, quantity: 1 }],
+          success_url: `${site}/settings?tab=plan&billing=success&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${site}/settings?tab=plan&billing=cancel`,
+          client_reference_id: coach.id,
+          subscription_data: {
+            metadata: { type: "coach_plan", coach_id: coach.id },
+            ...(keepTrial ? { trial_end: trialEnd } : {}),
+          },
           metadata: { type: "coach_plan", coach_id: coach.id },
         },
-        metadata: { type: "coach_plan", coach_id: coach.id },
-      });
+        // A double click within the same minute opens the same Checkout, not two subscriptions.
+        { idempotencyKey: `coach-plan-checkout:${coach.id}:${keepTrial ? trialEnd : "now"}:${site}:${minuteBucket(Date.now())}` },
+      );
       return json({ url: session.url, session_id: session.id });
     }
 

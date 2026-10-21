@@ -90,6 +90,11 @@ const AthleteSessionPage = () => {
 
   const pay = useMutation({
     mutationFn: () => startOccurrenceCheckout(s!.id, athleteId),
+    onSuccess: ({ redirected }) => {
+      if (redirected) return;
+      toast({ title: "You're booked", description: "Nothing was due by card for this session." });
+      refresh();
+    },
     onError: (err: unknown) =>
       toast({ title: "Couldn't open checkout", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
   });
@@ -151,6 +156,10 @@ const AthleteSessionPage = () => {
           ? `${money(s.price)} due to confirm your spot`
           : s.booking.paymentStatus === "credit"
             ? "Paid with a credit"
+          : s.booking.paymentStatus === "outside"
+            ? s.price > 0
+              ? "Paid outside AthaNext"
+              : "Free session"
           : s.booking.paymentStatus === "paid"
             ? s.booking.paidAmount
               ? `Paid ${money(s.booking.paidAmount)} by card`

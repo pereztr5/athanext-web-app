@@ -63,7 +63,12 @@ serve(async (req) => {
 
     const body = await req.json().catch(() => ({}));
     const admin = createClient(Deno.env.get("SUPABASE_URL") ?? "", Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "");
-    const stripe = new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", { apiVersion: "2023-10-16" });
+    const stripeKey = Deno.env.get("STRIPE_SECRET_KEY");
+    if (!stripeKey) {
+      console.error("STRIPE_SECRET_KEY is not set: package payments can't run");
+      return json({ error: "Payments aren't set up yet. Please try again later." }, 500);
+    }
+    const stripe = new Stripe(stripeKey, { apiVersion: "2023-10-16" });
 
     // Cancel a monthly group pass at period end (family owns the purchase).
     if (body.action === "cancel") {

@@ -1,15 +1,30 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { createClient, type SupabaseClient as SupabaseClientOf } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { checkoutExpiry, idempotencyKey, idsFromMetadata } from "../_shared/checkout.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
+// Optional: fills Stripe's real fee on payment rows. Not in this repo; when it isn't deployed
+// the call is skipped with one log line and nothing else depends on it.
 const RECONCILE_FUNCTION_NAME = "reconcile-stripe-fees";
 
 const NOTIFICATION_FUNCTION_NAME = "send-booking-notifications";
+
+/** Stripe's smallest card charge in USD. */
+const MIN_CHARGE_CENTS = 50;
+
+/** Another caller (webhook vs confirmation page) gets this long to finish a booking's emails. */
+const FOLLOWUP_LEASE_MS = 5 * 60 * 1000;
+
+/** Stripe metadata values stop at 500 characters; longer lists are left out (rows carry the id). */
+const metadataList = (ids: string[]) => {
+  const value = ids.join(",");
+  return value.length <= 500 ? value : "";
+};
 
 const isSessionPaid = (session: Stripe.Checkout.Session) => {
   const payStatus = session.payment_status;
@@ -21,13 +36,11 @@ const isSessionPaid = (session: Stripe.Checkout.Session) => {
   );
 };
 
-type SupabaseClient = ReturnType<typeof createClient>;
+// deno-lint-ignore no-explicit-any
+type SupabaseClient = SupabaseClientOf<any, "public", "public", any, any>;
 
-type PaymentUpdateResult = {
-  paid: boolean;
-  newlyPaid: boolean;
-  bookingIds: string[];
-};
+/** A booking a Checkout paid for (card, or a credit in the same basket). */
+type PaidRow = { id: string; paidWith: string; newly: boolean; followupDone: boolean };
 
 const extractPaymentIntentId = (session: Stripe.Checkout.Session): string | null => {
   const intent = session.payment_intent;
@@ -106,40 +119,42 @@ const resolveFeePercents = async (
   };
 };
 
-const ensurePaymentRowsForSession = async (
+/** Payment rows (fees per booking) for the bookings a Checkout covers. */
+const buildPaymentRows = async (
   session: Stripe.Checkout.Session,
   client: SupabaseClient,
+  bookingIds: string[],
 ) => {
+  if (!bookingIds.length) return [];
   const { platformFeePerc, stripeFeePerc, stripeFeeFixed } = await resolveFeePercents(session, client);
-  const paymentIntentId = extractPaymentIntentId(session);
 
   const { data: bookings, error: bookingFetchErr } = await client
     .from("coach_slot_bookings" as any)
-    .select("id, occurrence_id, coach_id")
-    .eq("stripe_session_id", session.id)
-    .eq("payment_status", "paid");
-
+    .select("id, occurrence_id, coach_id, status, payment_status, created_at")
+    .in("id", bookingIds)
+    .in("status", ["pending_payment", "booked"])
+    .in("payment_status", ["unpaid", "requires_action", "authorized", "paid"])
+    .order("created_at", { ascending: true });
   if (bookingFetchErr) throw bookingFetchErr;
-  if (!bookings || bookings.length === 0) return;
-
-  const occurrenceIds = bookings.map((b) => b.occurrence_id);
+  if (!bookings || bookings.length === 0) return [];
 
   const { data: occurrences, error: occErr } = await client
     .from("coach_availability_slot_occurrences" as any)
     .select("id, price")
-    .in("id", occurrenceIds);
+    .in("id", bookings.map((b: any) => b.occurrence_id));
   if (occErr) throw occErr;
 
-  const occurrenceById = new Map((occurrences || []).map((occ) => [occ.id, occ]));
+  const occurrenceById = new Map((occurrences || []).map((occ: any) => [occ.id, occ]));
+  const waived = waivedCoachesOf(session);
 
   let fixedApplied = false;
-  const paymentRows = bookings
-    .map((booking) => {
+  return bookings
+    .map((booking: any) => {
       const occ = occurrenceById.get(booking.occurrence_id);
       if (!occ) return null;
       const baseAmount = Number(occ.price || 0);
       // Coaches' own clients pay no platform fee (one checkout can cover several coaches).
-      const platformPerc = waivedCoachesOf(session).has(booking.coach_id) ? 0 : platformFeePerc;
+      const platformPerc = waived.has(booking.coach_id) ? 0 : platformFeePerc;
       const platformFeeAmount = Number((baseAmount * platformPerc / 100).toFixed(2));
       // Percent processing on every line; the $0.30 once-per-Checkout sits on the first row.
       const percentStripe = Number((baseAmount * stripeFeePerc / 100).toFixed(2));
@@ -156,85 +171,178 @@ const ensurePaymentRowsForSession = async (
         total_amount: totalAmount,
         currency: "USD",
         type: "booking_credit",
-        stripe_session_id: session.id,
-        stripe_payment_intent: paymentIntentId,
       };
     })
-    .filter((row): row is Record<string, unknown> => Boolean(row));
-
-  if (paymentRows.length) {
-    const { error: paymentsInsertErr } = await client
-      .from("payments" as any)
-      .upsert(paymentRows as any, { onConflict: "booking_id" });
-    if (paymentsInsertErr) throw paymentsInsertErr;
-  }
+    .filter(Boolean);
 };
 
-const getBookingIdsForSession = async (client: SupabaseClient, sessionId: string): Promise<string[]> => {
-  const { data, error } = await client
+/**
+ * Marks a paid Checkout's bookings paid and writes their payment rows in one transaction
+ * (mark_checkout_paid). Bookings are found by the Checkout id on the rows and by the
+ * booking_ids in its metadata, so an older Checkout tab that was paid still finds its bookings.
+ */
+const markSessionPaid = async (
+  session: Stripe.Checkout.Session,
+  client: SupabaseClient,
+  extraIds: string[] = [],
+): Promise<PaidRow[]> => {
+  const metaIds = idsFromMetadata(session.metadata?.booking_ids);
+  const { data: bySession, error: bySessionErr } = await client
     .from("coach_slot_bookings" as any)
     .select("id")
-    .eq("stripe_session_id", sessionId);
+    .eq("stripe_session_id", session.id);
+  if (bySessionErr) throw bySessionErr;
+  const named = [...new Set([...metaIds, ...extraIds])];
+  const all = [...new Set([...named, ...((bySession ?? []) as any[]).map((r) => r.id as string)])];
+  const paymentRows = await buildPaymentRows(session, client, all);
 
+  const { data, error } = await client.rpc("mark_checkout_paid" as any, {
+    p_session_id: session.id,
+    p_payment_intent: extractPaymentIntentId(session),
+    p_booking_ids: named,
+    p_payments: paymentRows,
+  });
   if (error) throw error;
-  return (data || []).map((r: any) => r.id);
+  const rows: PaidRow[] = ((data ?? []) as any[]).map((r) => ({
+    id: r.paid_booking_id,
+    paidWith: r.paid_with,
+    newly: Boolean(r.newly_paid),
+    followupDone: Boolean(r.followup_done),
+  }));
+  const missed = named.filter((id) => !rows.some((r) => r.id === id));
+  if (missed.length) {
+    // The family paid but these bookings were released, cancelled or paid by another Checkout.
+    console.error("PAID CHECKOUT WITHOUT BOOKING: refund or rebook by hand", session.id, missed);
+  }
+  return rows;
 };
 
-
-const callReconcileEndpointForBookings = async (bookingIds: string[]) => {
-  const uniqueIds = Array.from(new Set(bookingIds));
-  if (!uniqueIds.length) return;
-
+const serviceCall = async (fn: string, body: unknown) => {
   const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
   const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
   if (!supabaseUrl || !serviceRole) {
-    console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for reconcile call");
-    return;
+    console.error(`Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for ${fn}`);
+    return { ok: false, status: 0, text: "not configured" };
   }
-
-  const url = `${supabaseUrl}/functions/v1/${RECONCILE_FUNCTION_NAME}`;
-
-  for (const booking_id of uniqueIds) {
-    try {
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${serviceRole}`,
-        },
-        body: JSON.stringify({ booking_id }),
-      });
-
-      const text = await resp.text();
-      if (!resp.ok) {
-        console.error("Reconcile failed for booking:", booking_id, resp.status, text);
-      } else {
-        console.log("Reconcile ok for booking:", booking_id, text);
-      }
-    } catch (e) {
-      console.error("Reconcile call error for booking:", booking_id, e);
-    }
-  }
-};
-
-// Coach payouts: send the coach's (and any org's) share as soon as a booking is paid.
-const callPayoutTransfersForBookings = async (bookingIds: string[]) => {
-  const ids = Array.from(new Set(bookingIds));
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-  if (!ids.length || !supabaseUrl || !serviceRole) return;
   try {
-    const resp = await fetch(`${supabaseUrl}/functions/v1/stripe-payouts`, {
+    const resp = await fetch(`${supabaseUrl}/functions/v1/${fn}`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRole}` },
-      body: JSON.stringify({ action: "transfer_bookings", booking_ids: ids }),
+      body: JSON.stringify(body),
     });
-    const text = await resp.text();
-    if (!resp.ok) console.error("Payout transfers failed:", resp.status, text);
+    return { ok: resp.ok, status: resp.status, text: await resp.text() };
   } catch (e) {
-    console.error("Payout transfers call error:", e);
+    return { ok: false, status: 0, text: e instanceof Error ? e.message : String(e) };
   }
+};
+
+let reconcileMissing = false;
+/** Optional Stripe fee reconcile. Never blocks a booking; skipped once it is known to be missing. */
+const callReconcileEndpointForBookings = async (bookingIds: string[]) => {
+  if (reconcileMissing) return;
+  for (const booking_id of new Set(bookingIds)) {
+    const r = await serviceCall(RECONCILE_FUNCTION_NAME, { booking_id });
+    if (r.status === 404) {
+      reconcileMissing = true;
+      console.warn(`${RECONCILE_FUNCTION_NAME} is not deployed; skipping Stripe fee reconcile`);
+      return;
+    }
+    if (!r.ok) console.error("Reconcile failed for booking:", booking_id, r.status, r.text);
+  }
+};
+
+// Coach payouts: plan the coach's (and any org's) share as soon as a booking is paid.
+const callPayoutTransfersForBookings = async (bookingIds: string[]): Promise<boolean> => {
+  const ids = Array.from(new Set(bookingIds));
+  if (!ids.length) return true;
+  const r = await serviceCall("stripe-payouts", { action: "transfer_bookings", booking_ids: ids });
+  if (!r.ok) console.error("Payout transfers failed:", r.status, r.text);
+  return r.ok;
+};
+
+/** Sends every waiting share (optionally one coach's), e.g. once a Connect account can receive them. */
+const callPayoutSweep = async (coachId?: string) => {
+  const r = await serviceCall("stripe-payouts", { action: "sweep", ...(coachId ? { coach_id: coachId } : {}) });
+  if (!r.ok) console.error("Payout sweep failed:", r.status, r.text);
+};
+
+/** Adds bookings to the coach's Google Calendar when connected. Never fails the caller. */
+const callCalendarForBookings = async (client: SupabaseClient, bookingIds: string[]) => {
+  const ids = [...new Set(bookingIds)];
+  if (!ids.length) return;
+  try {
+    const { data: bookings } = await client.from("coach_slot_bookings" as any).select("id, coach_id").in("id", ids);
+    const coachIds = [...new Set(((bookings ?? []) as any[]).map((b) => b.coach_id))];
+    if (!coachIds.length) return;
+    const { data: conns } = await client
+      .from("coach_calendar_connections" as any)
+      .select("coach_id")
+      .in("coach_id", coachIds)
+      .eq("can_write", true);
+    const connected = new Set(((conns ?? []) as any[]).map((c) => c.coach_id));
+    for (const b of (bookings ?? []) as any[]) {
+      if (!connected.has(b.coach_id)) continue;
+      const r = await serviceCall("google-calendar", { action: "add_event", booking_id: b.id });
+      if (!r.ok) console.error("Calendar event failed for booking:", b.id, r.status, r.text);
+    }
+  } catch (e) {
+    console.error("Calendar events skipped:", e);
+  }
+};
+
+/**
+ * Emails, payout planning and calendar events for paid bookings, once each. A booking's
+ * paid_followup_at is set only after its steps succeed; a short lease keeps the webhook and the
+ * confirmation page from sending twice. Returns false when something is still left to do, so
+ * the webhook answers 500 and Stripe retries.
+ */
+const runPaidFollowups = async (client: SupabaseClient, rows: PaidRow[]): Promise<boolean> => {
+  const todo = rows.filter((r) => !r.followupDone).map((r) => r.id);
+  if (!todo.length) return true;
+  const leaseCutoff = new Date(Date.now() - FOLLOWUP_LEASE_MS).toISOString();
+  const { data: claimed, error } = await client
+    .from("coach_slot_bookings" as any)
+    .update({ paid_followup_claimed_at: new Date().toISOString() })
+    .in("id", todo)
+    .is("paid_followup_at", null)
+    .or(`paid_followup_claimed_at.is.null,paid_followup_claimed_at.lt."${leaseCutoff}"`)
+    .select("id, payment_status");
+  if (error) throw error;
+  const mine = (claimed ?? []) as { id: string; payment_status: string }[];
+  if (!mine.length) return false;
+
+  const paidIds = mine.filter((r) => r.payment_status === "paid").map((r) => r.id);
+  await callReconcileEndpointForBookings(paidIds);
+  // Payout planning first: if it fails, nothing is emailed yet and the whole step is retried.
+  const payoutsOk = await callPayoutTransfersForBookings(paidIds);
+  const notified = payoutsOk ? await callNotificationEndpointForBookings(mine.map((r) => r.id)) : new Set<string>();
+  const done = mine.filter((r) => notified.has(r.id)).map((r) => r.id);
+  const failed = mine.filter((r) => !notified.has(r.id)).map((r) => r.id);
+
+  if (done.length) {
+    const { error: doneErr } = await client
+      .from("coach_slot_bookings" as any)
+      .update({ paid_followup_at: new Date().toISOString(), paid_followup_claimed_at: null })
+      .in("id", done);
+    if (doneErr) console.error("Saving follow-up state failed:", doneErr);
+    await callCalendarForBookings(client, done);
+  }
+  if (failed.length) {
+    await client.from("coach_slot_bookings" as any).update({ paid_followup_claimed_at: null }).in("id", failed);
+    console.error("Paid booking follow-ups failed; will retry:", failed);
+  }
+  return failed.length === 0 && mine.length === todo.length;
+};
+
+/** Paid Checkout: mark it (atomic), then the follow-ups. */
+const settlePaidSession = async (session: Stripe.Checkout.Session, client: SupabaseClient) => {
+  // Card holds for requests (ATH-85) are captured only when the coach accepts.
+  if (session.metadata?.request === "1" || !isSessionPaid(session)) {
+    return { paid: false, newlyPaid: false, followupsDone: true };
+  }
+  const rows = await markSessionPaid(session, client);
+  const followupsDone = await runPaidFollowups(client, rows);
+  return { paid: true, newlyPaid: rows.some((r) => r.newly), followupsDone };
 };
 
 /** After a cancel / refund / dispute voids held shares, reverse any that were already sent. */
@@ -340,9 +448,10 @@ const createRequestFromSession = async (session: Stripe.Checkout.Session, client
 
 /**
  * When every request paid with one card hold has an answer, charge the accepted ones and
- * release the rest. Returns the ids that were charged.
+ * release the rest. Returns the bookings that were charged. A hold captured earlier whose
+ * bookings were not marked yet (a crash in between) is finished without charging again.
  */
-const settleRequestHold = async (sessionId: string, client: SupabaseClient, stripe: Stripe): Promise<string[]> => {
+const settleRequestHold = async (sessionId: string, client: SupabaseClient, stripe: Stripe): Promise<PaidRow[]> => {
   const { data: rows } = await client
     .from("coach_slot_bookings" as any)
     .select("id, status, payment_status, occurrence_id, coach_id, stripe_payment_intent")
@@ -353,31 +462,37 @@ const settleRequestHold = async (sessionId: string, client: SupabaseClient, stri
   const intentId = list.find((r) => r.stripe_payment_intent)?.stripe_payment_intent as string | undefined;
   if (!intentId) return [];
   const intent = await stripe.paymentIntents.retrieve(intentId);
-  if (intent.status !== "requires_capture") return [];
+  if (intent.status !== "requires_capture" && intent.status !== "succeeded") return [];
 
   if (!accepted.length) {
-    await stripe.paymentIntents.cancel(intentId);
-    await client.from("coach_slot_bookings" as any).update({ payment_status: "released" }).eq("stripe_session_id", sessionId).eq("payment_status", "authorized");
+    if (intent.status === "requires_capture") {
+      await stripe.paymentIntents.cancel(intentId, {}, { idempotencyKey: `request-release:${intentId}` });
+      await client.from("coach_slot_bookings" as any).update({ payment_status: "released" }).eq("stripe_session_id", sessionId).eq("payment_status", "authorized");
+    }
     return [];
   }
 
   const session = await stripe.checkout.sessions.retrieve(sessionId);
-  const { platformFeePerc, stripeFeePerc } = await resolveFeePercents(session, client);
-  const waived = waivedCoachesOf(session);
-  const factorFor = (coachId: string) => 1 + (waived.has(coachId) ? 0 : platformFeePerc) / 100 + stripeFeePerc / 100;
-  const { data: occs } = await client
-    .from("coach_availability_slot_occurrences" as any)
-    .select("id, price")
-    .in("id", accepted.map((r) => r.occurrence_id));
-  const priceOf = new Map(((occs ?? []) as any[]).map((o) => [o.id, Number(o.price || 0)]));
-  const amount = accepted.reduce((sum, r) => sum + Math.round((priceOf.get(r.occurrence_id) ?? 0) * factorFor(r.coach_id) * 100), 0);
-  await stripe.paymentIntents.capture(intentId, { amount_to_capture: Math.min(amount, intent.amount_capturable) });
+  if (intent.status === "requires_capture") {
+    const { platformFeePerc, stripeFeePerc } = await resolveFeePercents(session, client);
+    const waived = waivedCoachesOf(session);
+    const factorFor = (coachId: string) => 1 + (waived.has(coachId) ? 0 : platformFeePerc) / 100 + stripeFeePerc / 100;
+    const { data: occs } = await client
+      .from("coach_availability_slot_occurrences" as any)
+      .select("id, price")
+      .in("id", accepted.map((r) => r.occurrence_id));
+    const priceOf = new Map(((occs ?? []) as any[]).map((o) => [o.id, Number(o.price || 0)]));
+    const amount = accepted.reduce((sum, r) => sum + Math.round((priceOf.get(r.occurrence_id) ?? 0) * factorFor(r.coach_id) * 100), 0);
+    await stripe.paymentIntents.capture(
+      intentId,
+      { amount_to_capture: Math.min(amount, intent.amount_capturable) },
+      { idempotencyKey: `request-capture:${intentId}` },
+    );
+  }
 
-  const ids = accepted.map((r) => r.id);
-  await client.from("coach_slot_bookings" as any).update({ status: "booked", payment_status: "paid", updated_at: new Date().toISOString() }).in("id", ids);
+  const paid = await markSessionPaid(session, client, accepted.map((r) => r.id));
   await client.from("coach_slot_bookings" as any).update({ payment_status: "released" }).eq("stripe_session_id", sessionId).eq("payment_status", "authorized");
-  await ensurePaymentRowsForSession(session, client);
-  return ids;
+  return paid;
 };
 
 /** Coach answers a request: accept (and charge once the hold settles) or decline. */
@@ -406,13 +521,11 @@ const handleRequestResponse = async (req: Request, body: any, client: SupabaseCl
     for (const id of sessions) {
       const charged = await settleRequestHold(id, client, stripe()).catch((e: unknown) => {
         console.error("Settle failed", id, e);
-        return [] as string[];
+        return [] as PaidRow[];
       });
       if (charged.length) {
         settled++;
-        await callReconcileEndpointForBookings(charged);
-        await callNotificationEndpointForBookings(charged);
-        await callPayoutTransfersForBookings(charged);
+        await runPaidFollowups(client, charged).catch((e: unknown) => console.error("Follow-ups failed", id, e));
       }
     }
     return jsonResponse({ settled });
@@ -436,12 +549,8 @@ const handleRequestResponse = async (req: Request, body: any, client: SupabaseCl
   }
   try {
     const charged = await settleRequestHold((booking as any).stripe_session_id, client, stripe());
-    if (charged.length) {
-      await callReconcileEndpointForBookings(charged);
-      await callNotificationEndpointForBookings(charged);
-      await callPayoutTransfersForBookings(charged);
-    }
-    return jsonResponse({ status: accept ? "booked" : "canceled", charged: charged.includes(bookingId) });
+    if (charged.length) await runPaidFollowups(client, charged).catch((e: unknown) => console.error("Follow-ups failed", e));
+    return jsonResponse({ status: accept ? "booked" : "canceled", charged: charged.some((r) => r.id === bookingId) });
   } catch (e) {
     console.error("Charging the request failed", e);
     // The booking is accepted; the charge can be retried by the sweep.
@@ -449,87 +558,69 @@ const handleRequestResponse = async (req: Request, body: any, client: SupabaseCl
   }
 };
 
-const callNotificationEndpointForBookings = async (bookingIds: string[]) => {
-  const uniqueIds = Array.from(new Set(bookingIds));
-  if (!uniqueIds.length) return;
-
-  const supabaseUrl = Deno.env.get("SUPABASE_URL") ?? "";
-  const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-
-  if (!supabaseUrl || !serviceRole) {
-    console.error("Missing SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY for notification call");
-    return;
+/** Booking emails. Returns the bookings whose emails went out. */
+const callNotificationEndpointForBookings = async (bookingIds: string[]): Promise<Set<string>> => {
+  const ok = new Set<string>();
+  for (const booking_id of new Set(bookingIds)) {
+    const r = await serviceCall(NOTIFICATION_FUNCTION_NAME, { booking_id });
+    if (r.ok) ok.add(booking_id);
+    else console.error("Notification failed for booking:", booking_id, r.status, r.text);
   }
+  return ok;
+};
 
-  const url = `${supabaseUrl}/functions/v1/${NOTIFICATION_FUNCTION_NAME}`;
-
-  for (const booking_id of uniqueIds) {
-    try {
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${serviceRole}`,
-        },
-        body: JSON.stringify({ booking_id }),
-      });
-
-      const text = await resp.text();
-      if (!resp.ok) {
-        console.error("Notification failed for booking:", booking_id, resp.status, text);
-      } else {
-        console.log("Notification ok for booking:", booking_id, text);
+/**
+ * Expires earlier Checkouts that are still open, so an old tab can no longer be paid. One that
+ * was paid meanwhile is settled instead; returns true when that happened.
+ */
+const closeCheckouts = async (stripe: Stripe, client: SupabaseClient, sessionIds: string[]): Promise<boolean> => {
+  let paidAny = false;
+  for (const id of new Set(sessionIds)) {
+    let session = await stripe.checkout.sessions.retrieve(id, { expand: ["payment_intent"] });
+    if (session.status === "open") {
+      try {
+        session = await stripe.checkout.sessions.expire(id);
+      } catch (e) {
+        // Completed between the two calls: read it again and settle below.
+        console.warn("Expiring an earlier Checkout failed; re-reading it", id, e);
+        session = await stripe.checkout.sessions.retrieve(id, { expand: ["payment_intent"] });
       }
-    } catch (e) {
-      console.error("Notification call error for booking:", booking_id, e);
     }
+    if (session.status === "complete" && isSessionPaid(session)) {
+      const { paid } = await settlePaidSession(session, client);
+      paidAny = paidAny || paid;
+    }
+  }
+  return paidAny;
+};
+
+/** Removes what a failed booking attempt created and gives credits back (no trace left). */
+const undoAttempt = async (
+  client: SupabaseClient,
+  { pendingIds = [], creditIds = [], freeIds = [] }: { pendingIds?: string[]; creditIds?: string[]; freeIds?: string[] },
+) => {
+  if (creditIds.length) {
+    const { error } = await client.rpc("undo_checkout_credits" as any, { p_booking_ids: creditIds, p_reason: null, p_delete: true });
+    if (error) console.error("CREDITS NOT RETURNED after a failed booking; fix by hand", creditIds, error);
+  }
+  const rows = [...pendingIds, ...freeIds];
+  if (rows.length) {
+    const { error } = await client.from("coach_slot_bookings" as any).delete().in("id", rows);
+    if (error) console.error("Removing bookings after a failed attempt failed", rows, error);
   }
 };
 
-const updateBookingPaymentStatus = async (
-  session: Stripe.Checkout.Session,
-  client: SupabaseClient,
-): Promise<PaymentUpdateResult> => {
-  // Card holds for requests (ATH-85) are captured only when the coach accepts.
-  if (session.metadata?.request === "1") {
-    return { paid: false, newlyPaid: false, bookingIds: [] as string[] };
-  }
-  const paid = isSessionPaid(session);
-  if (!paid) {
-    return { paid: false, newlyPaid: false, bookingIds: [] as string[] };
-  }
-
-  const paymentIntentId = extractPaymentIntentId(session);
-
-  const { data: updatedRows, error: updErr } = await client
-    .from("coach_slot_bookings" as any)
-    .update({
-      status: "booked",
-      payment_status: "paid",
-      stripe_session_id: session.id,
-      stripe_payment_intent: paymentIntentId,
-    })
-    .eq("stripe_session_id", session.id)
-    .neq("payment_status", "paid")
-    .select("id");
-  if (updErr) throw updErr;
-
-  const newlyPaidIds = (updatedRows || []).map((r) => r.id);
-
-  if (!newlyPaidIds.length) {
-    const { error: syncErr } = await client
-      .from("coach_slot_bookings" as any)
-      .update({
-        stripe_session_id: session.id,
-        stripe_payment_intent: paymentIntentId,
-      })
-      .eq("stripe_session_id", session.id);
-    if (syncErr) throw syncErr;
-  }
-
-  await ensurePaymentRowsForSession(session, client);
-
-  return { paid: true, newlyPaid: newlyPaidIds.length > 0, bookingIds: newlyPaidIds };
+/** Account fields kept in sync from Stripe Connect (same shape stripe-payouts writes). */
+const payoutAccountFields = (account: Stripe.Account) => {
+  const bank = account.external_accounts?.data?.[0] as { last4?: string } | undefined;
+  return {
+    details_submitted: Boolean(account.details_submitted),
+    charges_enabled: Boolean(account.charges_enabled),
+    payouts_enabled: Boolean(account.payouts_enabled),
+    transfers_active: account.capabilities?.transfers === "active",
+    ...(bank?.last4 ? { bank_last4: bank.last4 } : {}),
+    updated_at: new Date().toISOString(),
+  };
 };
 
 const SESSION_TIME_ZONE = "America/New_York";
@@ -825,26 +916,26 @@ serve(async (req) => {
     }
 
     // Created on first use, so booking only checkouts (ATH-86) work without a Stripe key.
+    // A missing key fails loudly instead of sending unauthenticated calls to Stripe.
     let stripeClient: Stripe | null = null;
-    const stripeApi = () =>
-      (stripeClient ??= new Stripe(Deno.env.get("STRIPE_SECRET_KEY") || "", {
-        apiVersion: "2025-08-27.basil",
-      }));
+    const stripeApi = () => {
+      if (stripeClient) return stripeClient;
+      const key = Deno.env.get("STRIPE_SECRET_KEY");
+      if (!key) {
+        console.error("STRIPE_SECRET_KEY is not set: card payments can't run");
+        throw new Error("Payments aren't set up yet. Please try again later.");
+      }
+      stripeClient = new Stripe(key, { apiVersion: "2025-08-27.basil" });
+      return stripeClient;
+    };
+    const ok = (body: unknown = { received: true }) => jsonResponse(body, 200);
 
     if (parsedBody.action === "respond_request" || parsedBody.action === "request_sweep") {
       return await handleRequestResponse(req, parsedBody, supabaseClient, stripeApi);
     }
 
-    if (req.method === "GET") {
-      const url = new URL(req.url);
-      const sessionId = url.searchParams.get("session_id");
-      if (!sessionId) {
-        return new Response(JSON.stringify({ error: "session_id required" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
-      }
-
+    /** Back from Stripe (or a manual check): settle the Checkout the same way the webhook does. */
+    const verifySession = async (sessionId: string) => {
       const session = await stripeApi().checkout.sessions.retrieve(sessionId, {
         expand: ["payment_intent"],
       });
@@ -852,48 +943,53 @@ serve(async (req) => {
       // A request's card hold (ATH-85): create the request now; nothing is charged yet.
       if (session.metadata?.request === "1") {
         const { full } = await createRequestFromSession(session, supabaseClient, stripeApi());
-        return new Response(
-          JSON.stringify({ session_id: sessionId, requested: true, held: session.status === "complete" && !full, full }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-        );
+        return ok({ session_id: sessionId, requested: true, held: session.status === "complete" && !full, full });
       }
 
-      const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
-
-      if (paid && newlyPaid) {
-        await callReconcileEndpointForBookings(bookingIds);
-        await callNotificationEndpointForBookings(bookingIds);
-        await callPayoutTransfersForBookings(bookingIds);
+      if (session.status === "expired") {
+        await supabaseClient.rpc("release_unpaid_checkout_holds" as any, { p_session_id: session.id, p_force: false });
       }
+      const { paid, newlyPaid } = await settlePaidSession(session, supabaseClient);
+      return ok({
+        session_id: sessionId,
+        payment_status: session.payment_status,
+        status: session.status,
+        paid,
+        reconcile_called: paid && newlyPaid,
+      });
+    };
 
-      return new Response(
-        JSON.stringify({
-          session_id: sessionId,
-          payment_status: session.payment_status,
-          reconcile_called: paid && newlyPaid,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-      );
+    if (req.method === "GET") {
+      const sessionId = new URL(req.url).searchParams.get("session_id");
+      if (!sessionId) return jsonResponse({ error: "session_id required" }, 400);
+      return await verifySession(sessionId);
     }
 
     if (stripeSignature) {
-      const webhookSecret = Deno.env.get("STRIPE_CHECKOUT_WEBHOOK_SECRET");
-      if (!webhookSecret) {
-        return new Response(JSON.stringify({ error: "Webhook secret not configured" }), {
-          status: 500,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      // Booking/package/invoice events come from the account endpoint; account.updated comes from
+      // the Connect endpoint, which Stripe signs with its own secret.
+      const secrets = [
+        Deno.env.get("STRIPE_CHECKOUT_WEBHOOK_SECRET"),
+        Deno.env.get("STRIPE_CONNECT_WEBHOOK_SECRET"),
+      ].filter((s): s is string => Boolean(s));
+      if (!secrets.length) {
+        console.error("STRIPE_CHECKOUT_WEBHOOK_SECRET is not set: Stripe webhooks can't be verified");
+        return jsonResponse({ error: "Webhook secret not configured" }, 500);
       }
 
-      let event: Stripe.Event;
-      try {
-        event = await stripeApi().webhooks.constructEventAsync(rawBody, stripeSignature, webhookSecret);
-      } catch (err) {
-        console.error("Webhook signature verification failed:", err);
-        return new Response(JSON.stringify({ error: "Invalid signature" }), {
-          status: 400,
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-        });
+      let event: Stripe.Event | null = null;
+      let lastErr: unknown = null;
+      for (const secret of secrets) {
+        try {
+          event = await stripeApi().webhooks.constructEventAsync(rawBody, stripeSignature, secret);
+          break;
+        } catch (err) {
+          lastErr = err;
+        }
+      }
+      if (!event) {
+        console.error("Webhook signature verification failed:", lastErr);
+        return jsonResponse({ error: "Invalid signature" }, 400);
       }
 
       // Card refunded or disputed: booking is no longer paid; void held shares / reverse sent ones.
@@ -914,51 +1010,75 @@ serve(async (req) => {
               ? ((charge as Stripe.Dispute).payment_intent as string)
               : (charge as Stripe.Dispute).payment_intent?.id ?? null;
         if (chargeId) {
-          const ids = await bookingIdsForCharge(supabaseClient, chargeId, intentId);
+          const ids = await bookingIdsForCharge(supabaseClient, chargeId as string, intentId);
           await markBookingsChargeReversed(
             supabaseClient,
             ids,
             event.type === "charge.refunded" ? "refunded" : "disputed",
           );
         }
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
+        return ok();
+      }
+
+      // Connect: keep the coach's payout flags fresh; send waiting shares once transfers work.
+      if (event.type === "account.updated") {
+        const account = event.data.object as Stripe.Account;
+        const { data: row, error } = await supabaseClient
+          .from("coach_payout_accounts" as any)
+          .update(payoutAccountFields(account))
+          .eq("stripe_account_id", account.id)
+          .select("coach_id, transfers_active")
+          .maybeSingle();
+        if (error) {
+          console.error("Saving Connect account state failed:", account.id, error);
+          return jsonResponse({ error: error.message }, 500);
+        }
+        if ((row as any)?.transfers_active) await callPayoutSweep((row as any).coach_id);
+        return ok();
       }
 
       // Group pass renewals (academy packages): each monthly payment adds a month of credits.
       // The first month (or a $0 trial checkout) is handled with checkout.session.completed below.
-      // $0 trial invoices (subscription_create) do not grant credits.
+      // $0 trial invoices (subscription_create) do not grant credits. 404 = not a package
+      // subscription (for example the coach plan); anything else failing is retried by Stripe.
       if (event.type === "invoice.paid") {
         const invoice = event.data.object as Stripe.Invoice;
         if (invoice.billing_reason === "subscription_cycle" && (invoice.amount_paid ?? 0) > 0) {
-          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/reconcile-package-payment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-            body: JSON.stringify({ invoice_id: invoice.id }),
-          }).catch((e) => console.error("Renewal reconcile call error:", e));
+          const r = await serviceCall("reconcile-package-payment", { invoice_id: invoice.id });
+          if (!r.ok && r.status !== 404) {
+            console.error("Renewal reconcile failed:", invoice.id, r.status, r.text);
+            return jsonResponse({ error: "Renewal reconcile failed" }, 500);
+          }
         }
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
-        });
+        return ok();
       }
 
       // Monthly group pass ended (cancel at period end or Stripe cancelled it).
       if (event.type === "customer.subscription.deleted") {
         const sub = event.data.object as Stripe.Subscription;
-        const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
-        const adminClient = createClient(Deno.env.get("SUPABASE_URL") ?? "", serviceRole);
-        await adminClient
+        const { error } = await supabaseClient
           .from("package_purchases" as any)
           .update({ status: "expired", updated_at: new Date().toISOString() })
           .eq("stripe_subscription_id", sub.id)
           .in("status", ["active", "trialing"]);
-        return new Response(JSON.stringify({ received: true }), {
-          headers: { ...corsHeaders, "Content-Type": "application/json" },
-          status: 200,
+        if (error) return jsonResponse({ error: error.message }, 500);
+        return ok();
+      }
+
+      // Unpaid booking Checkout lapsed: give its spots (and credits used with it) back.
+      if (event.type === "checkout.session.expired") {
+        const session = event.data.object as Stripe.Checkout.Session;
+        const meta = session.metadata ?? {};
+        if (meta.request === "1" || meta.type || meta.kind) return ok();
+        const { data: released, error } = await supabaseClient.rpc("release_unpaid_checkout_holds" as any, {
+          p_session_id: session.id,
+          p_force: false,
         });
+        if (error) {
+          console.error("Releasing expired Checkout failed:", session.id, error);
+          return jsonResponse({ error: error.message }, 500);
+        }
+        return ok({ received: true, released });
       }
 
       if (event.type === "checkout.session.completed") {
@@ -966,95 +1086,48 @@ serve(async (req) => {
 
         if (session.metadata?.request === "1") {
           await createRequestFromSession(session, supabaseClient, stripeApi());
-          return new Response(JSON.stringify({ received: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
+          return ok();
         }
 
         // Package purchases (ATH-94): reconcile-package-payment adds the credits and pays the coach.
+        // It is safe to repeat, so a failure answers 500 and Stripe retries.
         if (session.metadata?.type === "package_purchase") {
-          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/reconcile-package-payment`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-            body: JSON.stringify({ session_id: session.id }),
-          }).catch((e) => console.error("Package reconcile call error:", e));
-          return new Response(JSON.stringify({ received: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
+          const r = await serviceCall("reconcile-package-payment", { session_id: session.id });
+          if (!r.ok) {
+            console.error("Package reconcile failed:", session.id, r.status, r.text);
+            return jsonResponse({ error: "Package reconcile failed" }, 500);
+          }
+          return ok();
         }
 
-        // Coach invoices (ATH-89) use the same Stripe account; coach-invoices settles them.
+        // Coach invoices (ATH-89) use the same Stripe account; coach-invoices settles them (safe to repeat).
         if (session.metadata?.kind === "invoice" && session.metadata?.invoice_id) {
-          await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/coach-invoices`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json", Authorization: `Bearer ${Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")}` },
-            body: JSON.stringify({ action: "settle", invoice_id: session.metadata.invoice_id }),
-          }).catch((e) => console.error("Invoice settle call error:", e));
-          return new Response(JSON.stringify({ received: true }), {
-            headers: { ...corsHeaders, "Content-Type": "application/json" },
-            status: 200,
-          });
+          const r = await serviceCall("coach-invoices", { action: "settle", invoice_id: session.metadata.invoice_id });
+          if (!r.ok) {
+            console.error("Invoice settle failed:", session.metadata.invoice_id, r.status, r.text);
+            return jsonResponse({ error: "Invoice settle failed" }, 500);
+          }
+          return ok();
         }
 
-        if (isSessionPaid(session)) {
+        // Only one-off booking Checkouts are left (the coach plan is handled by coach-billing).
+        if (session.mode === "payment" && isSessionPaid(session)) {
           try {
-            const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
-
-            if (paid && newlyPaid) {
-              await callReconcileEndpointForBookings(bookingIds);
-              await callNotificationEndpointForBookings(bookingIds);
-              await callPayoutTransfersForBookings(bookingIds);
-            }
+            const { followupsDone } = await settlePaidSession(session, supabaseClient);
+            // Bookings are paid; emails/payouts still to finish: let Stripe retry the event.
+            if (!followupsDone) return jsonResponse({ error: "Paid; follow-ups pending" }, 500);
           } catch (updErr: any) {
             console.error("Failed to mark bookings paid:", updErr);
-            return new Response(JSON.stringify({ error: updErr?.message || "Failed to update booking status" }), {
-              status: 500,
-              headers: { ...corsHeaders, "Content-Type": "application/json" },
-            });
+            return jsonResponse({ error: updErr?.message || "Failed to update booking status" }, 500);
           }
         }
       }
 
-      return new Response(JSON.stringify({ received: true }), {
-        headers: { ...corsHeaders, "Content-Type": "application/json" },
-        status: 200,
-      });
+      return ok();
     }
 
     if (parsedBody.session_id && typeof parsedBody.session_id === "string") {
-      const sessionId = parsedBody.session_id;
-
-      const session = await stripeApi().checkout.sessions.retrieve(sessionId, {
-        expand: ["payment_intent"],
-      });
-
-      // A request's card hold (ATH-85): create the request now; nothing is charged yet.
-      if (session.metadata?.request === "1") {
-        const { full } = await createRequestFromSession(session, supabaseClient, stripeApi());
-        return new Response(
-          JSON.stringify({ session_id: sessionId, requested: true, held: session.status === "complete" && !full, full }),
-          { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-        );
-      }
-
-      const { paid, newlyPaid, bookingIds } = await updateBookingPaymentStatus(session, supabaseClient);
-
-      if (paid && newlyPaid) {
-        await callReconcileEndpointForBookings(bookingIds);
-        await callNotificationEndpointForBookings(bookingIds);
-        await callPayoutTransfersForBookings(bookingIds);
-      }
-
-      return new Response(
-        JSON.stringify({
-          session_id: sessionId,
-          payment_status: session.payment_status,
-          reconcile_called: paid && newlyPaid,
-        }),
-        { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 },
-      );
+      return await verifySession(parsedBody.session_id);
     }
 
     const {
@@ -1106,7 +1179,7 @@ serve(async (req) => {
     const defaultGroupCapacity = await fetchDefaultGroupCapacity(supabaseClient);
     const { data: existingBookings, error: bookingsErr } = await supabaseClient
       .from("coach_slot_bookings" as any)
-      .select("id, occurrence_id, athlete_id, status, stripe_session_id")
+      .select("id, occurrence_id, athlete_id, status, payment_status, stripe_session_id, hold_expires_at")
       .in("occurrence_id", occurrenceIds)
       .in("status", ACTIVE_BOOKING_STATUSES);
     if (bookingsErr) throw bookingsErr;
@@ -1134,7 +1207,10 @@ serve(async (req) => {
     }
 
     const myBookings = (existingBookings || []).filter((b) => b.athlete_id === athleteId);
-    const hasPaidBooking = myBookings.some((b) => b.status === "booked" || b.status === "completed");
+    // Spots this family's own unpaid Checkout holds (pending, or a credit in the same basket).
+    const isHold = (b: any) =>
+      Boolean(b.hold_expires_at) && (b.status === "pending_payment" || (b.status === "booked" && b.payment_status === "credit"));
+    const hasPaidBooking = myBookings.some((b) => (b.status === "booked" || b.status === "completed") && !isHold(b));
     if (hasPaidBooking) {
       throw new Error("You already have a booking for this session.");
     }
@@ -1149,6 +1225,36 @@ serve(async (req) => {
       && pendingOccSet.size === occurrenceIds.length;
     let reusingPendingBookings = false;
 
+    /**
+     * Starting again replaces this family's earlier unpaid Checkout for these sessions: it is
+     * expired on Stripe (so an old tab can't be paid) and its held spots and credits are given
+     * back. Unpaid bookings that are not Checkout holds (an accepted request, a walk-in) still
+     * have to be paid from My sessions.
+     */
+    const releaseOwnHolds = async () => {
+      if (myPendingBookings.some((b) => !b.hold_expires_at)) {
+        throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
+      }
+      const holds = myBookings.filter(isHold);
+      if (!holds.length) return;
+      const sessionIds = [...new Set(holds.map((b) => b.stripe_session_id).filter(Boolean))] as string[];
+      if (sessionIds.length && await closeCheckouts(stripeApi(), supabaseClient, sessionIds)) {
+        throw new Error("Your earlier payment for this session went through. Check My sessions.");
+      }
+      for (const id of sessionIds) {
+        const { error } = await supabaseClient.rpc("release_unpaid_checkout_holds" as any, { p_session_id: id, p_force: true });
+        if (error) throw error;
+      }
+      // Holds whose Checkout never started (a crash before Stripe answered).
+      const orphans = holds.filter((b) => !b.stripe_session_id);
+      if (orphans.length) {
+        await undoAttempt(supabaseClient, {
+          pendingIds: orphans.filter((b) => b.status === "pending_payment").map((b) => b.id),
+          creditIds: orphans.filter((b) => b.status === "booked").map((b) => b.id),
+        });
+      }
+    };
+
     if (!coversAllPending) {
       const closed = occurrences.find((occ) =>
         isBookingWindowClosed(occ.occurrence_date, occ.start_time)
@@ -1159,6 +1265,9 @@ serve(async (req) => {
         );
       }
     }
+
+    // Before credits are counted, so credits held by the replaced Checkout count again.
+    if (!coversAllPending) await releaseOwnHolds();
 
     const { platformFeePerc: basePlatformFeePerc, stripeFeePerc, stripeFeeFixed } = await fetchFeePercents(supabaseClient);
 
@@ -1351,9 +1460,6 @@ serve(async (req) => {
         if (confirmErr) throw confirmErr;
         return json({ direct: true, offline: plans[0].offlinePending, booking_ids: myPendingBookings.map((b) => b.id) });
       }
-      if (myPendingBookings.length) {
-        throw new Error("You already have a pending booking for this session.");
-      }
       const { data: rows, error } = await supabaseClient
         .from("coach_slot_bookings" as any)
         .insert(occurrences.map((occ) =>
@@ -1372,151 +1478,254 @@ serve(async (req) => {
       });
     }
 
+    const isFree = (occ: (typeof occurrences)[number]) => Number(occ.price || 0) <= 0;
+    const occurrenceById = new Map(occurrences.map((o) => [o.id, o]));
+    // Free sessions never go to Stripe (a $0 session would otherwise be a $0.30 charge, below
+    // Stripe's minimum). They are booked straight away; "outside" = nothing to collect in the app.
+    const FREE_PAYMENT_STATUS = "outside";
+    const expiry = checkoutExpiry(Date.now());
+    const checkoutTotal = (occs: typeof occurrences, note = "") => {
+      const lines = occs.map((occ, i) => lineItem(occ, note, i));
+      const cents = lines.reduce((sum, line) => sum + line.price_data.unit_amount, 0);
+      if (cents < MIN_CHARGE_CENTS) {
+        throw new Error("This total is below the $0.50 card minimum, so it can't be paid by card. Ask the coach to check the price.");
+      }
+      return lines;
+    };
+
     // In-app requests (ATH-85): the family's card is held on Stripe's page and charged only
     // if the coach accepts. The requests are created once the card is held.
     if (mode === "request") {
-      if (myPendingBookings.length) {
-        throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
+      const paidOccs = occurrences.filter((o) => !isFree(o));
+      if (!paidOccs.length) {
+        // Free requests: nothing to hold. The coach accepts or declines as usual.
+        const { data: rows, error } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .insert(occurrences.map((occ) => rowFor(occ, "requested", "unpaid")))
+          .select("id");
+        if (error) throw error;
+        return json({ requested: true, booking_ids: ((rows || []) as any[]).map((r) => r.id) });
       }
-      const holdSession = await stripeApi().checkout.sessions.create({
-        customer_email: user.email || undefined,
-        payment_method_types: ["card"],
-        mode: "payment",
-        line_items: occurrences.map((occ, i) => lineItem(occ, ". Charged only if the coach accepts.", i)),
-        payment_intent_data: {
-          capture_method: "manual",
-          ...(user.email ? { receipt_email: user.email } : {}),
-          metadata: { request: "1" },
+      const holdSession = await stripeApi().checkout.sessions.create(
+        {
+          customer_email: user.email || undefined,
+          payment_method_types: ["card"],
+          mode: "payment",
+          line_items: checkoutTotal(paidOccs, ". Charged only if the coach accepts."),
+          payment_intent_data: {
+            capture_method: "manual",
+            ...(user.email ? { receipt_email: user.email } : {}),
+            metadata: { request: "1" },
+          },
+          expires_at: expiry.unix,
+          success_url: `${origin}/booking-confirmation?request=1&session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: `${origin}/book`,
+          metadata: {
+            request: "1",
+            occurrence_ids: occurrenceIds.join(","),
+            coach_id: firstCoachId,
+            athlete_id: athleteId,
+            user_id: user.id,
+            notes: String(notes || "").slice(0, 450),
+            platform_fee_perc: basePlatformFeePerc.toString(),
+            stripe_fee_perc: stripeFeePerc.toString(),
+            stripe_fee_fixed: stripeFeeFixed.toString(),
+            waived_coaches: waivedCoaches,
+          },
         },
-        success_url: `${origin}/booking-confirmation?request=1&session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${origin}/book`,
-        metadata: {
-          request: "1",
-          occurrence_ids: occurrenceIds.join(","),
-          coach_id: firstCoachId,
-          athlete_id: athleteId,
-          user_id: user.id,
-          notes: String(notes || "").slice(0, 450),
-          platform_fee_perc: basePlatformFeePerc.toString(),
-          stripe_fee_perc: stripeFeePerc.toString(),
-          stripe_fee_fixed: stripeFeeFixed.toString(),
-          waived_coaches: waivedCoaches,
-        },
-      });
+        { idempotencyKey: await idempotencyKey("booking-request", [user.id, athleteId, ...occurrenceIds], expiry.unix) },
+      );
       return json({ url: holdSession.url, session_id: holdSession.id, request: true });
     }
 
-    // Paid now. Credits first, then one Stripe checkout for the rest, across coaches.
+    // Paid now. Credits first, free sessions straight away, then one Stripe checkout for the
+    // rest, across coaches. Anything this attempt creates is undone if a later step fails.
     let bookingIds: string[] = [];
     const creditIds: string[] = [];
+    const freeIds: string[] = [];
     const creditOccIds = new Set<string>();
     let toPay = occurrences;
-    if (coversAllPending) {
-      reusingPendingBookings = true;
-      bookingIds = myPendingBookings.map((b) => b.id);
-    } else {
-      if (myPendingBookings.length) {
-        throw new Error("You already have a pending booking for this session. Please complete payment for it before creating a new one.");
-      }
-      const byDate = [...occurrences].sort((a, b) => `${a.occurrence_date}${a.start_time}`.localeCompare(`${b.occurrence_date}${b.start_time}`));
-      const creditOccs: typeof occurrences = [];
-      for (const plan of plans) {
-        const left = { ...plan.creditCounts };
-        for (const occ of byDate.filter((o) => o.coach_id === plan.coachId)) {
-          const kind = (occ as { session_type?: string }).session_type === "group" ? "group" : "individual";
-          if (left.own > 0) left.own--;
-          else if (left[kind] > 0) left[kind]--;
-          else continue;
-          creditOccs.push(occ);
-        }
-      }
-      for (const occ of creditOccs) {
-        const { data: row, error } = await supabaseClient
-          .from("coach_slot_bookings" as any)
-          .insert(rowFor(occ, "booked", "credit"))
-          .select("id")
-          .single();
-        if (error) throw error;
-        const { data: redeemed } = await supabaseClient.rpc("redeem_coach_credit" as any, { p_booking_id: (row as any).id });
-        if (redeemed) {
-          creditIds.push((row as any).id);
-          creditOccIds.add(occ.id);
-        } else {
-          // Someone used the last credit meanwhile: pay for this one instead.
-          await supabaseClient.from("coach_slot_bookings" as any).delete().eq("id", (row as any).id);
-        }
-      }
-      toPay = occurrences.filter((o) => !creditOccIds.has(o.id));
-      if (!toPay.length) {
-        await callNotificationEndpointForBookings(creditIds);
-        return json({ credits_used: creditIds.length, booked: true, booking_ids: creditIds });
-      }
-      const { data: bookingRows, error: bookingErr } = await supabaseClient
-        .from("coach_slot_bookings" as any)
-        .insert(toPay.map((occ) => rowFor(occ, "pending_payment", "unpaid")))
-        .select("id, occurrence_id");
-      if (bookingErr) throw bookingErr;
-      bookingIds = (bookingRows || []).map((b: any) => b.id);
-    }
-
-    const amountInCents = toPay.reduce((sum, occ, i) => sum + lineItem(occ, "", i).price_data.unit_amount, 0);
-    if (amountInCents <= 0) {
-      throw new Error("Total amount must be greater than zero");
-    }
-
-    let customerId: string | undefined;
-    if (user?.email) {
-      const customers = await stripeApi().customers.list({ email: user.email, limit: 1 });
-      if (customers.data.length > 0) {
-        customerId = customers.data[0].id;
-      }
-    }
-
-    let session: Stripe.Checkout.Session;
+    let previousSessionIds: string[] = [];
+    let session: Stripe.Checkout.Session | null = null;
     try {
-      session = await stripeApi().checkout.sessions.create({
-        customer: customerId,
-        customer_email: customerId ? undefined : user.email || undefined,
-        // Card covers Apple Pay and Google Pay where the device supports them.
-        payment_method_types: ["card"],
-        line_items: toPay.map((occ, i) => lineItem(occ, "", i)),
-        mode: "payment",
-        // Stripe emails the receipt (ATH-91). The card is never saved for later.
-        payment_intent_data: user.email ? { receipt_email: user.email } : undefined,
-        success_url: `${origin}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: plans.length > 1 ? `${origin}/book` : `${origin}/coach/${firstCoachId}`,
-        metadata: {
-          occurrence_ids: toPay.map((o) => o.id).join(","),
-          booking_ids: bookingIds.join(","),
-          coach_id: firstCoachId,
-          availability_id: toPay[0].availability_id ?? "",
-          weekly_slot_id: toPay[0].weekly_slot_id ?? "",
-          athlete_id: athleteId,
-          platform_fee_perc: basePlatformFeePerc.toString(),
-          stripe_fee_perc: stripeFeePerc.toString(),
-          stripe_fee_fixed: stripeFeeFixed.toString(),
-          waived_coaches: waivedCoaches,
-          credit_booking_ids: creditIds.join(","),
-        },
-      });
-    } catch (err) {
-      if (!reusingPendingBookings && bookingIds.length) {
-        await supabaseClient.from("coach_slot_bookings" as any).delete().in("id", bookingIds);
+      if (coversAllPending) {
+        reusingPendingBookings = true;
+        // The bookings were opened with an earlier Checkout: close it first so paying the old
+        // tab can't charge again. If it was paid meanwhile, the bookings are now paid.
+        previousSessionIds = [...new Set(myPendingBookings.map((b) => b.stripe_session_id).filter(Boolean))] as string[];
+        if (await closeCheckouts(stripeApi(), supabaseClient, previousSessionIds)) {
+          return json({ booked: true, already_paid: true, booking_ids: myPendingBookings.map((b) => b.id) });
+        }
+        const freeRows = myPendingBookings.filter((b) => {
+          const occ = occurrenceById.get(b.occurrence_id);
+          return occ && isFree(occ);
+        });
+        if (freeRows.length) {
+          const { error } = await supabaseClient
+            .from("coach_slot_bookings" as any)
+            .update({ status: "booked", payment_status: FREE_PAYMENT_STATUS, hold_expires_at: null, updated_at: new Date().toISOString() })
+            .in("id", freeRows.map((b) => b.id))
+            .eq("status", "pending_payment");
+          if (error) throw error;
+          freeIds.push(...freeRows.map((b) => b.id));
+        }
+        toPay = occurrences.filter((o) => !isFree(o));
+        bookingIds = myPendingBookings.filter((b) => !freeIds.includes(b.id)).map((b) => b.id);
+      } else {
+        const byDate = [...occurrences]
+          .filter((o) => !isFree(o))
+          .sort((a, b) => `${a.occurrence_date}${a.start_time}`.localeCompare(`${b.occurrence_date}${b.start_time}`));
+        const creditOccs: typeof occurrences = [];
+        for (const plan of plans) {
+          const left = { ...plan.creditCounts };
+          for (const occ of byDate.filter((o) => o.coach_id === plan.coachId)) {
+            const kind = (occ as { session_type?: string }).session_type === "group" ? "group" : "individual";
+            if (left.own > 0) left.own--;
+            else if (left[kind] > 0) left[kind]--;
+            else continue;
+            creditOccs.push(occ);
+          }
+        }
+        for (const occ of creditOccs) {
+          const { data: row, error } = await supabaseClient
+            .from("coach_slot_bookings" as any)
+            .insert(rowFor(occ, "booked", "credit"))
+            .select("id")
+            .single();
+          if (error) throw error;
+          const { data: redeemed, error: redeemErr } = await supabaseClient.rpc("redeem_coach_credit" as any, { p_booking_id: (row as any).id });
+          if (redeemed) {
+            creditIds.push((row as any).id);
+            creditOccIds.add(occ.id);
+          } else {
+            // Someone used the last credit meanwhile (or redeeming failed): pay for this one instead.
+            if (redeemErr) console.error("Redeeming a credit failed", (row as any).id, redeemErr);
+            await supabaseClient.from("coach_slot_bookings" as any).delete().eq("id", (row as any).id);
+          }
+        }
+        const freeOccs = occurrences.filter((o) => isFree(o));
+        if (freeOccs.length) {
+          const { data: freeRows, error: freeErr } = await supabaseClient
+            .from("coach_slot_bookings" as any)
+            .insert(freeOccs.map((occ) => rowFor(occ, "booked", FREE_PAYMENT_STATUS)))
+            .select("id");
+          if (freeErr) throw freeErr;
+          freeIds.push(...((freeRows || []) as any[]).map((r) => r.id));
+        }
+        toPay = occurrences.filter((o) => !creditOccIds.has(o.id) && !isFree(o));
+        if (toPay.length) {
+          const { data: bookingRows, error: bookingErr } = await supabaseClient
+            .from("coach_slot_bookings" as any)
+            .insert(toPay.map((occ) => ({ ...rowFor(occ, "pending_payment", "unpaid"), hold_expires_at: expiry.iso })))
+            .select("id, occurrence_id");
+          if (bookingErr) throw bookingErr;
+          bookingIds = (bookingRows || []).map((b: any) => b.id);
+        }
       }
+
+      if (!toPay.length) {
+        // Nothing left to charge: credits and free sessions are booked now.
+        const booked = [...creditIds, ...freeIds];
+        await callNotificationEndpointForBookings(booked);
+        await callCalendarForBookings(supabaseClient, booked);
+        return json({ credits_used: creditIds.length, booked: true, booking_ids: booked });
+      }
+      const lines = checkoutTotal(toPay);
+
+      let customerId: string | undefined;
+      if (user?.email) {
+        const customers = await stripeApi().customers.list({ email: user.email, limit: 1 });
+        if (customers.data.length > 0) {
+          customerId = customers.data[0].id;
+        }
+      }
+
+      // Same bookings + same earlier Checkout + same minute = same Checkout back from Stripe.
+      const attempt = `${previousSessionIds.length ? [...previousSessionIds].sort().join("+") : "new"}:${expiry.unix}`;
+      session = await stripeApi().checkout.sessions.create(
+        {
+          customer: customerId,
+          customer_email: customerId ? undefined : user.email || undefined,
+          // Card covers Apple Pay and Google Pay where the device supports them.
+          payment_method_types: ["card"],
+          line_items: lines,
+          mode: "payment",
+          // Unpaid Checkouts lapse (and their spots are released) instead of holding them for 24h.
+          expires_at: expiry.unix,
+          // Stripe emails the receipt (ATH-91). The card is never saved for later.
+          payment_intent_data: user.email ? { receipt_email: user.email } : undefined,
+          success_url: `${origin}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
+          cancel_url: plans.length > 1 ? `${origin}/book` : `${origin}/coach/${firstCoachId}`,
+          metadata: {
+            occurrence_ids: metadataList(toPay.map((o) => o.id)),
+            booking_ids: metadataList(bookingIds),
+            coach_id: firstCoachId,
+            availability_id: toPay[0].availability_id ?? "",
+            weekly_slot_id: toPay[0].weekly_slot_id ?? "",
+            athlete_id: athleteId,
+            platform_fee_perc: basePlatformFeePerc.toString(),
+            stripe_fee_perc: stripeFeePerc.toString(),
+            stripe_fee_fixed: stripeFeeFixed.toString(),
+            waived_coaches: waivedCoaches,
+            credit_booking_ids: metadataList(creditIds),
+          },
+        },
+        { idempotencyKey: await idempotencyKey("booking-checkout", bookingIds, attempt) },
+      );
+
+      // Rows this Checkout holds: new pending rows, credits in the same basket, and reused rows
+      // that were already Checkout holds. Reused rows that aren't holds (an accepted request, a
+      // walk-in) only point at the new Checkout and are never released.
+      const heldBefore = new Set(myPendingBookings.filter((b) => b.hold_expires_at).map((b) => b.id));
+      const holdIds = reusingPendingBookings ? bookingIds.filter((id) => heldBefore.has(id)) : [...bookingIds, ...creditIds];
+      const plainIds = reusingPendingBookings ? bookingIds.filter((id) => !heldBefore.has(id)) : [];
+      const intentId = extractPaymentIntentId(session);
+      if (holdIds.length) {
+        const { error } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .update({ stripe_session_id: session.id, stripe_payment_intent: intentId, hold_expires_at: expiry.iso })
+          .in("id", holdIds);
+        if (error) throw error;
+      }
+      if (plainIds.length) {
+        const { error } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .update({ stripe_session_id: session.id, stripe_payment_intent: intentId })
+          .in("id", plainIds);
+        if (error) throw error;
+      }
+      if (previousSessionIds.length) {
+        // Credits held with the earlier Checkout now wait for this one.
+        const { error } = await supabaseClient
+          .from("coach_slot_bookings" as any)
+          .update({ stripe_session_id: session.id, hold_expires_at: expiry.iso })
+          .in("stripe_session_id", previousSessionIds)
+          .eq("payment_status", "credit")
+          .eq("status", "booked")
+          .not("hold_expires_at", "is", null);
+        if (error) throw error;
+      }
+
+      // Free sessions in the same basket are booked already; credits wait for the payment.
+      if (freeIds.length) {
+        await callNotificationEndpointForBookings(freeIds);
+        await callCalendarForBookings(supabaseClient, freeIds);
+      }
+      return json({ url: session.url, session_id: session.id, credits_used: creditIds.length });
+    } catch (err) {
+      // Never leave a spot held, a credit spent or a payable Checkout behind a failed attempt.
+      if (session) {
+        await stripeApi().checkout.sessions.expire(session.id).catch((e: unknown) =>
+          console.error("Expiring the Checkout of a failed attempt failed", session?.id, e)
+        );
+      }
+      await undoAttempt(supabaseClient, {
+        pendingIds: reusingPendingBookings ? [] : bookingIds,
+        creditIds,
+        freeIds: reusingPendingBookings ? [] : freeIds,
+      });
       throw err;
     }
-
-    const { error: updErr } = await supabaseClient
-      .from("coach_slot_bookings" as any)
-      .update({
-        stripe_session_id: session.id,
-        stripe_payment_intent: extractPaymentIntentId(session),
-      })
-      .in("id", bookingIds);
-    if (updErr) throw updErr;
-    if (creditIds.length) await callNotificationEndpointForBookings(creditIds);
-
-    return json({ url: session.url, session_id: session.id, credits_used: creditIds.length });
   } catch (error) {
     console.error("Error creating booking payment:", error);
     const errorMessage = error instanceof Error ? error.message : "An unknown error occurred";

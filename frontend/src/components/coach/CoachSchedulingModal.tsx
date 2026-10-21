@@ -29,6 +29,7 @@ import { useReferralWaiver } from "@/hooks/useReferrals";
 import { computeSessionPrice, formatPriceBreakdown } from "@/utils/referralHelpers";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDateInZone, formatSlotForViewer } from "@/utils/viewerTime";
+import { functionPaymentError, paymentErrorMessage } from "@/utils/paymentErrors";
 
 interface Coach {
   id?: string;
@@ -393,7 +394,8 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
         }
       });
 
-      if (paymentError) throw paymentError;
+      if (paymentError) throw new Error(await functionPaymentError(paymentError, strings.appointments.errorCreatingBooking));
+      if (paymentData?.error) throw new Error(paymentErrorMessage(paymentData.error, strings.appointments.errorCreatingBooking));
 
       // Coach confirms first (ATH-49): the request is held, no checkout yet.
       if (paymentData?.requested) {
@@ -407,7 +409,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       }
 
       // Track free consultation if successful
-      if (isFreeConsultation && paymentData.appointmentId) {
+      if (isFreeConsultation && paymentData?.appointmentId) {
         await supabase
           .from('free_consultation_tracking')
           .insert({
@@ -419,15 +421,37 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       }
 
       // Redirect to Stripe Checkout
-      if (paymentData.url) {
+      if (paymentData?.url) {
         window.location.href = paymentData.url;
         onClose();
+        return;
       }
+
+      // Nothing to charge by card: credits, a free session or paid to the coach directly.
+      if (paymentData?.booked || paymentData?.direct) {
+        const credits = Number(paymentData.credits_used) || 0;
+        toast({
+          title: "You're booked",
+          description: paymentData.direct
+            ? paymentData.offline
+              ? "Pay the coach directly. It's confirmed once they mark it received."
+              : "Pay the coach directly. Nothing was charged in AthaNext."
+            : credits
+              ? `Paid with ${credits === 1 ? "a credit" : `${credits} credits`}.`
+              : "Nothing was due by card for this session.",
+        });
+        queryClient.invalidateQueries({ queryKey: ["sessions"] });
+        queryClient.invalidateQueries({ queryKey: ["bookable-sessions"] });
+        onClose();
+        return;
+      }
+
+      throw new Error(strings.appointments.errorCreatingBooking);
     } catch (error) {
       console.error('Booking error:', error);
       toast({
         title: strings.appointments.bookingFailed,
-        description: strings.appointments.errorCreatingBooking,
+        description: paymentErrorMessage(error, strings.appointments.errorCreatingBooking),
         variant: "destructive",
       });
     } finally {

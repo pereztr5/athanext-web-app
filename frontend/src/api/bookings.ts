@@ -5,6 +5,7 @@
 
 import type { ApiResponse, ApiError } from './client';
 import { supabase } from '@/integrations/supabase/client';
+import { functionPaymentError, paymentErrorMessage } from '@/utils/paymentErrors';
 
 export interface BookingConfirmationData {
   bookingId: string;
@@ -49,26 +50,27 @@ const buildApiError = (
  */
 export const verifyPaymentStatus = async (
   sessionId: string
-): Promise<ApiResponse<{ verified: boolean }>> => {
+): Promise<ApiResponse<{ verified: boolean; paid: boolean }>> => {
+  const fallback = "We couldn't confirm your payment yet. If you paid, it will show in My sessions shortly.";
   try {
-    await supabase.functions.invoke('create-booking-payment-v0', {
+    const { data, error } = await supabase.functions.invoke('create-booking-payment-v0', {
       body: { session_id: sessionId },
     });
+    if (error || data?.error) {
+      const message = error ? await functionPaymentError(error, fallback) : paymentErrorMessage(data.error, fallback);
+      console.error('Payment verification failed:', error ?? data?.error);
+      return { data: null, error: buildApiError('PAYMENT_VERIFICATION_ERROR', message, 500, error ?? data?.error) };
+    }
 
     return {
-      data: { verified: true },
+      data: { verified: true, paid: Boolean(data?.paid) || data?.payment_status === 'paid' },
       error: null,
     };
   } catch (err: any) {
     console.error('Payment verification failed:', err);
     return {
       data: null,
-      error: buildApiError(
-        'PAYMENT_VERIFICATION_ERROR',
-        err?.message || 'Failed to verify payment status',
-        500,
-        err
-      ),
+      error: buildApiError('PAYMENT_VERIFICATION_ERROR', paymentErrorMessage(err, fallback), 500, err),
     };
   }
 };
@@ -255,18 +257,15 @@ export const fetchCompleteBookingConfirmation = async (
   }
 };
 
-const readFunctionError = async (error: unknown, fallback: string) => {
-  const candidate = error as { message?: string; context?: { json?: () => Promise<{ error?: string }> } };
-  try {
-    const body = await candidate.context?.json?.();
-    if (body?.error) return body.error;
-  } catch {
-    // The function response was not JSON.
-  }
-  return candidate.message || fallback;
-};
-
-export const startOccurrenceCheckout = async (occurrenceId: string, athleteId: string) => {
+/**
+ * Pays for one booked-but-unpaid session. Opens Stripe when there is something to charge;
+ * otherwise (free session, already paid, paid to the coach) the booking is confirmed as is and
+ * `redirected` is false so the caller can say so and refresh.
+ */
+export const startOccurrenceCheckout = async (
+  occurrenceId: string,
+  athleteId: string
+): Promise<{ redirected: boolean; booked: boolean }> => {
   const { data, error } = await supabase.functions.invoke("create-booking-payment-v0", {
     body: {
       occurrence_id: occurrenceId,
@@ -276,15 +275,19 @@ export const startOccurrenceCheckout = async (occurrenceId: string, athleteId: s
   });
 
   if (error) {
-    throw new Error(await readFunctionError(error, "Could not start payment."));
+    throw new Error(await functionPaymentError(error, "Could not start payment. Please try again."));
   }
   if (data?.error) {
-    throw new Error(data.error);
+    throw new Error(paymentErrorMessage(data.error, "Could not start payment. Please try again."));
   }
-  if (!data?.url) {
-    throw new Error("Payment link was not created.");
+  if (data?.url) {
+    window.location.href = data.url;
+    return { redirected: true, booked: false };
   }
-  window.location.href = data.url;
+  if (data?.booked || data?.direct || data?.requested) {
+    return { redirected: false, booked: true };
+  }
+  throw new Error("Payment link was not created. Please try again.");
 };
 
 export const bookingsAPI = {

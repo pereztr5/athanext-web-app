@@ -767,7 +767,12 @@ const MySessions = () => {
     if (persona !== PROFILE_TYPE.athlete || !athleteProfileId || !occurrenceId) return;
     setPayingBookingId(session.bookingId);
     try {
-      await startOccurrenceCheckout(occurrenceId, athleteProfileId);
+      const { redirected } = await startOccurrenceCheckout(occurrenceId, athleteProfileId);
+      if (!redirected) {
+        toast({ title: "You're booked", description: "Nothing was due by card for this session." });
+        queryClient.invalidateQueries({ queryKey: ["sessions"] });
+        setPayingBookingId(null);
+      }
     } catch (error) {
       toast({
         title: "Payment didn't start",

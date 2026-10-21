@@ -186,7 +186,7 @@ const CoachSessionPage = () => {
     if (p === "refunded") return ["Refunded", ""];
     if (p === "credit") return ["Paid with a credit", s.ended || first.status === "canceled" ? "" : `${plural(first.creditsLeft, "credit")} left`];
     if (p === "paid") return ["Paid in app", money2(first.paidAmount ?? s.price)];
-    if (p === "outside") return ["Paid outside AthaNext", money(s.price)];
+    if (p === "outside") return s.price > 0 ? ["Paid outside AthaNext", money(s.price)] : ["Free session", ""];
     if (first.status === "canceled") return ["Not charged", ""];
     return ["Waiting for payment", `${money(s.price)} due`];
   };

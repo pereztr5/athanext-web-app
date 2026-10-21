@@ -11,6 +11,9 @@
 //   { action: "transfer_invoices", invoice_ids } -> { sent, waiting, failed }
 //   { action: "transfer_packages", purchase_ids } -> { sent, waiting, failed }
 //   { action: "reverse_bookings", booking_ids? } -> { reversed, failed }
+// Service role only (hourly job send-waiting-payouts, or Connect account.updated):
+//   { action: "sweep", coach_id? } -> { sent, waiting, failed, reversed }  every waiting share whose
+//                                    coach can receive transfers, plus pending reversals
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
@@ -114,6 +117,8 @@ const sendTransfers = async (admin: SupabaseClient, rows: Record<string, any>[])
   for (const row of rows) {
     // held = session not done yet; void / reversing = cancel or Stripe clawback.
     if (row.status === "sent" || row.status === "held" || row.status === "void" || row.status === "reversing") continue;
+    // A row that already has a Stripe transfer (e.g. a reversal that failed) must never be sent twice.
+    if (row.stripe_transfer_id) continue;
     const { data: account } = await admin
       .from("coach_payout_accounts")
       .select("stripe_account_id, transfers_active")
@@ -158,6 +163,57 @@ const sendTransfers = async (admin: SupabaseClient, rows: Record<string, any>[])
     }
   }
   return result;
+};
+
+/** Finishes Stripe reversals for shares already sent before a cancel / refund / dispute. */
+const reverseTransfers = async (admin: SupabaseClient, rows: Record<string, any>[]) => {
+  const total = { reversed: 0, failed: 0 };
+  for (const row of rows) {
+    if (!row.stripe_transfer_id) continue;
+    try {
+      await stripe().transfers.createReversal(row.stripe_transfer_id, {}, { idempotencyKey: `payout-reverse-${row.id}` });
+      await admin.from("payout_transfers").update({ status: "void", error: null }).eq("id", row.id);
+      total.reversed++;
+    } catch (e) {
+      console.error("reverse failed", row.id, e);
+      await admin
+        .from("payout_transfers")
+        .update({ status: "failed", error: e instanceof Error ? e.message : String(e) })
+        .eq("id", row.id);
+      total.failed++;
+    }
+  }
+  return total;
+};
+
+/** Sends due shares for every coach whose Connect account can receive transfers. */
+const sweep = async (admin: SupabaseClient, coachId?: string) => {
+  let accounts = admin.from("coach_payout_accounts").select("coach_id").eq("transfers_active", true);
+  if (coachId) accounts = accounts.eq("coach_id", coachId);
+  const { data: ready, error } = await accounts;
+  if (error) throw error;
+  const coachIds = ((ready ?? []) as { coach_id: string }[]).map((r) => r.coach_id);
+  const total = { sent: 0, waiting: 0, failed: 0, reversed: 0, coaches: coachIds.length };
+  // Small batches keep one run well inside the function time limit; the next run picks up the rest.
+  for (let i = 0; i < coachIds.length; i += 50) {
+    const batch = coachIds.slice(i, i + 50);
+    const { data: due } = await admin
+      .from("payout_transfers")
+      .select("*")
+      .in("coach_id", batch)
+      .in("status", ["waiting", "failed"])
+      .is("stripe_transfer_id", null)
+      .limit(200);
+    const r = await sendTransfers(admin, (due as Record<string, any>[]) ?? []);
+    total.sent += r.sent;
+    total.waiting += r.waiting;
+    total.failed += r.failed;
+  }
+  const { data: reversing } = coachId
+    ? await admin.from("payout_transfers").select("*").eq("coach_id", coachId).eq("status", "reversing").limit(50)
+    : await admin.rpc("list_reversing_transfers", { p_limit: 50 });
+  total.reversed = (await reverseTransfers(admin, (reversing as Record<string, any>[]) ?? [])).reversed;
+  return total;
 };
 
 serve(async (req) => {
@@ -222,6 +278,14 @@ serve(async (req) => {
           total.failed++;
         }
       }
+      return json(total);
+    }
+
+    if (body.action === "sweep") {
+      if (!bearer || bearer !== Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")) return json({ error: "Unauthorized" }, 401);
+      const coachId = typeof body.coach_id === "string" && body.coach_id ? body.coach_id : undefined;
+      const total = await sweep(admin, coachId);
+      console.log("payout sweep", JSON.stringify(total));
       return json(total);
     }
 
@@ -355,7 +419,7 @@ serve(async (req) => {
       return json({
         account: publicAccount(existing),
         balance: { available: cents(balance.available), pending: cents(balance.pending) },
-        payouts: payouts.data.map((p) => ({ id: p.id, amount: p.amount / 100, arrival: new Date(p.arrival_date * 1000).toISOString(), status: p.status })),
+        payouts: payouts.data.map((p: Stripe.Payout) => ({ id: p.id, amount: p.amount / 100, arrival: new Date(p.arrival_date * 1000).toISOString(), status: p.status })),
       });
     }
 
