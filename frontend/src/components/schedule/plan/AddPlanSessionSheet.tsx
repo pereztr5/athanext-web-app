@@ -202,7 +202,7 @@ export const AddPlanSessionSheet = ({
         </DialogHeader>
 
         {view === "list" ? (
-          <div className="flex max-h-[70vh] flex-col gap-2.5 overflow-y-auto px-4 py-5 md:px-[25px]">
+          <div className="flex max-h-[70dvh] flex-col gap-2.5 overflow-y-auto px-4 py-5 md:px-[25px]">
             {usual.length ? (
               <>
                 <span className={label}>Your usual sessions</span>
@@ -244,7 +244,7 @@ export const AddPlanSessionSheet = ({
           </div>
         ) : (
           <>
-            <div className="flex max-h-[70vh] flex-col gap-4 overflow-y-auto px-4 py-5 md:px-[25px]">
+            <div className="flex max-h-[70dvh] flex-col gap-4 overflow-y-auto px-4 py-5 md:px-[25px]">
               <div className="flex flex-col gap-1.5">
                 <span className={label}>Type</span>
                 <div className={segGroup} role="group" aria-label="Type">

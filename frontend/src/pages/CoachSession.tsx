@@ -439,7 +439,7 @@ const CoachSessionPage = () => {
           )
         ) : null}
 
-        {actions ? <div className="grid grid-cols-[1.3fr_1fr] gap-2 md:hidden [&>*]:w-full">{actions}</div> : null}
+        {actions ? <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-2 md:hidden [&>*]:w-full">{actions}</div> : null}
 
         {isLive ? (
           <button type="button" className={cn(dangerTextButton, "self-center md:self-start")} onClick={() => setMode("cancel")}>

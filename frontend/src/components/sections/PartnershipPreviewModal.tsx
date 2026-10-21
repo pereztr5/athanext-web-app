@@ -33,7 +33,7 @@ export const PartnershipPreviewModal = ({
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader className="space-y-4">
           <div className="flex items-start gap-4">
             <DialogTitle className="text-2xl flex-1">{partnership.name}</DialogTitle>

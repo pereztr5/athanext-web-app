@@ -185,7 +185,7 @@ export const AddSessionSheet = ({
           <DialogTitle className="text-card-title">Add a session</DialogTitle>
           <DialogDescription className="text-body-m text-dark-300">{formatDayISO(date, { weekday: "long", month: "short", day: "numeric" })}</DialogDescription>
         </DialogHeader>
-        <div className="flex max-h-[70vh] flex-col gap-3 overflow-y-auto px-4 py-5 md:px-[25px]">
+        <div className="flex max-h-[70dvh] flex-col gap-3 overflow-y-auto px-4 py-5 md:px-[25px]">
           <div className={segGroup} role="group" aria-label="Type">
             <button type="button" className={segButton(type === "group")} aria-pressed={type === "group"} onClick={() => setType("group")}>
               Group

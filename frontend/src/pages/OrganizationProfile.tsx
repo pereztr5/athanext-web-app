@@ -71,7 +71,7 @@ const OrganizationProfile = () => {
 
   const shell = isAuthenticated
     ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12"
-    : "mt-[3.8rem] min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10";
+    : "min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10";
   const backLink = (
     <Link
       to={`${ROUTES.COACHES}?view=organizations`}

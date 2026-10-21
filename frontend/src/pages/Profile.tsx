@@ -516,7 +516,7 @@ const Profile = () => {
             ) : null}
 
             <Dialog open={certDialogOpen} onOpenChange={setCertDialogOpen}>
-                <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
+                <DialogContent className="max-h-[90dvh] max-w-2xl gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
                     <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
                         <DialogTitle className="text-section text-dark">
                             Edit certifications
@@ -528,7 +528,7 @@ const Profile = () => {
 
                     <div className="h-px bg-light-525" />
 
-                    <div className="flex max-h-[60vh] flex-col gap-[10px] overflow-y-auto px-[25px] py-5">
+                    <div className="flex max-h-[60dvh] flex-col gap-[10px] overflow-y-auto px-[25px] py-5">
                         {certificationsDraft.length === 0 && (
                             <div className="rounded-control bg-light-400 p-[15px] text-body-m text-dark-300">
                                 Add your first certification to show your credentials.

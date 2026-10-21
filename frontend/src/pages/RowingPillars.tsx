@@ -2,7 +2,7 @@ import AthletePillarsGraphic from "@/components/coach/AthletePillarsGraphic";
 
 const RowingPillars = () => {
   return (
-    <div className="min-h-screen bg-background pt-20">
+    <div className="min-h-screen bg-background pt-5">
       <AthletePillarsGraphic initialSport="rowing" />
     </div>
   );

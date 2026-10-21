@@ -11,7 +11,7 @@ import { getConfigurationValue } from "@/api/configurations";
 
 const BecomeACoach = () => {
   const navigate = useNavigate();
-  const { role, isCoach, isAthleteLike, isAuthenticated, ready } = useRole();
+  const { role, isCoach, isAthleteLike } = useRole();
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [adminEmail, setAdminEmail] = useState<string | null>(null);
 
@@ -72,8 +72,8 @@ const BecomeACoach = () => {
   return (
     <div className="min-h-screen">
       {/* Hero Section */}
-      <section className={`relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 ${ready && isAuthenticated ? "pt-10" : "pt-24"} pb-12 px-4 border-b border-primary/20`}>
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 pt-10 pb-12 px-4 border-b border-primary/20">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-muted/5" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" />
         <div className="relative container mx-auto max-w-6xl text-center">
           <div className="mb-8 animate-fade-in">

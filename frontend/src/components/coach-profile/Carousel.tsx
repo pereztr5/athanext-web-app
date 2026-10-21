@@ -158,7 +158,7 @@ export function Carousel({
         {enablePreview && previewOpen && portalTarget && safePhotos[currentPhotoIndex] && createPortal(
             <div className="fixed inset-0 z-[2100] bg-dark/80 flex items-center justify-center px-4">
                 <div className="absolute inset-0" onClick={() => setPreviewOpen(false)} />
-                <div className="relative w-full max-w-5xl max-h-[90vh] flex flex-col gap-3 z-[2101]">
+                <div className="relative w-full max-w-5xl max-h-[90dvh] flex flex-col gap-3 z-[2101]">
                     <button
                         type="button"
                         aria-label="Close preview"
@@ -167,11 +167,11 @@ export function Carousel({
                     >
                         <X className="size-6" strokeWidth={1.5} />
                     </button>
-                    <div className="relative w-full h-full max-h-[80vh] bg-dark/30 rounded-card overflow-hidden flex items-center justify-center">
+                    <div className="relative w-full h-full max-h-[80dvh] bg-dark/30 rounded-card overflow-hidden flex items-center justify-center">
                         <img
                             src={safePhotos[currentPhotoIndex]}
                             alt={`${altTextPrefix || 'Photo'} ${currentPhotoIndex + 1}`}
-                            className="max-h-[80vh] w-auto object-contain"
+                            className="max-h-[80dvh] w-auto object-contain"
                         />
                         {hasMultiplePhotos && (
                             <>

@@ -943,7 +943,7 @@ export const ManageAvailabilityModal = ({
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="flex w-[min(1160px,calc(100vw-2rem))] max-w-none max-h-[90vh] flex-col gap-0 overflow-hidden border border-light-525 bg-light-300 p-0 shadow-overlay sm:rounded-card [&>button]:hidden"
+        className="flex w-[min(1160px,calc(100vw-2rem))] max-w-none max-h-[90dvh] flex-col gap-0 overflow-hidden border border-light-525 bg-light-300 p-0 shadow-overlay sm:rounded-card [&>button]:hidden"
       >
         <div className="flex items-center justify-between border-b border-light-525 p-[25px]">
           <h2 className="flex items-center gap-2 text-card-title text-dark">

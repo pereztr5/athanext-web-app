@@ -229,7 +229,7 @@ export const WeeklyHoursCard = ({
                       {rs.map(([a, b], idx) => (
                         <div key={idx} className="flex flex-wrap items-center gap-2">
                           <select
-                            className={cn(input, "w-[120px]")}
+                            className={cn(input, "min-w-0 flex-1 sm:w-[120px] sm:flex-none")}
                             value={a}
                             aria-label="From"
                             onChange={(e) => {
@@ -244,7 +244,7 @@ export const WeeklyHoursCard = ({
                           </select>
                           <span className={caption}>to</span>
                           <select
-                            className={cn(input, "w-[120px]", b <= a && "border-error-600 outline outline-1 -outline-offset-1 outline-error-600")}
+                            className={cn(input, "min-w-0 flex-1 sm:w-[120px] sm:flex-none", b <= a && "border-error-600 outline outline-1 -outline-offset-1 outline-error-600")}
                             value={b}
                             aria-label="Until"
                             onChange={(e) => {

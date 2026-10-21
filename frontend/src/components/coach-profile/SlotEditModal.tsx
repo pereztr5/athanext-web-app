@@ -198,7 +198,7 @@ export function SlotEditModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark sm:max-w-xl md:max-w-2xl [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-h-[90dvh] gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark sm:max-w-xl md:max-w-2xl [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
           <DialogTitle className="text-section text-dark">
             Edit time slot
@@ -214,7 +214,7 @@ export function SlotEditModal({
           <p className="px-[25px] py-5 text-body-m text-dark-300">No slot selected.</p>
         ) : (
           <>
-            <div className="max-h-[60vh] overflow-y-auto px-[25px] py-5">
+            <div className="max-h-[60dvh] overflow-y-auto px-[25px] py-5">
               <div
                 className="grid grid-cols-1 gap-4 sm:grid-cols-2"
                 style={{ opacity: !isEnabled ? 0.6 : 1 }}

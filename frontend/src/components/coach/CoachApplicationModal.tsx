@@ -137,7 +137,7 @@ export const CoachApplicationModal = ({ open, onOpenChange }: CoachApplicationMo
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-2xl max-h-[90dvh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="text-section">{strings.coach.applyToBecomeCoach}</DialogTitle>
           <DialogDescription>

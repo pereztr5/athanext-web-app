@@ -75,10 +75,10 @@ const WhyMyKonnect = () => {
   const coachBenefits = WHY_MYKONNECT_STRINGS.coachSection.benefits;
 
   return (
-    <div className="min-h-screen pt-16 bg-gradient-to-br from-blue-50 via-slate-50/30 to-slate-100/20 dark:from-blue-900 dark:via-slate-950/30 dark:to-slate-950/20">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-slate-50/30 to-slate-100/20 dark:from-blue-900 dark:via-slate-950/30 dark:to-slate-950/20">
       {/* Hero Section */}
       <section className="relative py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-muted/5" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" />
         <div className="relative max-w-7xl mx-auto">
           <div className="text-center max-w-4xl mx-auto mb-8 animate-fade-in">
@@ -186,7 +186,7 @@ const WhyMyKonnect = () => {
       </section>
 
       {/* Audience Columns */}
-      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-secondary/5">
+      <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-background to-muted/5">
         <div className="max-w-7xl mx-auto">
           <div className="text-center mb-8">
             <h2 className="text-3xl sm:text-4xl font-bold mb-4 text-slate-800 dark:text-slate-200">{WHY_MYKONNECT_STRINGS.builtForEveryone.title}</h2>
@@ -344,7 +344,7 @@ const WhyMyKonnect = () => {
 
       {/* Final CTA Banner (hide for coaches) */}
       {role !== 'coach' && (
-        <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 to-secondary/10">
+        <section className="py-12 sm:py-16 px-4 sm:px-6 lg:px-8 bg-gradient-to-br from-primary/10 to-muted/10">
           <div className="max-w-4xl mx-auto text-center animate-fade-in">
             <h2 className="text-3xl sm:text-4xl font-bold mb-6 text-slate-800 dark:text-slate-200">
               {WHY_MYKONNECT_STRINGS.finalCta.title}

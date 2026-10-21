@@ -184,7 +184,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-[520px]">
+      <DialogContent className="max-h-[90dvh] overflow-y-auto sm:max-w-[520px]">
         <DialogHeader>
           <DialogTitle>Manage organizations</DialogTitle>
           <DialogDescription>Organizations and partners you represent. Their logos show near the top of your profile.</DialogDescription>

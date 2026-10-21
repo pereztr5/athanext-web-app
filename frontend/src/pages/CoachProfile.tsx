@@ -257,7 +257,7 @@ const CoachProfile = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-16 pt-[3.8rem] md:px-10">
+      <div className="min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-16 md:px-10">
         <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6 pt-6" aria-busy="true" aria-label="Loading coach profile">
           <Skeleton className="h-4 w-28 rounded-pill" />
           <div className="grid grid-cols-1 gap-6 lg:grid-cols-[147px_minmax(0,1fr)_minmax(0,1fr)_147px]">
@@ -334,7 +334,7 @@ const CoachProfile = () => {
   }
 
   return (
-    <div className="mt-[3.8rem] min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10">
+    <div className="min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10">
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
         <Link
           to={ROUTES.COACHES}

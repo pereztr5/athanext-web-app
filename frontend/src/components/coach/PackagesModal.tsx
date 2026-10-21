@@ -79,7 +79,7 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent
         className={cn(
-          "max-w-4xl max-h-[90vh] overflow-y-auto gap-0 p-0",
+          "max-w-4xl max-h-[90dvh] overflow-y-auto gap-0 p-0",
           "bg-light-300 border border-light-525 rounded-card sm:rounded-card shadow-overlay font-sans text-dark",
           "[&>button]:text-dark-300 [&>button]:opacity-100 [&>button:hover]:text-dark [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]"
         )}

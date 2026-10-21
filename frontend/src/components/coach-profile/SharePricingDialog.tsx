@@ -205,7 +205,7 @@ export function SharePricingDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-[920px] overflow-y-auto border-light-525 bg-light-300 p-0 sm:rounded-card [&>button]:hidden">
+      <DialogContent className="max-h-[90dvh] max-w-[920px] overflow-y-auto border-light-525 bg-light-300 p-0 sm:rounded-card [&>button]:hidden">
         <div className="flex items-start justify-between gap-4 border-b border-light-525 px-6 py-4">
           <DialogHeader className="space-y-1 text-left">
             <DialogTitle className="text-section text-dark">

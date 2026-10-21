@@ -165,8 +165,8 @@ const Partnerships = () => {
   return (
     <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <section className="relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 pt-24 pb-12 px-4 border-b border-primary/20" aria-labelledby="resources-hero-heading">
-        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-secondary/5" />
+      <section className="relative overflow-hidden bg-gradient-to-br from-blue-100/40 via-blue-50/30 to-slate-100/20 dark:from-blue-900/40 dark:via-blue-800/30 dark:to-slate-900/20 pt-9 pb-12 px-4 border-b border-primary/20" aria-labelledby="resources-hero-heading">
+        <div className="absolute inset-0 bg-gradient-to-br from-primary/5 via-transparent to-muted/5" />
         <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,rgba(59,130,246,0.15),transparent_50%)]" />
         <div className="relative container mx-auto max-w-6xl text-center px-0 sm:px-4">
           <h1 className="text-4xl md:text-5xl font-bold mb-4">

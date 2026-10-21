@@ -7,6 +7,9 @@ import { cn } from "@/lib/utils"
 // AthaNext Design System Button. One primary per view, last in a group.
 // Disabled uses the light-400 / light-525 / dark-200 recipe, never opacity.
 const filledDisabled = "disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200"
+// Phones: a text button may shrink inside a row and wrap its label instead of pushing the row
+// off screen. Icon buttons keep their size.
+const narrowWrap = "max-sm:min-w-0 max-sm:whitespace-normal max-sm:text-center"
 
 const buttonVariants = cva(
   "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-control border border-transparent font-medium tracking-[-0.03em] transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary disabled:cursor-not-allowed [&_svg]:pointer-events-none [&_svg]:size-4 [&_svg]:shrink-0",
@@ -27,9 +30,9 @@ const buttonVariants = cva(
         back: "h-auto gap-1 border-0 p-0 text-label-sm text-dark-300 hover:text-dark disabled:text-dark-200",
       },
       size: {
-        default: "h-control px-4 text-label",
-        sm: "h-control-sm px-3 text-label-sm",
-        lg: "h-input px-5 text-label",
+        default: `h-control px-4 text-label ${narrowWrap}`,
+        sm: `h-control-sm px-3 text-label-sm ${narrowWrap}`,
+        lg: `h-input px-5 text-label ${narrowWrap}`,
         icon: "size-control",
       },
     },

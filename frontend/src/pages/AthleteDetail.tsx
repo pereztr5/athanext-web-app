@@ -141,7 +141,7 @@ const AthleteDetailPage = () => {
     "Nothing due"
   );
 
-  const stat = "flex min-w-0 flex-col gap-1 p-3 md:px-[18px] md:py-3.5";
+  const stat = "flex min-w-0 flex-col gap-1 break-words p-3 md:px-[18px] md:py-3.5";
   const statValue = "text-subtitle md:text-card-title";
 
   return (
@@ -170,7 +170,7 @@ const AthleteDetailPage = () => {
           </div>
           <div className="hidden gap-2 md:flex">{actions}</div>
         </header>
-        <div className="grid grid-cols-[1.3fr_1fr] gap-2 md:hidden [&>*]:w-full">{actions}</div>
+        <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-2 md:hidden [&>*]:w-full">{actions}</div>
 
         <div className="grid grid-cols-3 divide-x divide-light-525 rounded-card border border-light-525 bg-light-300">
           <div className={stat}>

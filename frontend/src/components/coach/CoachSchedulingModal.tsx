@@ -551,7 +551,7 @@ const CoachSchedulingModal = ({ coach, isOpen, onClose, serviceType, prefillSlot
       </AlertDialog>
 
       <Dialog open={isOpen} onOpenChange={onClose}>
-        <DialogContent className={cn("max-w-2xl max-h-[90vh] overflow-y-auto gap-0 p-0", modalSurface, closeButtonOverride)}>
+        <DialogContent className={cn("max-w-2xl max-h-[90dvh] overflow-y-auto gap-0 p-0", modalSurface, closeButtonOverride)}>
           <DialogHeader className="px-[25px] py-5 pr-14 text-left">
             <DialogTitle className="text-section text-dark">
               Confirm your booking

@@ -25,7 +25,7 @@ export const CommunityMembersDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[80vh] max-w-md gap-4 overflow-y-auto font-sans text-dark">
+      <DialogContent className="max-h-[80dvh] max-w-md gap-4 overflow-y-auto font-sans text-dark">
         <div className="flex flex-col gap-1.5 pr-8 text-left">
           <DialogTitle className="text-card-title">Community members</DialogTitle>
           <DialogDescription className="text-body-m text-dark-300">

@@ -635,7 +635,7 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
       >
         <DialogContent
           onInteractOutside={(event) => event.preventDefault()}
-          className={`max-w-4xl max-h-[85vh] flex flex-col ${
+          className={`max-w-4xl max-h-[85dvh] flex flex-col ${
           isMobile
             ? 'w-[95vw] m-2'
             : ''

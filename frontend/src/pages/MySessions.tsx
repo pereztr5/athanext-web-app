@@ -1112,7 +1112,7 @@ const MySessions = () => {
           }
         }}
       >
-        <DialogContent className="max-h-[90vh] max-w-2xl gap-0 overflow-y-auto p-0 font-sans text-dark [&>button]:right-[13px] [&>button]:top-[11px] [&>button]:text-dark-300 [&>button]:opacity-100 [&>button:hover]:text-dark sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]">
+        <DialogContent className="max-h-[90dvh] max-w-2xl gap-0 overflow-y-auto p-0 font-sans text-dark [&>button]:right-[13px] [&>button]:top-[11px] [&>button]:text-dark-300 [&>button]:opacity-100 [&>button:hover]:text-dark sm:[&>button]:right-[17px] sm:[&>button]:top-[19px] [&>button_svg]:stroke-[1.5]">
           {selectedSessionSafe && (() => {
             const isAthleteView = role === PROFILE_TYPE.athlete;
             const perAthleteRate = isAthleteView

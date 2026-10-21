@@ -32,7 +32,7 @@ export const modalSurface =
 export const closeButtonOverride =
   "[&>button]:text-dark [&>button]:opacity-100 [&>button:hover]:bg-light-400 [&>button]:right-[13px] [&>button]:top-[11px] sm:[&>button]:right-[17px] sm:[&>button]:top-[15px] [&>button_svg]:stroke-[1.5]";
 export const dialogContent = cn(
-  "max-h-[90vh] w-[calc(100vw-32px)] max-w-[520px] gap-0 overflow-y-auto p-0",
+  "max-h-[90dvh] w-[calc(100vw-32px)] max-w-[520px] gap-0 overflow-y-auto p-0",
   modalSurface,
   closeButtonOverride
 );

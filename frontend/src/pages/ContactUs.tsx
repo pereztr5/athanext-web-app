@@ -50,7 +50,7 @@ const ContactUs = () => {
   };
 
   return (
-    <div className={ready && isAuthenticated ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "overflow-x-hidden px-4 pb-12 pt-[3.8rem] md:px-5"}>
+    <div className={ready && isAuthenticated ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "overflow-x-hidden px-4 pb-12 md:px-5"}>
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
         <ContactHero
           backgroundImage={contactBanner}

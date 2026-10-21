@@ -20,7 +20,7 @@ export const GearPageShell = ({
   const inAppShell = ready && isAuthenticated;
 
   return (
-    <div className={inAppShell ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-light px-4 pb-16 pt-[calc(3.8rem+40px)] font-sans"}>
+    <div className={inAppShell ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-light px-4 pb-16 pt-10 font-sans"}>
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
         <div className="flex items-start justify-between gap-4">
           <div className="flex min-w-0 flex-col gap-[10px]">

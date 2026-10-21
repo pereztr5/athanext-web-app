@@ -172,7 +172,7 @@ export const CampEditorDialog = ({
 
   return (
     <Dialog open={open} onOpenChange={(next) => { if (!saving) onOpenChange(next); }}>
-      <DialogContent className="max-h-[90vh] max-w-lg gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
+      <DialogContent className="max-h-[90dvh] max-w-lg gap-0 overflow-hidden p-0 font-sans tracking-[-0.03em] text-dark [&>button]:right-[17px] [&>button]:top-[19px]">
         <DialogHeader className="space-y-1.5 px-[25px] py-5 pr-14 text-left">
           <DialogTitle className="text-section text-dark">{isNew ? "Add camp" : "Edit camp"}</DialogTitle>
           <DialogDescription className="text-body-m text-dark-300">
@@ -180,7 +180,7 @@ export const CampEditorDialog = ({
           </DialogDescription>
         </DialogHeader>
         <div className="h-px bg-light-525" />
-        <div className="flex max-h-[60vh] flex-col gap-4 overflow-y-auto px-[25px] py-5">
+        <div className="flex max-h-[60dvh] flex-col gap-4 overflow-y-auto px-[25px] py-5">
           <div className="flex flex-col gap-1.5">
             <Label className={fieldLabel}>Name</Label>
             <Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Thanksgiving high performance camp" maxLength={100} />

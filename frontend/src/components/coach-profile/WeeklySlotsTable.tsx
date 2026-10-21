@@ -463,7 +463,7 @@ export const WeeklySlotsTable = ({
 
   return (
     <div
-      className="-mx-[25px] flex min-h-[360px] max-h-[65vh] flex-col border-t border-light-525 px-[25px] pt-5"
+      className="-mx-[25px] flex min-h-[360px] max-h-[65dvh] flex-col border-t border-light-525 px-[25px] pt-5"
       ref={scrollRef}
     >
       <div className="mb-5 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">

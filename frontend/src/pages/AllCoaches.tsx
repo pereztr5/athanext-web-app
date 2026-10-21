@@ -415,7 +415,7 @@ const AllCoaches = () => {
   return (
     <div className={isAuthenticated ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12" : "min-h-screen bg-light font-sans"}>
       {!isAuthenticated ? (
-        <section className="mt-[3.8rem] border-b border-light-525 px-4 pb-12 pt-14 md:pb-16 md:pt-20">
+        <section className="border-b border-light-525 px-4 pb-12 pt-14 md:pb-16 md:pt-20">
           <div className="mx-auto flex max-w-wrapper flex-col items-center gap-[30px] text-center">
             <div className="flex flex-col items-center gap-[15px]">
               <BrandPill tone="blue">Coach directory</BrandPill>

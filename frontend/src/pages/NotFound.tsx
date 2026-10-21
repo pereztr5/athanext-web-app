@@ -14,7 +14,7 @@ const NotFound = () => {
   }, [location.pathname]);
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-light px-4 font-sans">
+    <div className="flex min-h-[calc(100svh-3.8rem)] items-center justify-center bg-light px-4 font-sans">
       <div className="flex w-full max-w-[420px] flex-col items-center gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center">
         <span className="inline-flex size-10 items-center justify-center rounded-control border border-light-525 bg-light-400 text-dark-300" aria-hidden="true">
           <Compass className="size-5" strokeWidth={1.5} />

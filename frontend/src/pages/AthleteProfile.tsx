@@ -1243,14 +1243,14 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
           }
         }}
       >
-        <DialogContent className="max-h-[85vh] overflow-y-auto p-[25px] sm:max-w-[560px]">
+        <DialogContent className="max-h-[85dvh] overflow-y-auto p-[25px] sm:max-w-[560px]">
           <DialogHeader className="pr-8 text-left">
             <DialogTitle>{viewAllTitle}</DialogTitle>
             <DialogDescription className={mutedTextClass}>{viewAllDescription}</DialogDescription>
           </DialogHeader>
 
           {viewAllSection === "sessions" ? (
-            <ScrollArea className="max-h-[60vh] pr-2">
+            <ScrollArea className="max-h-[60dvh] pr-2">
               <div className="flex flex-col gap-[10px]">
                 {safeUpcomingSessions.length > 0 ? (
                   safeUpcomingSessions.map((session) => (
@@ -1272,7 +1272,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
               </div>
             </ScrollArea>
           ) : (
-            <ScrollArea className="max-h-[60vh] pr-2">
+            <ScrollArea className="max-h-[60dvh] pr-2">
               <div className="flex flex-col gap-[10px]">
                 {displayedMessages.length > 0 ? (
                   displayedMessages.map((message) => (
@@ -1295,7 +1295,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
       {portalTarget && avatarPreviewOpen && activeProfile.profileImageUrl && createPortal(
         <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-black/80 px-4">
           <div className="absolute inset-0" onClick={() => setAvatarPreviewOpen(false)} />
-          <div className="relative z-[2101] flex max-h-[90vh] w-full max-w-3xl flex-col gap-3">
+          <div className="relative z-[2101] flex max-h-[90dvh] w-full max-w-3xl flex-col gap-3">
             <button
               type="button"
               aria-label="Close preview"
@@ -1304,11 +1304,11 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
             >
               <X className="size-6" strokeWidth={1.5} />
             </button>
-            <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-card bg-black/30">
+            <div className="relative flex h-full max-h-[80dvh] w-full items-center justify-center overflow-hidden rounded-card bg-black/30">
               <img
                 src={activeProfile.profileImageUrl}
                 alt={`${activeProfile.fullName || "Athlete"} profile`}
-                className="max-h-[80vh] w-auto object-contain"
+                className="max-h-[80dvh] w-auto object-contain"
               />
             </div>
           </div>

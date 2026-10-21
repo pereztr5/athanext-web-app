@@ -341,7 +341,7 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
   return (
     <div
       className={cn(
-        "fixed bottom-6 right-6 z-[100] w-[380px] max-w-[92dvw] h-[700px] sm:h-[70dvh] bg-light-300 text-dark rounded-card shadow-overlay border border-light-525 flex flex-col overflow-hidden transition-all duration-300 ease-out max-[430px]:left-0 max-[430px]:right-0 max-[430px]:top-[var(--vv-top,0px)] max-[430px]:w-screen max-[430px]:max-w-none max-[430px]:rounded-none max-[430px]:h-[var(--vvh,100svh)] max-[430px]:pt-[env(safe-area-inset-top)] max-[430px]:pb-[env(safe-area-inset-bottom)]",
+        "fixed bottom-6 right-6 z-[100] w-[380px] max-w-[92dvw] h-[min(700px,calc(100dvh-3rem))] sm:h-[70dvh] bg-light-300 text-dark rounded-card shadow-overlay border border-light-525 flex flex-col overflow-hidden transition-all duration-300 ease-out max-[430px]:left-0 max-[430px]:right-0 max-[430px]:top-[var(--vv-top,0px)] max-[430px]:w-screen max-[430px]:max-w-none max-[430px]:rounded-none max-[430px]:h-[var(--vvh,100svh)] max-[430px]:pt-[env(safe-area-inset-top)] max-[430px]:pb-[env(safe-area-inset-bottom)]",
         isVisible && !isClosing ? "translate-x-0 opacity-100" : "translate-x-full opacity-0"
       )}
       aria-label={`Chat with ${coach.name}${activeConversationId ? `, conversation ${activeConversationId}` : ""}`}

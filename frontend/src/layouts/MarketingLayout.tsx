@@ -6,7 +6,8 @@ const AUTH_PATHS = ["/", "/auth", "/forgot-password", "/reset-password", "/signu
 
 // Signed-out visitors on public pages (coach profiles, directory, invites, legal)
 // get only the logo, which leads back to sign-in. The marketing navbar and
-// footer live on athanext.com now.
+// footer live on athanext.com now. The bar is fixed, so the content area is
+// padded here and pages don't add their own offset.
 export const MarketingLayout = () => {
   const { pathname } = useLocation();
   const isAuthPage = AUTH_PATHS.includes(pathname);
@@ -23,7 +24,9 @@ export const MarketingLayout = () => {
           </Link>
         </header>
       )}
-      <Outlet />
+      <div className={isAuthPage ? undefined : "pt-[calc(3.8rem+var(--network-banner-height,0px))]"}>
+        <Outlet />
+      </div>
     </>
   );
 };

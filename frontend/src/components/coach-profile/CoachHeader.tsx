@@ -909,7 +909,7 @@ export function CoachHeader({
                         role="dialog"
                         aria-modal="true"
                         aria-labelledby="crop-cover-title"
-                        className={`${modalSurfaceClass} max-h-[90vh] max-w-5xl overflow-y-auto`}
+                        className={`${modalSurfaceClass} max-h-[90dvh] max-w-5xl overflow-y-auto`}
                     >
                         <div className="flex flex-wrap items-center justify-between gap-2 px-[25px] py-5">
                             <h3 id="crop-cover-title" className={modalTitleClass}>Crop cover photo</h3>
@@ -1360,7 +1360,7 @@ export function CoachHeader({
         {!isEditMode && avatarPreviewOpen && avatarDisplayUrl && portalTarget && createPortal(
             <div className="fixed inset-0 z-[2100] flex items-center justify-center bg-dark/80 px-4">
                 <div className="absolute inset-0" onClick={() => setAvatarPreviewOpen(false)} />
-                <div className="relative z-[2101] flex max-h-[90vh] w-full max-w-3xl flex-col gap-3">
+                <div className="relative z-[2101] flex max-h-[90dvh] w-full max-w-3xl flex-col gap-3">
                     <button
                         type="button"
                         aria-label="Close preview"
@@ -1369,11 +1369,11 @@ export function CoachHeader({
                     >
                         <X className="size-5" strokeWidth={1.5} />
                     </button>
-                    <div className="relative flex h-full max-h-[80vh] w-full items-center justify-center overflow-hidden rounded-card bg-dark/30">
+                    <div className="relative flex h-full max-h-[80dvh] w-full items-center justify-center overflow-hidden rounded-card bg-dark/30">
                         <img
                             src={avatarDisplayUrl}
                             alt={`${coach.name} profile`}
-                            className="max-h-[80vh] w-auto object-contain"
+                            className="max-h-[80dvh] w-auto object-contain"
                         />
                     </div>
                 </div>

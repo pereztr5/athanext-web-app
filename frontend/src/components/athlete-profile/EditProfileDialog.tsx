@@ -1127,7 +1127,7 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
     <>
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent
-        className="sm:max-w-[600px] max-h-[90vh] overflow-y-auto gap-5 p-[25px]"
+        className="sm:max-w-[600px] max-h-[90dvh] overflow-y-auto gap-5 p-[25px]"
         onInteractOutside={(e) => e.preventDefault()}
         onEscapeKeyDown={(e) => e.preventDefault()}
         // Phase 2: cropActive logic

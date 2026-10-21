@@ -203,10 +203,11 @@ All colors MUST be HSL.
     letter-spacing: -0.03em;
   }
 
-  /* Design system focus: 2px solid primary, 2px offset (6.3:1). Applies to raw buttons and links too. */
+  /* Design system focus: 2px solid primary (6.3:1). Applies to raw buttons and links too. Drawn
+     inside the element so overflow-hidden cards and dialogs and the screen edge never clip it. */
   :focus-visible {
     outline: 2px solid hsl(var(--primary));
-    outline-offset: 2px;
+    outline-offset: -2px;
   }
 }
 

@@ -17,7 +17,7 @@ export const AppLayout = () => {
       <AppSidebar />
       <SidebarInset className="min-w-0 overflow-x-clip bg-light">
         <AppTopBar />
-        <main className="min-w-0 flex-1 overflow-x-clip pb-16 md:pb-0">
+        <main className="min-w-0 flex-1 overflow-x-clip pb-[calc(4rem+env(safe-area-inset-bottom))] md:pb-0">
           <CoachBillingGate>
             <Outlet />
           </CoachBillingGate>
