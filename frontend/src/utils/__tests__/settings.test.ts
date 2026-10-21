@@ -22,9 +22,9 @@ describe("passwordStrength", () => {
 
 describe("notificationOn", () => {
   it("treats missing keys as on", () => {
-    expect(notificationOn({}, "message", "email")).toBe(true);
-    expect(notificationOn(null, "message", "app")).toBe(true);
-    expect(notificationOn({ message_email: false }, "message", "email")).toBe(false);
-    expect(notificationOn({ message_email: false }, "message", "app")).toBe(true);
+    expect(notificationOn({}, "message")).toBe(true);
+    expect(notificationOn(null, "message")).toBe(true);
+    expect(notificationOn({ message_email: false }, "message")).toBe(false);
+    expect(notificationOn({ message_app: false }, "message")).toBe(true);
   });
 });

@@ -32,7 +32,7 @@ serve(async (req) => {
   }
 
   try {
-    const { to, from, subject, message, html } = await req.json();
+    const { to, from, subject, message, html, replyTo } = await req.json();
 
     if (!to || !from || !subject || (!message && !html)) {
       return new Response(
@@ -46,6 +46,7 @@ serve(async (req) => {
         {
           from: from,
           to: to,
+          replyTo: typeof replyTo === "string" && replyTo.includes("@") ? replyTo : undefined,
           subject: subject,
           text: message,
           html: html,

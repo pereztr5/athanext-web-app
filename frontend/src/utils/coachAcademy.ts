@@ -160,3 +160,43 @@ export const applyOrganizations = <T extends { id?: string; company?: string | n
 /** The org an admin set up for this page slug, if any. */
 export const findOrganization = <T extends { name: string; slug: string }>(organizations: T[], slug: string) =>
   organizations.find((org) => org.slug === slug || academySlug(org.name) === slug);
+
+type DirectoryOrg = { name: string; slug: string; coachIds: string[] };
+
+/**
+ * The organizations directory (item 19): only organizations set up in the app, never a coach's
+ * free-text business name. Each lists the coaches the database shows for it (accepted members
+ * the owner shows, whose coach account is listed and not deactivated), and an organization with
+ * none of them visible is left out. Sorted like buildOrganizations.
+ */
+export const buildOrgDirectory = <T extends OrganizationCoach>(
+  coaches: Array<T | null | undefined>,
+  organizations: DirectoryOrg[],
+  getSport: (coach: T) => string
+): CoachOrganization[] => {
+  const byId = new Map<string, T>();
+  coaches.forEach((coach) => {
+    if (coach?.id) byId.set(coach.id, coach);
+  });
+  return organizations
+    .flatMap((org) => {
+      const members = org.coachIds
+        .map((id) => byId.get(id))
+        .filter((coach): coach is T => Boolean(coach))
+        .map((coach) => ({ ...coach, company: org.name }));
+      const built = members.length ? buildOrganizations(members, getSport)[0] : undefined;
+      return built ? [{ ...built, name: org.name, slug: org.slug }] : [];
+    })
+    .sort((a, b) => b.coachCount - a.coachCount || a.name.localeCompare(b.name));
+};
+
+/** Coach id -> page path of the organization that shows them. Coaches outside one get no org link. */
+export const orgPathByCoach = (organizations: DirectoryOrg[]): Map<string, string> => {
+  const paths = new Map<string, string>();
+  organizations.forEach((org) => {
+    org.coachIds.forEach((id) => {
+      if (!paths.has(id)) paths.set(id, `/organizations/${org.slug}`);
+    });
+  });
+  return paths;
+};

@@ -16,6 +16,7 @@ import { BrandPill } from "@/components/brand";
 import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { chatAPI } from "@/api/chat";
 import { coachSessionAPI, type CoachSessionBooking } from "@/api/coachSession";
+import { getMeetingUrl } from "@/api/meetingLinks";
 import { offlinePayAPI } from "@/api/offlinePay";
 import { meta, primaryButton, secondaryButton, smallButton, textButton, dangerTextButton } from "@/components/schedule/styles";
 import { buttonVariants } from "@/components/ui/button";
@@ -84,6 +85,11 @@ const CoachSessionPage = () => {
   const s = query.data;
   // Booking only coaches (ATH-86) are paid by families directly.
   const { profile } = useProfile();
+  const meeting = useQuery({
+    queryKey: ["meeting-link", profile?.userProfile?.coach_id],
+    enabled: isCoach && s?.location === "online" && Boolean(profile?.userProfile?.coach_id),
+    queryFn: () => getMeetingUrl(profile!.userProfile!.coach_id as string),
+  });
   const { coach: me } = useCoachDetails(isCoach ? profile?.userProfile?.coach_id ?? undefined : undefined);
   const paysDirect = (me as { pay_mode?: string } | undefined)?.pay_mode === "self";
 
@@ -313,7 +319,16 @@ const CoachSessionPage = () => {
 
         <section className={spCard}>
           {s.location === "online"
-            ? fact(Video, "Video call", "Link sent 15 minutes before")
+            ? fact(
+                Video,
+                "Video call",
+                meeting.data ? "The link for this session" : "Add a video link in Schedule settings",
+                meeting.data ? (
+                  <a className="text-label-sm text-primary hover:underline" href={meeting.data} target="_blank" rel="noreferrer">
+                    Open
+                  </a>
+                ) : null
+              )
             : fact(
                 MapPin,
                 s.place || "In person",

@@ -4,7 +4,7 @@ import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
 import ErrorBoundary from "@/components/common/ErrorBoundary";
 import { ProfileSkeleton } from "@/components/athlete-profile";
 import { PROFILE_TYPE } from "@/utils/db";
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
 import AthleteProfile from "./AthleteProfile";
 import { useMySessions } from "@/hooks/useMySessions";
@@ -79,6 +79,8 @@ const Profile = () => {
     const [isSaving, setIsSaving] = useState(false);
     const [isEditMode, setIsEditMode] = useState(false);
     const [editedCoach, setEditedCoach] = useState<any>(null);
+    const editedRef = useRef<any>(null);
+    editedRef.current = editedCoach;
     const [coverImagesToUpload, setCoverImagesToUpload] = useState<File[]>([]);
     const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
     const [coverImageUrlsToRemove, setCoverImageUrlsToRemove] = useState<string[]>([]);
@@ -146,6 +148,7 @@ const Profile = () => {
     };
 
     const handleSaveEdit = async () => {
+        const editedCoach = editedRef.current;
         if (!coach || !editedCoach) return;
 
         if (editedCoach.name.trim().length < 3) {
@@ -371,17 +374,12 @@ const Profile = () => {
 
     const handleFieldChange = (field: string, value: any) => {
         setEditedCoach((prev: any) => {
-            if (!prev) {
-                // If editedCoach is null, initialize it with coach data
-                return {
-                    ...coach,
-                    [field]: value
-                };
-            }
-            return {
-                ...prev,
-                [field]: value
+            const next = {
+                ...(prev ?? coach),
+                [field]: value,
             };
+            editedRef.current = next;
+            return next;
         });
     };
 

@@ -13,6 +13,7 @@ import { scheduleSettingsAPI } from "@/api/scheduleSettings";
 import { BookingRulesCard, type RulesView } from "@/components/schedule/settings/BookingRulesCard";
 import { CalendarSyncCard } from "@/components/schedule/settings/CalendarSyncCard";
 import { LocationsCard } from "@/components/schedule/settings/LocationsCard";
+import { MeetingLinkCard } from "@/components/schedule/settings/MeetingLinkCard";
 import { TimeOffCard } from "@/components/schedule/settings/TimeOffCard";
 import { WeeklyHoursCard } from "@/components/schedule/settings/WeeklyHoursCard";
 import { PageHeader } from "@/components/ui/page-header";
@@ -79,7 +80,7 @@ const ScheduleSettingsPage = () => {
       <div className="mx-auto flex w-full max-w-wrapper-focused flex-col gap-4 md:gap-6">
         <PageHeader
           title="Schedule settings"
-          subtitle="Weekly hours, locations, time off, booking rules and calendar sync."
+          subtitle="Weekly hours, locations, video calls, time off, booking rules and calendar sync."
           back={{ label: "My schedule", to: ROUTES.SCHEDULE }}
         />
         <div className="flex w-full flex-col gap-4 md:gap-6">
@@ -99,6 +100,7 @@ const ScheduleSettingsPage = () => {
               loading={scheduleQuery.isLoading}
             />
           ) : null}
+          {coachId ? <MeetingLinkCard coachId={coachId} /> : null}
           <TimeOffCard days={timeOff} today={today} loading={timeOffLoading} />
           <BookingRulesCard rules={rules} loading={rulesLoading} />
           <CalendarSyncCard calendar={schedule?.calendar ?? null} loading={scheduleQuery.isLoading} />

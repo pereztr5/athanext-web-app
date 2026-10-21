@@ -15,13 +15,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import type { Brand } from "@/utils/brands";
-import { agesLine, cancellationLine, coachesLine, repliesLabel, withBaseService } from "./own/shared";
-import { coachAcademy, organizationPath } from "@/utils/coachAcademy";
+import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
 import { CoachIntroCallCard } from "@/components/intro-calls";
 import { WhoCard } from "./family/WhoCard";
 import { AboutCard } from "./family/AboutCard";
 import { OrganizationsCard } from "./OrganizationsCard";
-import { organizationsForProfile } from "./organizationLogos";
+import { useCoachOrganizations } from "./useCoachOrganizations";
 import { PricingCard, type SessionRow } from "./family/PricingCard";
 import { REVIEWS_ANCHOR, ReviewsCard } from "./family/ReviewsCard";
 import { MoreList } from "./family/MoreList";
@@ -74,6 +73,8 @@ export type CoachProfileData = ProfileData & {
     new_family_booking?: string | null;
     cancel_notice_hours?: number | null;
     favourite_positions?: string[] | null;
+    positions?: string[] | null;
+    instagram_handle?: string | null;
 };
 
 interface CoachProfileViewProps {
@@ -112,11 +113,12 @@ export function CoachProfileView({
   const [city, setCity] = useState<string>("");
   const [buying, setBuying] = useState<string | null>(null);
   const { data: brands = NO_BRANDS } = useCoachBrands(coach.id);
+  const organizations = useCoachOrganizations(coach.id);
   const { data: fullReviews } = useFamilyReviews(coach.id);
   const extras = useCoachExtras(coach.id);
   const isMyCoach = useIsMyCoach(coach.id);
   const first = coach.name.split(" ")[0] || "This coach";
-  const role = coach.coach_position || coach.position || "Coach";
+  const role = coachTitle(coach);
   const showRating = isPublicCoachRatingVisible(totalReviews, averageRating);
   const reviews = fullReviews ?? fallbackReviews;
 
@@ -153,16 +155,13 @@ export function CoachProfileView({
   const individualPrices = sessions.filter((s) => !s.unit && s.price > 0).map((s) => s.price);
   const from = individualPrices.length ? Math.min(...individualPrices) : hourly;
 
-  const orgName = extras?.organization?.name || coachAcademy(coach.company);
-  const academy = orgName
-    ? { name: orgName, to: extras?.organization?.slug ? `/organizations/${extras.organization.slug}` : organizationPath(orgName) }
-    : null;
+  const listedOrg = organizations[0];
+  const academy = listedOrg ? { name: listedOrg.name, to: `/organizations/${listedOrg.slug}` } : null;
 
   const facts: [string, string][] = (
     [
       ["1-on-1 from", from ? money(from) : ""],
       ["Where", place],
-      ["Replies", repliesLabel(coach.response_time_hours)],
       ["Speaks", (coach.languages ?? []).join(", ")],
     ] as [string, string][]
   ).filter(([, value]) => value);
@@ -248,10 +247,11 @@ export function CoachProfileView({
           onMessage={isOwn ? undefined : onMessage}
           messaging={messaging}
           facts={facts}
+          instagram={coach.instagram_handle}
           intro={<CoachIntroCallCard coachId={coach.id} mode="family" coachFirstName={first} />}
         />
 
-        <OrganizationsCard brands={organizationsForProfile(coach.id, brands)} />
+        <OrganizationsCard brands={organizations} />
 
         <AboutCard
           coaches={coaches}

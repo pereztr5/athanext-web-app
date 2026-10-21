@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { ALL_ACADEMIES, academySlug, applyOrganizations, buildOrganizations, coachAcademy, findOrganization, getAcademyOptions, matchesAcademy } from "@/utils/coachAcademy";
+import { ALL_ACADEMIES, academySlug, applyOrganizations, buildOrgDirectory, buildOrganizations, coachAcademy, findOrganization, getAcademyOptions, matchesAcademy, orgPathByCoach } from "@/utils/coachAcademy";
 
 describe("coachAcademy", () => {
   it("trims and collapses whitespace", () => {
@@ -135,5 +135,56 @@ describe("applyOrganizations", () => {
   it("finds an org by its slug or its name", () => {
     expect(findOrganization(orgs, "torres-soccer")?.name).toBe("Torres Soccer");
     expect(findOrganization(orgs, "nope")).toBeUndefined();
+  });
+});
+
+describe("buildOrgDirectory", () => {
+  const sport = () => "soccer";
+  const coaches = [
+    { id: "a", company: "Torres Soccer", is_verified: true },
+    { id: "b", company: "My Own GK Business" },
+    { id: "c", company: "Ethan Training" },
+    { id: "d", company: "Torres Soccer" },
+  ];
+
+  it("lists only app organizations, never free-text businesses", () => {
+    const out = buildOrgDirectory(coaches, [{ name: "Torres Soccer", slug: "torres-soccer-2", coachIds: ["a", "b"] }], sport);
+    expect(out.map((o) => o.name)).toEqual(["Torres Soccer"]);
+    expect(out[0].slug).toBe("torres-soccer-2");
+    // d typed the same name but is not a shown member.
+    expect(out[0].coachIds).toEqual(["a", "b"]);
+    expect(out[0].coachCount).toBe(2);
+    expect(out[0].verifiedCount).toBe(1);
+  });
+
+  it("drops organizations with no visible coaches and ignores unknown ids", () => {
+    const out = buildOrgDirectory(
+      coaches,
+      [
+        { name: "Empty", slug: "empty", coachIds: [] },
+        { name: "Gone", slug: "gone", coachIds: ["zzz"] },
+        { name: "Big", slug: "big", coachIds: ["a", "c", "d"] },
+        { name: "Small", slug: "small", coachIds: ["b"] },
+      ],
+      sport
+    );
+    expect(out.map((o) => o.slug)).toEqual(["big", "small"]);
+  });
+
+  it("returns nothing without organizations", () => {
+    expect(buildOrgDirectory(coaches, [], sport)).toEqual([]);
+  });
+});
+
+describe("orgPathByCoach", () => {
+  it("maps shown coaches to their org page, first org wins", () => {
+    const paths = orgPathByCoach([
+      { name: "One", slug: "one", coachIds: ["a", "b"] },
+      { name: "Two", slug: "two", coachIds: ["b", "c"] },
+    ]);
+    expect(paths.get("a")).toBe("/organizations/one");
+    expect(paths.get("b")).toBe("/organizations/one");
+    expect(paths.get("c")).toBe("/organizations/two");
+    expect(paths.get("d")).toBeUndefined();
   });
 });

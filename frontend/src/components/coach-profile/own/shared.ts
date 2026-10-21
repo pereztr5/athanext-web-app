@@ -23,6 +23,20 @@ export const coachesLine = (coach: CoachProfileData) => {
   return [sport, who].filter(Boolean).join(" · ");
 };
 
+/**
+ * The coach's title from the positions they coach ("Goalkeeper coach", "Goalkeeper and field
+ * player coach"). Read only on Edit profile: it follows coaches.favourite_positions.
+ */
+export const coachTitle = (coach: { favourite_positions?: string[] | null; positions?: string[] | null }) => {
+  const list = (coach.favourite_positions?.length ? coach.favourite_positions : coach.positions ?? [])
+    .map((p) => p.trim())
+    .filter(Boolean);
+  const names = Array.from(new Set(list.map((p) => p.toLowerCase()))).map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p));
+  if (!names.length) return "Coach";
+  const joined = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+  return `${joined} coach`;
+};
+
 /** "Ages 10 to 19" or "Ages 18 and up"; empty when not set. */
 export const agesLine = ({ age_min, age_max }: { age_min?: number | null; age_max?: number | null }) => {
   if (age_min == null && age_max == null) return "";
@@ -50,15 +64,6 @@ export const cancellationLine = (hours?: number | null, policy?: string | null) 
   hours
     ? `Cancel up to ${hours} hours before for a session credit`
     : policy?.trim() || "Cancel up to 24 hours before for a session credit";
-
-/** "Within an hour", "Within a day", "Within 12 hours". */
-export const repliesLabel = (hours?: number | null) => {
-  const h = hours ?? 24;
-  if (h <= 1) return "Within an hour";
-  if (h === 24) return "Within a day";
-  if (h % 24 === 0) return `Within ${h / 24} days`;
-  return `Within ${h} hours`;
-};
 
 /** Session types with the base 1-on-1 row first, priced from hourly_rate. `always` keeps the base row while editing. */
 export const withBaseService = (

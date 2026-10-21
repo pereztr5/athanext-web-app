@@ -19,7 +19,6 @@ import { OwnProfilePreview } from "./OwnProfilePreview";
 import { SharePricingDialog } from "./SharePricingDialog";
 import type { CoachFaqItem } from "./FAQSection";
 import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
-import { CoachingVideoDialog } from "./own/CoachingVideoDialog";
 import { OwnProfileEditor } from "./own/OwnProfileEditor";
 import { useBookingRules, useCompleteness, useOwnOrganization, useProfileExtras, type StepName } from "./own/hooks";
 import { withBaseService } from "./own/shared";
@@ -77,7 +76,6 @@ export function CoachOwnProfile({
   const [locationLabel, setLocationLabel] = useState(coach.locations?.[0] || "");
   const [sharePricingOpen, setSharePricingOpen] = useState(false);
   const [brandsOpen, setBrandsOpen] = useState(false);
-  const [videoOpen, setVideoOpen] = useState(false);
   const [slug, setSlug] = useState(coach.slug || "");
   const { data: platformFaqs = [] } = useFAQItems("general");
   const { data: brands = NO_BRANDS } = useCoachBrands(coach.id);
@@ -132,8 +130,7 @@ export function CoachOwnProfile({
   };
 
   const onStep = (step: StepName) => {
-    if (step === "Coaching video") setVideoOpen(true);
-    else if (step === "Certifications") onEditCertifications();
+    if (step === "Certifications") onEditCertifications();
     else if (step === "Payout details") navigate(`${ROUTES.SETTINGS}?tab=booking`);
     else if (step === "Availability") navigate(ROUTES.SCHEDULE);
     else {
@@ -162,7 +159,6 @@ export function CoachOwnProfile({
             completeness={completeness}
             cancelHours={cancelHours}
             windowWeeks={windowWeeks}
-            coachingVideoUrl={extras?.coachingVideoUrl ?? null}
             saving={saving}
             onStep={onStep}
             onDone={onDone}
@@ -172,7 +168,6 @@ export function CoachOwnProfile({
             onEditCertifications={onEditCertifications}
             onManageBrands={() => setBrandsOpen(true)}
             onSharePricing={slug ? () => setSharePricingOpen(true) : null}
-            onVideo={() => setVideoOpen(true)}
             onCoachUpdated={onCoachUpdated}
           />
         ) : (
@@ -188,7 +183,6 @@ export function CoachOwnProfile({
             locationLabel={locationLabel}
             organization={organization}
             faqs={shownFaqs}
-            brands={brands}
             brandNames={brands.map((brand) => brand.name)}
             cancellation={cancellation}
             completeness={completeness}
@@ -201,7 +195,6 @@ export function CoachOwnProfile({
       </div>
 
       <ManageBrandsDialog open={brandsOpen} onOpenChange={setBrandsOpen} coachId={coach.id} currentBrands={brands} />
-      <CoachingVideoDialog open={videoOpen} onOpenChange={setVideoOpen} coachId={coach.id} current={extras?.coachingVideoUrl ?? null} />
 
       {slug ? (
         <SharePricingDialog

@@ -18,6 +18,7 @@ SUPABASE_DIR="$ROOT/backend/supabase"
 
 # folder                      name                          jwt
 FUNCTIONS="
+account-emails                account-emails                on
 add-client-referral           add-client-referral           on
 admin-accounts                admin-accounts                on
 coach-billing                 coach-billing                 off

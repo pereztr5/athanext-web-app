@@ -5,10 +5,11 @@
  * AthaNext stores no card or bank details; payouts and the $29 plan are set up on Stripe's pages.
  */
 import { useEffect, useMemo, useState, type ReactNode } from "react";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Banknote, Bell, CalendarSync, CreditCard, Download, Eye, EyeOff, Lock, LogOut, ShieldCheck, User, Wallet } from "@/components/icons";
 import { authAPI, coachesAPI, userProfilesAPI } from "@/api";
+import { sendAccountEmail } from "@/api/accountEmails";
 import { scheduleAPI } from "@/api/schedule";
 import { BookingRulesSection, CalendarSyncSection } from "@/components/schedule/BookingSettings";
 import { card, dangerButton, input, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
@@ -31,7 +32,8 @@ import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
-import { downloadJson } from "@/utils/download";
+import { dollarsFromCents, pdfSection } from "@/utils/dataExport";
+import { downloadDataPdf } from "@/utils/downloadPdf";
 import {
   activeOfflineMethods,
   OFFLINE_METHODS,
@@ -42,10 +44,11 @@ import {
 import {
   COACH_NOTIFICATIONS,
   DEACTIVATE_WORD,
+  emailPrefKey,
   joinName,
+  NOTIFICATIONS_CAPTION,
   notificationOn,
   splitName,
-  type NotificationChannel,
   type NotificationItem,
 } from "@/utils/settings";
 
@@ -97,6 +100,15 @@ export const ToggleRow = ({ title, detail, checked, onChange, ariaLabel, disable
     </div>
     <Switch checked={checked} onCheckedChange={onChange} aria-label={ariaLabel} disabled={disabled} />
   </div>
+);
+
+/** Account type changes (coach to family or back) are done by support, not in the app. */
+export const SwitchAccountTypeNote = () => (
+  <p className={meta}>
+    Need to switch between a coach and a family account?{" "}
+    <Link to={ROUTES.HELP} className="font-medium text-primary hover:underline">Contact support</Link> or email{" "}
+    <a href="mailto:support@athanext.com" className="font-medium text-primary hover:underline">support@athanext.com</a>.
+  </p>
 );
 
 /** Page frame shared by coach and athlete settings: header, tab list and the open tab. */
@@ -182,7 +194,7 @@ export const CoachSettings = () => {
         <>
           {tab === "account" ? <AccountTab coach={coach} onDirtyChange={setAccountDirty} /> : null}
           {tab === "notifications" ? (
-            <NotificationsTab kinds={COACH_NOTIFICATIONS} caption="Email is sent for bookings and messages. The app column is your notifications list." />
+            <NotificationsTab kinds={COACH_NOTIFICATIONS} caption={NOTIFICATIONS_CAPTION} />
           ) : null}
           {tab === "booking" && coachId ? (
             <BookingTab
@@ -281,6 +293,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
           <span className={meta}>Saves straight away. My schedule creates sessions in this zone.</span>
         </div>
       </div>
+      <SwitchAccountTypeNote />
       {dirty ? (
         <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-control border border-primary-300 bg-primary-50 px-4 py-3 md:bottom-4">
           <span className={sub}>You have unsaved changes</span>
@@ -300,7 +313,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
 
 /* ---------- Notifications ---------- */
 
-export const NotificationsTab = ({ kinds, caption }: { kinds: readonly NotificationItem[]; caption: string }) => {
+export const NotificationsTab = ({ kinds, caption, children }: { kinds: readonly NotificationItem[]; caption: string; children?: ReactNode }) => {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
@@ -310,12 +323,12 @@ export const NotificationsTab = ({ kinds, caption }: { kinds: readonly Notificat
     setPrefs(stored && typeof stored === "object" ? (stored as Record<string, boolean>) : {});
   }, [userProfile]);
 
-  const toggle = async (kind: string, channel: NotificationChannel, on: boolean) => {
+  const toggle = async (kind: string, on: boolean) => {
     if (!user?.id) return;
     const stored = (userProfile as { notification_prefs?: unknown } | null)?.notification_prefs;
     const base = stored && typeof stored === "object" && !Array.isArray(stored) ? { ...(stored as Record<string, boolean>) } : {};
     const previous = prefs;
-    const next = { ...base, ...prefs, [`${kind}_${channel}`]: on };
+    const next = { ...base, ...prefs, [emailPrefKey(kind)]: on };
     setPrefs(next);
     const { error } = await userProfilesAPI.updateUserProfile(user.id, { notification_prefs: next as unknown as Json });
     if (error) {
@@ -327,40 +340,18 @@ export const NotificationsTab = ({ kinds, caption }: { kinds: readonly Notificat
   };
 
   return (
-    <Card icon={<Bell className="size-5 text-dark-300" strokeWidth={1.5} />} title="Notifications">
-      <div className="grid grid-cols-[minmax(0,1fr)_auto_auto] items-center gap-x-4 gap-y-4">
-        <span className={label}>Notify me about</span>
-        <span className={cn(label, "text-center")}>Email</span>
-        <span className={cn(label, "text-center")}>App</span>
-        {kinds.map((item) => (
-          <div key={item.kind} className="contents">
-            <div className="flex flex-col gap-1">
-              <span className="text-label-sm text-dark">{item.title}</span>
-              <span className={meta}>{item.detail}</span>
-            </div>
-            <div className="flex min-w-14 justify-center">
-              {item.channels.includes("email") ? (
-                <Switch
-                  checked={notificationOn(prefs, item.kind, "email")}
-                  onCheckedChange={(on) => toggle(item.kind, "email", on)}
-                  aria-label={`${item.title} by email`}
-                />
-              ) : (
-                <span className="text-caption text-dark-300">App only</span>
-              )}
-            </div>
-            <div className="flex min-w-14 justify-center">
-              {item.channels.includes("app") ? (
-                <Switch
-                  checked={notificationOn(prefs, item.kind, "app")}
-                  onCheckedChange={(on) => toggle(item.kind, "app", on)}
-                  aria-label={`${item.title} by app`}
-                />
-              ) : null}
-            </div>
-          </div>
-        ))}
-      </div>
+    <Card icon={<Bell className="size-5 text-dark-300" strokeWidth={1.5} />} title="Email notifications">
+      {kinds.map((item) => (
+        <ToggleRow
+          key={item.kind}
+          title={item.title}
+          detail={item.detail}
+          checked={notificationOn(prefs, item.kind)}
+          onChange={(on) => void toggle(item.kind, on)}
+          ariaLabel={`${item.title} by email`}
+        />
+      ))}
+      {children}
       <p className={meta}>{caption}</p>
     </Card>
   );
@@ -568,21 +559,68 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
         supabase.from("coach_client_referrals").select("*").eq("coach_id", coachId),
         supabase.from("coach_reviews").select("*").eq("coach_id", coachId),
       ]);
-      downloadJson(
-        {
-          exported_at: new Date().toISOString(),
-          coach: coachRow.data,
-          account: profileRow.data,
-          packages: packages.data ?? [],
-          sessions: sessions.data ?? [],
-          bookings: bookings.data ?? [],
-          clients: clients.data ?? [],
-          reviews: reviews.data ?? [],
-        },
-        `athanext-data-${new Date().toISOString().slice(0, 10)}.json`
+      const coach = (coachRow.data ?? {}) as Record<string, unknown>;
+      const account = (profileRow.data ?? {}) as Record<string, unknown>;
+      downloadDataPdf(
+        [
+          pdfSection("Profile", [
+            {
+              Name: coach.name,
+              Email: coach.email,
+              Title: coach.position,
+              Locations: coach.locations,
+              Instagram: coach.instagram_handle,
+            },
+          ]),
+          pdfSection("Account", [{ Name: account.name, Email: account.email, Phone: account.phone_number }]),
+          pdfSection(
+            "Packages",
+            ((packages.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Package: row.package_name,
+              Sessions: row.session_count,
+              Price: dollarsFromCents(row.total_price),
+              "For sale": row.is_active === false ? "No" : "Yes",
+            }))
+          ),
+          pdfSection(
+            "Sessions",
+            ((sessions.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Date: row.occurrence_date,
+              Time: row.start_time,
+              Name: row.session_name,
+              Where: row.location,
+              Place: row.place,
+            }))
+          ),
+          pdfSection(
+            "Bookings",
+            ((bookings.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Status: row.status,
+              Payment: row.payment_status,
+              Booked: row.created_at,
+            }))
+          ),
+          pdfSection(
+            "Clients",
+            ((clients.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Name: row.athlete_name ?? row.name,
+              Email: row.email,
+              Added: row.created_at,
+            }))
+          ),
+          pdfSection(
+            "Reviews",
+            ((reviews.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Rating: row.rating,
+              Review: row.review_text,
+              Date: row.created_at,
+            }))
+          ),
+        ],
+        `athanext-data-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     },
-    onSuccess: () => toast({ title: "Your data is downloading" }),
+    onSuccess: () => toast({ title: "Your data is downloading", description: "A PDF of your profile, account, packages, sessions, bookings, clients and reviews." }),
     onError: () => toast({ title: "Couldn't download your data", description: "Try again.", variant: "destructive" }),
   });
 
@@ -603,7 +641,7 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
       />
       <button type="button" className={cn(secondaryButton, "self-start")} disabled={exportData.isPending} onClick={() => exportData.mutate()}>
         <Download strokeWidth={1.5} aria-hidden="true" />
-        {exportData.isPending ? "Preparing…" : "Download my data"}
+        {exportData.isPending ? "Preparing…" : "Download my data (PDF)"}
       </button>
     </Card>
   );
@@ -826,6 +864,7 @@ const DeactivateCard = ({ coachId }: { coachId: string }) => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["coach-details"] });
+      void sendAccountEmail("coach_deactivated");
       toast({ title: "Account deactivated", description: "Families can no longer book you. Reactivate any time from here." });
     },
     onError: (err) => toast({ title: "Couldn't deactivate", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),

@@ -1,23 +1,14 @@
-import { useMemo } from "react";
 import { Link, useParams } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, ChevronLeft } from "@/components/icons";
 import { Banner } from "@/components/ui/banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { coachesAPI } from "@/api/coaches";
-import type { PublicOrganization } from "@/api/organizations";
 import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { OrgFamilyPage } from "@/components/organization/OrgFamilyPage";
 import { useMyOrganization, usePublicOrganizations } from "@/hooks/useOrganizations";
-import {
-  academySlug,
-  applyOrganizations,
-  buildOrganizations,
-  findOrganization,
-  sportLabel,
-} from "@/utils/coachAcademy";
-import { getCoachSport } from "@/utils/coachSport";
+import { findOrganization } from "@/utils/coachAcademy";
 
 type PublicCoach = {
   id: string;
@@ -44,8 +35,8 @@ type PublicCoach = {
 const card = "flex min-w-0 flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px]";
 
 /**
- * Organization landing page (ATH-63). An organization is the set of coaches
- * that list the same academy, so everything here is derived from them.
+ * Organization landing page. Only an organization set up in the app has a page,
+ * and it lists coaches the organization shows who are listed and not deactivated.
  */
 const OrganizationProfile = () => {
   const { slug = "" } = useParams();
@@ -63,11 +54,6 @@ const OrganizationProfile = () => {
 
   const { data: orgPages = [], isLoading: orgsLoading } = usePublicOrganizations();
   const orgPage = findOrganization(orgPages, slug);
-  const members = useMemo(
-    () => applyOrganizations(coaches, orgPages).filter((coach) => academySlug(coach.company) === slug),
-    [coaches, orgPages, slug]
-  );
-  const organization = useMemo(() => buildOrganizations(members, getCoachSport)[0], [members]);
 
   const shell = isAuthenticated
     ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12"
@@ -126,39 +112,14 @@ const OrganizationProfile = () => {
     );
   }
 
-  if (!organization) {
-    return (
-      <div className={shell}>
-        <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
-          {backLink}
-          <div className={`${card} items-center text-center`}>
-            <p className="text-card-title text-dark">Organization not found</p>
-            <p className="text-body-m text-dark-300">
-              No coaches list this academy right now.
-            </p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const fromCoaches: PublicOrganization = {
-    id: organization.slug,
-    name: organization.name,
-    slug: organization.slug,
-    line: [organization.location, organization.sports.map(sportLabel).join(", ")].filter(Boolean).join(" · "),
-    about: "",
-    logoUrl: null,
-    pricing: [],
-    coachIds: members.map((coach) => coach.id),
-    memberIds: members.map((coach) => coach.id),
-  };
-
   return (
     <div className={shell}>
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
         {backLink}
-        <OrgFamilyPage org={fromCoaches} coaches={members} messageCoachId={members[0]?.id} />
+        <div className={`${card} items-center text-center`}>
+          <p className="text-card-title text-dark">Organization not found</p>
+          <p className="text-body-m text-dark-300">This organization isn't on AthaNext.</p>
+        </div>
       </div>
     </div>
   );

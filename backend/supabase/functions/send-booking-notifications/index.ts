@@ -40,7 +40,7 @@ serve(async (req) => {
     const { data: booking, error } = await admin
       .from("coach_slot_bookings")
       .select(
-        "id, payment_status, coach_id, athlete_id, occurrence_id, coach:coaches(id, name, email, user_id), athlete:athlete_profiles(id, full_name, user_id), occurrence:coach_availability_slot_occurrences(occurrence_date, start_time, session_name, price)",
+        "id, payment_status, coach_id, athlete_id, occurrence_id, coach:coaches(id, name, email, user_id), athlete:athlete_profiles(id, full_name, user_id), occurrence:coach_availability_slot_occurrences(occurrence_date, start_time, session_name, price, location)",
       )
       .eq("id", bookingId)
       .maybeSingle();
@@ -60,6 +60,22 @@ serve(async (req) => {
       : "your session";
     const sessionName = (row.occurrence?.session_name as string) ?? "Session";
     const price = Number(row.occurrence?.price ?? 0);
+    const video = row.occurrence?.location === "online";
+    let meetingUrl = "";
+    if (video && row.coach_id) {
+      const { data: link } = await admin.from("coach_meeting_links").select("meeting_url").eq("coach_id", row.coach_id).maybeSingle();
+      meetingUrl = typeof link?.meeting_url === "string" ? link.meeting_url : "";
+    }
+    const videoHtml = (audience: "coach" | "family") => {
+      if (!video) return "";
+      if (meetingUrl) return `<p>Video call: <a href="${escapeHtml(meetingUrl)}">${escapeHtml(meetingUrl)}</a></p>`;
+      return audience === "coach"
+        ? `<p>This is a video call. Add your Zoom, Meet or Teams link in Schedule settings so the family can join.</p>`
+        : `<p>This is a video call. The join link shows on the session page once your coach adds it.</p>`;
+    };
+    // Gmail SMTP only delivers from the configured mailbox. Reply-To is support@ so families
+    // reach AthaNext even while the visible From is still that mailbox.
+    const replyTo = "support@athanext.com";
 
     let familyEmail: string | null = null;
     const userId = row.athlete?.user_id as string | null;
@@ -75,7 +91,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${serviceRole}`,
         },
-        body: JSON.stringify({ to, from, subject, html }),
+        body: JSON.stringify({ to, from, replyTo, subject, html }),
       }).catch((e) => {
         console.error("send-email failed", e);
         return null;
@@ -105,6 +121,7 @@ serve(async (req) => {
         `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
           <h2 style="color:#0054B4;">New booking</h2>
           <p><strong>${escapeHtml(athleteName)}</strong> booked <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>
+          ${videoHtml("coach")}
           <p>Amount: ${usd(price)} (your share is paid after the session, on your weekly payout day).</p>
         </div>`,
       );
@@ -118,6 +135,7 @@ serve(async (req) => {
           <h2 style="color:#0054B4;">You're booked</h2>
           <p>Hi,</p>
           <p>Your session with <strong>${escapeHtml(coachName)}</strong> is confirmed: <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>
+          ${videoHtml("family")}
           <p>Paid: ${usd(price)}. Cancel with enough notice and it comes back as a session credit.</p>
         </div>`,
       );
@@ -138,6 +156,7 @@ serve(async (req) => {
           `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
             <h2 style="color:#0054B4;">${escapeHtml(athleteName.split(" ")[0])} is booked</h2>
             <p>${escapeHtml(sessionName)} with <strong>${escapeHtml(coachName)}</strong> on ${escapeHtml(when)}. Paid: ${usd(price)}.</p>
+            ${videoHtml("family")}
             <p style="color:#686B72;font-size:13px;">You get this copy as a guardian on the family's AthaNext account.</p>
           </div>`,
         );

@@ -1,45 +1,48 @@
 /**
- * Edit profile (Working Copy c-profile with `prof.edit`, `AN.profileBody(p, 'edit')`): one card
- * with cover, photo, Title and ZIP, pillars, levels, About you and facts; sessions and packages
- * with show/hide per session type; credentials; reviews. The right column has completeness,
- * quick info, the FAQ editor and gear. Text fields save on Done; packages, session types,
- * cover, video, credentials and deals save as soon as their editor closes.
+ * Edit profile: photo, read-only title, ZIP, Instagram, pillars, levels, about you;
+ * sessions and packages; locations; credentials; reviews. The right column has completeness,
+ * organizations from the database, brands and gear. Text fields save on Done. Packages,
+ * session types, locations, credentials and deals save as soon as their editor closes.
  */
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { useQueryClient } from "@tanstack/react-query";
-import { Award, BadgeCheck, Check, Image as ImageIcon, Layers, Pencil, Plus, ShieldCheck, Trash2, Upload, Video } from "@/components/icons";
-import { BASE_SERVICE_ID, coachProfileAPI, type ProfileService } from "@/api/coachProfile";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { Award, BadgeCheck, Check, Layers, Pencil, Plus, ShieldCheck, Upload } from "@/components/icons";
+import { BASE_SERVICE_ID, type ProfileService } from "@/api/coachProfile";
 import { packagesAPI } from "@/api/packages";
+import { scheduleAPI } from "@/api/schedule";
 import { BrandPill } from "@/components/brand";
-import { ToastAction } from "@/components/ui/toast";
+import ConfirmationDialog from "@/components/common/ConfirmationDialog";
+import { LocationsCard } from "@/components/schedule/settings/LocationsCard";
 import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/ui/page-header";
 import { card, iconButton, input, label, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { LEVEL_OPTIONS, LEVEL_TAGS, sanitizePathwayTags, type LevelTag } from "@/constants/pathwayTags";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { useToast } from "@/hooks/use-toast";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import type { Brand } from "@/utils/brands";
-import { AGE_AND_UP } from "@/utils/coachAges";
+import { normalizeInstagramHandle } from "@/utils/instagram";
 import { hasRichTextMarkup, stripRichTextToPlainText } from "@/utils/richText";
+import { addDaysISO } from "@/utils/schedule";
+import { isoDateInZone } from "@/utils/viewerTime";
 import { BrandLogos } from "../BrandLogos";
-import { organizationsForProfile } from "../organizationLogos";
 import type { CoachProfileData, ProfileReview } from "../CoachProfileView";
 import { GearAndDealsCard } from "../GearAndDealsCard";
+import { useCoachOrganizations } from "../useCoachOrganizations";
 import { CompletenessList } from "./Completeness";
 import { OwnReviews } from "./OwnReviews";
 import { ServiceEditorDialog } from "./ServiceEditorDialog";
 import { useSaveServices, type StepName } from "./hooks";
 import { Avatar } from "./parts";
-import { caption, chip, money, repliesLabel, sessionTypesFromWhere } from "./shared";
+import { caption, chip, coachTitle, money, sessionTypesFromWhere } from "./shared";
 import type { Camp } from "@/api/packages";
 import { CampEditorDialog } from "@/components/camps/CampEditorDialog";
 import { CampEditorList } from "@/components/camps/CampEditorList";
 import { packageKind } from "@/components/camps/format";
 
-const AGE_OPTIONS = Array.from({ length: 28 }, (_, i) => i + 5);
 const BIO_MAX = 600;
 const h2 = "flex items-center gap-2 text-card-title text-dark [&>svg]:size-5 [&>svg]:text-dark-300";
 const field = "flex flex-col gap-1.5";
@@ -67,7 +70,6 @@ export const OwnProfileEditor = ({
   completeness,
   cancelHours,
   windowWeeks,
-  coachingVideoUrl,
   saving,
   onStep,
   onDone,
@@ -77,7 +79,6 @@ export const OwnProfileEditor = ({
   onEditCertifications,
   onManageBrands,
   onSharePricing,
-  onVideo,
   onCoachUpdated,
 }: {
   /** The coach with the draft applied. */
@@ -98,7 +99,6 @@ export const OwnProfileEditor = ({
   completeness: { steps: [StepName, boolean][]; done: number };
   cancelHours: number;
   windowWeeks: number;
-  coachingVideoUrl: string | null;
   saving: boolean;
   onStep: (step: StepName) => void;
   onDone: () => void;
@@ -108,18 +108,23 @@ export const OwnProfileEditor = ({
   onEditCertifications: () => void;
   onManageBrands: () => void;
   onSharePricing: (() => void) | null;
-  onVideo: () => void;
   onCoachUpdated: () => void;
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const timeZone = useViewerTimeZone();
+  const today = isoDateInZone(new Date(), timeZone);
+  const schedule = useQuery({
+    queryKey: ["coach-schedule", today, addDaysISO(today, 62)],
+    queryFn: () => scheduleAPI.get(today, addDaysISO(today, 62)),
+  });
+  const organizations = useCoachOrganizations(coach.id);
   const saveServices = useSaveServices(coach.id);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [coverPreview, setCoverPreview] = useState<string | null>(null);
-  const [coverSaving, setCoverSaving] = useState(false);
-  const [languagesDraft, setLanguagesDraft] = useState((coach.languages || []).join(", "));
-  const [placesDraft, setPlacesDraft] = useState((coach.locations || []).join(", "));
+  const [instagramDraft, setInstagramDraft] = useState(coach.instagram_handle ?? "");
+  const [instagramError, setInstagramError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<ProfileService | null>(null);
+  const [removingPackage, setRemovingPackage] = useState<CoachPackage | null>(null);
   const [campDraft, setCampDraft] = useState<Camp | null | undefined>(undefined);
 
   useEffect(() => () => {
@@ -129,11 +134,12 @@ export const OwnProfileEditor = ({
   const pillars = coach.specialties || [];
   const levels = sanitizePathwayTags(coach.pathway_tags);
   const photo = photoPreview || coach.profile_image_url || coach.image_url;
-  const cover = coverPreview || coach.cover_image_urls?.[0];
   const bio = hasRichTextMarkup(coach.bio) ? stripRichTextToPlainText(coach.bio) : coach.bio ?? "";
   const individual = services.filter((s) => s.on && s.format === "individual" && s.price > 0);
   const from = individual.length ? Math.min(...individual.map((s) => s.price)) : 0;
-  const sortedPackages = packages.filter((pkg) => packageKind(pkg) !== "camp").sort((a, b) => a.total_price - b.total_price);
+  const sortedPackages = packages
+    .filter((pkg) => pkg.is_active && packageKind(pkg) !== "camp")
+    .sort((a, b) => a.total_price - b.total_price);
 
   const togglePillar = (title: string) => {
     const on = pillars.includes(title);
@@ -155,18 +161,22 @@ export const OwnProfileEditor = ({
     onField("pathway_tags", LEVEL_TAGS.filter((l) => (l === level ? !on : current.includes(l))));
   };
 
-  const uploadCover = async (file: File) => {
-    setCoverSaving(true);
-    try {
-      await coachProfileAPI.setCover(coach.id, file, coach.cover_image_urls ?? []);
-      setCoverPreview(URL.createObjectURL(file));
-      toast({ title: "Cover photo updated" });
-      onCoachUpdated();
-    } catch (err) {
-      toast({ title: "Couldn't upload the cover", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
-    } finally {
-      setCoverSaving(false);
+  const commitInstagram = () => {
+    const raw = instagramDraft.trim();
+    if (!raw) {
+      setInstagramError(null);
+      onField("instagram_handle", null);
+      return true;
     }
+    const handle = normalizeInstagramHandle(raw);
+    if (!handle) {
+      setInstagramError("Use an Instagram handle or a profile link");
+      return false;
+    }
+    setInstagramDraft(handle);
+    setInstagramError(null);
+    onField("instagram_handle", handle);
+    return true;
   };
 
   /* Session types. The base row's price and place are coach fields saved on Done; the rest live in profile_services. */
@@ -196,23 +206,17 @@ export const OwnProfileEditor = ({
   const toggleService = (s: ProfileService) => void persist(withStored({ ...s, on: !s.on, price: s.id === BASE_SERVICE_ID ? 0 : s.price }));
   const deleteService = (id: string) => persist(storedServices.filter((s) => s.id !== id));
 
-  const setPackageActive = async (pkg: CoachPackage, active: boolean) => {
-    const res = await packagesAPI.updateCoachPackage(pkg.id, { is_active: active });
+  const removePackage = async (pkg: CoachPackage) => {
+    const res = await packagesAPI.updateCoachPackage(pkg.id, { is_active: false });
     if (res.error) {
-      toast({ title: "Couldn't update the package", description: res.error.message, variant: "destructive" });
+      toast({ title: "Couldn't remove the package", description: res.error.message, variant: "destructive" });
       return;
     }
     await queryClient.invalidateQueries({ queryKey: ["coach-packages", coach.id] });
-    if (!active)
-      toast({
-        title: "Package removed",
-        description: "Families who bought it keep their credits. It just stops being sold.",
-        action: (
-          <ToastAction altText="Undo remove package" onClick={() => void setPackageActive(pkg, true)}>
-            Undo
-          </ToastAction>
-        ),
-      });
+    toast({
+      title: "Package removed",
+      description: "Families who already bought it keep their credits. It no longer shows on your profile.",
+    });
   };
 
 
@@ -249,7 +253,14 @@ export const OwnProfileEditor = ({
         <p className="min-w-0 flex-1 text-body-m">
           <b className="font-medium">Editing your profile.</b> Changes save when you press Done.
         </p>
-        <button type="button" className={cn(primaryButton, smallButton)} onClick={onDone} disabled={saving}>
+        <button
+          type="button"
+          className={cn(primaryButton, smallButton)}
+          onClick={() => {
+            if (commitInstagram()) onDone();
+          }}
+          disabled={saving}
+        >
           {saving ? "Saving…" : "Done"}
         </button>
       </div>
@@ -259,36 +270,6 @@ export const OwnProfileEditor = ({
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
         <div className="flex min-w-0 flex-col gap-6">
           <section className={card} aria-label="Your profile">
-            <div
-              className={cn(
-                "relative flex h-[150px] items-center justify-center gap-2 overflow-hidden rounded-control px-4 text-center font-medium",
-                cover ? "bg-light-550 text-dark-400" : "border border-dashed border-light-600 bg-light-400 text-dark-300"
-              )}
-            >
-              {cover ? (
-                <img src={cover} alt="" className="absolute inset-0 size-full object-cover" />
-              ) : (
-                <>
-                  <ImageIcon className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                  <span>No cover photo yet</span>
-                </>
-              )}
-              <label className={cn(secondaryButton, smallButton, "absolute bottom-3 right-3 cursor-pointer", coverSaving && "pointer-events-none opacity-50")}>
-                <Upload strokeWidth={1.5} aria-hidden="true" />
-                {coverSaving ? "Uploading…" : cover ? "Change cover" : "Add cover"}
-                <input
-                  type="file"
-                  accept="image/*"
-                  className="sr-only"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    e.target.value = "";
-                    if (file) void uploadCover(file);
-                  }}
-                />
-              </label>
-            </div>
-
             <div className="flex flex-wrap items-start gap-3">
               <div className="flex flex-col items-center gap-1.5">
                 <Avatar name={coach.name} src={photo} size={64} />
@@ -315,15 +296,11 @@ export const OwnProfileEditor = ({
                   {coach.sport ? <BrandPill tone="teal">{coach.sport.charAt(0).toUpperCase() + coach.sport.slice(1)}</BrandPill> : null}
                 </div>
                 <div className="grid max-w-[420px] grid-cols-1 gap-4 sm:grid-cols-2">
-                  <label className={field}>
+                  <div className={field}>
                     <span className={label}>Title</span>
-                    <input
-                      className={input}
-                      placeholder="Private coach"
-                      value={coach.coach_position ?? coach.position ?? ""}
-                      onChange={(e) => onField("coach_position", e.target.value)}
-                    />
-                  </label>
+                    <span className="text-label-sm text-dark">{coachTitle(coach)}</span>
+                    <span className={help}>Comes from the positions you coach.</span>
+                  </div>
                   <label className={field}>
                     <span className={label}>ZIP code</span>
                     <input
@@ -335,6 +312,20 @@ export const OwnProfileEditor = ({
                       onChange={(e) => onField("zip_code", e.target.value.replace(/\D/g, "").slice(0, 5))}
                     />
                     {locationLabel ? <span className={help}>Shows as {locationLabel}</span> : null}
+                  </label>
+                  <label className={cn(field, "sm:col-span-2")}>
+                    <span className={label}>Instagram</span>
+                    <input
+                      className={input}
+                      placeholder="@yourhandle"
+                      value={instagramDraft}
+                      onChange={(e) => {
+                        setInstagramDraft(e.target.value);
+                        setInstagramError(null);
+                      }}
+                      onBlur={commitInstagram}
+                    />
+                    {instagramError ? <span className="text-caption text-error-700">{instagramError}</span> : <span className={help}>Shown on your profile as a link.</span>}
                   </label>
                 </div>
               </div>
@@ -387,26 +378,16 @@ export const OwnProfileEditor = ({
               </span>
             </label>
 
-            <div className="flex flex-wrap items-center justify-between gap-3 rounded-control bg-light-400 px-4 py-3">
-              <span className="flex min-w-0 items-center gap-2.5">
-                <Video className="size-4 shrink-0 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
-                <span className="flex min-w-0 flex-col gap-1">
-                  <span className="text-label-sm text-dark">Coaching video</span>
-                  <span className={cn(caption, "truncate")}>{coachingVideoUrl || "A 30 to 90 second clip of you coaching"}</span>
-                </span>
-              </span>
-              <button type="button" className={cn(secondaryButton, smallButton)} onClick={onVideo}>
-                {coachingVideoUrl ? "Change" : "Add video"}
-              </button>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4 border-t border-light-525 pt-[14px] md:grid-cols-4">
-              {[
-                ["Individual sessions", from ? `From ${money(from)}` : "Not set"],
-                ["Locations", (coach.locations ?? []).join(", ") || locationLabel || "Not set"],
-                ["Usually replies", repliesLabel(coach.response_time_hours)],
-                ["Verified", coach.is_verified ? "Yes" : "Not yet"],
-              ].map(([l, v]) => (
+            <div className="grid grid-cols-2 gap-4 border-t border-light-525 pt-[14px]">
+              {(
+                [
+                  ["Individual sessions", from ? `From ${money(from)}` : "Not set"],
+                  ["Verified", coach.is_verified ? "Yes" : "Not yet"],
+                  ...(typeof coach.response_time_hours === "number" && coach.response_time_hours > 0
+                    ? [["Usually replies", `Within ${coach.response_time_hours} ${coach.response_time_hours === 1 ? "hour" : "hours"}`] as [string, string]]
+                    : []),
+                ] as [string, string][]
+              ).map(([l, v]) => (
                 <div key={l} className="flex min-w-0 flex-col gap-1">
                   <span className={label}>{l}</span>
                   <span className="break-words text-label-sm text-dark">{v}</span>
@@ -437,13 +418,8 @@ export const OwnProfileEditor = ({
                       Most booked
                     </BrandPill>
                   ) : null}
-                  {!p.is_active ? (
-                    <BrandPill tone="muted" className="self-start">
-                      Not for sale
-                    </BrandPill>
-                  ) : null}
-                  <span className={cn("text-label-sm text-dark", !p.is_active && "opacity-60")}>{p.package_name}</span>
-                  <span className={cn("text-highlight text-dark", !p.is_active && "opacity-60")}>{money(p.total_price / 100)}</span>
+                  <span className="text-label-sm text-dark">{p.package_name}</span>
+                  <span className="text-highlight text-dark">{money(p.total_price / 100)}</span>
                   <span className={caption}>
                     {money(p.total_price / 100 / Math.max(1, p.session_count))} per session · valid {p.validity_days} days
                   </span>
@@ -451,15 +427,9 @@ export const OwnProfileEditor = ({
                     <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => onEditPackage(p)}>
                       Edit
                     </button>
-                    {p.is_active ? (
-                      <button type="button" className={cn(textButton, "text-dark-300")} onClick={() => void setPackageActive(p, false)}>
-                        Remove
-                      </button>
-                    ) : (
-                      <button type="button" className={textButton} onClick={() => void setPackageActive(p, true)}>
-                        Sell again
-                      </button>
-                    )}
+                    <button type="button" className={cn(textButton, "text-dark-300")} onClick={() => setRemovingPackage(p)}>
+                      Remove
+                    </button>
                   </div>
                 </div>
               ))}
@@ -538,6 +508,15 @@ export const OwnProfileEditor = ({
           </section>
 
           <OwnReviews coachId={coach.id} averageRating={averageRating} totalReviews={totalReviews} showRating={showRating} fallback={reviews} />
+
+          <LocationsCard
+            coachId={coach.id}
+            locations={coach.locations ?? []}
+            sessions={schedule.data?.sessions ?? []}
+            today={today}
+            loading={schedule.isLoading}
+            onSaved={(next) => onField("locations", next)}
+          />
         </div>
 
         <div className="flex min-w-0 flex-col gap-6">
@@ -566,18 +545,38 @@ export const OwnProfileEditor = ({
           />
 
           <section className={card} aria-label="Organizations">
+            <h2 className={h2}>Organizations</h2>
+            <BrandLogos brands={organizations} />
+            <span className={caption}>Logos come from the organizations that list you.</span>
+          </section>
+
+          <section className={card} aria-label="Brands">
             <div className="flex items-center justify-between gap-3">
-              <h2 className={h2}>Organizations</h2>
+              <h2 className={h2}>Brands</h2>
               <button type="button" className={cn(secondaryButton, smallButton)} onClick={onManageBrands}>
                 Manage
               </button>
             </div>
-            <BrandLogos brands={organizationsForProfile(coach.id, brands)} />
-            <span className={caption}>Logos show near the top of your profile. Matching gear shows first under Gear and deals.</span>
+            <BrandLogos brands={brands} />
+            <span className={caption}>Matching gear shows first under Gear and deals.</span>
           </section>
         </div>
       </div>
 
+      <ConfirmationDialog
+        open={removingPackage !== null}
+        onOpenChange={(open) => {
+          if (!open) setRemovingPackage(null);
+        }}
+        title="Remove this package?"
+        description="It leaves your profile. Families who already bought it keep their credits."
+        confirmLabel="Remove"
+        onConfirm={() => {
+          const pkg = removingPackage;
+          setRemovingPackage(null);
+          if (pkg) void removePackage(pkg);
+        }}
+      />
       <ServiceEditorDialog service={editingService} onClose={() => setEditingService(null)} onSave={saveService} onDelete={deleteService} />
       <CampEditorDialog
         open={campDraft !== undefined}

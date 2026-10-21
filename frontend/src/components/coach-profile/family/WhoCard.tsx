@@ -1,8 +1,9 @@
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { BadgeCheck, CalendarPlus, MessageCircle } from "@/components/icons";
+import { BadgeCheck, CalendarPlus, Instagram, MessageCircle } from "@/components/icons";
 import { primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
+import { instagramUrl } from "@/utils/instagram";
 import { CoachProfileCard } from "../CoachProfileCard";
 import { Stars } from "./Stars";
 import { caption, cardGap, initialsOf, plural } from "./styles";
@@ -26,6 +27,8 @@ export interface WhoCardProps {
   facts: [string, string][];
   /** The free intro call row, under Book and Message. */
   intro?: ReactNode;
+  /** coaches.instagram_handle; shows a link to the profile when valid. */
+  instagram?: string | null;
 }
 
 /** Who (Working Copy `.sp2-who`, `.sp2-cta`, `.sp2-facts`): avatar, name, rating, Book and Message, facts. */
@@ -46,7 +49,9 @@ export const WhoCard = ({
   messaging,
   facts,
   intro,
+  instagram,
 }: WhoCardProps) => {
+  const instagramHref = instagramUrl(instagram);
   const ctas = [onBook ? "book" : null, onMessage ? "message" : null].filter(Boolean);
   return (
     <CoachProfileCard className={cardGap} aria-label="Coach">
@@ -70,6 +75,17 @@ export const WhoCard = ({
               </>
             ) : null}
           </span>
+          {instagramHref ? (
+            <a
+              href={instagramHref}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={cn(caption, "inline-flex w-fit items-center gap-1 hover:text-dark hover:underline")}
+            >
+              <Instagram className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+              Instagram
+            </a>
+          ) : null}
           {showRating ? (
             <span className="flex items-center gap-1.5">
               <Stars value={rating} size={13} />

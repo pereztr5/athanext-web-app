@@ -8,6 +8,7 @@ import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Download, Lock, Plus, ShieldCheck, User, UserPlus } from "@/components/icons";
 import { userProfilesAPI } from "@/api";
+import { sendAccountEmail } from "@/api/accountEmails";
 import { BrandPill } from "@/components/brand";
 import { TimeZoneSelect } from "@/components/common/TimeZoneSelect";
 import { Banner } from "@/components/ui/banner";
@@ -20,8 +21,9 @@ import { supabase } from "@/integrations/supabase/client";
 import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { ATHLETE_NOTIFICATIONS, DELETE_WORD, DELETION_GRACE_DAYS } from "@/utils/settings";
-import { downloadJson } from "@/utils/download";
+import { ATHLETE_NOTIFICATIONS, DELETE_WORD, DELETION_GRACE_DAYS, NOTIFICATIONS_CAPTION } from "@/utils/settings";
+import { pdfSection } from "@/utils/dataExport";
+import { downloadDataPdf } from "@/utils/downloadPdf";
 import { LegalCard } from "@/components/legal/LegalLinks";
 import {
   deleteAthleteGuardian,
@@ -30,7 +32,7 @@ import {
   listAthleteGuardians,
   sendGuardianInvite,
 } from "./guardians";
-import { Card, ConfirmWordCard, Field, NotificationsTab, SecurityTab, SettingsShell, ToggleRow, sub } from "./CoachSettings";
+import { Card, ConfirmWordCard, Field, NotificationsTab, SecurityTab, SettingsShell, SwitchAccountTypeNote, ToggleRow, sub } from "./CoachSettings";
 
 type Tab = "account" | "notifications" | "privacy" | "security" | "legal";
 const RELATIONSHIPS = ["Parent", "Guardian", "Other family member"] as const;
@@ -68,12 +70,11 @@ export const AthleteSettings = () => {
       defaultTab="account"
       dirty={dirty}
       onDiscard={() => setDirty(false)}
-      banner={extras.deletion_requested_at ? <DeletionBanner requestedAt={extras.deletion_requested_at} /> : null}
       render={(tab) => (
         <>
           {tab === "account" ? <AccountTab isParent={isParent} athleteId={athlete?.id} athleteFirst={athleteFirst} parentName={extras.name || "you"} onDirtyChange={setDirty} /> : null}
           {tab === "notifications" ? (
-            <NotificationsTab kinds={ATHLETE_NOTIFICATIONS} caption="Email is sent for bookings and messages. Notes and reminders are on your notifications list." />
+            <NotificationsTab kinds={ATHLETE_NOTIFICATIONS} caption={NOTIFICATIONS_CAPTION} />
           ) : null}
           {tab === "privacy" ? <PrivacyTab athleteId={athlete?.id} athleteFirst={athleteFirst} isParent={isParent} /> : null}
           {tab === "security" ? (
@@ -192,6 +193,7 @@ const AccountTab = ({ isParent, athleteId, athleteFirst, parentName, onDirtyChan
         {isParent ? `${athleteFirst}'s` : "Your"} details (name, birthday, position, team) are on{" "}
         <Link to={ROUTES.DASHBOARD} className="font-medium text-primary hover:underline">Home</Link>.
       </p>
+      <SwitchAccountTypeNote />
       {dirty ? (
         <div className="sticky bottom-20 flex flex-wrap items-center justify-between gap-3 rounded-control border border-primary-300 bg-primary-50 px-4 py-3 md:bottom-4">
           <span className={sub}>You have unsaved changes</span>
@@ -449,19 +451,39 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
         athleteId ? supabase.from("slot_feedback_v2").select("*").eq("athlete_id", athleteId) : Promise.resolve({ data: [] }),
         athleteId ? supabase.from("coach_client_referrals").select("*").eq("athlete_id", athleteId) : Promise.resolve({ data: [] }),
       ]);
-      downloadJson(
-        {
-          exported_at: new Date().toISOString(),
-          account: account.data,
-          athlete: athlete.data,
-          bookings: bookings.data ?? [],
-          session_notes: notes.data ?? [],
-          coaches: coaches.data ?? [],
-        },
-        `athanext-data-${new Date().toISOString().slice(0, 10)}.json`
+      const accountRow = (account.data ?? {}) as Record<string, unknown>;
+      const athleteRow = (athlete.data ?? {}) as Record<string, unknown>;
+      downloadDataPdf(
+        [
+          pdfSection("Account", [{ Name: accountRow.name, Email: accountRow.email, Phone: accountRow.phone_number }]),
+          pdfSection("Athlete", [{ Name: athleteRow.full_name ?? athleteRow.name, Birth: athleteRow.date_of_birth }]),
+          pdfSection(
+            "Bookings",
+            ((bookings.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Status: row.status,
+              Payment: row.payment_status,
+              Booked: row.created_at,
+            }))
+          ),
+          pdfSection(
+            "Session notes",
+            ((notes.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Note: row.note ?? row.feedback,
+              Date: row.created_at,
+            }))
+          ),
+          pdfSection(
+            "Coaches",
+            ((coaches.data ?? []) as Record<string, unknown>[]).map((row) => ({
+              Name: row.athlete_name ?? row.coach_name ?? row.name,
+              Added: row.created_at,
+            }))
+          ),
+        ],
+        `athanext-data-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     },
-    onSuccess: () => toast({ title: "Your data is downloading" }),
+    onSuccess: () => toast({ title: "Your data is downloading", description: "A PDF of the account, athlete profile, bookings, session notes and coaches." }),
     onError: () => toast({ title: "Couldn't download the data", description: "Try again.", variant: "destructive" }),
   });
 
@@ -478,16 +500,13 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
       </div>
       <button type="button" className={cn(secondaryButton, "self-start")} disabled={exportData.isPending} onClick={() => exportData.mutate()}>
         <Download strokeWidth={1.5} aria-hidden="true" />
-        {exportData.isPending ? "Preparing…" : `Download ${whose} data`}
+        {exportData.isPending ? "Preparing…" : `Download ${whose} data (PDF)`}
       </button>
     </Card>
   );
 };
 
 /* ---------- Delete account ---------- */
-
-const deletionDate = (requestedAt: string) =>
-  new Date(new Date(requestedAt).getTime() + DELETION_GRACE_DAYS * 86_400_000).toLocaleDateString("en-US", { month: "short", day: "numeric" });
 
 const DeleteCard = ({ isParent, athleteFirst }: { isParent: boolean; athleteFirst: string }) => {
   const { user, refreshUserProfile } = useAuth();
@@ -499,44 +518,19 @@ const DeleteCard = ({ isParent, athleteFirst }: { isParent: boolean; athleteFirs
     },
     onSuccess: async () => {
       await refreshUserProfile();
-      toast({ title: "Account deletion scheduled", description: `You can undo it from here for ${DELETION_GRACE_DAYS} days.` });
+      void sendAccountEmail("deletion_requested");
+      toast({ title: "Account deletion scheduled", description: "We emailed you the date. Choose Keep my account before then to undo it." });
     },
     onError: (err) => toast({ title: "Couldn't schedule deletion", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
   });
   return (
     <ConfirmWordCard
       title="Delete account"
-      body={`Deletes ${isParent ? `${athleteFirst}'s` : "your"} account and personal details ${DELETION_GRACE_DAYS} days after you ask, and cancels upcoming sessions. Coaches keep a record of past sessions without the name. Sign in before then to undo.`}
+      body={`Deletes ${isParent ? `${athleteFirst}'s` : "your"} account and personal details ${DELETION_GRACE_DAYS} days after you ask, and cancels upcoming sessions then. Coaches keep a record of past sessions without the name. We email you the date; until then, sign in and choose Keep my account to undo it.`}
       word={DELETE_WORD}
       actionLabel="Delete account"
       pending={request.isPending}
       onConfirm={() => request.mutate()}
     />
-  );
-};
-
-const DeletionBanner = ({ requestedAt }: { requestedAt: string }) => {
-  const { user, refreshUserProfile } = useAuth();
-  const { toast } = useToast();
-  const undo = useMutation({
-    mutationFn: async () => {
-      const { error } = await userProfilesAPI.updateUserProfile(user!.id, { deletion_requested_at: null });
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: async () => {
-      await refreshUserProfile();
-      toast({ title: "Account restored" });
-    },
-    onError: () => toast({ title: "Couldn't undo", variant: "destructive" }),
-  });
-  return (
-    <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-error-300 bg-error-50 px-4 py-3">
-      <span className="text-body-m text-error-700">
-        <b className="font-medium">This account is scheduled for deletion on {deletionDate(requestedAt)}.</b>
-      </span>
-      <button type="button" className={primaryButton} disabled={undo.isPending} onClick={() => undo.mutate()}>
-        Undo
-      </button>
-    </div>
   );
 };

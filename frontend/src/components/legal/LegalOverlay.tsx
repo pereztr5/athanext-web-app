@@ -1,6 +1,6 @@
 /**
  * In-app Terms / Privacy overlay (WC4 #22). Desktop panel, phone full-screen.
- * Stripe Connect stays external; coach terms open the published coach URL when needed.
+ * Stripe Connect stays external; coach terms open the in-app /coach-terms page in a new tab.
  */
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
 import { useQuery } from "@tanstack/react-query";
@@ -11,7 +11,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { cn } from "@/lib/utils";
 import { segButton, segGroup } from "@/components/schedule/styles";
-import { COACH_TERMS_URL } from "@/utils/offlinePay";
+import { COACH_TERMS_PATH } from "@/utils/offlinePay";
 import { formatDayISO } from "@/utils/schedule";
 
 export type LegalDoc = "terms" | "privacy" | "coach";
@@ -52,7 +52,7 @@ export const LegalProvider = ({ children }: { children: ReactNode }) => {
 
   const open = useCallback((next: LegalDoc = "terms") => {
     if (next === "coach") {
-      window.open(COACH_TERMS_URL, "_blank", "noopener,noreferrer");
+      window.open(COACH_TERMS_PATH, "_blank", "noopener,noreferrer");
       return;
     }
     setDoc(next);

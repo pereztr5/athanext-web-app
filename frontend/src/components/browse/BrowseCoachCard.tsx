@@ -4,7 +4,6 @@ import { BrandPill, BrandStar } from "@/components/brand";
 import { FreeIntroPill } from "@/components/intro-calls";
 import { primaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
-import { organizationPath } from "@/utils/coachAcademy";
 
 export interface BrowseCoachCardProps {
   name: string;
@@ -20,6 +19,8 @@ export interface BrowseCoachCardProps {
   /** Dollars for one 1-on-1 session. */
   price: number | null;
   academy: string;
+  /** The page of the organization that shows this coach. Without one the academy is plain text. */
+  academyTo?: string | null;
   isMine: boolean;
   freeIntro?: boolean;
   onOpen: () => void;
@@ -45,6 +46,7 @@ export const BrowseCoachCard = ({
   agePill,
   price,
   academy,
+  academyTo,
   isMine,
   freeIntro,
   onOpen,
@@ -117,15 +119,20 @@ export const BrowseCoachCard = ({
           </span>
         ) : null}
         <span className="min-w-0 overflow-hidden">
-          {academy ? (
+          {academy && academyTo ? (
             <Link
-              to={organizationPath(academy)}
+              to={academyTo}
               onClick={(event) => event.stopPropagation()}
               className="inline-flex max-w-full items-center gap-1 font-medium text-primary hover:text-primary-600 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
             >
               <Building2 className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
               <span className="truncate">{academy}</span>
             </Link>
+          ) : academy ? (
+            <span className="inline-flex max-w-full items-center gap-1 font-medium">
+              <Building2 className="size-3 shrink-0" strokeWidth={1.5} aria-hidden="true" />
+              <span className="truncate">{academy}</span>
+            </span>
           ) : isMine ? (
             <BrandPill tone="green">Your coach</BrandPill>
           ) : (

@@ -23,6 +23,7 @@ import Analytics from "./pages/Analytics";
 import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
+import CoachTerms from "./pages/CoachTerms";
 import ContactUs from "./pages/ContactUs";
 import Help from "./pages/Help";
 import OrganizationProfile from "./pages/OrganizationProfile";
@@ -101,6 +102,7 @@ export const ROUTES = {
   ABOUT: "/about",
   PRIVACY_POLICY: "/privacy-policy",
   TERMS_AND_CONDITIONS: "/terms-and-conditions",
+  COACH_TERMS: "/coach-terms",
   CONTACT_US: "/contact",
   HELP: "/help",
   PROFILE: "/profile",
@@ -146,6 +148,7 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.CONTACT_US, element: <ContactUs /> },
   { path: ROUTES.PRIVACY_POLICY, element: <PrivacyPolicy /> },
   { path: ROUTES.TERMS_AND_CONDITIONS, element: <TermsAndConditions /> },
+  { path: ROUTES.COACH_TERMS, element: <CoachTerms /> },
   { path: ROUTES.BECOME_COACH, element: <BecomeACoach /> },
 ];
 

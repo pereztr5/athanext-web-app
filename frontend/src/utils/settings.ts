@@ -26,52 +26,49 @@ export const passwordStrength = (value: string) => {
   return { score, hint };
 };
 
-export type NotificationChannel = "email" | "app";
-
-/** A row on Account settings > Notifications. Only channels that are actually sent get a switch. */
+/**
+ * Account settings > Notifications is email only (there is no mobile app yet). The in-app
+ * notifications list always shows everything. Each switch saves "<kind>_email" in
+ * user_profiles.notification_prefs; false turns that email off, missing means on.
+ */
 export type NotificationItem = {
   kind: string;
   title: string;
   detail: string;
-  channels: readonly NotificationChannel[];
 };
+
+/**
+ * Every email switch and the edge function that reads it before sending. A switch only belongs
+ * on the page if its key is in this map (settings.test.ts checks that).
+ */
+export const EMAIL_PREF_SENDERS: Record<string, string> = {
+  booking_email: "send-booking-notifications",
+  message_email: "send-conversation-email",
+  receipts_email: "send-booking-notifications",
+};
+
+/** Shown under the switches on both settings pages. */
+export const NOTIFICATIONS_CAPTION =
+  "Emails go to your sign-in email. Everything also shows on your notifications list in AthaNext, whatever you choose here.";
+
+export const emailPrefKey = (kind: string) => `${kind}_email`;
 
 export const COACH_NOTIFICATIONS: NotificationItem[] = [
   {
     kind: "booking",
-    title: "Booking requests and bookings",
-    detail: "Requests in the app, and an email when a booking is confirmed",
-    channels: ["email", "app"],
+    title: "Bookings",
+    detail: "An email when a family books and pays for a session",
   },
   {
     kind: "message",
     title: "Messages",
-    detail: "From families and athletes",
-    channels: ["email", "app"],
-  },
-  {
-    kind: "notes",
-    title: "Feedback due",
-    detail: "Sessions from the last week that still need feedback",
-    channels: ["app"],
-  },
-  {
-    kind: "review",
-    title: "Reviews",
-    detail: "New reviews on your profile",
-    channels: ["app"],
-  },
-  {
-    kind: "reminder",
-    title: "Session reminders",
-    detail: "On your notifications list 24 hours before",
-    channels: ["app"],
+    detail: "An email when a family starts a chat or replies to you",
   },
 ];
 
-/** Missing keys mean on; matches notification_allowed() in the database. */
-export const notificationOn = (prefs: unknown, kind: string, channel: NotificationChannel) => {
-  const value = prefs && typeof prefs === "object" ? (prefs as Record<string, unknown>)[`${kind}_${channel}`] : undefined;
+/** Missing keys mean on; matches the checks in send-booking-notifications and send-conversation-email. */
+export const notificationOn = (prefs: unknown, kind: string) => {
+  const value = prefs && typeof prefs === "object" ? (prefs as Record<string, unknown>)[emailPrefKey(kind)] : undefined;
   return value !== false;
 };
 
@@ -81,26 +78,12 @@ export const ATHLETE_NOTIFICATIONS: NotificationItem[] = [
   {
     kind: "booking",
     title: "Bookings",
-    detail: "An email when a booking is confirmed, and a note when a coach accepts a request",
-    channels: ["email", "app"],
+    detail: "An email confirming each session you book and pay for",
   },
   {
     kind: "message",
     title: "Messages",
-    detail: "From coaches and group channels",
-    channels: ["email", "app"],
-  },
-  {
-    kind: "notes",
-    title: "Session notes",
-    detail: "When a coach shares feedback",
-    channels: ["app"],
-  },
-  {
-    kind: "reminder",
-    title: "Session reminders",
-    detail: "On your notifications list 24 hours before",
-    channels: ["app"],
+    detail: "An email when a coach replies to you",
   },
 ];
 

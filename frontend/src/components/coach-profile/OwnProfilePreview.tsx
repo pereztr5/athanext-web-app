@@ -3,7 +3,7 @@
  * who (completeness strip, hero, Edit and Share, facts), About, Sessions and pricing, Reviews and More.
  */
 import { Link } from "react-router-dom";
-import { BadgeCheck, Check, Eye, Pencil, Plus, Share2 } from "@/components/icons";
+import { BadgeCheck, Check, Eye, Instagram, Pencil, Plus, Share2 } from "@/components/icons";
 import type { CoachProfileExtras, ProfileService } from "@/api/coachProfile";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { BrandPill } from "@/components/brand";
@@ -11,19 +11,20 @@ import { CoachIntroCallCard } from "@/components/intro-calls";
 import { card, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { sanitizePathwayTags } from "@/constants/pathwayTags";
 import { cn } from "@/lib/utils";
+import { instagramUrl } from "@/utils/instagram";
 import { formatRichTextForRender } from "@/utils/richText";
 import "@/styles/richText.css";
 import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
 import type { CoachFaqItem } from "./FAQSection";
 import { OrganizationsCard } from "./OrganizationsCard";
-import { organizationsForProfile } from "./organizationLogos";
+import { useCoachOrganizations } from "./useCoachOrganizations";
 import { CompletenessNudge } from "./own/Completeness";
 import { MoreList } from "./own/MoreList";
 import { OwnReviews } from "./own/OwnReviews";
 import { PricingSection } from "./own/PricingSection";
 import type { StepName } from "./own/hooks";
 import { Avatar, Stars } from "./own/parts";
-import { agesLine, caption, coachesLine, money, plural, repliesLabel, sectionTitle, sp2Card } from "./own/shared";
+import { agesLine, caption, coachesLine, coachTitle, money, plural, sectionTitle, sp2Card } from "./own/shared";
 
 const tagRow = "grid grid-cols-[72px_minmax(0,1fr)] items-start gap-[10px]";
 const tagLabel = "pt-1 text-label-xsm text-dark-300";
@@ -40,7 +41,6 @@ export const OwnProfilePreview = ({
   locationLabel,
   organization,
   faqs,
-  brands,
   brandNames,
   cancellation,
   completeness,
@@ -61,7 +61,6 @@ export const OwnProfilePreview = ({
   locationLabel: string;
   organization: { name: string; to: string } | null;
   faqs: CoachFaqItem[];
-  brands: { id: string; name: string; logo_url: string | null }[];
   brandNames: string[];
   cancellation: string;
   completeness: { steps: [StepName, boolean][]; done: number; next: StepName | null };
@@ -71,14 +70,15 @@ export const OwnProfilePreview = ({
   onShare: () => void;
 }) => {
   const first = coach.name.split(" ")[0] || coach.name;
-  const role = coach.coach_position || coach.position || "Coach";
+  const role = coachTitle(coach);
+  const organizations = useCoachOrganizations(coach.id);
+  const instagram = instagramUrl(coach.instagram_handle);
   const individual = services.filter((s) => s.format === "individual" && s.price > 0);
   const from = individual.length ? Math.min(...individual.map((s) => s.price)) : 0;
   const places = (coach.locations ?? []).filter((l) => l && l !== "Video call").join(", ");
   const facts = [
     ["1-on-1 from", from ? money(from) : ""],
     ["Where", places || locationLabel],
-    ["Replies", repliesLabel(coach.response_time_hours)],
     ["Speaks", (coach.languages ?? []).filter(Boolean).join(", ")],
   ].filter(([, v]) => v);
   const levels = sanitizePathwayTags(coach.pathway_tags);
@@ -122,6 +122,12 @@ export const OwnProfilePreview = ({
                 </>
               ) : null}
             </span>
+            {instagram ? (
+              <a href={instagram} target="_blank" rel="noopener noreferrer" className={cn(caption, "inline-flex w-fit items-center gap-1 hover:text-dark hover:underline")}>
+                <Instagram className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
+                Instagram
+              </a>
+            ) : null}
             {showRating ? (
               <span className="flex items-center gap-1.5">
                 <Stars value={averageRating} />
@@ -169,7 +175,7 @@ export const OwnProfilePreview = ({
         ) : null}
       </section>
 
-      <OrganizationsCard brands={organizationsForProfile(coach.id, brands)} />
+      <OrganizationsCard brands={organizations} />
 
       <section aria-label="About" className={cn(card, sp2Card)}>
         <h2 className={sectionTitle}>About</h2>

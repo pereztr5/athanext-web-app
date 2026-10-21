@@ -21,12 +21,15 @@ export const LocationsCard = ({
   sessions,
   today,
   loading,
+  onSaved,
 }: {
   coachId: string;
   locations: string[];
   sessions: ScheduleSession[];
   today: string;
   loading: boolean;
+  /** Called with the list just saved, so another screen's draft stays in step. */
+  onSaved?: (locations: string[]) => void;
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -54,8 +57,9 @@ export const LocationsCard = ({
       const { error } = await coachesAPI.updateCoach(coachId, { locations: next });
       if (error) throw new Error(error.message || "Couldn't save locations");
     },
-    onSuccess: () => {
+    onSuccess: (_data, next) => {
       refresh();
+      onSaved?.(next);
     },
     onError: fail,
   });

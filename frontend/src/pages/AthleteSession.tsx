@@ -12,6 +12,7 @@ import { buttonVariants } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { RESCHEDULABLE_PAYMENTS, athleteSessionAPI } from "@/api/athleteSession";
 import { startOccurrenceCheckout } from "@/api/bookings";
+import { getMeetingUrl } from "@/api/meetingLinks";
 import { InfoBox } from "@/components/book/checkoutParts";
 import { RescheduleDialog } from "@/components/athlete-session/RescheduleDialog";
 import { SessionHeader } from "@/components/session/SessionHeader";
@@ -43,6 +44,11 @@ const AthleteSessionPage = () => {
   const athleteId = profile?.userProfile?.athlete_id ?? "";
   const query = useQuery({ queryKey: ["athlete-session", id], enabled: Boolean(id), queryFn: () => athleteSessionAPI.get(id!) });
   const s = query.data;
+  const meeting = useQuery({
+    queryKey: ["meeting-link", s?.coach.id],
+    enabled: s?.location === "online" && Boolean(s?.coach.id),
+    queryFn: () => getMeetingUrl(s!.coach.id),
+  });
 
   const queryClient = useQueryClient();
   const [confirmCancel, setConfirmCancel] = useState(false);
@@ -281,7 +287,16 @@ const AthleteSessionPage = () => {
           <div className="flex flex-col gap-4 md:gap-6">
             <section className={cn(card, "gap-0 divide-y divide-light-525 py-2")}>
               {s.location === "online"
-                ? fact(Video, "Video call", "Link sent 15 minutes before")
+                ? fact(
+                    Video,
+                    "Video call",
+                    meeting.data ? "The link for this session" : "Your coach hasn't added a video link yet",
+                    meeting.data ? (
+                      <a className={cn(textButton, "text-caption")} href={meeting.data} target="_blank" rel="noreferrer">
+                        Join
+                      </a>
+                    ) : null
+                  )
                 : fact(
                     MapPin,
                     where,

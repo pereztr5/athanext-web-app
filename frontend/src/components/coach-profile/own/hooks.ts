@@ -80,7 +80,6 @@ export type StepName =
   | "Pillars and pricing"
   | "Availability"
   | "Payout details"
-  | "Coaching video"
   | "Certifications";
 
 /** Completeness steps for the coach's own profile. */
@@ -98,7 +97,6 @@ export const useCompleteness = (coach: CoachProfileData & { image_url?: string |
     ["Availability", hasAvailability],
     // Coaches who take payment themselves have nothing to connect.
     ["Payout details", coach.pay_mode === "self" || Boolean(payout.data?.connected && payout.data.transfersActive)],
-    ["Coaching video", Boolean(extras?.coachingVideoUrl)],
     ["Certifications", Boolean(coach.certifications?.length)],
   ];
   return { steps, done: steps.filter(([, ok]) => ok).length, next: steps.find(([, ok]) => !ok)?.[0] ?? null };

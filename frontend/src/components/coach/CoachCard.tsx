@@ -9,7 +9,8 @@ import { SPORTS_OPTIONS, normalizePosition } from "@/utils/db";
 import type { Coach } from '@/types/coachProfile'
 import { isPublicCoachRatingVisible, publicCoachRatingLabel } from "@/utils/publicRating";
 import { BrandPill, BrandStar } from "@/components/brand";
-import { coachAcademy, organizationPath } from "@/utils/coachAcademy";
+import { coachAcademy } from "@/utils/coachAcademy";
+import { instagramUrl } from "@/utils/instagram";
 import { Link } from "react-router-dom";
 import { sportFromText } from '@/utils/coachSport';
 
@@ -21,6 +22,8 @@ interface CoachCardProps {
     onSendMessage?: (coach: Coach) => void;
     disableSendMessage?: boolean;
     isSendingMessage?: boolean;
+    /** The page of the organization that shows this coach. Without one the academy is plain text. */
+    organizationTo?: string | null;
 }
 
 /**
@@ -53,9 +56,11 @@ const CoachCard = ({
     onSendMessage,
     disableSendMessage,
     isSendingMessage,
+    organizationTo,
 }: CoachCardProps) => {
     const [showAllSpecialties, setShowAllSpecialties] = useState(false);
     const [showAllPositions, setShowAllPositions] = useState(false);
+    const instagram = instagramUrl(coach?.instagram_handle);
 
     const initials = coach?.name
         ?.split(' ')
@@ -176,9 +181,9 @@ const CoachCard = ({
                                         </svg>
                                     </span>
                                 )}
-                                {coach?.instagram_handle && (
+                                {instagram ? (
                                     <a
-                                        href={`https://instagram.com/${coach.instagram_handle}`}
+                                        href={instagram}
                                         target="_blank"
                                         rel="noopener noreferrer"
                                         onClick={(e) => e.stopPropagation()}
@@ -187,15 +192,15 @@ const CoachCard = ({
                                     >
                                         <Instagram className="size-4" strokeWidth={1.5} />
                                     </a>
-                                )}
+                                ) : null}
                             </div>
                             <div className="flex min-w-0 flex-wrap items-center gap-[6px]">
                                 <p className="text-body-m text-dark-300">
                                     {primarySpecialty}
                                 </p>
-                                {academy && (
+                                {academy && organizationTo ? (
                                     <Link
-                                        to={organizationPath(academy)}
+                                        to={organizationTo}
                                         onClick={(e) => e.stopPropagation()}
                                         className="min-w-0 max-w-full rounded-pill focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
                                     >
@@ -203,7 +208,11 @@ const CoachCard = ({
                                             <span className="truncate">{academy}</span>
                                         </BrandPill>
                                     </Link>
-                                )}
+                                ) : academy ? (
+                                    <BrandPill tone="muted" className="min-w-0 max-w-full">
+                                        <span className="truncate">{academy}</span>
+                                    </BrandPill>
+                                ) : null}
                             </div>
                             <p className="flex items-center gap-1 text-caption text-dark-300">
                                 <MapPin className="size-3 flex-none" strokeWidth={2} aria-hidden="true" />

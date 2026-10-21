@@ -27,11 +27,11 @@ import {
   ALL_ACADEMIES,
   academySlug,
   applyOrganizations,
-  buildOrganizations,
+  buildOrgDirectory,
   findOrganization,
   coachAcademy,
   matchesAcademy,
-  organizationPath,
+  orgPathByCoach,
 } from "@/utils/coachAcademy";
 import { organizationPartners } from "@/utils/brands";
 import { getCoachSport } from "@/utils/coachSport";
@@ -427,10 +427,13 @@ const AllCoaches = () => {
 
   const showOrganizations = directoryView === "organizations";
   // Same search and filters in both views: an organization is listed when any of its
-  // coaches matches, while its card describes the whole organization.
-  const matchingAcademies = new Set(filteredCoaches.map((coach) => academySlug(coach?.company)));
-  const allOrganizations = buildOrganizations(coaches, getCoachSport);
-  const organizations = allOrganizations.filter((org) => matchingAcademies.has(org.slug));
+  // coaches matches, while its card describes the whole organization. Only organizations set
+  // up in the app are listed; a coach's own business name never makes one.
+  const matchingCoachIds = new Set(filteredCoaches.map((coach) => coach?.id));
+  const allOrganizations = buildOrgDirectory(coaches, publicOrgs, getCoachSport);
+  const organizations = allOrganizations.filter((org) => org.coachIds.some((id) => matchingCoachIds.has(id)));
+  const orgPaths = orgPathByCoach(publicOrgs);
+  const selectedOrg = selectedAcademy === ALL_ACADEMIES ? undefined : findOrganization(publicOrgs, academySlug(selectedAcademy));
   const viewCounts: Record<DirectoryView, number> = { coaches: coaches.length, organizations: allOrganizations.length };
 
   const sportWord = selectedSport === "All Sports" ? "" : selectedSport;
@@ -567,9 +570,13 @@ const AllCoaches = () => {
           {!showOrganizations && selectedAcademy !== ALL_ACADEMIES ? (
             <>
               {" · Coaches at "}
-              <Link to={organizationPath(selectedAcademy)} className={textLink}>
-                {selectedAcademy}
-              </Link>
+              {selectedOrg ? (
+                <Link to={`/organizations/${selectedOrg.slug}`} className={textLink}>
+                  {selectedAcademy}
+                </Link>
+              ) : (
+                selectedAcademy
+              )}
               {". "}
               <button type="button" onClick={() => setSelectedAcademy(ALL_ACADEMIES)} className={textLink}>
                 Show all
@@ -631,6 +638,7 @@ const AllCoaches = () => {
                     onSendMessage={handleSendMessage}
                     disableSendMessage={false}
                     isSendingMessage={sendingMessageFor === coach.id}
+                    organizationTo={orgPaths.get(coach.id) ?? null}
                   />
                 );
               }
@@ -649,6 +657,7 @@ const AllCoaches = () => {
                   agePill={agePillLabel(coach)}
                   price={Number(coach.hourly_rate) || null}
                   academy={coachAcademy(coach.company)}
+                  academyTo={orgPaths.get(coach.id) ?? null}
                   isMine={myCoachIds.has(coach.id)}
                   freeIntro={introCoachIds.has(coach.id)}
                   onOpen={() => onViewProfile(coach.id)}

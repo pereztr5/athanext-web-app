@@ -86,3 +86,8 @@ content_path = "./supabase/templates/magic_link.html"
 # Report an issue: emails support and the family. Called by the signed-in family.
 [functions.report-session-issue]
 verify_jwt = true
+
+# Account settings emails (deletion scheduled or cancelled, coach deactivated). Sends only to the
+# signed-in caller, and only when the account is in that state.
+[functions.account-emails]
+verify_jwt = true
