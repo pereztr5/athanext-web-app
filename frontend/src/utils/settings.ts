@@ -37,19 +37,9 @@ export type NotificationItem = {
   detail: string;
 };
 
-/**
- * Every email switch and the edge function that reads it before sending. A switch only belongs
- * on the page if its key is in this map (settings.test.ts checks that).
- */
-export const EMAIL_PREF_SENDERS: Record<string, string> = {
-  booking_email: "send-booking-notifications",
-  message_email: "send-conversation-email",
-  receipts_email: "send-booking-notifications",
-};
-
 /** Shown under the switches on both settings pages. */
 export const NOTIFICATIONS_CAPTION =
-  "Emails go to your sign-in email. Everything also shows on your notifications list in AthaNext, whatever you choose here.";
+  "These switches only change emails, which go to your sign-in email. Your notifications list in AthaNext isn't affected.";
 
 export const emailPrefKey = (kind: string) => `${kind}_email`;
 
@@ -57,16 +47,16 @@ export const COACH_NOTIFICATIONS: NotificationItem[] = [
   {
     kind: "booking",
     title: "Bookings",
-    detail: "An email when a family books and pays for a session",
+    detail: "An email when a family books a session with you",
   },
   {
     kind: "message",
     title: "Messages",
-    detail: "An email when a family starts a chat or replies to you",
+    detail: "An email when a family starts a chat, and when they answer your message. A run of messages sends one email.",
   },
 ];
 
-/** Missing keys mean on; matches the checks in send-booking-notifications and send-conversation-email. */
+/** Missing keys mean on; matches the checks in send-booking-notifications and send-conversation-email (settingsNotifications.test.ts). */
 export const notificationOn = (prefs: unknown, kind: string) => {
   const value = prefs && typeof prefs === "object" ? (prefs as Record<string, unknown>)[emailPrefKey(kind)] : undefined;
   return value !== false;
@@ -78,12 +68,12 @@ export const ATHLETE_NOTIFICATIONS: NotificationItem[] = [
   {
     kind: "booking",
     title: "Bookings",
-    detail: "An email confirming each session you book and pay for",
+    detail: "An email confirming each session you book",
   },
   {
     kind: "message",
     title: "Messages",
-    detail: "An email when a coach replies to you",
+    detail: "An email when a coach answers your message. A run of messages sends one email.",
   },
 ];
 

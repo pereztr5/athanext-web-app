@@ -1,7 +1,11 @@
-// Emails coach and family after a booking is paid. Called by create-booking-payment
-// with the service role and { booking_id }.
+// Emails coach and family once a booking is confirmed: paid by card, a session credit or
+// package, a free session, paying the coach directly, or an accepted request. Called by
+// create-booking-payment with the service role and { booking_id }; it makes sure each
+// booking is emailed once.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { bookingEmailSender } from "../_shared/email_sender.ts";
+import { formatSessionWhen } from "../_shared/session_time.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -46,20 +50,47 @@ serve(async (req) => {
       .maybeSingle();
     if (error || !booking) return json({ error: error?.message ?? "Booking not found" }, 404);
 
+    // send-email signs in to Gmail as GMAIL_USER (configurations.smtp_email names the same
+    // mailbox). Mail is from support@ when that is the mailbox; otherwise replies go to support@.
     const { data: cfg } = await admin.from("configurations").select("value").eq("key", "smtp_email").maybeSingle();
-    const from = (cfg?.value as string | undefined) ?? "";
-    if (!from) return json({ error: "smtp_email not configured", emailed: false }, 200);
+    const sender = bookingEmailSender(Deno.env.get("GMAIL_USER") || (cfg?.value as string | undefined));
+    if (!sender) return json({ error: "smtp_email not configured", emailed: false }, 200);
+    const { from, replyTo } = sender;
 
     // deno-lint-ignore no-explicit-any
     const row = booking as any;
     const coachName = (row.coach?.name as string) ?? "Your coach";
     const coachEmail = (row.coach?.email as string | null) ?? null;
     const athleteName = (row.athlete?.full_name as string) ?? "Athlete";
+    // Shown in the coach's time zone (Account settings), e.g. "Tue, Nov 24 at 4:00 PM ET".
+    let coachTimeZone: string | null = null;
+    if (row.coach?.user_id) {
+      const { data: coachProfile } = await admin.from("user_profiles").select("timezone").eq("id", row.coach.user_id).maybeSingle();
+      coachTimeZone = (coachProfile?.timezone as string | null) ?? null;
+    }
     const when = row.occurrence?.occurrence_date
-      ? `${row.occurrence.occurrence_date} at ${String(row.occurrence.start_time ?? "").slice(0, 5)}`
+      ? formatSessionWhen(row.occurrence.occurrence_date, row.occurrence.start_time, coachTimeZone)
       : "your session";
     const sessionName = (row.occurrence?.session_name as string) ?? "Session";
     const price = Number(row.occurrence?.price ?? 0);
+    const paymentStatus = String(row.payment_status ?? "");
+    // How it was paid, in the family's and the coach's words.
+    const familyPayment = (() => {
+      if (paymentStatus === "credit") return "Paid with a session credit.";
+      if (paymentStatus === "outside") return price > 0 ? "Paid outside the app, as agreed with your coach." : "This session is free.";
+      if (paymentStatus === "direct" || paymentStatus === "pending_offline") {
+        return `Pay ${escapeHtml(coachName)} directly${price > 0 ? `: ${usd(price)}` : ""}.`;
+      }
+      return `Paid: ${usd(price)}. Cancel with enough notice and it comes back as a session credit.`;
+    })();
+    const coachPayment = (() => {
+      if (paymentStatus === "credit") return "Paid with a session credit.";
+      if (paymentStatus === "outside") return price > 0 ? "Paid outside the app." : "This session is free.";
+      if (paymentStatus === "direct" || paymentStatus === "pending_offline") {
+        return `The family pays you directly${price > 0 ? `: ${usd(price)}` : ""}.`;
+      }
+      return `Amount: ${usd(price)} (your share is paid after the session, on your weekly payout day).`;
+    })();
     const video = row.occurrence?.location === "online";
     let meetingUrl = "";
     if (video && row.coach_id) {
@@ -73,9 +104,6 @@ serve(async (req) => {
         ? `<p>This is a video call. Add your Zoom, Meet or Teams link in Schedule settings so the family can join.</p>`
         : `<p>This is a video call. The join link shows on the session page once your coach adds it.</p>`;
     };
-    // Gmail SMTP only delivers from the configured mailbox. Reply-To is support@ so families
-    // reach AthaNext even while the visible From is still that mailbox.
-    const replyTo = "support@athanext.com";
 
     let familyEmail: string | null = null;
     const userId = row.athlete?.user_id as string | null;
@@ -91,7 +119,7 @@ serve(async (req) => {
           "Content-Type": "application/json",
           Authorization: `Bearer ${serviceRole}`,
         },
-        body: JSON.stringify({ to, from, replyTo, subject, html }),
+        body: JSON.stringify({ to, from, subject, html, ...(replyTo ? { replyTo } : {}) }),
       }).catch((e) => {
         console.error("send-email failed", e);
         return null;
@@ -122,7 +150,7 @@ serve(async (req) => {
           <h2 style="color:#0054B4;">New booking</h2>
           <p><strong>${escapeHtml(athleteName)}</strong> booked <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>
           ${videoHtml("coach")}
-          <p>Amount: ${usd(price)} (your share is paid after the session, on your weekly payout day).</p>
+          <p>${coachPayment}</p>
         </div>`,
       );
     }
@@ -136,7 +164,7 @@ serve(async (req) => {
           <p>Hi,</p>
           <p>Your session with <strong>${escapeHtml(coachName)}</strong> is confirmed: <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>
           ${videoHtml("family")}
-          <p>Paid: ${usd(price)}. Cancel with enough notice and it comes back as a session credit.</p>
+          <p>${familyPayment}</p>
         </div>`,
       );
     }
@@ -155,7 +183,8 @@ serve(async (req) => {
           `Confirmed with ${coachName} for ${athleteName.split(" ")[0]}`,
           `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
             <h2 style="color:#0054B4;">${escapeHtml(athleteName.split(" ")[0])} is booked</h2>
-            <p>${escapeHtml(sessionName)} with <strong>${escapeHtml(coachName)}</strong> on ${escapeHtml(when)}. Paid: ${usd(price)}.</p>
+            <p>${escapeHtml(sessionName)} with <strong>${escapeHtml(coachName)}</strong> on ${escapeHtml(when)}.</p>
+            <p>${familyPayment}</p>
             ${videoHtml("family")}
             <p style="color:#686B72;font-size:13px;">You get this copy as a guardian on the family's AthaNext account.</p>
           </div>`,

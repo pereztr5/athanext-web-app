@@ -1,5 +1,6 @@
 import nodemailer from "npm:nodemailer@6.9.10";
 import { serve } from "https://deno.land/std@0.131.0/http/server.ts";
+import { allowedReplyTo } from "../_shared/email_sender.ts";
 
 const smtpUser = Deno.env.get("GMAIL_USER") || "";
 const smtpPass = Deno.env.get("GMAIL_APP_PASSWORD") || "";
@@ -46,12 +47,13 @@ serve(async (req) => {
         {
           from: from,
           to: to,
-          replyTo: typeof replyTo === "string" && replyTo.includes("@") ? replyTo : undefined,
+          // Only support@ or this mailbox; any other Reply-To is ignored.
+          replyTo: allowedReplyTo(replyTo, smtpUser),
           subject: subject,
           text: message,
           html: html,
         },
-        (error) => {
+        (error: Error | null) => {
           if (error) return reject(error);
           resolve();
         },

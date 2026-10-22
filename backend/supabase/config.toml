@@ -53,7 +53,8 @@ verify_jwt = true
 [functions.coach-billing]
 verify_jwt = false
 
-# Paid booking emails. create-booking-payment calls this with the service role.
+# Booking confirmation emails (card, credits, free, pay the coach directly, accepted requests).
+# create-booking-payment calls this with the service role.
 [functions.send-booking-notifications]
 verify_jwt = true
 

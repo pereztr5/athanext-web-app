@@ -111,9 +111,6 @@ export const buildOrganizations = <T extends OrganizationCoach>(
     .sort((a, b) => b.coachCount - a.coachCount || a.name.localeCompare(b.name));
 };
 
-/** Path of an academy's organization page (ROUTES.ORGANIZATION). */
-export const organizationPath = (company: string | null | undefined): string => `/organizations/${academySlug(company)}`;
-
 export const initialsOf = (name: string) =>
   name
     .split(" ")

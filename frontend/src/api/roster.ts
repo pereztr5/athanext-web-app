@@ -216,11 +216,19 @@ export const rosterAPI = {
     return { credits: Number(raw.credits) || 0, ownClient: Boolean(raw.own_client), paysDirect: Boolean(raw.pays_direct) };
   },
 
-  /** Books the athlete, paid with credits or outside AthaNext. Returns the booking ids. */
+  /** Books the athlete, paid with credits or outside AthaNext, and queues the confirmation email. Returns the booking ids. */
   async book(athleteId: string, occurrenceIds: string[], payment: "credit" | "outside"): Promise<string[]> {
     const { data, error } = await supabase.rpc("coach_book_athlete", { p_athlete_id: athleteId, p_occurrence_ids: occurrenceIds, p_payment: payment });
     if (error) throw error;
-    return (data as string[]) ?? [];
+    const ids = (data as string[]) ?? [];
+    // Confirmation email (with the video link for virtual sessions). The function waits out the
+    // Undo window first and skips undone bookings. Never blocks the booking.
+    if (ids.length) {
+      void supabase.functions
+        .invoke("create-booking-payment-v0", { body: { action: "notify_booked", booking_ids: ids } })
+        .catch(() => undefined);
+    }
+    return ids;
   },
 
   async undoBooking(bookingIds: string[]): Promise<void> {

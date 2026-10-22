@@ -20,13 +20,12 @@ export const scheduledDeletionAt = (requestedAt: string | Date): Date => {
   return run;
 };
 
-export const formatDeletionDate = (date: Date, timeZone = "America/New_York") => {
-  try {
-    return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone });
-  } catch {
-    return date.toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric", timeZone: "America/New_York" });
-  }
-};
+/**
+ * The run's date as "Nov 5", read in UTC (the zone the job runs in), with no time. A local
+ * zone would move it a day for anyone at UTC-8 or further west. Mirrors the frontend.
+ */
+export const formatDeletionDate = (requestedAt: string | Date) =>
+  scheduledDeletionAt(requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
 const escapeHtml = (value: string) =>
   value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
@@ -43,16 +42,15 @@ export type AccountEmailInput = {
   name?: string | null;
   /** deletion_requested_at, for deletion_requested. */
   requestedAt?: string | null;
-  timeZone?: string | null;
   appOrigin: string;
 };
 
-export const buildAccountEmail = ({ event, name, requestedAt, timeZone, appOrigin }: AccountEmailInput) => {
+export const buildAccountEmail = ({ event, name, requestedAt, appOrigin }: AccountEmailInput) => {
   const first = escapeHtml((name ?? "").trim().split(/\s+/)[0] || "there");
   const signIn = `${appOrigin.replace(/\/$/, "")}/auth`;
   const settings = `${appOrigin.replace(/\/$/, "")}/settings`;
   if (event === "deletion_requested") {
-    const when = formatDeletionDate(scheduledDeletionAt(requestedAt ?? new Date()), timeZone || "America/New_York");
+    const when = formatDeletionDate(requestedAt ?? new Date());
     return {
       subject: `Your AthaNext account will be deleted on ${when}`,
       html: wrap("Your account is scheduled for deletion", [

@@ -81,9 +81,7 @@ const Profile = () => {
     const [editedCoach, setEditedCoach] = useState<any>(null);
     const editedRef = useRef<any>(null);
     editedRef.current = editedCoach;
-    const [coverImagesToUpload, setCoverImagesToUpload] = useState<File[]>([]);
     const [selectedImageFile, setSelectedImageFile] = useState<File | null>(null);
-    const [coverImageUrlsToRemove, setCoverImageUrlsToRemove] = useState<string[]>([]);
     const [certDialogOpen, setCertDialogOpen] = useState(false);
     const [savingCerts, setSavingCerts] = useState(false);
     const [certificationsDraft, setCertificationsDraft] = useState<
@@ -225,53 +223,6 @@ const Profile = () => {
                 uploadedImageUrl = `${publicUrlData.publicUrl}?v=${Date.now()}`;
             }
 
-            // Upload new cover images
-            const uploadedCoverUrls: string[] = [];
-            for (const file of coverImagesToUpload) {
-                if (file.size > 10 * 1024 * 1024) {
-                    toast({
-                        title: 'File too large',
-                        description: `${file.name} is over 10MB. Skipping.`,
-                        variant: 'destructive',
-                    });
-                    continue;
-                }
-
-                const fileExt = file.name.split('.').pop();
-                const fileName = `${coach.id}-cover-${Date.now()}-${Math.random().toString(36).substring(7)}.${fileExt}`;
-                const filePath = `coach-profiles/covers/${fileName}`;
-
-                const { error: uploadError } = await supabase
-                    .storage
-                    .from('athalink-images')
-                    .upload(filePath, file, {
-                        cacheControl: '3600',
-                        upsert: false,
-                    });
-
-                if (uploadError) {
-                    console.error('Failed to upload cover image:', uploadError);
-                    continue;
-                }
-
-                const { data: publicUrlData } = supabase
-                    .storage
-                    .from('athalink-images')
-                    .getPublicUrl(filePath);
-
-                uploadedCoverUrls.push(publicUrlData.publicUrl);
-            }
-
-            // Merge with existing cover images (removing the ones marked for deletion)
-            const existingUrls = coach.cover_image_urls || [];
-            const filteredUrls = existingUrls.filter((url) =>
-                !coverImageUrlsToRemove.includes(url)
-            );
-            const newCoverUrls = [...filteredUrls, ...uploadedCoverUrls];
-
-            // Determine if cover_image_urls should be updated
-            const shouldUpdateCoverUrls = coverImageUrlsToRemove.length > 0 || uploadedCoverUrls.length > 0;
-
             // Update coach profile
             // Note: Database column is 'position', not 'coach_position' (which is an alias in get_coaches_public)
             const response = await coachesAPI.updateCoach(coach.id, {
@@ -298,7 +249,6 @@ const Profile = () => {
                   editedCoach.profile_faqs ?? coach.profile_faqs
                 ) as unknown as import("@/integrations/supabase/types").Json,
                 ...(uploadedImageUrl ? { image_url: uploadedImageUrl } : {}),
-                ...(shouldUpdateCoverUrls ? { cover_image_urls: newCoverUrls } : {}),
             });
 
             if (response.error) {
@@ -349,8 +299,6 @@ const Profile = () => {
 
             setIsEditMode(false);
             setSearchParams({});
-            setCoverImagesToUpload([]);
-            setCoverImageUrlsToRemove([]);
 
             // Invalidate coach details and refresh profile data
             queryClient.invalidateQueries({ queryKey: ["coach-details"] });
@@ -373,14 +321,14 @@ const Profile = () => {
     };
 
     const handleFieldChange = (field: string, value: any) => {
-        setEditedCoach((prev: any) => {
-            const next = {
-                ...(prev ?? coach),
-                [field]: value,
-            };
-            editedRef.current = next;
-            return next;
-        });
+        // The ref is updated here, outside the state updater, so Save right after a change
+        // still reads the newest values.
+        const next = {
+            ...(editedRef.current ?? coach),
+            [field]: value,
+        };
+        editedRef.current = next;
+        setEditedCoach(next);
     };
 
     const handleImageSelect = (file: File) => {

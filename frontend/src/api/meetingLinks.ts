@@ -1,10 +1,10 @@
 import { supabase } from "@/integrations/supabase/client";
-import { normalizeMeetingUrl } from "@/utils/meetingUrl";
+import { checkMeetingUrl } from "@/utils/meetingUrl";
 
 /**
  * coaches don't expose meeting_url on the public coach row. The link lives in
- * coach_meeting_links, which the coach can write and a family can read only after
- * they have a booking with that coach. The table isn't in the generated types yet.
+ * coach_meeting_links, which the coach can write and a family can read only while they
+ * have a current booking with that coach. The table isn't in the generated types yet.
  */
 
 type MeetingRow = { meeting_url: string | null };
@@ -32,7 +32,7 @@ const links = () =>
     }
   ).from("coach_meeting_links");
 
-/** The coach's video link, or null. Families only get a row when they have a booking. */
+/** The coach's video link, or null. Families only get a row while they have a current booking. */
 export async function getMeetingUrl(coachId: string): Promise<string | null> {
   const { data, error } = await links().select("meeting_url").eq("coach_id", coachId).maybeSingle();
   if (missing(error)) return null;
@@ -47,11 +47,13 @@ export async function saveMeetingUrl(coachId: string, raw: string): Promise<void
     if (error && !missing(error)) throw new Error(error.message);
     return;
   }
-  const meetingUrl = normalizeMeetingUrl(raw);
-  if (!meetingUrl) throw new Error("Use a full https link, like a Zoom, Meet or Teams URL");
+  const checked = checkMeetingUrl(raw);
+  if (!checked.url) throw new Error(checked.error);
   const { error } = await links().upsert(
-    { coach_id: coachId, meeting_url: meetingUrl, updated_at: new Date().toISOString() },
+    { coach_id: coachId, meeting_url: checked.url, updated_at: new Date().toISOString() },
     { onConflict: "coach_id" }
   );
+  // 23514: the database check. Same rule as checkMeetingUrl, so this only shows if they drift.
+  if (error?.code === "23514") throw new Error("That link can't be used. Paste the full https link from Zoom, Meet or Teams");
   if (error) throw new Error(error.message);
 }

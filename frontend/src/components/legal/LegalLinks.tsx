@@ -4,7 +4,7 @@
  */
 import { ExternalLink, Scale } from "@/components/icons";
 import { useQuery } from "@tanstack/react-query";
-import { Link, useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 import { getPrivacyPolicyContent } from "@/api/privacy-policy";
 import { getTermsAndConditionsContent } from "@/api/terms";
 import { openLegalDoc, type LegalDoc } from "@/components/legal/LegalOverlay";
@@ -12,7 +12,8 @@ import { Card, sub } from "@/components/settings/CoachSettings";
 import { meta } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
-import { COACH_TERMS_PATH, STRIPE_CONNECT_AGREEMENT } from "@/utils/offlinePay";
+import { ROUTES } from "@/routes";
+import { STRIPE_CONNECT_AGREEMENT } from "@/utils/offlinePay";
 import { formatDayISO } from "@/utils/schedule";
 
 export type LegalKind = "terms" | "privacy" | "coach" | "stripe";
@@ -30,7 +31,7 @@ const openKind = (kind: LegalKind) => {
     return;
   }
   if (kind === "coach") {
-    window.open(COACH_TERMS_PATH, "_blank", "noopener,noreferrer");
+    window.open(ROUTES.COACH_TERMS, "_blank", "noopener,noreferrer");
     return;
   }
   openLegalDoc(kind as LegalDoc);
@@ -62,7 +63,7 @@ export const LegalAnchor = ({
     // New tab so an in-progress form (payout setup) keeps its state.
     return (
       <Link
-        to={COACH_TERMS_PATH}
+        to={ROUTES.COACH_TERMS}
         target="_blank"
         rel="noopener noreferrer"
         className={cn("underline underline-offset-2 hover:text-primary", className)}
@@ -93,7 +94,6 @@ export const LegalAuthFooter = ({ className }: { className?: string }) => (
 
 export const LegalCard = ({ role, compact = false }: { role: "coach" | "athlete"; compact?: boolean }) => {
   const { userProfile } = useAuth();
-  const navigate = useNavigate();
   const terms = useQuery({ queryKey: ["legal-terms"], queryFn: async () => (await getTermsAndConditionsContent()).data });
   const privacy = useQuery({ queryKey: ["legal-privacy"], queryFn: async () => (await getPrivacyPolicyContent()).data });
   const kinds: LegalKind[] = role === "coach" ? ["terms", "privacy", "coach", "stripe"] : ["terms", "privacy"];
@@ -133,13 +133,14 @@ export const LegalCard = ({ role, compact = false }: { role: "coach" | "athlete"
       {compact ? null : <p className={sub}>The agreements that cover your AthaNext account.</p>}
       <div className="flex flex-col gap-1">
         {kinds.map((kind) => {
-          const external = kind === "stripe";
+          // Stripe and Coach terms open in a new tab, so the settings page keeps its place.
+          const external = kind === "stripe" || kind === "coach";
           return (
             <button
               key={kind}
               type="button"
               className="flex w-full items-center gap-3 rounded-control px-3 py-3 text-left hover:bg-light-400 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-              onClick={() => (kind === "coach" ? navigate(COACH_TERMS_PATH) : openKind(kind))}
+              onClick={() => openKind(kind)}
             >
               <span className="flex min-w-0 grow flex-col gap-1">
                 <span className="text-label-sm text-dark">{LABELS[kind].label}</span>

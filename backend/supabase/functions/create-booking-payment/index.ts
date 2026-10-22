@@ -504,7 +504,12 @@ const handleRequestResponse = async (req: Request, body: any, client: SupabaseCl
     .eq("id", bookingId)
     .maybeSingle();
   const held = (booking as any)?.payment_status === "authorized" && (booking as any)?.stripe_session_id;
-  if (!held) return jsonResponse({ status: result });
+  if (!held) {
+    // Booking-only coaches: accepting confirms it (pay the coach directly). A request that still
+    // needs paying (pending_payment) is emailed once the family pays.
+    if (accept && result === "booked") await inBackground(notifyConfirmed(client, [bookingId]));
+    return jsonResponse({ status: result });
+  }
 
   if (accept) {
     await client.from("coach_slot_bookings" as any).update({ status: "booked", updated_at: new Date().toISOString() }).eq("id", bookingId);
@@ -529,6 +534,95 @@ const callNotificationEndpointForBookings = async (bookingIds: string[]): Promis
     else console.error("Notification failed for booking:", booking_id, r.status, r.text);
   }
   return ok;
+};
+
+/** Runs `task` after the response when the runtime allows it (EdgeRuntime.waitUntil), else now. */
+const inBackground = async (task: Promise<unknown>) => {
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(task);
+    return;
+  }
+  await task;
+};
+
+/** Ways a booking is confirmed without a card payment in the app. */
+const NON_CARD_PAYMENTS = ["credit", "outside", "direct", "pending_offline"];
+
+/**
+ * Booking email (with the video-call link for virtual sessions) and calendar event for bookings
+ * confirmed without a card: credits and packages, free sessions, paying the coach directly,
+ * accepted requests and coach bookings. Card payments go through runPaidFollowups instead.
+ * Each booking is claimed with the same paid_followup_* columns, so it is emailed once whichever
+ * path calls first. Rows still waiting on a Checkout (hold_expires_at) are left for that payment.
+ * Never fails the caller; a send that fails is logged.
+ */
+const notifyConfirmed = async (client: SupabaseClient, bookingIds: string[]) => {
+  const ids = [...new Set(bookingIds)].filter(Boolean);
+  if (!ids.length) return;
+  try {
+    const leaseCutoff = new Date(Date.now() - FOLLOWUP_LEASE_MS).toISOString();
+    const { data: claimed, error } = await client
+      .from("coach_slot_bookings" as any)
+      .update({ paid_followup_claimed_at: new Date().toISOString() })
+      .in("id", ids)
+      .eq("status", "booked")
+      .in("payment_status", NON_CARD_PAYMENTS)
+      .is("hold_expires_at", null)
+      .is("paid_followup_at", null)
+      .or(`paid_followup_claimed_at.is.null,paid_followup_claimed_at.lt."${leaseCutoff}"`)
+      .select("id");
+    if (error) throw error;
+    const mine = ((claimed ?? []) as { id: string }[]).map((r) => r.id);
+    if (!mine.length) return;
+    const notified = await callNotificationEndpointForBookings(mine);
+    const missed = mine.filter((id) => !notified.has(id));
+    if (missed.length) console.error("Booking emails failed (not retried):", missed);
+    const { error: doneErr } = await client
+      .from("coach_slot_bookings" as any)
+      .update({ paid_followup_at: new Date().toISOString(), paid_followup_claimed_at: null })
+      .in("id", mine);
+    if (doneErr) console.error("Saving follow-up state failed:", doneErr);
+    await callCalendarForBookings(client, mine);
+  } catch (e) {
+    console.error("Confirmation follow-ups skipped:", e);
+  }
+};
+
+/** Undo shows on the coach's toast for about 5 seconds after a roster booking. */
+const UNDO_WINDOW_MS = 20_000;
+
+/**
+ * A coach booked athletes from the roster (coach_book_athlete, credit or paid outside the app):
+ * send the confirmation for those bookings once the undo window has passed. Only the coach of
+ * each booking can ask.
+ */
+const handleNotifyBooked = async (req: Request, body: any, client: SupabaseClient) => {
+  const authHeader = req.headers.get("Authorization") ?? "";
+  const token = authHeader.replace(/^Bearer\s+/i, "");
+  if (!token) return jsonResponse({ error: "Authentication required" }, 401);
+  const { data: userData, error: authError } = await client.auth.getUser(token);
+  if (authError || !userData?.user) return jsonResponse({ error: "Invalid authentication token" }, 401);
+  const { data: profile } = await client.from("user_profiles" as any).select("coach_id").eq("id", userData.user.id).maybeSingle();
+  const coachId = (profile as any)?.coach_id as string | null;
+  if (!coachId) return jsonResponse({ error: "Only a coach can do this." }, 403);
+  const requested = Array.isArray(body.booking_ids)
+    ? (body.booking_ids as unknown[]).filter((id): id is string => typeof id === "string").slice(0, 20)
+    : [];
+  if (!requested.length) return jsonResponse({ notified: 0 });
+  const { data: rows } = await client
+    .from("coach_slot_bookings" as any)
+    .select("id")
+    .in("id", requested)
+    .eq("coach_id", coachId);
+  const own = ((rows ?? []) as { id: string }[]).map((r) => r.id);
+  // The coach can undo for a few seconds (the booking is deleted); wait that out first, and
+  // notifyConfirmed skips anything no longer booked.
+  await inBackground(
+    new Promise((resolve) => setTimeout(resolve, UNDO_WINDOW_MS)).then(() => notifyConfirmed(client, own)),
+  );
+  return jsonResponse({ queued: own.length });
 };
 
 /**
@@ -891,6 +985,10 @@ serve(async (req) => {
       return stripeClient;
     };
     const ok = (body: unknown = { received: true }) => jsonResponse(body, 200);
+
+    if (parsedBody.action === "notify_booked") {
+      return await handleNotifyBooked(req, parsedBody, supabaseClient);
+    }
 
     if (parsedBody.action === "respond_request" || parsedBody.action === "request_sweep") {
       return await handleRequestResponse(req, parsedBody, supabaseClient, stripeApi);
@@ -1412,6 +1510,7 @@ serve(async (req) => {
           })
           .in("id", myPendingBookings.map((b) => b.id));
         if (confirmErr) throw confirmErr;
+        await inBackground(notifyConfirmed(supabaseClient, myPendingBookings.map((b) => b.id)));
         return json({ direct: true, offline: plans[0].offlinePending, booking_ids: myPendingBookings.map((b) => b.id) });
       }
       const { data: rows, error } = await supabaseClient
@@ -1424,6 +1523,7 @@ serve(async (req) => {
         .select("id, status");
       if (error) throw error;
       const requested = ((rows || []) as any[]).some((r) => r.status === "requested");
+      await inBackground(notifyConfirmed(supabaseClient, ((rows || []) as any[]).filter((r) => r.status === "booked").map((r) => r.id)));
       return json({
         direct: !requested,
         offline: !requested && plans.some((p) => p.offlinePending),
@@ -1585,8 +1685,7 @@ serve(async (req) => {
       if (!toPay.length) {
         // Nothing left to charge: credits and free sessions are booked now.
         const booked = [...creditIds, ...freeIds];
-        await callNotificationEndpointForBookings(booked);
-        await callCalendarForBookings(supabaseClient, booked);
+        await inBackground(notifyConfirmed(supabaseClient, booked));
         return json({ credits_used: creditIds.length, booked: true, booking_ids: booked });
       }
       const lines = checkoutTotal(toPay);
@@ -1664,10 +1763,7 @@ serve(async (req) => {
       }
 
       // Free sessions in the same basket are booked already; credits wait for the payment.
-      if (freeIds.length) {
-        await callNotificationEndpointForBookings(freeIds);
-        await callCalendarForBookings(supabaseClient, freeIds);
-      }
+      if (freeIds.length) await inBackground(notifyConfirmed(supabaseClient, freeIds));
       return json({ url: session.url, session_id: session.id, credits_used: creditIds.length });
     } catch (err) {
       // Never leave a spot held, a credit spent or a payable Checkout behind a failed attempt.

@@ -14,5 +14,10 @@ export const scheduledDeletionAt = (requestedAt: string | Date): Date => {
   return run;
 };
 
-export const formatDeletionDate = (requestedAt: string, timeZone?: string) =>
-  scheduledDeletionAt(requestedAt).toLocaleDateString("en-US", { month: "long", day: "numeric", ...(timeZone ? { timeZone } : {}) });
+/**
+ * The run's date as "Nov 5", read in UTC (the zone the job runs in), with no time, so the banner
+ * and the deletion email always name the same day. A local zone would move it a day for anyone
+ * at UTC-8 or further west. accountDeletion.test.ts checks both agree.
+ */
+export const formatDeletionDate = (requestedAt: string | Date) =>
+  scheduledDeletionAt(requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });

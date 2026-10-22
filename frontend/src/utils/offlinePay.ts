@@ -77,5 +77,3 @@ export const offlineMethodsLabel = (pay: OfflinePay) => {
 };
 
 export const STRIPE_CONNECT_AGREEMENT = "https://stripe.com/legal/connect-account";
-/** Coach terms are hosted in the app (public.coach_terms), at the public /coach-terms page. */
-export const COACH_TERMS_PATH = "/coach-terms";

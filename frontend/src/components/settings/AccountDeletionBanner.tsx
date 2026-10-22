@@ -8,13 +8,11 @@ import { sendAccountEmail } from "@/api/accountEmails";
 import { primaryButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
-import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDeletionDate } from "@/utils/accountDeletion";
 
 export const AccountDeletionBanner = ({ className }: { className?: string }) => {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
-  const timeZone = useViewerTimeZone();
   const requestedAt = (userProfile as { deletion_requested_at?: string | null } | null)?.deletion_requested_at;
 
   const keep = useMutation({
@@ -36,7 +34,7 @@ export const AccountDeletionBanner = ({ className }: { className?: string }) => 
     <div className={className}>
       <div className="flex flex-wrap items-center justify-between gap-3 rounded-control border border-error-300 bg-error-50 px-4 py-3">
         <span className="text-body-m text-error-700">
-          <b className="font-medium">This account will be deleted on {formatDeletionDate(requestedAt, timeZone)}.</b> Changed your mind? Keep it and
+          <b className="font-medium">This account will be deleted on {formatDeletionDate(requestedAt)}.</b> Changed your mind? Keep it and
           nothing is deleted.
         </span>
         <button type="button" className={primaryButton} disabled={keep.isPending} onClick={() => keep.mutate()}>

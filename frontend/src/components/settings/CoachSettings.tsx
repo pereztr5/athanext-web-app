@@ -32,7 +32,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
-import { dollarsFromCents, pdfSection } from "@/utils/dataExport";
+import { bookingExportRows, COACH_EXPORT_CONTENTS, dollarsFromCents, exportDate, exportDay, exportTime, pdfSection } from "@/utils/dataExport";
 import { downloadDataPdf } from "@/utils/downloadPdf";
 import {
   activeOfflineMethods,
@@ -313,7 +313,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
 
 /* ---------- Notifications ---------- */
 
-export const NotificationsTab = ({ kinds, caption, children }: { kinds: readonly NotificationItem[]; caption: string; children?: ReactNode }) => {
+export const NotificationsTab = ({ kinds, caption }: { kinds: readonly NotificationItem[]; caption: string }) => {
   const { user, userProfile, refreshUserProfile } = useAuth();
   const { toast } = useToast();
   const [prefs, setPrefs] = useState<Record<string, boolean>>({});
@@ -351,7 +351,6 @@ export const NotificationsTab = ({ kinds, caption, children }: { kinds: readonly
           ariaLabel={`${item.title} by email`}
         />
       ))}
-      {children}
       <p className={meta}>{caption}</p>
     </Card>
   );
@@ -555,10 +554,20 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
         supabase.from("user_profiles").select("*").eq("id", user!.id).maybeSingle(),
         supabase.from("coach_packages").select("*").eq("coach_id", coachId),
         supabase.from("coach_availability_slot_occurrences").select("*").eq("coach_id", coachId),
-        supabase.from("coach_slot_bookings").select("*").eq("coach_id", coachId),
-        supabase.from("coach_client_referrals").select("*").eq("coach_id", coachId),
+        supabase
+          .from("coach_slot_bookings")
+          .select(
+            "status, payment_status, occurrence:coach_availability_slot_occurrences(occurrence_date, start_time, session_name), athlete:athlete_profiles(full_name)"
+          )
+          .eq("coach_id", coachId),
+        supabase
+          .from("coach_client_referrals")
+          .select("athlete_first_name, client_name, client_email, status, created_at, confirmed_at")
+          .eq("coach_id", coachId),
         supabase.from("coach_reviews").select("*").eq("coach_id", coachId),
       ]);
+      const failed = [coachRow, profileRow, packages, sessions, bookings, clients, reviews].find((result) => result.error);
+      if (failed?.error) throw new Error(failed.error.message);
       const coach = (coachRow.data ?? {}) as Record<string, unknown>;
       const account = (profileRow.data ?? {}) as Record<string, unknown>;
       downloadDataPdf(
@@ -585,27 +594,22 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
           pdfSection(
             "Sessions",
             ((sessions.data ?? []) as Record<string, unknown>[]).map((row) => ({
-              Date: row.occurrence_date,
-              Time: row.start_time,
+              Date: exportDate(row.occurrence_date),
+              Time: exportTime(row.start_time),
               Name: row.session_name,
               Where: row.location,
               Place: row.place,
             }))
           ),
-          pdfSection(
-            "Bookings",
-            ((bookings.data ?? []) as Record<string, unknown>[]).map((row) => ({
-              Status: row.status,
-              Payment: row.payment_status,
-              Booked: row.created_at,
-            }))
-          ),
+          pdfSection("Bookings", bookingExportRows((bookings.data ?? []) as Parameters<typeof bookingExportRows>[0], "athlete")),
           pdfSection(
             "Clients",
             ((clients.data ?? []) as Record<string, unknown>[]).map((row) => ({
-              Name: row.athlete_name ?? row.name,
-              Email: row.email,
-              Added: row.created_at,
+              Athlete: row.athlete_first_name,
+              Contact: row.client_name,
+              Email: row.client_email,
+              Status: row.status === "confirmed" ? "Connected" : "Invited",
+              Added: exportDay(row.confirmed_at ?? row.created_at),
             }))
           ),
           pdfSection(
@@ -613,14 +617,14 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
             ((reviews.data ?? []) as Record<string, unknown>[]).map((row) => ({
               Rating: row.rating,
               Review: row.review_text,
-              Date: row.created_at,
+              Date: exportDay(row.created_at),
             }))
           ),
         ],
         `athanext-data-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     },
-    onSuccess: () => toast({ title: "Your data is downloading", description: "A PDF of your profile, account, packages, sessions, bookings, clients and reviews." }),
+    onSuccess: () => toast({ title: "Your data is downloading" }),
     onError: () => toast({ title: "Couldn't download your data", description: "Try again.", variant: "destructive" }),
   });
 
@@ -639,6 +643,7 @@ const PrivacyTab = ({ coachId, listed }: { coachId: string; listed: boolean }) =
         onChange={setListed}
         ariaLabel="Show my profile on the marketplace"
       />
+      <p className={meta}>{COACH_EXPORT_CONTENTS}</p>
       <button type="button" className={cn(secondaryButton, "self-start")} disabled={exportData.isPending} onClick={() => exportData.mutate()}>
         <Download strokeWidth={1.5} aria-hidden="true" />
         {exportData.isPending ? "Preparing…" : "Download my data (PDF)"}

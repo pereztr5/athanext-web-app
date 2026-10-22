@@ -22,7 +22,7 @@ import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { ATHLETE_NOTIFICATIONS, DELETE_WORD, DELETION_GRACE_DAYS, NOTIFICATIONS_CAPTION } from "@/utils/settings";
-import { pdfSection } from "@/utils/dataExport";
+import { ATHLETE_EXPORT_CONTENTS, bookingExportRows, exportDate, exportDay, pdfSection } from "@/utils/dataExport";
 import { downloadDataPdf } from "@/utils/downloadPdf";
 import { LegalCard } from "@/components/legal/LegalLinks";
 import {
@@ -444,46 +444,68 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
 
   const exportData = useMutation({
     mutationFn: async () => {
+      const none = Promise.resolve({ data: [] as Record<string, unknown>[], error: null });
       const [account, athlete, bookings, notes, coaches] = await Promise.all([
-        supabase.from("user_profiles").select("*").eq("id", user!.id).maybeSingle(),
-        athleteId ? supabase.from("athlete_profiles").select("*").eq("id", athleteId).maybeSingle() : Promise.resolve({ data: null }),
-        athleteId ? supabase.from("coach_slot_bookings").select("*").eq("athlete_id", athleteId) : Promise.resolve({ data: [] }),
-        athleteId ? supabase.from("slot_feedback_v2").select("*").eq("athlete_id", athleteId) : Promise.resolve({ data: [] }),
-        athleteId ? supabase.from("coach_client_referrals").select("*").eq("athlete_id", athleteId) : Promise.resolve({ data: [] }),
+        supabase.from("user_profiles").select("name, email, phone_number").eq("id", user!.id).maybeSingle(),
+        athleteId
+          ? supabase.from("athlete_profiles").select("full_name, date_of_birth").eq("id", athleteId).maybeSingle()
+          : Promise.resolve({ data: null, error: null }),
+        athleteId
+          ? supabase
+              .from("coach_slot_bookings")
+              .select(
+                "status, payment_status, occurrence:coach_availability_slot_occurrences(occurrence_date, start_time, session_name), coach:coaches(name)"
+              )
+              .eq("athlete_id", athleteId)
+          : none,
+        athleteId
+          ? supabase
+              .from("slot_feedback_v2")
+              .select("created_at, feedback_to_athlete, rating, comment, coach_reply")
+              .eq("athlete_id", athleteId)
+              .order("created_at", { ascending: true })
+          : none,
+        athleteId
+          ? supabase
+              .from("coach_client_referrals")
+              .select("status, created_at, confirmed_at, coach:coaches(name)")
+              .eq("athlete_id", athleteId)
+          : none,
       ]);
+      const failed = [account, athlete, bookings, notes, coaches].find((result) => result.error);
+      if (failed?.error) throw new Error(failed.error.message);
       const accountRow = (account.data ?? {}) as Record<string, unknown>;
       const athleteRow = (athlete.data ?? {}) as Record<string, unknown>;
       downloadDataPdf(
         [
           pdfSection("Account", [{ Name: accountRow.name, Email: accountRow.email, Phone: accountRow.phone_number }]),
-          pdfSection("Athlete", [{ Name: athleteRow.full_name ?? athleteRow.name, Birth: athleteRow.date_of_birth }]),
-          pdfSection(
-            "Bookings",
-            ((bookings.data ?? []) as Record<string, unknown>[]).map((row) => ({
-              Status: row.status,
-              Payment: row.payment_status,
-              Booked: row.created_at,
-            }))
-          ),
+          pdfSection("Athlete", athleteId ? [{ Name: athleteRow.full_name, Birthday: exportDate(athleteRow.date_of_birth) }] : []),
+          pdfSection("Bookings", bookingExportRows((bookings.data ?? []) as Parameters<typeof bookingExportRows>[0], "coach")),
           pdfSection(
             "Session notes",
             ((notes.data ?? []) as Record<string, unknown>[]).map((row) => ({
-              Note: row.note ?? row.feedback,
-              Date: row.created_at,
+              Date: exportDay(row.created_at),
+              "Coach's note": row.feedback_to_athlete,
+              "Your rating": row.rating,
+              "Your review": row.comment,
+              "Coach's reply": row.coach_reply,
             }))
           ),
           pdfSection(
             "Coaches",
-            ((coaches.data ?? []) as Record<string, unknown>[]).map((row) => ({
-              Name: row.athlete_name ?? row.coach_name ?? row.name,
-              Added: row.created_at,
-            }))
+            ((coaches.data ?? []) as { status?: unknown; created_at?: unknown; confirmed_at?: unknown; coach?: { name?: unknown } | null }[]).map(
+              (row) => ({
+                Coach: row.coach?.name,
+                Status: row.status === "confirmed" ? "Connected" : "Invited",
+                Added: exportDay(row.confirmed_at ?? row.created_at),
+              })
+            )
           ),
         ],
         `athanext-data-${new Date().toISOString().slice(0, 10)}.pdf`
       );
     },
-    onSuccess: () => toast({ title: "Your data is downloading", description: "A PDF of the account, athlete profile, bookings, session notes and coaches." }),
+    onSuccess: () => toast({ title: "Your data is downloading" }),
     onError: () => toast({ title: "Couldn't download the data", description: "Try again.", variant: "destructive" }),
   });
 
@@ -498,6 +520,7 @@ const PrivacyTab = ({ athleteId, athleteFirst, isParent }: { athleteId?: string;
             : "Your profile is visible only to you and your coaches. No photos of athletes are shown on AthaNext."}
         </span>
       </div>
+      <p className={meta}>{ATHLETE_EXPORT_CONTENTS}</p>
       <button type="button" className={cn(secondaryButton, "self-start")} disabled={exportData.isPending} onClick={() => exportData.mutate()}>
         <Download strokeWidth={1.5} aria-hidden="true" />
         {exportData.isPending ? "Preparing…" : `Download ${whose} data (PDF)`}

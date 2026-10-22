@@ -1,10 +1,9 @@
 /**
- * Coach profile extras (Working Copy c-profile): coaching video, the session types listed under
- * Sessions and pricing, most booked package, academy and cover photo. RPCs from
+ * Coach profile extras (Working Copy c-profile): the session types listed under Sessions and
+ * pricing, most booked package and academy. RPCs from
  * 20261010220000_coach_profile.sql.
  */
 import { supabase } from "@/integrations/supabase/client";
-import { coachesAPI } from "@/api/coaches";
 
 export type ProfileServiceFormat = "individual" | "group";
 
@@ -20,7 +19,6 @@ export interface ProfileService {
 }
 
 export interface CoachProfileExtras {
-  coachingVideoUrl: string | null;
   services: ProfileService[];
   mostBookedPackageId: string | null;
   organization: { name: string; slug: string; isOwner: boolean } | null;
@@ -58,7 +56,6 @@ export const coachProfileAPI = {
     const raw = (data ?? {}) as Row;
     const org = raw.organization as Row | null;
     return {
-      coachingVideoUrl: typeof raw.coaching_video_url === "string" ? raw.coaching_video_url : null,
       services: ((raw.services as Row[]) ?? []).map(toService).filter((s): s is ProfileService => s !== null),
       mostBookedPackageId: typeof raw.most_booked_package_id === "string" ? raw.most_booked_package_id : null,
       organization: org && typeof org.name === "string" ? { name: org.name, slug: String(org.slug ?? ""), isOwner: Boolean(org.is_owner) } : null,
@@ -66,27 +63,8 @@ export const coachProfileAPI = {
     };
   },
 
-  async setCoachingVideo(url: string | null): Promise<void> {
-    const { error } = await rpc("set_coach_coaching_video", { p_url: url });
-    if (error) throw error;
-  },
-
   async setServices(services: ProfileService[]): Promise<void> {
     const { error } = await rpc("set_coach_profile_services", { p_services: services });
     if (error) throw error;
-  },
-
-  /** Uploads a cover photo and makes it the first of coaches.cover_image_urls. */
-  async setCover(coachId: string, file: File, current: string[]): Promise<string[]> {
-    if (file.size > 8 * 1024 * 1024) throw new Error("Pick a photo under 8 MB.");
-    const ext = file.name.split(".").pop() || "jpg";
-    const path = `coach-profiles/covers/${coachId}-cover-${Date.now()}.${ext}`;
-    const { error: uploadError } = await supabase.storage.from("athalink-images").upload(path, file, { cacheControl: "3600", upsert: false });
-    if (uploadError) throw uploadError;
-    const url = supabase.storage.from("athalink-images").getPublicUrl(path).data.publicUrl;
-    const next = [url, ...current.filter((u) => u !== url)];
-    const response = await coachesAPI.updateCoach(coachId, { cover_image_urls: next });
-    if (response.error) throw new Error(response.error.message);
-    return next;
   },
 };

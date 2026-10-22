@@ -61,7 +61,7 @@
     "geolocation-utils": "^1.2.6",
     "html2canvas": "^1.4.1",
     "input-otp": "^1.4.2",
-    "jspdf": "^4.0.0",
+    "jspdf": "4.1.0",
     "jspdf-autotable": "5.0.9",
     "lucide-react": "^0.462.0",
     "next-themes": "^0.3.0",
