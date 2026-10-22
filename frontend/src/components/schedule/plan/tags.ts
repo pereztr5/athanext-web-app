@@ -1,11 +1,11 @@
 /** Session tag options and how a tag is saved (see SessionTag). */
 import { useAuth } from "@/contexts/AuthContext";
-import { pillarsForSport } from "@/utils/sessionPillars";
+import { usePillarTitles } from "@/hooks/usePillarTitles";
 
-/** The signed-in coach's pillars, used as the tag options. */
+/** The signed-in coach's pillars (the database list, as at sign up), used as the tag options. */
 export const useSessionTags = () => {
   const { userProfile } = useAuth();
-  return pillarsForSport(userProfile?.sport ?? null);
+  return usePillarTitles(userProfile?.sport ?? null);
 };
 
 /** Saved details for a tag: the pillar goes on both keys older screens read. */

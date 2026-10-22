@@ -757,7 +757,7 @@ const resolveCoachOccurrence = async (
 ) => {
   if (!slotId) return null;
   const columns =
-    "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, start_time";
+    "id, availability_id, weekly_slot_id, coach_id, occurrence_date, session_name, price, start_time, location";
   const { data: byId } = await client
     .from("coach_availability_slot_occurrences" as any)
     .select(columns)
@@ -774,6 +774,12 @@ const resolveCoachOccurrence = async (
     .maybeSingle();
   return bySlot ?? null;
 };
+
+/**
+ * A free walk-in: booked, nothing to collect in the app. "outside" like other free bookings, so
+ * the confirmation reads "This session is free" and notifyConfirmed can claim it.
+ */
+const WALK_IN_FREE_PAYMENT_STATUS = "outside";
 
 const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => {
   const authHeader = req.headers.get("Authorization");
@@ -906,11 +912,13 @@ const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => 
       .from("coach_slot_bookings" as any)
       .update({
         status: paid ? "booked" : "pending_payment",
-        payment_status: paid ? "paid" : "unpaid",
+        payment_status: paid ? WALK_IN_FREE_PAYMENT_STATUS : "unpaid",
         updated_at: new Date().toISOString(),
       })
       .eq("id", existing.id);
     if (acceptError) throw acceptError;
+    // Same as accepting a request: the confirmation (with the video-call link) goes out once.
+    if (paid) await inBackground(notifyConfirmed(client, [existing.id]));
     return jsonResponse({
       bookingId: existing.id,
       athlete: { id: athlete.id, name: athlete.full_name },
@@ -937,13 +945,19 @@ const handleWalkIn = async (req: Request, body: any, client: SupabaseClient) => 
       coach_id: occurrence.coach_id,
       athlete_id: athleteId,
       status: requiresPayment ? "pending_payment" : "booked",
-      payment_status: requiresPayment ? "unpaid" : "paid",
+      payment_status: requiresPayment ? "unpaid" : WALK_IN_FREE_PAYMENT_STATUS,
       notes: "Added by coach after arrival",
       created_by: userData.user.id,
     })
     .select("id")
     .single();
   if (insertError) throw insertError;
+  // A walk-in on a video call isn't in the room: send the booking email with the meeting link.
+  // notifyConfirmed claims the booking (paid_followup_*), so it is never emailed twice, and runs
+  // after the response. Paid walk-ins are emailed when the family pays.
+  if (!requiresPayment && (occurrence as { location?: string | null }).location === "online") {
+    await inBackground(notifyConfirmed(client, [inserted.id]));
+  }
 
   return jsonResponse({
     bookingId: inserted.id,

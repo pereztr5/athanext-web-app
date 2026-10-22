@@ -4,6 +4,7 @@ import {
   CAMP_TIMES,
   campDayCount,
   campMissing,
+  campPagePathFor,
   campPath,
   campShareUrl,
   campSourceFromSearch,
@@ -56,6 +57,14 @@ describe("camp link", () => {
     expect(campShareUrl("https://athanext.com", "brayan", "thanksgiving-camp")).toBe("https://athanext.com/brayan/thanksgiving-camp?src=link");
     expect(campSourceFromSearch("?src=link&x=1")).toBe("link");
     expect(campSourceFromSearch("?src=instagram")).toBeNull();
+  });
+
+  it("sends profile camp cards to the camp page (no src) only when the camp has a published link", () => {
+    expect(campPagePathFor("brayan", { slug: "fall-camp", published: true })).toBe("/brayan/fall-camp");
+    expect(campPagePathFor("brayan", { slug: "fall-camp" })).toBe("/brayan/fall-camp");
+    expect(campPagePathFor("brayan", { slug: "fall-camp", published: false })).toBeNull();
+    expect(campPagePathFor("brayan", { slug: null, published: true })).toBeNull();
+    expect(campPagePathFor(null, { slug: "fall-camp", published: true })).toBeNull();
   });
 
   it("parses the two route segments and refuses ones that can't be a camp link", () => {

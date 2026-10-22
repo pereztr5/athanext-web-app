@@ -33,7 +33,8 @@ import { authAPI } from "@/api/auth";
 import { coachesAPI, userProfilesAPI, type PublicCoach } from "@/api";
 import { createAthleteInitiatedReferral } from "@/api/referrals";
 import { getSportPillars, setSportPillars } from "@/api/sport-pillars";
-import { SIGNUP_PILLARS, type PillarSport } from "@/utils/sessionPillars";
+import { pickedPillarIds } from "@/utils/sessionPillars";
+import { usePillarTitles } from "@/hooks/usePillarTitles";
 import logo from "@/assets/AthaNext-Logo.svg";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
@@ -158,16 +159,12 @@ const PILLAR_ICONS: Record<string, typeof User> = {
   "Performance coaching": Dumbbell,
   "Academic tutoring": BookOpen,
   "College recruiting": GraduationCap,
-  "On-water technique": Zap,
-  "Erg and race training": Zap,
-  "Strength and conditioning": Dumbbell,
+  "Technical development": Zap,
+  "Race preparation": Flag,
 };
 
-// Titles come from the shared list so session tags use the same pillars.
-const PILLARS: Record<PillarSport, { title: string; Icon: typeof User }[]> = {
-  Soccer: SIGNUP_PILLARS.Soccer.map((title) => ({ title, Icon: PILLAR_ICONS[title] ?? Zap })),
-  Rowing: SIGNUP_PILLARS.Rowing.map((title) => ({ title, Icon: PILLAR_ICONS[title] ?? Zap })),
-};
+const pillarIcon = (title: string) =>
+  PILLAR_ICONS[Object.keys(PILLAR_ICONS).find((k) => k.toLowerCase() === title.toLowerCase()) ?? ""] ?? Zap;
 
 const AGE_TILES = [
   ["u9", "Under 9"],
@@ -291,6 +288,8 @@ export const SignUpFlow = ({
   });
   const [step, setStep] = useState<StepId>(() => (camp ? "account" : initialSignupStep(Boolean(user), readSignupAnswers())));
   const prefilledFor = useRef<string | null>(user?.id ?? null);
+  // Titles from sport_pillars (built-in list offline), so a coach's picks link to those rows.
+  const pillarTitles = usePillarTitles(answers.sport ?? "Soccer");
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -571,9 +570,7 @@ export const SignUpFlow = ({
 
         try {
           const pillarsRes = await getSportPillars(sportKey);
-          const ids = (pillarsRes.data?.sportPillars ?? [])
-            .filter((p) => answers.pillars.some((t) => t.toLowerCase() === p.title.toLowerCase()))
-            .map((p) => p.id);
+          const ids = pickedPillarIds(pillarsRes.data?.sportPillars ?? [], answers.pillars);
           if (ids.length) await setSportPillars(coachId, sportKey, ids);
         } catch {
           // Pillars can be set later on the profile.
@@ -947,7 +944,7 @@ export const SignUpFlow = ({
       </div>
     );
   } else if (step === "pillars") {
-    const list = PILLARS[answers.sport ?? "Soccer"];
+    const list = pillarTitles.map((title) => ({ title, Icon: pillarIcon(title) }));
     body = (
       <div className="flex flex-col gap-3">
         <Head

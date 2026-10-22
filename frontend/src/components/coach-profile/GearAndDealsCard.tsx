@@ -56,8 +56,9 @@ interface GearAndDealsCardProps {
 }
 
 /**
- * Gear and deals (ATH-88): one box with the coach's brand deals on top and the gear store
- * carousel under it. Hidden from families when there is nothing to show.
+ * Gear and deals (ATH-88): one box with the coach's brand deals on top and store gear from the
+ * coach's own brands under it (never unrelated store products). Hidden from families when
+ * there is nothing to show.
  */
 export function GearAndDealsCard({
   coachId,
@@ -196,7 +197,9 @@ export function GearAndDealsCard({
         </div>
       ) : editing ? (
         <p className={cn(caption, "border-t border-light-525 pt-4")}>
-          Gear from the AthaNext store shows here, starting with your brands.
+          {brandNames.length
+            ? "None of your brands are in the AthaNext store yet. Their gear shows here once they are."
+            : "Add the brands you use under Brands, and their gear from the AthaNext store shows here."}
         </p>
       ) : null}
 

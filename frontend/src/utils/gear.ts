@@ -79,8 +79,10 @@ export const writeCartId = (cartId: string | null) => {
 export const COACH_GEAR_PREVIEW_LIMIT = 4;
 
 /**
- * Products for the Gear preview on a coach profile (ATH-65): products from the
- * coach's own brands first (matched on Shopify vendor), then other in-stock gear.
+ * Products for the Gear preview on a coach profile (ATH-65): only in-stock products from the
+ * coach's own brands (matched on Shopify vendor). Empty when the coach has no brands or none of
+ * them are in the store, so the profile hides gear instead of showing unrelated store items.
+ * The /gear store page is unaffected.
  */
 export const pickCoachGear = <T extends Pick<ShopifyProduct, "vendor" | "availableForSale">>(
   products: T[],
@@ -88,10 +90,10 @@ export const pickCoachGear = <T extends Pick<ShopifyProduct, "vendor" | "availab
   limit = COACH_GEAR_PREVIEW_LIMIT
 ): T[] => {
   const brandKeys = new Set(coachBrandNames.map((name) => brandKey(name)).filter(Boolean));
-  const inStock = products.filter((product) => product.availableForSale);
-  const fromBrands = inStock.filter((product) => brandKeys.has(brandKey(product.vendor)));
-  const others = inStock.filter((product) => !brandKeys.has(brandKey(product.vendor)));
-  return [...fromBrands, ...others].slice(0, limit);
+  if (!brandKeys.size) return [];
+  return products
+    .filter((product) => product.availableForSale && brandKeys.has(brandKey(product.vendor)))
+    .slice(0, limit);
 };
 
 /* ---------- Catalog filters (ATH-97): search, sport, category, price and From my coaches ---------- */

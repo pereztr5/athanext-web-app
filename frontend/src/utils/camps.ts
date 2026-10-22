@@ -16,6 +16,21 @@ const COACH_SLUG = /^[a-z0-9][a-z0-9._-]*$/i;
 export const campPath = (coachSlug: string, campSlug: string) =>
   `/${encodeURIComponent(coachSlug)}/${encodeURIComponent(campSlug)}`;
 
+/**
+ * Where a family's "Register" on a profile camp card goes: the camp page (no src, so
+ * marketplace pricing) when the camp has a published link, otherwise null and the caller
+ * falls back to the old package checkout.
+ */
+export const campPagePathFor = (
+  coachSlug: string | null | undefined,
+  camp: { slug: string | null | undefined; published?: boolean },
+): string | null => {
+  const coach = coachSlug?.trim();
+  const slug = camp.slug?.trim();
+  if (!coach || !slug || camp.published === false) return null;
+  return campPath(coach, slug);
+};
+
 /** The coach's share link. src=link marks the coach's own families (no marketplace fee). */
 export const campShareUrl = (origin: string, coachSlug: string, campSlug: string) =>
   `${origin}${campPath(coachSlug, campSlug)}?src=link`;
