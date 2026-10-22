@@ -81,6 +81,22 @@ type Coach = Omit<
   | "stripe_subscription_id"
   | "subscription_status"
   | "trial_ends_at"
+  | "cancel_notice_hours"
+  | "coaching_video_url"
+  | "coordinates_zip"
+  | "group_min"
+  | "intro_enabled"
+  | "intro_format"
+  | "intro_minutes"
+  | "intro_new_only"
+  | "intro_questions"
+  | "intro_video_url"
+  | "intro_weekly_limit"
+  | "profile_services"
+  | "travel_miles"
+  | "travel_zip"
+  | "zip_latitude"
+  | "zip_longitude"
 > & {
   is_verified?: boolean;
   favourite_positions?: string[];
