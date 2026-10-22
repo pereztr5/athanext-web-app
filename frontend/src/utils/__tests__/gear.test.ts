@@ -88,23 +88,55 @@ describe("gear helpers", () => {
 });
 
 describe("pickCoachGear", () => {
-  const product = (vendor: string, availableForSale = true) => ({ vendor, availableForSale, id: `${vendor}-${availableForSale}` });
+  const product = (vendor: string, availableForSale = true, tags: string[] = []) => ({
+    vendor,
+    availableForSale,
+    tags,
+    id: `${vendor}-${availableForSale}-${tags.join("+")}`,
+  });
+  const ids = (gear: { products: { id: string }[] }) => gear.products.map((p) => p.id);
 
   it("shows only in-stock products from the coach's brands, matched like brand names", () => {
     const products = [product("Reusch"), product("SetGK"), product("setgk ", false), product(" SETGK "), product("Uhlsport")];
-    expect(pickCoachGear(products, ["SetGK"]).map((p) => p.vendor)).toEqual(["SetGK", " SETGK "]);
+    const gear = pickCoachGear(products, ["SetGK"], "soccer");
+    expect(gear.source).toBe("coach");
+    expect(gear.products.map((p) => p.vendor)).toEqual(["SetGK", " SETGK "]);
   });
 
-  it("is empty without brands or when none of the coach's brands are in the store", () => {
-    const products = [product("A"), product("B", false), product("C"), product("D"), product("E"), product("F")];
-    expect(pickCoachGear(products, [])).toEqual([]);
-    expect(pickCoachGear(products, ["  "])).toEqual([]);
-    expect(pickCoachGear(products, ["Nike"])).toEqual([]);
-    expect(pickCoachGear(products, ["B"])).toEqual([]);
+  it("keeps the coach's brand picks ahead of store items, but drops another sport's gear", () => {
+    const products = [product("Store", true, ["Soccer"]), product("SetGK", true, ["Rowing"]), product("SetGK", true, ["soccer"])];
+    const gear = pickCoachGear(products, ["SetGK"], "soccer");
+    expect(gear.source).toBe("coach");
+    expect(ids(gear)).toEqual(["SetGK-true-soccer"]);
   });
 
-  it("respects the limit", () => {
+  it("falls back to in-stock store products for the coach's sport when the brands have none", () => {
+    const products = [
+      product("A", true, ["Rowing"]),
+      product("B", true, ["Soccer"]),
+      product("C", false, ["Soccer"]),
+      product("D"),
+      product("E", true, [" soccer "]),
+    ];
+    const soccer = pickCoachGear(products, ["Nike"], "soccer");
+    expect(soccer.source).toBe("store");
+    expect(ids(soccer)).toEqual(["B-true-Soccer", "E-true- soccer "]);
+    expect(ids(pickCoachGear(products, [], "Rowing"))).toEqual(["A-true-Rowing"]);
+  });
+
+  it("hides gear when nothing matches the coach's brands or sport", () => {
+    const products = [product("A", true, ["Rowing"]), product("B", false, ["Soccer"]), product("C")];
+    expect(pickCoachGear(products, [], "soccer")).toEqual({ products: [], source: null });
+    expect(pickCoachGear(products, ["  "], null)).toEqual({ products: [], source: null });
+    expect(pickCoachGear(products, ["Nike"], "basketball")).toEqual({ products: [], source: null });
+    expect(pickCoachGear(products, ["B"], "soccer")).toEqual({ products: [], source: null });
+    expect(pickCoachGear(products, ["A"], "soccer")).toEqual({ products: [], source: null });
+  });
+
+  it("respects the limit for both sources", () => {
     const products = [product("F"), product("A"), product("F"), product("F")].map((p, i) => ({ ...p, id: `${p.id}-${i}` }));
-    expect(pickCoachGear(products, ["F"], 2).map((p) => p.id)).toEqual(["F-true-0", "F-true-2"]);
+    expect(ids(pickCoachGear(products, ["F"], "soccer", 2))).toEqual(["F-true--0", "F-true--2"]);
+    const store = [1, 2, 3].map((i) => ({ ...product("S", true, ["Rowing"]), id: `S${i}` }));
+    expect(ids(pickCoachGear(store, [], "rowing", 2))).toEqual(["S1", "S2"]);
   });
 });

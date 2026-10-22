@@ -76,26 +76,6 @@ export const writeCartId = (cartId: string | null) => {
   }
 };
 
-export const COACH_GEAR_PREVIEW_LIMIT = 4;
-
-/**
- * Products for the Gear preview on a coach profile (ATH-65): only in-stock products from the
- * coach's own brands (matched on Shopify vendor). Empty when the coach has no brands or none of
- * them are in the store, so the profile hides gear instead of showing unrelated store items.
- * The /gear store page is unaffected.
- */
-export const pickCoachGear = <T extends Pick<ShopifyProduct, "vendor" | "availableForSale">>(
-  products: T[],
-  coachBrandNames: string[],
-  limit = COACH_GEAR_PREVIEW_LIMIT
-): T[] => {
-  const brandKeys = new Set(coachBrandNames.map((name) => brandKey(name)).filter(Boolean));
-  if (!brandKeys.size) return [];
-  return products
-    .filter((product) => product.availableForSale && brandKeys.has(brandKey(product.vendor)))
-    .slice(0, limit);
-};
-
 /* ---------- Catalog filters (ATH-97): search, sport, category, price and From my coaches ---------- */
 
 export const GEAR_SPORTS = ["Soccer", "Rowing"] as const;
@@ -119,6 +99,56 @@ type Filterable = Pick<ShopifyProduct, "title" | "vendor" | "productType" | "pri
 
 const productSports = (product: { tags?: string[] }) =>
   GEAR_SPORTS.filter((sport) => (product.tags ?? []).some((tag) => tag.trim().toLowerCase() === sport.toLowerCase()));
+
+export const COACH_GEAR_PREVIEW_LIMIT = 4;
+
+export type CoachGearSource = "coach" | "store";
+
+export type CoachGear<T> = {
+  products: T[];
+  /** "coach": the coach's own brand picks. "store": AthaNext store items for the coach's sport. */
+  source: CoachGearSource | null;
+};
+
+type CoachGearProduct = Pick<ShopifyProduct, "vendor" | "availableForSale"> & { tags?: string[] };
+
+/** The /gear catalog sport ("Soccer", "Rowing") for a coach sport like "soccer"; null when unknown. */
+export const toGearSport = (sport?: string | null): (typeof GEAR_SPORTS)[number] | null =>
+  GEAR_SPORTS.find((gearSport) => gearSport.toLowerCase() === (sport ?? "").trim().toLowerCase()) ?? null;
+
+/**
+ * Products for the Gear preview on a coach profile (ATH-65): in-stock products from the coach's
+ * own brands (matched on Shopify vendor) first. Without any, in-stock AthaNext store products
+ * tagged with the coach's sport (same tags as the /gear sport filter). Products tagged for
+ * another sport never show, and gear hides (empty, source null) when nothing matches.
+ */
+export const pickCoachGear = <T extends CoachGearProduct>(
+  products: T[],
+  coachBrandNames: string[],
+  coachSport?: string | null,
+  limit = COACH_GEAR_PREVIEW_LIMIT
+): CoachGear<T> => {
+  const sport = toGearSport(coachSport);
+  const brandKeys = new Set(coachBrandNames.map((name) => brandKey(name)).filter(Boolean));
+  const inStock = products.filter((product) => product.availableForSale);
+  // A brand pick with no sport tag is fine; one tagged only for other sports is not.
+  const fitsSport = (product: T) => {
+    const sports = productSports(product);
+    return sports.length === 0 || (sport !== null && sports.includes(sport));
+  };
+
+  const own = brandKeys.size
+    ? inStock.filter((product) => brandKeys.has(brandKey(product.vendor)) && fitsSport(product)).slice(0, limit)
+    : [];
+  if (own.length) return { products: own, source: "coach" };
+
+  if (!sport) return { products: [], source: null };
+  const store = inStock.filter((product) => productSports(product).includes(sport)).slice(0, limit);
+  return store.length ? { products: store, source: "store" } : { products: [], source: null };
+};
+
+/** Heading for the gear list: the coach's picks, or the store fallback. */
+export const COACH_GEAR_STORE_LABEL = "From the AthaNext store";
 
 /** Sports that at least one product is tagged with; the sport filter only shows these. */
 export const getSportOptions = (products: { tags?: string[] }[]) =>

@@ -20,7 +20,7 @@ export type CoachTermsDoc = {
 const isoDay = (raw: string | null | undefined) =>
   raw && /^\d{4}-\d{2}-\d{2}/.test(raw) ? raw.slice(0, 10) : null;
 
-/** Null when there is no published copy (no row, or an empty body): the page shows "being updated". */
+/** Null when there is no published copy (no row, or an empty body): the page redirects to Terms. */
 export const toCoachTermsDoc = (row: CoachTermsRow | null | undefined): CoachTermsDoc | null => {
   if (!row) return null;
   const content = (row.content ?? "").trim();

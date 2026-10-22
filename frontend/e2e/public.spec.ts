@@ -22,6 +22,14 @@ for (const { route, text } of pages) {
   });
 }
 
+test("coach terms: with no published coach terms it opens Terms and conditions instead", async ({ page }) => {
+  await page.goto("/coach-terms");
+  await expect(page.getByText(/terms/i).first()).toBeVisible();
+  // Published coach terms stay on /coach-terms; an empty coach_terms table redirects (replace).
+  await expect(page).toHaveURL(/\/(coach-terms|terms-and-conditions)$/);
+  await expect(page.getByText(/coach terms are being updated/i)).toHaveCount(0);
+});
+
 test("sign up: the questions start and Continue with Google is offered at the account step", async ({ page }) => {
   await page.goto("/auth?mode=signup");
   await expect(page.getByText(/welcome to athanext/i).first()).toBeVisible();

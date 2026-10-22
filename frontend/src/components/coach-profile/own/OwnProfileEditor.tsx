@@ -28,6 +28,7 @@ import { normalizeInstagramHandle } from "@/utils/instagram";
 import { hasRichTextMarkup, stripRichTextToPlainText } from "@/utils/richText";
 import { addDaysISO } from "@/utils/schedule";
 import { isoDateInZone } from "@/utils/viewerTime";
+import { detectCoachSport } from "@/utils/coachSport";
 import { BrandLogos } from "../BrandLogos";
 import type { CoachProfileData, ProfileReview } from "../CoachProfileView";
 import { GearAndDealsCard } from "../GearAndDealsCard";
@@ -533,6 +534,7 @@ export const OwnProfileEditor = ({
             links={coach.affiliate_links}
             dealsEnabled={coach.deals_enabled}
             brandNames={brands.map((b) => b.name)}
+            coachSport={detectCoachSport(coach)}
             isOwner
             editing
             onDealsEnabledChange={(on) => onField("deals_enabled", on)}

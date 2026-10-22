@@ -1,4 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
+import { Navigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/page-header";
@@ -9,8 +10,12 @@ import { formatDateToUSA } from "@/utils/helperFunctions";
 import "@/styles/privacyPolicy-termsCondition.css";
 import PolicyLoadingSkeleton from "@/components/common/PolicyLoadingSkeleton";
 import { usePolicyPageClass } from "@/hooks/usePolicyPageClass";
+import { ROUTES } from "@/routes";
 
-/** Public /coach-terms: the active row of public.coach_terms, same layout as Terms. */
+/**
+ * Public /coach-terms: the active row of public.coach_terms, same layout as Terms. With no
+ * published coach terms it replaces itself with the Terms and conditions page.
+ */
 const CoachTerms = () => {
   const pageClass = usePolicyPageClass();
   const query = useQuery({ queryKey: ["coach-terms"], queryFn: getCoachTerms, staleTime: Infinity });
@@ -47,33 +52,23 @@ const CoachTerms = () => {
   }
 
   const doc = query.data;
+  if (!doc) return <Navigate to={ROUTES.TERMS_AND_CONDITIONS} replace />;
 
   return (
     <div className={pageClass}>
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
-        <PageHeader title={doc?.title ?? "Coach terms"} />
+        <PageHeader title={doc.title} />
         <Card>
           <CardContent className="p-6 sm:p-8">
-            {doc ? (
-              <>
-                <div
-                  className="content-wrapper prose prose-sm sm:prose-base dark:prose-invert max-w-none"
-                  dangerouslySetInnerHTML={{ __html: sanitizeHTML(doc.content) }}
-                />
-                {doc.lastUpdated ? (
-                  <div className="mt-8 border-t border-light-525 pt-8">
-                    <p className="text-caption text-dark-300">Last updated: {formatDateToUSA(doc.lastUpdated)}</p>
-                  </div>
-                ) : null}
-              </>
-            ) : (
-              <div className="flex flex-col gap-2">
-                <h3 className="text-subtitle text-dark">Coach terms are being updated</h3>
-                <p className="text-body-m text-dark-300">
-                  Check back soon. Questions about coaching on AthaNext? Contact us and we'll help.
-                </p>
+            <div
+              className="content-wrapper prose prose-sm sm:prose-base dark:prose-invert max-w-none"
+              dangerouslySetInnerHTML={{ __html: sanitizeHTML(doc.content) }}
+            />
+            {doc.lastUpdated ? (
+              <div className="mt-8 border-t border-light-525 pt-8">
+                <p className="text-caption text-dark-300">Last updated: {formatDateToUSA(doc.lastUpdated)}</p>
               </div>
-            )}
+            ) : null}
           </CardContent>
         </Card>
       </div>

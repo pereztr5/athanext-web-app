@@ -7,7 +7,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { visibleDeals } from "@/utils/affiliateLinks";
-import { formatPriceRange, pickCoachGear } from "@/utils/gear";
+import { COACH_GEAR_STORE_LABEL, formatPriceRange, pickCoachGear } from "@/utils/gear";
 import { GroupChatRows } from "../GroupChatsCard";
 import { useFamilyCoachChannels } from "./hooks";
 import { caption, lbl, medium, plural } from "./styles";
@@ -55,6 +55,7 @@ export const MoreList = ({
   affiliateLinks,
   dealsEnabled,
   brandNames,
+  coachSport,
 }: {
   coachId: string;
   first: string;
@@ -62,12 +63,17 @@ export const MoreList = ({
   affiliateLinks: unknown;
   dealsEnabled: boolean | null | undefined;
   brandNames: string[];
+  /** Coach sport; store gear for it shows when the coach's brands have none. */
+  coachSport?: string | null;
 }) => {
   const [open, setOpen] = useState<string | null>(null);
   const { toast } = useToast();
   const { channels } = useFamilyCoachChannels(coachId);
   const { data: products = [] } = useGearProducts();
-  const gear = isShopifyConfigured ? pickCoachGear(products, brandNames) : [];
+  const { products: gear, source: gearSource } = isShopifyConfigured
+    ? pickCoachGear(products, brandNames, coachSport)
+    : { products: [], source: null };
+  const storeGear = gearSource === "store";
   const deals = visibleDeals(affiliateLinks, dealsEnabled);
   const toggle = (key: string) => setOpen((current) => (current === key ? null : key));
 
@@ -103,12 +109,14 @@ export const MoreList = ({
     );
   }
   if (deals.length || gear.length) {
-    const sub = [deals.length ? plural(deals.length, "brand deal") : "", gear.length ? `${plural(gear.length, "product")} in ${first}'s store` : ""]
+    const sub = [deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : `${plural(gear.length, "product")} in ${first}'s store`) : ""]
       .filter(Boolean)
       .join(" · ");
     items.push(
       <Item key="gear" icon={Tag} title="Gear and deals" sub={sub} open={open === "gear"} onToggle={() => toggle("gear")}>
-        <span className={caption}>{first} may earn a commission when families buy through these links.</span>
+        {deals.length || !storeGear ? (
+          <span className={caption}>{first} may earn a commission when families buy through these links.</span>
+        ) : null}
         {deals.map((deal) => (
           <div key={deal.url} className="flex items-center justify-between gap-3">
             <a
@@ -132,6 +140,7 @@ export const MoreList = ({
             ) : null}
           </div>
         ))}
+        {storeGear ? <span className="text-label-xsm text-dark-300">{COACH_GEAR_STORE_LABEL}</span> : null}
         {gear.map((product) => (
           <Link key={product.id} to={`${ROUTES.GEAR}/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:text-primary">
             <span className={cn(medium, "truncate")}>{product.title}</span>

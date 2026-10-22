@@ -10,7 +10,7 @@ import { useGearProducts } from "@/hooks/useGear";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { visibleDeals } from "@/utils/affiliateLinks";
-import { formatPriceRange, pickCoachGear } from "@/utils/gear";
+import { COACH_GEAR_STORE_LABEL, formatPriceRange, pickCoachGear } from "@/utils/gear";
 import type { CoachFaqItem } from "../FAQSection";
 import { useOwnChannels } from "./hooks";
 import { caption, plural } from "./shared";
@@ -38,6 +38,7 @@ export const MoreList = ({
   links,
   dealsEnabled,
   brandNames,
+  coachSport,
 }: {
   coachId: string;
   firstName: string;
@@ -45,13 +46,18 @@ export const MoreList = ({
   links: unknown;
   dealsEnabled: boolean | null | undefined;
   brandNames: string[];
+  /** Coach sport; store gear for it shows when the coach's brands have none. */
+  coachSport?: string | null;
 }) => {
   const { toast } = useToast();
   const [open, setOpen] = useState<Key | null>(null);
   const { data: channels = [] } = useOwnChannels(coachId);
   const { data: products = [] } = useGearProducts();
   const deals = visibleDeals(links, dealsEnabled);
-  const gear = isShopifyConfigured ? pickCoachGear(products, brandNames) : [];
+  const { products: gear, source: gearSource } = isShopifyConfigured
+    ? pickCoachGear(products, brandNames, coachSport)
+    : { products: [], source: null };
+  const storeGear = gearSource === "store";
   const toggle = (key: Key) => setOpen((cur) => (cur === key ? null : key));
 
   const copy = async (code: string) => {
@@ -94,11 +100,13 @@ export const MoreList = ({
         key="gear"
         icon={Tag}
         title="Gear and deals"
-        sub={[deals.length ? plural(deals.length, "brand deal") : "", gear.length ? `${plural(gear.length, "product")} in ${firstName}'s store` : ""].filter(Boolean).join(" · ")}
+        sub={[deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : `${plural(gear.length, "product")} in ${firstName}'s store`) : ""].filter(Boolean).join(" · ")}
         open={open === "gear"}
         onToggle={() => toggle("gear")}
       >
-        <span className={caption}>You may earn a commission when families buy through these links.</span>
+        {deals.length || !storeGear ? (
+          <span className={caption}>You may earn a commission when families buy through these links.</span>
+        ) : null}
         {deals.map((deal) => (
           <div key={deal.url} className="flex items-center justify-between gap-3">
             <a href={deal.url} target="_blank" rel="sponsored noopener noreferrer" className="flex min-w-0 flex-col gap-1 hover:underline">
@@ -117,6 +125,7 @@ export const MoreList = ({
             ) : null}
           </div>
         ))}
+        {storeGear ? <span className="text-label-xsm text-dark-300">{COACH_GEAR_STORE_LABEL}</span> : null}
         {gear.map((product) => (
           <Link key={product.id} to={`/gear/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:underline">
             <span className="truncate text-label-sm text-dark">{product.title}</span>

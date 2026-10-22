@@ -421,6 +421,7 @@ const CoachProfile = () => {
               links={coach.affiliate_links}
               dealsEnabled={coach.deals_enabled}
               brandNames={coachBrands.map((brand) => brand.name)}
+              coachSport={normalizedCoachSport}
             />
           </div>
         </div>

@@ -13,6 +13,7 @@ import { sanitizePathwayTags } from "@/constants/pathwayTags";
 import { cn } from "@/lib/utils";
 import { instagramUrl } from "@/utils/instagram";
 import { formatRichTextForRender } from "@/utils/richText";
+import { detectCoachSport } from "@/utils/coachSport";
 import "@/styles/richText.css";
 import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
 import type { CoachFaqItem } from "./FAQSection";
@@ -250,7 +251,7 @@ export const OwnProfilePreview = ({
 
       <OwnReviews coachId={coach.id} averageRating={averageRating} totalReviews={totalReviews} showRating={showRating} fallback={reviews} />
 
-      <MoreList coachId={coach.id} firstName={first} faqs={faqs} links={coach.affiliate_links} dealsEnabled={coach.deals_enabled} brandNames={brandNames} />
+      <MoreList coachId={coach.id} firstName={first} faqs={faqs} links={coach.affiliate_links} dealsEnabled={coach.deals_enabled} brandNames={brandNames} coachSport={detectCoachSport(coach)} />
     </div>
   );
 };

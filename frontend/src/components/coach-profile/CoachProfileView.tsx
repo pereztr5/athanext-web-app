@@ -17,6 +17,7 @@ import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import type { Brand } from "@/utils/brands";
 import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
 import { campPagePathFor } from "@/utils/camps";
+import { detectCoachSport } from "@/utils/coachSport";
 import { CoachIntroCallCard } from "@/components/intro-calls";
 import { WhoCard } from "./family/WhoCard";
 import { AboutCard } from "./family/AboutCard";
@@ -293,6 +294,7 @@ export function CoachProfileView({
           affiliateLinks={coach.affiliate_links}
           dealsEnabled={coach.deals_enabled}
           brandNames={brands.map((brand) => brand.name)}
+          coachSport={detectCoachSport(coach)}
         />
       </div>
       <BuyPackagesDialog

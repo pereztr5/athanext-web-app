@@ -28,7 +28,7 @@ import {
   visibleDeals,
   type AffiliateLink,
 } from "@/utils/affiliateLinks";
-import { pickCoachGear } from "@/utils/gear";
+import { COACH_GEAR_STORE_LABEL, pickCoachGear } from "@/utils/gear";
 import { CoachProfileCard, CoachProfileCardHeader, CoachProfileChip } from "./CoachProfileCard";
 
 type DraftLink = { brand: string; url: string; code: string };
@@ -45,6 +45,8 @@ interface GearAndDealsCardProps {
   /** coaches.deals_enabled; families see no deals when it is off. */
   dealsEnabled: boolean | null | undefined;
   brandNames: string[];
+  /** Coach sport ("soccer", "rowing"); picks store gear when the coach's brands have none. */
+  coachSport?: string | null;
   /** The coach looking at their own profile ("I use" instead of their name). */
   isOwner?: boolean;
   /** Edit profile mode: the deals switch and editor show, and the box shows even when empty. */
@@ -56,9 +58,9 @@ interface GearAndDealsCardProps {
 }
 
 /**
- * Gear and deals (ATH-88): one box with the coach's brand deals on top and store gear from the
- * coach's own brands under it (never unrelated store products). Hidden from families when
- * there is nothing to show.
+ * Gear and deals (ATH-88): one box with the coach's brand deals on top and store gear under it:
+ * the coach's own brands, else AthaNext store items for the coach's sport (labelled as such).
+ * Never another sport's gear. Hidden from families when there is nothing to show.
  */
 export function GearAndDealsCard({
   coachId,
@@ -66,6 +68,7 @@ export function GearAndDealsCard({
   links,
   dealsEnabled,
   brandNames,
+  coachSport,
   isOwner = false,
   editing = false,
   onDealsEnabledChange,
@@ -75,7 +78,10 @@ export function GearAndDealsCard({
   const [editorOpen, setEditorOpen] = useState(false);
   const [open, setOpen] = useState(!folded);
   const { data: products = [] } = useGearProducts();
-  const gear = isShopifyConfigured ? pickCoachGear(products, brandNames) : [];
+  const { products: gear, source: gearSource } = isShopifyConfigured
+    ? pickCoachGear(products, brandNames, coachSport)
+    : { products: [], source: null };
+  const storeGear = gearSource === "store";
   const allDeals = parseAffiliateLinks(links);
   const deals = editing ? allDeals : visibleDeals(links, dealsEnabled);
   const dealsOn = dealsEnabled !== false;
@@ -88,7 +94,7 @@ export function GearAndDealsCard({
     return (
       <CoachProfileCard className="gap-0">
         <button type="button" className="flex w-full items-center justify-between gap-3 text-left" aria-expanded={false} onClick={() => setOpen(true)}>
-          <span className="text-card-title text-dark">Gear {first} uses</span>
+          <span className="text-card-title text-dark">{deals.length || !storeGear ? `Gear ${first} uses` : "Gear and deals"}</span>
           <span className="inline-flex items-center gap-1.5 text-caption text-dark-300">
             {[deals.length ? `${deals.length} ${deals.length === 1 ? "deal" : "deals"}` : "", gear.length ? `${gear.length} ${gear.length === 1 ? "product" : "products"}` : ""]
               .filter(Boolean)
@@ -106,11 +112,13 @@ export function GearAndDealsCard({
         title="Gear and deals"
         actions={editing ? <CoachProfileChip label="Optional" /> : undefined}
       />
+      {editing || deals.length || !storeGear ? (
       <p className={cn(caption, "-mt-2")}>
         {isOwner
           ? "Gear I use with players. I may earn a commission when you buy through these links."
           : `Gear ${first} uses with players. ${first} may earn a commission when you buy through these links.`}
       </p>
+      ) : null}
 
       {editing ? (
         <div className="flex items-center justify-between gap-3">
@@ -179,7 +187,7 @@ export function GearAndDealsCard({
       {gear.length ? (
         <div className="flex flex-col gap-[10px] border-t border-light-525 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-label-sm text-dark">Gear</span>
+            <span className="text-label-sm text-dark">{storeGear ? COACH_GEAR_STORE_LABEL : isOwner ? "Gear from my brands" : `Gear from ${first}'s brands`}</span>
             <Link
               to={ROUTES.GEAR}
               className="text-label-sm text-primary hover:underline"
@@ -195,8 +203,10 @@ export function GearAndDealsCard({
             ))}
           </div>
         </div>
-      ) : editing ? (
-        <p className={cn(caption, "border-t border-light-525 pt-4")}>
+      ) : null}
+
+      {editing && gearSource !== "coach" ? (
+        <p className={cn(caption, gear.length ? "" : "border-t border-light-525 pt-4")}>
           {brandNames.length
             ? "None of your brands are in the AthaNext store yet. Their gear shows here once they are."
             : "Add the brands you use under Brands, and their gear from the AthaNext store shows here."}
