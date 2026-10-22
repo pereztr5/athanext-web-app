@@ -63,6 +63,12 @@ deploy_one() {
     trap 'rm -rf "$workdir"' RETURN
     mkdir -p "$workdir/supabase/functions"
     cp "$SUPABASE_DIR/config.toml" "$workdir/supabase/config.toml"
+    # config.toml points auth templates at ./supabase/templates. The CLI reads that
+    # even for a function deploy, so the throwaway project needs the files too.
+    if [ -d "$SUPABASE_DIR/templates" ]; then
+      mkdir -p "$workdir/supabase/templates"
+      cp -R "$SUPABASE_DIR/templates/." "$workdir/supabase/templates/"
+    fi
     cp -R "$SUPABASE_DIR/functions/$folder" "$workdir/supabase/functions/$name"
     [ -d "$SUPABASE_DIR/functions/_shared" ] && cp -R "$SUPABASE_DIR/functions/_shared" "$workdir/supabase/functions/_shared"
     (cd "$workdir" && supabase functions deploy "$name" "${flags[@]}")
