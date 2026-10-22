@@ -1,7 +1,8 @@
 /**
  * Tapping a session in My schedule (ATH-71).
  * Open and offered slots: share them, remove one week, change every week or stop repeating.
- * Groups open the group sheet. Booked 1-on-1s and requests go straight to the session page.
+ * Groups open the group sheet, camp days the camp day sheet. Booked 1-on-1s and requests go
+ * straight to the session page.
  */
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -26,6 +27,7 @@ import {
 } from "@/utils/schedule";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatInstantSpan } from "@/utils/viewerTime";
+import { CampDaySheet } from "@/components/camps/CampDaySheet";
 import { ShareSession } from "./ShareSession";
 import { GroupSheet } from "./views/GroupSheet";
 import {
@@ -118,6 +120,10 @@ export const SessionDialog = ({
   });
 
   if (!session) return <Dialog open={false} />;
+
+  if (session.camp) {
+    return <CampDaySheet session={{ ...session, camp: session.camp }} coachSlug={rules.slug} timeZone={timeZone} onClose={onClose} />;
+  }
 
   const kind = sessionKind(session);
   if (kind === "group") {

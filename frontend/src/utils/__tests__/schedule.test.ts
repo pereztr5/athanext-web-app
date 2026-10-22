@@ -34,6 +34,7 @@ const session = (overrides: Partial<ScheduleSession> & Pick<ScheduleSession, "id
   isDraft: false,
   seriesId: null,
   bookings: [],
+  camp: null,
   ...overrides,
 });
 

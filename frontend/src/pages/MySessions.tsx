@@ -40,6 +40,7 @@ import { feeLine, toCents, type FeeConfig } from "@/utils/fees";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { RateCoachDialog } from "@/components/reviews/RateCoachDialog";
 import { SessionsSkeleton } from "@/components/my-session/SessionsSkeleton";
+import { MyCampsCard } from "@/components/camps/MyCampsCard";
 import { AthleteSessionsList, sessionListTitle } from "@/components/my-session/AthleteSessionsList";
 import { CoachSessionCard, CoachSessionSection } from "@/components/my-session/CoachSessionCard";
 import { useOccurrenceInfo, type CoachCardKind } from "@/components/my-session/coachSessions";
@@ -1076,6 +1077,8 @@ const MySessions = () => {
             </CoachSessionSection>
           </>
         ) : (
+          <>
+          <MyCampsCard />
           <AthleteSessionsList
             upcoming={[...inProgressSessions, ...upcomingSessions]}
             past={pastCompletedSessions}
@@ -1086,6 +1089,7 @@ const MySessions = () => {
             isParent={persona === PROFILE_TYPE.parent}
             onOpen={openSession}
           />
+          </>
         )}
       </div>
 

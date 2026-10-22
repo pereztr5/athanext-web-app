@@ -4,6 +4,7 @@ import { createClient, type SupabaseClient as SupabaseClientOf } from "https://e
 import { checkoutExpiry, idempotencyKey, idsFromMetadata } from "../_shared/checkout.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { checkoutFees, type FeeConfig, feeConfigFromMetadata, feeConfigMetadata, toCents } from "../_shared/fees.ts";
+import { isFullRefund, releaseCampSession, reverseCampCharge, settleCampSession } from "../_shared/camp_settle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -1000,6 +1001,13 @@ serve(async (req) => {
         expand: ["payment_intent"],
       });
 
+      // Camp sign-up Checkouts (camp-signup) settle their registrations, not bookings.
+      if (session.metadata?.kind === "camp") {
+        if (session.status === "expired") await releaseCampSession(supabaseClient, session.id);
+        const camp = await settleCampSession(supabaseClient, session as any);
+        return ok({ session_id: sessionId, payment_status: session.payment_status, status: session.status, paid: camp.paid, camp: true });
+      }
+
       // A request's card hold (ATH-85): create the request now; nothing is charged yet.
       if (session.metadata?.request === "1") {
         const { full } = await createRequestFromSession(session, supabaseClient, stripeApi());
@@ -1053,7 +1061,10 @@ serve(async (req) => {
       }
 
       // Card refunded or disputed: booking is no longer paid; void held shares / reverse sent ones.
-      if (event.type === "charge.refunded" || event.type === "charge.dispute.created") {
+      // A lost dispute is only acted on for camps (bookings were already marked on dispute created).
+      const lostDispute =
+        event.type === "charge.dispute.closed" && (event.data.object as Stripe.Dispute).status === "lost";
+      if (event.type === "charge.refunded" || event.type === "charge.dispute.created" || lostDispute) {
         const charge = event.data.object as Stripe.Charge | Stripe.Dispute;
         const chargeId =
           event.type === "charge.refunded"
@@ -1069,6 +1080,23 @@ serve(async (req) => {
             : typeof (charge as Stripe.Dispute).payment_intent === "string"
               ? ((charge as Stripe.Dispute).payment_intent as string)
               : (charge as Stripe.Dispute).payment_intent?.id ?? null;
+        // Camp sign-up charges: cancel the registrations (full refund or dispute), void or reverse
+        // the coach payout, email the coach. Partial refunds leave the spots paid (logged).
+        try {
+          const camp = await reverseCampCharge(supabaseClient, {
+            paymentIntentId: intentId,
+            chargeId: (chargeId as string | undefined) ?? null,
+            status: event.type === "charge.refunded" ? "refunded" : "disputed",
+            full: event.type === "charge.refunded" ? isFullRefund(charge as Stripe.Charge) : true,
+          });
+          if (camp.handled) {
+            return camp.done ? ok() : jsonResponse({ error: "Camp reversal saved; coach email pending" }, 500);
+          }
+        } catch (e: any) {
+          console.error("Camp charge reversal failed:", chargeId, e);
+          return jsonResponse({ error: e?.message ?? "Camp reversal failed" }, 500);
+        }
+        if (lostDispute) return ok();
         if (chargeId) {
           const ids = await bookingIdsForCharge(supabaseClient, chargeId as string, intentId);
           await markBookingsChargeReversed(
@@ -1129,6 +1157,16 @@ serve(async (req) => {
       if (event.type === "checkout.session.expired") {
         const session = event.data.object as Stripe.Checkout.Session;
         const meta = session.metadata ?? {};
+        // Camp sign-up: the athletes' spots go back.
+        if (meta.kind === "camp") {
+          try {
+            const released = await releaseCampSession(supabaseClient, session.id);
+            return ok({ received: true, released });
+          } catch (e: any) {
+            console.error("Releasing expired camp Checkout failed:", session.id, e);
+            return jsonResponse({ error: e?.message ?? "Release failed" }, 500);
+          }
+        }
         if (meta.request === "1" || meta.type || meta.kind) return ok();
         const { data: released, error } = await supabaseClient.rpc("release_unpaid_checkout_holds" as any, {
           p_session_id: session.id,
@@ -1156,6 +1194,19 @@ serve(async (req) => {
           if (!r.ok) {
             console.error("Package reconcile failed:", session.id, r.status, r.text);
             return jsonResponse({ error: "Package reconcile failed" }, 500);
+          }
+          return ok();
+        }
+
+        // Camp sign-ups (camp-signup): mark exactly the registrations in the metadata paid, then
+        // payout planning, receipt and coach email. Safe to repeat; 500 while anything is left.
+        if (session.metadata?.kind === "camp") {
+          try {
+            const { followupsDone } = await settleCampSession(supabaseClient, session as any);
+            if (!followupsDone) return jsonResponse({ error: "Camp paid; follow-ups pending" }, 500);
+          } catch (e: any) {
+            console.error("Settling camp Checkout failed:", session.id, e);
+            return jsonResponse({ error: e?.message ?? "Camp settle failed" }, 500);
           }
           return ok();
         }

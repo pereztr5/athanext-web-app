@@ -35,6 +35,7 @@ import { detectCoachSport } from "@/utils/coachSport";
 import { Plus, X } from "@/components/icons";
 import { CoachOwnProfile } from "@/components/coach-profile/CoachOwnProfile";
 import { PackageEditorDialog } from "@/components/coach-profile/PackageEditorDialog";
+import { CampUrlDialogs } from "@/components/camps/CampUrlDialogs";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { sanitizePathwayTags } from "@/constants/pathwayTags";
 
@@ -439,6 +440,8 @@ const Profile = () => {
 
     const modals = (
         <>
+            {/* /profile?camp=<id>&view=registrations (or view=edit) opens the camp here. */}
+            <CampUrlDialogs />
             <ReviewModal
                 open={showReviewModal}
                 onOpenChange={setShowReviewModal}

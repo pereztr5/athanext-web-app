@@ -49,8 +49,9 @@ import { useToast } from "@/hooks/use-toast";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { isValidE164 } from "@/utils/phone";
+import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
 import { clearJoinCoach } from "@/utils/referralHelpers";
+import { clearCampFinish, readCampFinish } from "@/components/camps/campFinish";
 import {
   COACH_POS_TO_DB,
   LEVEL_TO_PATHWAY,
@@ -243,15 +244,38 @@ const Tile = ({
   </button>
 );
 
+/**
+ * A camp family finishing their account (/auth?mode=signup&email=…&camp_signup=…): they signed up
+ * as a parent with their details already, so the flow opens on the account step with them filled in.
+ */
+export type CampFinishParams = { signupId: string; email: string | null };
+
+const campAnswers = (base: SignupAnswers, camp: CampFinishParams): SignupAnswers => {
+  const known = readCampFinish(camp.signupId);
+  const [first = "", ...rest] = (known?.parentName ?? "").split(/\s+/).filter(Boolean);
+  return {
+    ...base,
+    who: "parent",
+    sport: base.sport ?? "Soccer",
+    email: camp.email || known?.email || base.email,
+    first: base.first || first,
+    last: base.last || rest.join(" "),
+    phone: base.phone || normalizeStoredPhone(known?.phone),
+    ath: base.ath || known?.athleteFirst || "",
+  };
+};
+
 export const SignUpFlow = ({
   inviteToken,
   joinCoachId,
   onSaving,
+  camp = null,
 }: {
   inviteToken: string | null;
   joinCoachId: string | null;
   /** Called before the account is verified or saved, so Auth doesn't navigate away mid-save. */
   onSaving?: () => void;
+  camp?: CampFinishParams | null;
 }) => {
   const { user, refreshUserProfile, signOut } = useAuth();
   const { toast } = useToast();
@@ -261,10 +285,11 @@ export const SignUpFlow = ({
   // here too. Saved answers skip to the account step; otherwise the questions start with the
   // name and email filled in.
   const [answers, setAnswers] = useState<SignupAnswers>(() => {
-    const base = readSignupAnswers() ?? emptySignupAnswers();
+    const saved = readSignupAnswers() ?? emptySignupAnswers();
+    const base = camp ? campAnswers(saved, camp) : saved;
     return user ? prefillFromUser(base, user) : base;
   });
-  const [step, setStep] = useState<StepId>(() => initialSignupStep(Boolean(user), readSignupAnswers()));
+  const [step, setStep] = useState<StepId>(() => (camp ? "account" : initialSignupStep(Boolean(user), readSignupAnswers())));
   const prefilledFor = useRef<string | null>(user?.id ?? null);
   const [showPassword, setShowPassword] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -306,6 +331,18 @@ export const SignUpFlow = ({
   }, [user, step]);
 
   const patch = (partial: Partial<SignupAnswers>) => setAnswers((cur) => ({ ...cur, ...partial }));
+
+  // Where email confirmation and Google come back to: this flow, still in camp mode.
+  const returnQuery = (() => {
+    const q = new URLSearchParams({ mode: "signup" });
+    if (inviteToken) q.set("invite", inviteToken);
+    if (camp) {
+      q.set("camp_signup", camp.signupId);
+      if (camp.email) q.set("email", camp.email);
+    }
+    return q.toString();
+  })();
+  const campBirthYear = camp ? readCampFinish(camp.signupId)?.birthYear ?? null : null;
 
   const go = (id: StepId) => setStep(id);
 
@@ -394,7 +431,7 @@ export const SignUpFlow = ({
       password: answers.pw,
       name,
       metadata: { name, persona_type: persona, phone_number: answers.phone },
-      emailRedirectTo: `${window.location.origin}/auth?mode=signup${inviteToken ? `&invite=${inviteToken}` : ""}`,
+      emailRedirectTo: `${window.location.origin}/auth?${returnQuery}`,
     });
     setBusy(false);
     if (error) {
@@ -409,7 +446,7 @@ export const SignUpFlow = ({
     writeSignupRole(roleFromWho(answers.who));
     setBusy(true);
     const { error } = await authAPI.signInWithOAuth("google", {
-      redirectTo: `${window.location.origin}/auth?mode=signup${inviteToken ? `&invite=${inviteToken}` : ""}`,
+      redirectTo: `${window.location.origin}/auth?${returnQuery}`,
     });
     setBusy(false);
     if (error) {
@@ -564,7 +601,8 @@ export const SignUpFlow = ({
       } else {
         const athFirst = isParent ? answers.ath.trim() : answers.first.trim();
         const athLast = isParent ? answers.last.trim() : answers.last.trim();
-        const dob = dobFromAgeTile(answers.age);
+        // A camp family gave the birth year; the day is unknown.
+        const dob = campBirthYear && !answers.age ? `${campBirthYear}-01-01` : dobFromAgeTile(answers.age);
         const pathway = answers.level ? [LEVEL_TO_PATHWAY[answers.level] ?? answers.level] : [];
         const athleteFields = {
           full_name: `${athFirst} ${athLast}`.trim(),
@@ -619,6 +657,15 @@ export const SignUpFlow = ({
         if (!inviteToken && joinCoachId) {
           await createAthleteInitiatedReferral(joinCoachId);
           clearJoinCoach();
+        }
+        if (camp) {
+          // The camp is on their Home; AuthContext links the sign-up to the account.
+          clearCampFinish();
+          clearSignupSession();
+          await refreshUserProfile();
+          toast({ title: "Your account is ready", description: "The camp is on your schedule." });
+          navigate(ROUTES.DASHBOARD, { replace: true });
+          return;
         }
         await loadMatches();
         clearSignupSession();
@@ -1106,9 +1153,13 @@ export const SignUpFlow = ({
     body = (
       <div className="flex flex-col gap-3">
         <Head
-          title={googleMode ? "Almost done" : isCoach ? "Create your coach account" : "Save your matches"}
+          title={camp ? "Finish your account" : googleMode ? "Almost done" : isCoach ? "Create your coach account" : "Save your matches"}
           sub={
-            googleMode
+            camp
+              ? googleMode
+                ? "One more detail and the camp is on your schedule."
+                : "We already have your details, so it's one step."
+              : googleMode
               ? "A couple of details Google doesn't share with us."
               : isCoach
                 ? "Free to set up. Your profile stays private until you go live."
@@ -1117,7 +1168,7 @@ export const SignUpFlow = ({
                   : "Create your account to see your coaches."
           }
         />
-        {!isCoach && !googleMode && summaryPills.length ? (
+        {!camp && !isCoach && !googleMode && summaryPills.length ? (
           <div className="flex flex-wrap gap-1.5">
             {summaryPills.map((p) => (
               <BrandPill key={p} tone="blue">
@@ -1216,7 +1267,7 @@ export const SignUpFlow = ({
           {busy ? "Working…" : "Complete signup"}
           <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
         </button>
-        {!googleMode ? (
+        {!googleMode && !camp ? (
           <button type="button" className={cn(textButton, "self-center")} onClick={back}>
             Back
           </button>

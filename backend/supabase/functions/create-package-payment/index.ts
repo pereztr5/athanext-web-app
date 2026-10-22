@@ -161,17 +161,24 @@ serve(async (req) => {
         if (!Number.isFinite(capacity)) {
           return json({ error: "Could not check how many spots are left. Try again." }, 500);
         }
-        const { count, error: countError } = await admin
-          .from("package_purchases")
-          .select("id", { count: "exact", head: true })
-          .eq("package_id", packageData.id)
-          .in("status", ["active", "expired", "completed"]);
-        if (countError) {
-          console.error("Camp capacity check failed", countError);
-          return json({ error: "Could not check how many spots are left. Try again." }, 500);
-        }
-        if ((count ?? 0) >= capacity) {
-          return json({ error: "This camp is full" }, 409);
+        // camp_spots_left counts these purchases plus camp sign-up registrations (camp-signup),
+        // so the two ways in never oversell. Before that migration: purchases only, as before.
+        const { data: spotsLeft, error: spotsError } = await admin.rpc("camp_spots_left", { p_camp_id: packageData.id });
+        if (!spotsError && typeof spotsLeft === "number") {
+          if (spotsLeft <= 0) return json({ error: "This camp is full" }, 409);
+        } else {
+          const { count, error: countError } = await admin
+            .from("package_purchases")
+            .select("id", { count: "exact", head: true })
+            .eq("package_id", packageData.id)
+            .in("status", ["active", "expired", "completed"]);
+          if (countError) {
+            console.error("Camp capacity check failed", countError);
+            return json({ error: "Could not check how many spots are left. Try again." }, 500);
+          }
+          if ((count ?? 0) >= capacity) {
+            return json({ error: "This camp is full" }, 409);
+          }
         }
       }
     }

@@ -54,34 +54,13 @@ export interface Camp {
   spotsLeft: number | null;
   coCoaches: CampCoach[];
   coCoachIds: string[];
+  included: string[];
+  direct: boolean;
+  slug: string | null;
+  published: boolean;
   sessionCount: number;
   durationMinutes: number;
   validityDays: number;
-}
-
-export interface CampInput {
-  name: string;
-  description: string | null;
-  totalPriceCents: number;
-  isActive: boolean;
-  startsOn: string | null;
-  endsOn: string | null;
-  dailyStart: string | null;
-  dailyEnd: string | null;
-  location: string | null;
-  capacity: number | null;
-  ageMin: number | null;
-  ageMax: number | null;
-  coCoachIds: string[];
-  sessionCount: number;
-  durationMinutes: number;
-  validityDays: number;
-}
-
-export interface CampTeammates {
-  coaches: CampCoach[];
-  /** True when get_camp_teammates is not in the database yet. */
-  unavailable: boolean;
 }
 
 export interface PackagePurchase {
@@ -152,20 +131,6 @@ const missingFunction = (error: LooseError) => {
   return error.code === "PGRST202" || error.code === "42883" || /could not find the function/i.test(message);
 };
 
-const campSaveError = (error: LooseError): ApiError => {
-  if (error.code === "PGRST204" || error.code === "42703") {
-    return {
-      code: error.code,
-      message: "Camps are not available yet. The database update has not been applied.",
-      status: 400,
-    };
-  }
-  if (error.code === "42501" || error.code === "PGRST116") {
-    return { code: error.code, message: "You don't have permission to save this camp.", status: 403 };
-  }
-  return { code: error.code || "UNKNOWN_ERROR", message: error.message || "That didn't save. Try again.", status: 400 };
-};
-
 const parseCoaches = (value: unknown): CampCoach[] => {
   if (!Array.isArray(value)) return [];
   return value.flatMap((item) => {
@@ -212,34 +177,15 @@ export const parseCamp = (raw: unknown): Camp | null => {
     spotsLeft,
     coCoaches,
     coCoachIds: coCoachIds.length ? coCoachIds : coCoaches.map((coach) => coach.id),
+    included: Array.isArray(row.features) ? row.features.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [],
+    direct: row.camp_pay_direct === true,
+    slug: asString(row.camp_slug),
+    published: typeof row.camp_published_at === "string" && row.camp_published_at.length > 0,
     sessionCount: asInt(row.session_count) ?? 1,
     durationMinutes: asInt(row.duration_minutes) ?? 60,
     validityDays: asInt(row.validity_days) ?? 1,
   };
 };
-
-const campWriteRow = (input: CampInput): Record<string, unknown> => ({
-  kind: "camp",
-  package_name: input.name,
-  description: input.description,
-  session_count: input.sessionCount,
-  duration_minutes: input.durationMinutes,
-  total_price: input.totalPriceCents,
-  price_per_session: input.sessionCount > 0 ? Math.round(input.totalPriceCents / input.sessionCount) : null,
-  validity_days: input.validityDays,
-  features: [],
-  is_active: input.isActive,
-  camp_starts_on: input.startsOn,
-  camp_ends_on: input.endsOn,
-  camp_daily_start: input.dailyStart,
-  camp_daily_end: input.dailyEnd,
-  camp_location: input.location,
-  camp_capacity: input.capacity,
-  camp_age_min: input.ageMin,
-  camp_age_max: input.ageMax,
-  co_coach_ids: input.coCoachIds,
-  updated_at: new Date().toISOString(),
-});
 
 const functionErrorMessage = async (error: unknown): Promise<string> => {
   const fallback = error instanceof Error ? error.message : "Could not start checkout.";
@@ -501,30 +447,6 @@ export const packagesAPI = {
     }
     const rows = Array.isArray(fallback.data) ? fallback.data : [];
     return { data: rows.map(parseCamp).filter((camp): camp is Camp => camp !== null), error: null };
-  },
-
-  /** Other coaches in the signed-in coach's organizations. */
-  async listCampTeammates(): Promise<ApiResponse<CampTeammates>> {
-    const { data, error } = await loose.rpc("get_camp_teammates");
-    if (error) {
-      if (missingFunction(error)) return { data: { coaches: [], unavailable: true }, error: null };
-      return { data: null, error: { code: error.code || "UNKNOWN_ERROR", message: error.message, status: 400 } };
-    }
-    return { data: { coaches: parseCoaches(data), unavailable: false }, error: null };
-  },
-
-  /** Insert or update a camp. Does not report success unless the saved row comes back. */
-  async saveCamp(coachId: string, input: CampInput, campId?: string): Promise<ApiResponse<Camp>> {
-    const row = campWriteRow(input);
-    const result = campId
-      ? await loose.from("coach_packages").update(row).eq("id", campId).select("*").single()
-      : await loose.from("coach_packages").insert({ ...row, coach_id: coachId }).select("*").single();
-    if (result.error) return { data: null, error: campSaveError(result.error) };
-    const camp = parseCamp(result.data);
-    if (!camp) {
-      return { data: null, error: { code: "INVALID", message: "The camp did not save.", status: 500 } };
-    }
-    return { data: camp, error: null };
   },
 
   /** Stop renewing a monthly group pass at the end of the current period. */

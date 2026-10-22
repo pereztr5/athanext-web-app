@@ -204,7 +204,7 @@ export default function CreateSession() {
         />
       ) : null}
 
-      {coachId ? <CampEditorDialog open={campOpen} camp={null} coachId={coachId} onOpenChange={setCampOpen} /> : null}
+      {coachId ? <CampEditorDialog open={campOpen} campId={null} onOpenChange={setCampOpen} /> : null}
 
       {schedule.data && coachId ? (
         <SessionDialog

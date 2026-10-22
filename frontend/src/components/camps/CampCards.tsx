@@ -5,7 +5,8 @@ import { Calendar, Clock, MapPin, Users } from "@/components/icons";
 import { secondaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { CampBubbles } from "./CampBubbles";
-import { campEnded, campMoney, formatAges, formatCampDates, formatDailyTime, spotsLabel, todayUtc } from "./format";
+import { formatCampDates } from "@/utils/camps";
+import { campEnded, campMoney, formatAges, formatDailyTime, spotsLabel, todayUtc } from "./format";
 import { useCamps } from "./useCamps";
 
 export type CampRegisterResult = { redirect: boolean; message: string | null };

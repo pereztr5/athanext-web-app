@@ -92,3 +92,9 @@ verify_jwt = true
 # signed-in caller, and only when the account is in that state.
 [functions.account-emails]
 verify_jwt = true
+
+# Camp sign-up without an account (card Checkout or pay the coach directly) and the coach's camp
+# emails. Families are not signed in, so the function validates and rate limits them itself and
+# checks the caller's login for coach actions. Paid Checkouts settle in create-booking-payment.
+[functions.camp-signup]
+verify_jwt = false

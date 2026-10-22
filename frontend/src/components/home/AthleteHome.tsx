@@ -14,6 +14,7 @@ import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigge
 import { ToastAction } from "@/components/ui/toast";
 import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { MyCampsCard } from "@/components/camps/MyCampsCard";
 import { card, dangerButton, dialogContent, iconButton, input, label, meta, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { PATHWAY_TAGS } from "@/constants/pathwayTags";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -138,6 +139,8 @@ export const AthleteHome = () => {
             </div>
           </section>
         ) : null}
+
+        <MyCampsCard />
 
         <div className="grid grid-cols-1 items-start gap-5 md:grid-cols-2">
           <section className={card}>

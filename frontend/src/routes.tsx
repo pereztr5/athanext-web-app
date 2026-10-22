@@ -24,6 +24,7 @@ import About from "./pages/About";
 import PrivacyPolicy from "./pages/PrivacyPolicy";
 import TermsAndConditions from "./pages/TermsAndConditions";
 import CoachTerms from "./pages/CoachTerms";
+import CampSignup, { LegacyCampRedirect } from "./pages/CampSignup";
 import ContactUs from "./pages/ContactUs";
 import Help from "./pages/Help";
 import OrganizationProfile from "./pages/OrganizationProfile";
@@ -74,6 +75,11 @@ export const ROUTES = {
   SOCCER: "/soccer",
   ROWING: "/rowing",
   COACH_PROFILE: "/coach/:id",
+  // Old camp links and the Stripe return URLs from camp-signup (still /camps/...) redirect to CAMP_PAGE.
+  CAMP_SIGNUP: "/camps/:coachSlug/:campSlug",
+  // athanext.com/<coach>/<camp>. Two dynamic segments: React Router ranks every static or
+  // partly static route above it, so it only matches paths no other route claims.
+  CAMP_PAGE: "/:coachSlug/:campSlug",
   COACH_PRICING: "/coach/:id/pricing",
   BOOKING_CONFIRMATION: "/booking-confirmation",
   PACKAGE_CONFIRMATION: "/package-confirmation",
@@ -139,6 +145,7 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.GROUP_OFFER, element: <GroupOffer /> },
   { path: ROUTES.COACH_PRICING, element: <CoachProfile /> },
   { path: ROUTES.COACH_PROFILE, element: <CoachProfile /> },
+  { path: ROUTES.CAMP_SIGNUP, element: <LegacyCampRedirect /> },
   { path: ROUTES.ORGANIZATION, element: <OrganizationProfile /> },
   { path: ROUTES.INVITE, element: <InviteClaim /> },
   { path: ROUTES.GEAR, element: <Gear /> },
@@ -150,6 +157,8 @@ export const DUAL_CHROME_ROUTES: AppRoute[] = [
   { path: ROUTES.TERMS_AND_CONDITIONS, element: <TermsAndConditions /> },
   { path: ROUTES.COACH_TERMS, element: <CoachTerms /> },
   { path: ROUTES.BECOME_COACH, element: <BecomeACoach /> },
+  // Keep last: the public camp page, after every static route.
+  { path: ROUTES.CAMP_PAGE, element: <CampSignup /> },
 ];
 
 export const AUTH_FLOW_ROUTES: AppRoute[] = [

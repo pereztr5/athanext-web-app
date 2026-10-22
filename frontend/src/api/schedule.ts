@@ -60,6 +60,20 @@ export interface ScheduleSession {
   isDraft: boolean;
   seriesId: string | null;
   bookings: ScheduleBooking[];
+  /** A camp day (one group session per camp group per day). Never booked one by one. */
+  camp: ScheduleCampDay | null;
+}
+
+export interface ScheduleCampDay {
+  id: string;
+  name: string;
+  slug: string | null;
+  /** 1-based day of the camp. */
+  dayIndex: number;
+  daysTotal: number;
+  groupName: string | null;
+  groupSpots: number | null;
+  signedUp: number | null;
 }
 
 export interface ScheduleSeries {
@@ -179,6 +193,18 @@ const mapSession = (row: Row): ScheduleSession => ({
   details: (row.details as SessionDetails) ?? {},
   isDraft: Boolean(row.is_draft),
   seriesId: row.series_id ?? null,
+  camp: row.camp
+    ? {
+        id: row.camp.id,
+        name: row.camp.name || "Camp",
+        slug: row.camp.slug ?? null,
+        dayIndex: Number(row.camp_day_index) || 1,
+        daysTotal: Number(row.camp.days_total) || 1,
+        groupName: row.camp.group_name ?? null,
+        groupSpots: row.camp.group_spots != null ? Number(row.camp.group_spots) : null,
+        signedUp: row.camp.signed_up != null ? Number(row.camp.signed_up) : null,
+      }
+    : null,
   bookings: ((row.bookings as Row[]) ?? []).map((b) => ({
     id: b.id,
     athleteId: b.athlete_id,

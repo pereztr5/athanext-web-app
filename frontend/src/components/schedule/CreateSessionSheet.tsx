@@ -40,7 +40,7 @@ export const CreateSessionSheet = ({
   });
 
   const [campOpen, setCampOpen] = useState(false);
-  const camp = coachId ? <CampEditorDialog open={campOpen} camp={null} coachId={coachId} onOpenChange={setCampOpen} /> : null;
+  const camp = coachId ? <CampEditorDialog open={campOpen} campId={null} onOpenChange={setCampOpen} /> : null;
   const pickCamp = () => {
     setCampOpen(true);
     onOpenChange(false);

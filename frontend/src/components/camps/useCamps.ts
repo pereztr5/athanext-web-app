@@ -11,14 +11,3 @@ export const useCamps = (coachId: string | undefined, includeInactive = false) =
       return res.data ?? [];
     },
   });
-
-export const useCampTeammates = (enabled: boolean) =>
-  useQuery({
-    queryKey: ["camp-teammates"],
-    enabled,
-    queryFn: async () => {
-      const res = await packagesAPI.listCampTeammates();
-      if (res.error) throw new Error(res.error.message);
-      return res.data ?? { coaches: [], unavailable: false };
-    },
-  });

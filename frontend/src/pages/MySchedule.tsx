@@ -212,7 +212,7 @@ const MySchedulePage = () => {
   const handlers: ScheduleViewHandlers = {
     onOpenSession: (session) => {
       const kind = sessionKind(session);
-      if (kind === "booked" || kind === "request") navigate(`/sessions/${session.id}`);
+      if (!session.camp && (kind === "booked" || kind === "request")) navigate(`/sessions/${session.id}`);
       else setOpenSession(session);
     },
     onRespond: (bookingId, accept) => respond.mutate({ bookingId, accept }),

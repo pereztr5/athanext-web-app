@@ -38,9 +38,8 @@ import { ServiceEditorDialog } from "./ServiceEditorDialog";
 import { useSaveServices, type StepName } from "./hooks";
 import { Avatar } from "./parts";
 import { caption, chip, coachTitle, money, sessionTypesFromWhere } from "./shared";
-import type { Camp } from "@/api/packages";
-import { CampEditorDialog } from "@/components/camps/CampEditorDialog";
 import { CampEditorList } from "@/components/camps/CampEditorList";
+import { useCampDialogs } from "@/components/camps/useCampDialogs";
 import { packageKind } from "@/components/camps/format";
 
 const BIO_MAX = 600;
@@ -125,7 +124,7 @@ export const OwnProfileEditor = ({
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<ProfileService | null>(null);
   const [removingPackage, setRemovingPackage] = useState<CoachPackage | null>(null);
-  const [campDraft, setCampDraft] = useState<Camp | null | undefined>(undefined);
+  const campDialogs = useCampDialogs();
 
   useEffect(() => () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
@@ -396,11 +395,11 @@ export const OwnProfileEditor = ({
             </div>
           </section>
 
-          <section className={card} aria-label="Sessions and packages">
+          <section className={card} aria-label="Sessions, packages and camps">
             <div className="flex items-center justify-between gap-3">
               <h2 className={h2}>
                 <Layers strokeWidth={1.5} aria-hidden="true" />
-                Sessions and packages
+                Sessions, packages and camps
               </h2>
               {onSharePricing ? (
                 <button type="button" className={cn(secondaryButton, smallButton)} onClick={onSharePricing}>
@@ -441,17 +440,13 @@ export const OwnProfileEditor = ({
                 <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
                 Add package
               </button>
-              <button
-                type="button"
-                className="flex min-h-[80px] items-center justify-center gap-2 rounded-control border border-dashed border-light-600 bg-light-400 text-label-sm text-primary hover:border-primary-300"
-                onClick={() => setCampDraft(null)}
-              >
-                <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
-                Add camp
-              </button>
             </div>
 
-            <CampEditorList coachId={coach.id} mostBookedId={mostBookedId} onEdit={(camp) => setCampDraft(camp)} />
+            <CampEditorList
+              coverFallback={coach.profile_image_url || coach.image_url || null}
+              onEdit={campDialogs.openEditor}
+              onRegistrations={campDialogs.openRegistrations}
+            />
 
             <span className={cn(label, "-mb-1.5")}>Single sessions</span>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">
@@ -578,14 +573,6 @@ export const OwnProfileEditor = ({
         }}
       />
       <ServiceEditorDialog service={editingService} onClose={() => setEditingService(null)} onSave={saveService} onDelete={deleteService} />
-      <CampEditorDialog
-        open={campDraft !== undefined}
-        camp={campDraft ?? null}
-        coachId={coach.id}
-        onOpenChange={(open) => {
-          if (!open) setCampDraft(undefined);
-        }}
-      />
     </div>
   );
 };

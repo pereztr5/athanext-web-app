@@ -60,6 +60,13 @@ const Auth = () => {
   const invitePath = inviteToken ? `/invite/${inviteToken}` : null;
   // A coach's share link (ATH-78): the sign-up asks to join that coach's athletes.
   const coachParam = searchParams.get("coach");
+  // "Finish your account" after a camp sign-up: the parent's email and the sign-up to link.
+  const campSignupParam = searchParams.get("camp_signup");
+  const campEmailParam = searchParams.get("email");
+  const campFinish = useMemo(
+    () => (campSignupParam && /^[0-9a-f-]{36}$/i.test(campSignupParam) ? { signupId: campSignupParam, email: campEmailParam } : null),
+    [campSignupParam, campEmailParam],
+  );
   const joinCoachId = useMemo(() => (inviteToken ? null : readJoinCoach(coachParam)), [inviteToken, coachParam]);
   const { data: joinCoachName } = useQuery({
     queryKey: ["join-coach-name", joinCoachId],
@@ -382,6 +389,7 @@ const Auth = () => {
                 <SignUpFlow
                   inviteToken={inviteToken}
                   joinCoachId={joinCoachId}
+                  camp={campFinish}
                   onSaving={() => {
                     signupSavingRef.current = true;
                   }}

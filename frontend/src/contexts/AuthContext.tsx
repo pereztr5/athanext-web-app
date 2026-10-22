@@ -6,6 +6,7 @@ import { type UserProfile } from "@/api/userProfiles";
 import { createContext, useContext, useState, useEffect, ReactNode, useRef } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { planAuthEvent } from "@/utils/authEvents";
+import { campsAPI } from "@/api/camps";
 
 // Helper to check if profile is complete based on required fields
 const isProfileCompleteHelper = (userProfile: UserProfile | null): boolean => {
@@ -196,6 +197,29 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       }
     }
   }, [userProfile, userName, userImg]);
+
+  // Camp sign-ups made with this email before the account existed: link them to the account
+  // once per session, in the background. A finished family account with a confirmed email only.
+  const claimUserId = user?.id ?? null;
+  const emailConfirmed = Boolean(user?.email_confirmed_at);
+  const familyReady =
+    profileReady && userProfile?.is_profile_completed === true && userProfile.persona_type !== "coach" && !userProfile.coach_id;
+  useEffect(() => {
+    if (!claimUserId || !emailConfirmed || !familyReady) return;
+    const key = `athanext:camp-claim:${claimUserId}`;
+    try {
+      if (sessionStorage.getItem(key)) return;
+      sessionStorage.setItem(key, "1");
+    } catch {
+      // No storage: claim anyway, it is safe to repeat.
+    }
+    campsAPI
+      .claim()
+      .then((result) => {
+        if (result.claimed > 0 || result.athletes_created > 0) void queryClient.invalidateQueries({ queryKey: ["my-camps"] });
+      })
+      .catch((err) => console.warn("Linking camp sign-ups failed", err));
+  }, [claimUserId, emailConfirmed, familyReady, queryClient]);
 
   const signIn = async (email: string, password: string) => {
     return authActions.signIn(email, password, toast);

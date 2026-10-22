@@ -20,6 +20,7 @@ SUPABASE_DIR="$ROOT/backend/supabase"
 FUNCTIONS="
 account-emails                account-emails                on
 add-client-referral           add-client-referral           on
+camp-signup                   camp-signup                   off
 admin-accounts                admin-accounts                on
 coach-billing                 coach-billing                 off
 coach-invoices                coach-invoices                on

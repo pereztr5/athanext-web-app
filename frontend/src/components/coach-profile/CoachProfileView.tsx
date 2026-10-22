@@ -16,6 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import type { Brand } from "@/utils/brands";
 import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
+import { campPath } from "@/utils/camps";
 import { CoachIntroCallCard } from "@/components/intro-calls";
 import { WhoCard } from "./family/WhoCard";
 import { AboutCard } from "./family/AboutCard";
@@ -192,6 +193,10 @@ export function CoachProfileView({
     if (isOwn) {
       toast({ title: "This is your own profile", description: "Families register for your camps here." });
       return { redirect: false, message: null };
+    }
+    if (camp.slug && coach.slug) {
+      navigate(campPath(coach.slug, camp.slug));
+      return { redirect: true, message: null };
     }
     if (!user) {
       navigate(`${ROUTES.AUTH}?mode=signin`, { state: { from: location } });
