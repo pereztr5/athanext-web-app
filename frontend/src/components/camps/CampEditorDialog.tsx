@@ -22,6 +22,7 @@ import {
   campDayCount,
   campMissing,
   campStepAnswered,
+  campWaiverUrl,
   draftFromCamp,
   draftToPayload,
   emptyCampDraft,
@@ -83,20 +84,20 @@ const viewFromDraft = (draft: CampDraft, coach: CoachInfo, taken: Record<string,
   included: draft.included.map((i) => i.trim()).filter(Boolean),
 });
 
-/** The pay step as families see it, under the preview: the card fee, and the pay-directly link. */
+/** The pay step as families see it, under the preview: card processing, and the pay-directly link. */
 const PayPreview = ({ draft }: { draft: CampDraft }) => {
   const { config } = useFeeConfig();
   const cents = parsePriceCents(draft.price);
-  // A coach's own link: no marketplace fee, card processing only.
-  const fee = cents && config ? feeLine(cents, "package", config, true) : null;
+  // Camps have no platform fee for anyone: card processing only.
+  const fee = cents && config ? feeLine(cents, "camp", config) : null;
   return (
     <div className="flex flex-col gap-2">
       <span className="text-label-xsm text-dark-300">Pay with</span>
       <div className="flex items-center justify-between gap-3 rounded-control border border-primary bg-primary-50 px-3 py-2.5">
         <span className="text-label-sm">Card, Apple Pay or Google Pay</span>
-        {fee ? <span className="flex-none text-caption text-dark-300">+ {formatCampMoney(fee.totalCents - fee.listCents)} fee</span> : null}
+        {fee ? <span className="flex-none text-caption text-dark-300">+ {formatCampMoney(fee.totalCents - fee.listCents)} card processing</span> : null}
       </div>
-      {draft.payDirect ? <span className="text-caption text-primary">Paying in cash? (your own clients only)</span> : null}
+      {draft.payDirect ? <span className="text-caption text-primary">Paying in cash?</span> : null}
     </div>
   );
 };
@@ -459,7 +460,7 @@ export const CampEditorDialog = ({
               >
                 <span className="flex flex-col gap-0.5">
                   <span className={sectionTitle}>More details</span>
-                  <span className={meta}>Cover photo, what&apos;s included, a linked coach, paying you directly</span>
+                  <span className={meta}>Cover photo, what&apos;s included, a linked coach, paying you directly, a waiver</span>
                 </span>
                 <span className={cn(textButton)}>{showDetails ? "Hide" : "Show"}</span>
               </button>
@@ -526,7 +527,8 @@ const Review = ({ draft, view, onEdit }: { draft: CampDraft; view: CampView; onE
           draft.coverUrl ? "Cover photo" : "Your profile photo as the cover",
           draft.included.filter((i) => i.trim()).length ? plural(draft.included.filter((i) => i.trim()).length, "included item") : null,
           draft.linkedCoach ? `With ${draft.linkedCoach.name}` : null,
-          draft.payDirect ? "Your clients can pay you directly" : null,
+          draft.payDirect ? "Families can pay you directly" : null,
+          campWaiverUrl(draft.waiverUrl) ? "Waiver" : null,
         ]
           .filter(Boolean)
           .join(" · ") || "None",

@@ -139,7 +139,9 @@ const PackageConfirmation = () => {
   const coachName = coach?.name || "Your coach";
   const priceLabel = useMemo(() => {
     if (!pkg) return "-";
-    const fees = feeConfig ? feeLine(toCents(pkg.total_price / 100), "package", feeConfig, waived) : null;
+    // Camps: no platform fee for anyone (create-package-payment), card processing only.
+    const kind = pkg.kind === "camp" ? "camp" : "package";
+    const fees = feeConfig ? feeLine(toCents(pkg.total_price / 100), kind, feeConfig, waived) : null;
     return feeAmountText(Boolean(fees), feeError, `$${((fees?.totalCents ?? 0) / 100).toFixed(2)}`);
   }, [pkg, feeConfig, feeError, waived]);
 

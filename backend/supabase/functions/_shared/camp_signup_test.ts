@@ -6,7 +6,7 @@ import {
   campErrorStatus,
   campMetadata,
   campPath,
-  campPlatformWaived,
+  CAMP_PLATFORM_WAIVED,
   campSource,
   clientIp,
   finishAccountUrl,
@@ -114,29 +114,28 @@ Deno.test("source: only src=link is the coach's own link", () => {
   assertEquals(campSource("anything"), "marketplace");
 });
 
-Deno.test("fee by source: link or client pays card processing only, marketplace pays the platform fee", () => {
-  assertEquals(campPlatformWaived("link", false), true);
-  assertEquals(campPlatformWaived("marketplace", true), true);
-  assertEquals(campPlatformWaived("marketplace", false), false);
-
-  const own = campCheckoutFees(26000, 2, true, config);
-  assertEquals(own.platformCents, 0);
-  assert(own.processingCents > 0);
-  assertEquals(own.lines.length, 2);
-  assertEquals(own.lines.reduce((n, l) => n + l.totalCents, 0), own.totalCents);
-
-  const market = campCheckoutFees(26000, 2, false, config);
-  assertEquals(market.platformCents, 2 * 2600);
-  // Same numbers as a package of the same price: one fee module.
-  const pkg = checkoutFees([{ listCents: 26000, kind: "package" }, { listCents: 26000, kind: "package" }], config);
-  assertEquals(market.totalCents, pkg.totalCents);
+Deno.test("no platform fee on any camp: card processing only, same for every source", () => {
+  assertEquals(CAMP_PLATFORM_WAIVED, true);
+  const fees = campCheckoutFees(26000, 2, config);
+  assertEquals(fees.platformCents, 0);
+  assertEquals(fees.listCents, 52000);
+  assert(fees.processingCents > 0);
+  assertEquals(fees.lines.length, 2);
+  assertEquals(fees.lines.reduce((n, l) => n + l.totalCents, 0), fees.totalCents);
+  // round((52000 + 30) / 0.971) = 53584: 2.9% + $0.30 grossed up, once per Checkout.
+  assertEquals(fees.totalCents, 53584);
+  // Same numbers as an existing client's package of the same price: one fee module.
+  const waived = checkoutFees(
+    [{ listCents: 26000, kind: "package", platformWaived: true }, { listCents: 26000, kind: "package", platformWaived: true }],
+    config,
+  );
+  assertEquals(fees.totalCents, waived.totalCents);
+  assertEquals(campCheckoutFees(26000, 0, config).totalCents, 0);
 });
 
-Deno.test("direct pay only when the camp allows it and the family is the coach's own", () => {
-  assertEquals(campDirectAllowed(true, "link", false), true);
-  assertEquals(campDirectAllowed(true, "marketplace", true), true);
-  assertEquals(campDirectAllowed(true, "marketplace", false), false);
-  assertEquals(campDirectAllowed(false, "link", true), false);
+Deno.test("paying the coach directly is offered to every family when the camp allows it", () => {
+  assertEquals(campDirectAllowed(true), true);
+  assertEquals(campDirectAllowed(false), false);
 });
 
 Deno.test("camp metadata round-trips and ignores other Checkouts", () => {

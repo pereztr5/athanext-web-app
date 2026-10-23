@@ -186,9 +186,12 @@ serve(async (req) => {
     const campWhen = [packageData.camp_starts_on, packageData.camp_ends_on].filter(Boolean).join(" to ");
     const campLine = [packageData.camp_location, campWhen].filter(Boolean).join(" · ");
 
-    // Same referral waiver as booking: confirmed coach-client pair for an athlete the caller owns.
-    let platformWaived = false;
-    const { data: athleteRows } = await supabaseClient.from("athlete_profiles").select("id").eq("user_id", user.id).limit(20);
+    // Camps carry no platform fee for anyone (card processing only). Packages: same referral
+    // waiver as booking, a confirmed coach-client pair for an athlete the caller owns.
+    let platformWaived = isCamp;
+    const { data: athleteRows } = isCamp
+      ? { data: [] }
+      : await supabaseClient.from("athlete_profiles").select("id").eq("user_id", user.id).limit(20);
     const athleteIds = (athleteRows ?? []).map((a) => a.id as string);
     if (athleteIds.length) {
       const { data: waiverRows } = await supabaseClient
@@ -203,7 +206,7 @@ serve(async (req) => {
 
     // coach_packages.total_price is stored in cents.
     const listPrice = Number(packageData.total_price) / 100;
-    const unitAmount = feeLine(toCents(listPrice), "package", fees, platformWaived).totalCents;
+    const unitAmount = feeLine(toCents(listPrice), isCamp ? "camp" : "package", fees, platformWaived).totalCents;
 
     let customer;
     const existingCustomers = await stripe.customers.list({

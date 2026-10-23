@@ -23,7 +23,9 @@ import { coachPricingPath } from "@/utils/coachSlug";
 import {
   CAMP_MAX_ATHLETES,
   campFormAthletes,
+  campReviewPayment,
   campSourceFromSearch,
+  campWaiverUrl,
   emptyAthlete,
   emptyCampForm,
   formatCampMoney,
@@ -414,6 +416,7 @@ const Details = ({
   onNext: () => void;
 }) => {
   const coachFirst = firstName(camp.coach.name);
+  const waiverHref = campWaiverUrl(camp.waiver_url);
   const footerClass = useFooterClass();
   const clear = (key: string) =>
     setErrors((cur) => {
@@ -549,7 +552,21 @@ const Details = ({
             }}
           />
           <span>
-            I agree to {coachFirst}&apos;s camp waiver and to photos of my athlete being used by {camp.coach.name}.
+            I agree to {coachFirst}&apos;s{" "}
+            {waiverHref ? (
+              <a
+                href={waiverHref}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-primary underline underline-offset-2 hover:text-primary-700"
+                onClick={(e) => e.stopPropagation()}
+              >
+                camp waiver
+              </a>
+            ) : (
+              "camp waiver"
+            )}{" "}
+            and to photos of my athlete being used by {camp.coach.name}.
           </span>
         </label>
         <FieldError id="waiver-error" text={err("waiver")} />
@@ -598,11 +615,9 @@ const Review = ({
     queryFn: () => campSignupAPI.quote({ campId: camp.id, src, athletes: count }),
     retry: 1,
   });
-  const direct = pay === "direct" && Boolean(quote.data?.direct_allowed);
+  // No platform fee on camps: card processing on the card option only.
+  const { direct, directOffered, feeCents, totalCents: total } = campReviewPayment(quote.data, pay, camp.price_cents * count);
   const card = quote.data?.card;
-  const listCents = card?.listCents ?? camp.price_cents * count;
-  const feeCents = card ? card.totalCents - card.listCents : null;
-  const total = direct ? listCents : card?.totalCents ?? null;
   const groupName = (id: string) => camp.groups.find((g) => g.id === id)?.name ?? "";
 
   return (
@@ -656,10 +671,10 @@ const Review = ({
               <b className="text-label-sm">Card, Apple Pay or Google Pay</b>
               <span className="text-caption text-dark-300">On Stripe&apos;s secure page</span>
             </span>
-            {feeCents != null ? <span className="flex-none text-caption text-dark-300">+ {formatCampMoney(feeCents)} fee</span> : null}
+            {feeCents != null ? <span className="flex-none text-caption text-dark-300">+ {formatCampMoney(feeCents)} card processing</span> : null}
           </div>
         )}
-        {quote.data?.direct_allowed ? (
+        {directOffered ? (
           <button type="button" className={cn(textButton, "min-h-[44px] self-start", !direct && "text-dark-300 hover:text-dark")} onClick={() => setPay(direct ? "card" : "direct")}>
             {direct ? "Pay by card instead" : "Paying in cash?"}
           </button>

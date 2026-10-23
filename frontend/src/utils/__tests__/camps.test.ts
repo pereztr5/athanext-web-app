@@ -25,6 +25,11 @@ import {
   pickCampDay,
   runAgainDraft,
   validateCampForm,
+  CAMP_WAIVER_MAX_BYTES,
+  campReviewPayment,
+  campWaiverFileError,
+  campWaiverUrl,
+  campWaiverUrlError,
   type CampDraft,
   type CampForm,
 } from "@/utils/camps";
@@ -265,5 +270,75 @@ describe("run a camp again", () => {
       ["Youth", "10:30", "12:00", 12, undefined],
     ]);
     expect(campMissing(draft, TODAY)).toEqual(["dates"]);
+  });
+});
+
+describe("waiver", () => {
+  it("takes https links only, like save_camp", () => {
+    expect(campWaiverUrl(" https://example.com/waiver.pdf ")).toBe("https://example.com/waiver.pdf");
+    expect(campWaiverUrl("https://docs.google.com/document/d/abc/edit?usp=sharing")).toBe(
+      "https://docs.google.com/document/d/abc/edit?usp=sharing",
+    );
+    for (const bad of ["http://example.com/w.pdf", "javascript:alert(1)", "https://", "https://localhost/w.pdf", "https://a b.com", "example.com/w.pdf"]) {
+      expect(campWaiverUrl(bad)).toBeNull();
+      expect(campWaiverUrlError(bad)).toBe("Add a link that starts with https://");
+    }
+    expect(campWaiverUrl(`https://example.com/${"a".repeat(1000)}`)).toBeNull();
+    expect(campWaiverUrlError("")).toBeNull();
+    expect(campWaiverUrlError("   ")).toBeNull();
+    expect(campWaiverUrl(null)).toBeNull();
+  });
+
+  it("uploads PDFs up to 10 MB", () => {
+    expect(campWaiverFileError({ name: "waiver.pdf", type: "application/pdf", size: 200_000 })).toBeNull();
+    expect(campWaiverFileError({ name: "waiver.pdf", type: "", size: 200_000 })).toBeNull();
+    expect(campWaiverFileError({ name: "waiver.png", type: "image/png", size: 200_000 })).toBe("Choose a PDF file.");
+    expect(campWaiverFileError({ name: "waiver.pdf", type: "application/pdf", size: CAMP_WAIVER_MAX_BYTES + 1 })).toBe(
+      "The waiver must be under 10 MB.",
+    );
+    expect(campWaiverFileError({ name: "waiver.pdf", type: "application/pdf", size: 0 })).not.toBeNull();
+  });
+
+  it("is optional: saved when valid, null when empty, and a bad link is listed as missing", () => {
+    const draft = { ...emptyCampDraft(), name: "Summer camp" };
+    expect(draftToPayload(draft).camp.waiver_url).toBeNull();
+    expect(campMissing(draft, TODAY)).not.toContain("a waiver link that starts with https://");
+    expect(draftToPayload({ ...draft, waiverUrl: "https://example.com/w.pdf" }).camp.waiver_url).toBe("https://example.com/w.pdf");
+    expect(campMissing({ ...draft, waiverUrl: "http://example.com/w.pdf" }, TODAY)).toContain("a waiver link that starts with https://");
+  });
+});
+
+describe("paying the coach directly", () => {
+  it("is on for new camps", () => {
+    expect(emptyCampDraft().payDirect).toBe(true);
+    expect(draftToPayload(emptyCampDraft()).camp.pay_direct).toBe(true);
+  });
+
+  it("is offered to any family when the camp allows it, with no card processing", () => {
+    const quote = {
+      direct_allowed: true,
+      card: { listCents: 50000, platformCents: 0, processingCents: 1524, totalCents: 51524 },
+    };
+    expect(campReviewPayment(quote, "card", 50000)).toEqual({
+      direct: false,
+      directOffered: true,
+      listCents: 50000,
+      feeCents: 1524,
+      totalCents: 51524,
+    });
+    expect(campReviewPayment(quote, "direct", 50000)).toEqual({
+      direct: true,
+      directOffered: true,
+      listCents: 50000,
+      feeCents: null,
+      totalCents: 50000,
+    });
+    // Switch off: card only, even if "direct" was picked earlier.
+    const cardOnly = campReviewPayment({ ...quote, direct_allowed: false }, "direct", 50000);
+    expect(cardOnly.direct).toBe(false);
+    expect(cardOnly.directOffered).toBe(false);
+    expect(cardOnly.totalCents).toBe(51524);
+    // Quote still loading: no total for card yet.
+    expect(campReviewPayment(undefined, "card", 50000)).toMatchObject({ direct: false, feeCents: null, totalCents: null });
   });
 });

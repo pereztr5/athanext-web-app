@@ -41,7 +41,7 @@ export const CampDaySheet = ({
     if (!link) return;
     void navigator.clipboard
       .writeText(link)
-      .then(() => toast({ title: "Sign-up link copied", description: "Families from your link count as your clients: no marketplace fee." }))
+      .then(() => toast({ title: "Sign-up link copied", description: "Families who sign up become your clients." }))
       .catch(() => toast({ title: "Couldn't copy", description: link }));
   };
 

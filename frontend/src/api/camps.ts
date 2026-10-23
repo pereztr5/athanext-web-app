@@ -1,4 +1,5 @@
 import { supabase } from "@/integrations/supabase/client";
+import { campWaiverFileError } from "@/utils/camps";
 
 /**
  * Camps for coaches (editor, publish, registrations) and the family portal.
@@ -73,6 +74,8 @@ export type CoachCamp = {
   included: string[];
   tags: string[];
   pay_direct: boolean;
+  /** The camp waiver (https), or null. Optional until the waiver migration is live. */
+  waiver_url?: string | null;
   linked_coach: CampCoachRef | null;
   co_coach_ids: string[];
   age_min: number | null;
@@ -115,7 +118,10 @@ export type CampInputPayload = {
   cover_url?: string | null;
   included?: string[];
   tags?: string[];
+  /** Omitted: new camps on, saved camps unchanged. */
   pay_direct?: boolean;
+  /** https link or uploaded PDF; null removes it; omitted = unchanged. */
+  waiver_url?: string | null;
   linked_coach_id?: string | null;
   age_min?: number | null;
   age_max?: number | null;
@@ -291,6 +297,18 @@ export const campsAPI = {
       .from("athalink-images")
       .upload(path, file, { cacheControl: "3600", upsert: false, contentType: file.type });
     if (error) throw new CampError(error.message || "The photo didn't upload. Try again.");
+    return supabase.storage.from("athalink-images").getPublicUrl(path).data.publicUrl;
+  },
+
+  /** Camp waiver PDF (public URL for save()). Up to 10 MB. */
+  async uploadWaiver(file: File): Promise<string> {
+    const error = campWaiverFileError(file);
+    if (error) throw new CampError(error);
+    const path = `camp-waivers/${crypto.randomUUID()}.pdf`;
+    const { error: uploadError } = await supabase.storage
+      .from("athalink-images")
+      .upload(path, file, { cacheControl: "3600", upsert: false, contentType: "application/pdf" });
+    if (uploadError) throw new CampError(uploadError.message || "The waiver didn't upload. Try again.");
     return supabase.storage.from("athalink-images").getPublicUrl(path).data.publicUrl;
   },
 

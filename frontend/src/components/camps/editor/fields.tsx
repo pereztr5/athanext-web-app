@@ -4,7 +4,7 @@
  */
 import { useMemo, useRef, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Image as ImageIcon, MapPin, Plus, Search, X } from "@/components/icons";
+import { FileText, Image as ImageIcon, MapPin, Plus, Search, X } from "@/components/icons";
 import { coachesAPI } from "@/api";
 import { campsAPI, type CampCoachRef, type CoachCamp } from "@/api/camps";
 import { Calendar } from "@/components/ui/calendar";
@@ -14,6 +14,9 @@ import { input, label, meta, secondaryButton, smallButton, textButton } from "@/
 import { cn } from "@/lib/utils";
 import {
   campDayCount,
+  campWaiverLabel,
+  campWaiverUrl,
+  campWaiverUrlError,
   clampSpots,
   formatCampDates,
   formatCampDay,
@@ -491,16 +494,87 @@ const LinkCoachField = ({ draft, patch, selfId }: { draft: CampDraft; patch: Pat
 const PayDirectField = ({ draft, patch }: { draft: CampDraft; patch: Patch }) => (
   <label className="flex cursor-pointer items-start gap-3 rounded-card border border-light-525 bg-light-300 p-3.5 md:p-4">
     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <b className="text-label-sm">Let your own clients pay you directly</b>
+      <b className="text-label-sm">Let families pay you directly (cash, Zelle, Venmo)</b>
       <span className={meta}>
-        Cash or however you take payment. Their spot shows as Waiting until you mark it paid. Marketplace families always pay in the app.
+        Any family can choose it at sign-up. Their spot shows as Waiting until you mark it paid. Card payments stay in the app.
       </span>
     </span>
-    <Switch checked={draft.payDirect} onCheckedChange={(on) => patch({ payDirect: on })} aria-label="Let your own clients pay you directly" />
+    <Switch
+      checked={draft.payDirect}
+      onCheckedChange={(on) => patch({ payDirect: on })}
+      aria-label="Let families pay you directly (cash, Zelle, Venmo)"
+    />
   </label>
 );
 
-/** Optional details: cover, included, linked coach, pay directly. */
+const WaiverField = ({ draft, patch }: { draft: CampDraft; patch: Patch }) => {
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const saved = campWaiverUrl(draft.waiverUrl);
+  const linkError = campWaiverUrlError(draft.waiverUrl);
+  const uploaded = saved?.includes("/camp-waivers/") ?? false;
+  const upload = async (file: File | undefined) => {
+    if (!file) return;
+    setBusy(true);
+    setUploadError(null);
+    try {
+      patch({ waiverUrl: await campsAPI.uploadWaiver(file) });
+    } catch (err) {
+      setUploadError(err instanceof Error ? err.message : "The waiver didn't upload. Try again.");
+    } finally {
+      setBusy(false);
+      if (fileRef.current) fileRef.current.value = "";
+    }
+  };
+  return (
+    <div className={fieldBox}>
+      <label htmlFor="camp-waiver" className={label}>
+        Waiver <span className="font-normal text-dark-300">(optional)</span>
+      </label>
+      {uploaded && saved ? (
+        <div className="flex items-center gap-2.5 rounded-control border border-light-525 bg-light-300 px-2.5 py-2">
+          <FileText className="size-5 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
+          <a href={saved} target="_blank" rel="noopener noreferrer" className="min-w-0 flex-1 truncate text-label-sm underline underline-offset-2 hover:text-primary">
+            {campWaiverLabel(saved)}
+          </a>
+          <button type="button" className={cn(textButton, "text-dark-300 hover:text-dark")} onClick={() => patch({ waiverUrl: "" })}>
+            Remove
+          </button>
+        </div>
+      ) : (
+        <input
+          id="camp-waiver"
+          className={input}
+          type="url"
+          inputMode="url"
+          maxLength={1000}
+          placeholder="Paste a link, like https://…"
+          value={draft.waiverUrl}
+          aria-invalid={linkError ? "true" : undefined}
+          aria-describedby={linkError ? "camp-waiver-error" : undefined}
+          onChange={(e) => patch({ waiverUrl: e.target.value })}
+        />
+      )}
+      <div className="flex flex-wrap items-center gap-2">
+        <button type="button" className={cn(secondaryButton, smallButton)} disabled={busy} onClick={() => fileRef.current?.click()}>
+          <FileText strokeWidth={1.5} aria-hidden="true" />
+          {busy ? "Uploading…" : uploaded ? "Replace PDF" : "Upload a PDF"}
+        </button>
+        <input ref={fileRef} type="file" accept="application/pdf,.pdf" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+      </div>
+      <span className={meta}>A PDF up to 10 MB or a link. Families open it from the waiver checkbox when they sign up.</span>
+      {linkError ? (
+        <span id="camp-waiver-error" className="text-caption text-error-700">
+          {linkError}
+        </span>
+      ) : null}
+      {uploadError ? <span className="text-caption text-error-700">{uploadError}</span> : null}
+    </div>
+  );
+};
+
+/** Optional details: cover, included, linked coach, pay directly, waiver. */
 export const DetailsFields = ({
   draft,
   patch,
@@ -517,6 +591,7 @@ export const DetailsFields = ({
     <IncludedField draft={draft} patch={patch} />
     <LinkCoachField draft={draft} patch={patch} selfId={selfId} />
     <PayDirectField draft={draft} patch={patch} />
+    <WaiverField draft={draft} patch={patch} />
   </div>
 );
 

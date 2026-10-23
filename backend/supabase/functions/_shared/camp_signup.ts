@@ -1,11 +1,9 @@
 // Pure helpers for camp sign-up (camp-signup function and the Stripe webhook). No imports
 // besides fees.ts, so everything here is unit tested.
 //
-// Fee rule (same fee module as sessions and packages):
-//   the coach's own link (?src=link) or an existing client of the coach -> no platform fee,
-//   card processing only; a marketplace family -> the normal platform fee.
-// Paying the coach directly is only offered when the camp allows it and the family came from
-// the coach's link or is his client.
+// Fee rule (fees.ts, kind "camp"): no platform fee on any camp sign-up (link, marketplace or
+// added by the coach). A card payment adds card processing only; paying the coach directly adds
+// nothing. Paying the coach directly is offered to every family whenever the camp allows it.
 
 import { checkoutFees, type FeeBreakdown, type FeeConfig } from "./fees.ts";
 
@@ -140,22 +138,16 @@ export const validateCampSignup = (
   };
 };
 
-/** No platform fee for the coach's own link or his clients. */
-export const campPlatformWaived = (source: CampSource, isClient: boolean) => source === "link" || isClient;
+/** Camps never carry a platform fee, whoever signs up (kept on the Checkout metadata as "1"). */
+export const CAMP_PLATFORM_WAIVED = true;
 
-/** Paying the coach directly: only when the camp allows it and the family is the coach's own. */
-export const campDirectAllowed = (payDirect: boolean, source: CampSource, isClient: boolean) =>
-  payDirect && campPlatformWaived(source, isClient);
+/** Paying the coach directly: offered to every family whenever the camp's switch is on. */
+export const campDirectAllowed = (payDirect: boolean) => payDirect === true;
 
-/** Card fees for a camp Checkout: one line per athlete at the camp's list price. */
-export const campCheckoutFees = (
-  priceCents: number,
-  athletes: number,
-  platformWaived: boolean,
-  config: FeeConfig,
-): FeeBreakdown =>
+/** Card fees for a camp Checkout: one line per athlete at the camp's list price, card processing only. */
+export const campCheckoutFees = (priceCents: number, athletes: number, config: FeeConfig): FeeBreakdown =>
   checkoutFees(
-    Array.from({ length: Math.max(0, athletes) }, () => ({ listCents: priceCents, kind: "package" as const, platformWaived })),
+    Array.from({ length: Math.max(0, athletes) }, () => ({ listCents: priceCents, kind: "camp" as const })),
     config,
   );
 

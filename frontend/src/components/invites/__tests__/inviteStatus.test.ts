@@ -8,6 +8,7 @@ import {
   isInviteWorkStatus,
   matchesFilter,
   relativeDay,
+  viaLabel,
 } from "../inviteStatus";
 
 const row = (over: Partial<CoachInviteRow>): CoachInviteRow => ({
@@ -37,6 +38,14 @@ describe("inviteStatus", () => {
     expect(inviteStatus(row({ status: "confirmed", athlete_id: "a1" }))).toBe("joined");
     expect(inviteStatus(row({ status: "declined", relationship_source: "platform" }))).toBe("marketplace");
     expect(inviteStatus(row({ status: "declined" }))).toBe("declined");
+  });
+
+  it("shows a camp family as a client right away, labelled Camp", () => {
+    const camp = row({ status: "confirmed", invited_via: "camp", invite_token: null, expires_at: null });
+    expect(inviteStatus(camp)).toBe("joined");
+    expect(viaLabel(camp)).toBe("Camp");
+    // An emailed invite the family hasn't claimed yet still waits.
+    expect(inviteStatus(row({ status: "confirmed", invited_via: "email" }))).toBe("sent");
   });
 
   it("orders filters Needs approval, Waiting, Joined, All", () => {

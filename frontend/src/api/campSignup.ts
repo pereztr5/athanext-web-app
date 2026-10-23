@@ -10,8 +10,9 @@ import type { FeeBreakdown } from "@/utils/fees";
  *           /camps/<coach>/<camp>?signup=<id>&session_id=... (or &canceled=1), which redirects to
  *           the camp page /<coach>/<camp> with the same query; call status().
  *   direct: spot held 7 days, status "held" (Waiting for the coach).
- * Pass `src: "link"` when the page was opened from the coach's shared link (?src=link):
- * no platform fee, and "pay the coach directly" is offered when the camp allows it.
+ * Camps carry no platform fee for anyone: card adds card processing only, and "pay the coach
+ * directly" is offered to every family when the camp allows it. `src: "link"` (the coach's
+ * shared link, ?src=link) is still passed along to tell the coach where the family came from.
  */
 
 type LooseError = { code?: string; message?: string };
@@ -48,8 +49,10 @@ export type CampPage = {
   included: string[];
   age_min: number | null;
   age_max: number | null;
-  /** The camp lets the coach's own families pay him directly (shown only for src=link or his clients; quote() decides). */
+  /** The camp lets families pay the coach directly (quote().direct_allowed decides). */
   pay_direct: boolean;
+  /** The coach's camp waiver (https PDF or page), or null. */
+  waiver_url?: string | null;
   /** False once the camp has ended. */
   open: boolean;
   spots_left: number | null;
@@ -68,21 +71,17 @@ export type CampPage = {
   groups: CampPageGroup[];
 };
 
-/**
- * The price for the link the family came from, never for an email: src=link has no platform fee,
- * marketplace has it. A marketplace family who turns out to be the coach's client pays less; that
- * is only known at signup (CampSignupResult.fees / platform_waived) and Stripe Checkout shows it.
- */
+/** The camp price and the card total (camp price plus card processing; no platform fee on camps). */
 export type CampQuote = {
   camp_id: string;
   price_cents: number;
   source: "link" | "marketplace";
   athletes: number;
-  /** True only for src=link. */
+  /** Always true: camps have no platform fee. */
   platform_waived: boolean;
-  /** Offer "Paying in cash?" (src=link and the camp allows it). */
+  /** Offer "Paying in cash?" (the camp allows paying the coach directly). */
   direct_allowed: boolean;
-  /** Card total for `athletes` athletes at this link's price; the charged total can only be the same or lower. */
+  /** Card total for `athletes` athletes: what Checkout charges. */
   card: FeeBreakdown;
 };
 
@@ -114,9 +113,9 @@ export type CampSignupResult =
       url: string;
       session_id: string;
       expires_at: string;
-      /** The real price: true also for a marketplace family the server found to be the coach's client. */
+      /** Always true: camps have no platform fee. */
       platform_waived: boolean;
-      /** What Checkout charges (may be lower than the quote). */
+      /** What Checkout charges. */
       fees: FeeBreakdown;
     }
   | {

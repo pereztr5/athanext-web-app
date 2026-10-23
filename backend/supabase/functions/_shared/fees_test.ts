@@ -95,3 +95,21 @@ Deno.test("metadata round trip", () => {
   assertEquals(feeConfigFromMetadata(feeConfigMetadata(config)), config);
   assertEquals(feeConfigFromMetadata({ platform_fee_perc: "10" }), null);
 });
+
+Deno.test("camp: no platform fee for anyone, card processing only ($200 -> $206.28)", () => {
+  const line = feeLine(20000, "camp", config);
+  assertEquals(line, { listCents: 20000, platformCents: 0, processingCents: 628, totalCents: 20628 });
+  // Same as an existing client's package: the waiver flag changes nothing for a camp.
+  assertEquals(feeLine(20000, "camp", config, true), line);
+  assertEquals(feeLine(20000, "package", config, true), line);
+  assertEquals(feeRows(line), [{ label: "Card processing", cents: 628 }]);
+});
+
+Deno.test("camp: fixed processing charged once for several athletes", () => {
+  const fees = checkoutFees([{ listCents: 15000, kind: "camp" }, { listCents: 15000, kind: "camp" }], config);
+  assertEquals(fees.platformCents, 0);
+  assertEquals(fees.listCents, 30000);
+  // round((30000 + 30) / 0.971) = 30927
+  assertEquals(fees.totalCents, 30927);
+  assertEquals(fees.lines.map((l) => l.totalCents), [15464, 15463]);
+});

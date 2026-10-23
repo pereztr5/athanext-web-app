@@ -4,10 +4,9 @@
 //
 // Family (no login)
 //   { action: "quote", camp_id, src?, athletes? }
-//       -> { price_cents, platform_waived, direct_allowed, card: FeeBreakdown } for the link the family
-//          came from only (src=link: no platform fee). It never looks at an email, so it can't reveal
-//          the coach's clients. A client's lower price is applied at signup (returned there, and on
-//          the Stripe Checkout).
+//       -> { price_cents, platform_waived, direct_allowed, card: FeeBreakdown }. Camps carry no
+//          platform fee for anyone: card is the camp price plus card processing; paying the coach
+//          directly (offered whenever the camp allows it) is the camp price only.
 //   { action: "signup", camp_id, src?, pay_method: "card"|"direct",
 //     parent: { name, email, phone? }, note?, waiver: true, photo_consent?,
 //     athletes: [{ first_name, last_name, birth_year, group_id, note? }] }
@@ -19,7 +18,8 @@
 // Coach (Authorization: the coach's session)
 //   { action: "coach_add", camp_id, group_id, athlete_id?, first_name?, last_name?, birth_year?,
 //     parent_email?, parent_name?, paid, send_details?, send_invite? }
-//       -> add_camp_athlete result + { invited, emailed }
+//       -> add_camp_athlete result + { invited, emailed }; the family becomes the coach's client
+//          (confirmed referral) and, without an account, gets the usual invite for that row
 //   { action: "resend_finish", registration_id } -> { emailed }
 //   { action: "send_details", registration_id }  -> { emailed }
 //   { action: "resend_invite", referral_id }     -> add-client-referral resend result
@@ -30,8 +30,10 @@ import { checkoutExpiry, idempotencyKey } from "../_shared/checkout.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { feeConfigMetadata } from "../_shared/fees.ts";
 import {
+  CAMP_PLATFORM_WAIVED,
   CAMP_RATE_LIMITS,
   campCheckoutFees,
+  campDirectAllowed,
   campErrorStatus,
   campMetadata,
   campPath,
@@ -96,7 +98,14 @@ serve(async (req) => {
       if (!data) return json({ error: "This camp is not taking sign-ups" }, 404);
       const fees = await loadFeeConfig(admin);
       const athletes = Math.min(6, Math.max(1, Number(body.athletes) || 1));
-      return json({ ...data, source, athletes, card: campCheckoutFees(data.price_cents, athletes, data.platform_waived, fees) });
+      return json({
+        ...data,
+        platform_waived: CAMP_PLATFORM_WAIVED,
+        direct_allowed: campDirectAllowed(data.direct_allowed),
+        source,
+        athletes,
+        card: campCheckoutFees(data.price_cents, athletes, fees),
+      });
     }
 
     // ---------------- Family: sign up ----------------
@@ -143,7 +152,8 @@ serve(async (req) => {
       const athletes = (start.athletes ?? []) as Array<{
         id: string; first_name: string; last_name: string; group_name: string | null; start_time: string | null; end_time: string | null;
       }>;
-      const breakdown = campCheckoutFees(camp.price_cents, athletes.length, Boolean(start.platform_waived), fees!);
+      // No platform fee on camps: the camp price plus card processing.
+      const breakdown = campCheckoutFees(camp.price_cents, athletes.length, fees!);
       const expiry = checkoutExpiry(Date.now());
       const metadata = {
         ...campMetadata({
@@ -152,12 +162,12 @@ serve(async (req) => {
           coachId: camp.coach_id,
           registrationIds: athletes.map((a) => a.id),
           source: input.source,
-          platformWaived: Boolean(start.platform_waived),
+          platformWaived: CAMP_PLATFORM_WAIVED,
           listCents: camp.price_cents,
           athletes: athletes.length,
         }),
         ...feeConfigMetadata(fees!),
-        ...(start.platform_waived ? { platform_fee_perc: "0" } : {}),
+        platform_fee_perc: "0",
       };
 
       let session: Stripe.Checkout.Session;
@@ -178,7 +188,7 @@ serve(async (req) => {
                   description: [
                     `With ${camp.coach_name}`,
                     a.group_name ? `${a.group_name}${a.start_time && a.end_time ? `, ${campTime(a.start_time)} to ${campTime(a.end_time)}` : ""}` : "",
-                    breakdown.lines[i].platformCents ? "Includes platform fee and card processing" : "Includes card processing",
+                    "Includes card processing",
                   ].filter(Boolean).join(" · ").slice(0, 500),
                 },
               },
@@ -214,7 +224,7 @@ serve(async (req) => {
         url: session.url,
         session_id: session.id,
         expires_at: expiry.iso,
-        platform_waived: Boolean(start.platform_waived),
+        platform_waived: CAMP_PLATFORM_WAIVED,
         fees: breakdown,
       });
     }
@@ -266,13 +276,17 @@ serve(async (req) => {
 
       let invited = false;
       if (added.invite_needed && body.send_invite !== false) {
-        // The usual family invite (coach_client_referrals + email), as the coach.
+        // The family is already the coach's client (add_camp_athlete confirmed the referral), so
+        // the usual invite email goes out for that row, as the coach. Before that migration:
+        // a new invite, as before.
         const r = await fetch(`${url}/functions/v1/add-client-referral`, {
           method: "POST",
           headers: { "Content-Type": "application/json", Authorization: req.headers.get("Authorization") ?? "", origin },
-          body: JSON.stringify({
-            clients: [{ email: added.parent_email, name: added.parent_name ?? undefined, athlete_first_name: added.athlete_first_name }],
-          }),
+          body: JSON.stringify(
+            isUuid(added.referral_id)
+              ? { action: "resend", referral_id: added.referral_id }
+              : { clients: [{ email: added.parent_email, name: added.parent_name ?? undefined, athlete_first_name: added.athlete_first_name }] },
+          ),
         }).catch(() => null);
         invited = Boolean(r?.ok);
         if (!invited) console.error("Camp family invite failed", added.id, r?.status);

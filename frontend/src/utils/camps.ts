@@ -31,7 +31,7 @@ export const campPagePathFor = (
   return campPath(coach, slug);
 };
 
-/** The coach's share link. src=link marks the coach's own families (no marketplace fee). */
+/** The coach's share link. src=link tells the coach the family came from his link. */
 export const campShareUrl = (origin: string, coachSlug: string, campSlug: string) =>
   `${origin}${campPath(coachSlug, campSlug)}?src=link`;
 
@@ -270,6 +270,8 @@ export type CampDraft = {
   included: string[];
   linkedCoach: CampCoachRef | null;
   payDirect: boolean;
+  /** Waiver link as typed or uploaded ("" = none). */
+  waiverUrl: string;
 };
 
 let groupKey = 0;
@@ -295,7 +297,9 @@ export const emptyCampDraft = (): CampDraft => ({
   coverUrl: null,
   included: [],
   linkedCoach: null,
-  payDirect: false,
+  // New camps let families pay the coach directly; the coach can turn it off.
+  payDirect: true,
+  waiverUrl: "",
 });
 
 const priceText = (cents: number) => (cents % 100 === 0 ? String(cents / 100) : (cents / 100).toFixed(2));
@@ -323,6 +327,7 @@ export const draftFromCamp = (camp: CoachCamp): CampDraft => ({
   included: [...camp.included],
   linkedCoach: camp.linked_coach,
   payDirect: camp.pay_direct,
+  waiverUrl: camp.waiver_url ?? "",
 });
 
 /** "Run a camp again": everything but the dates, as a new camp (new groups, no ids). */
@@ -384,6 +389,7 @@ export const campMissing = (draft: CampDraft, today: string): string[] => {
     missing.push(draft.groups.length > 1 && draft.groups.some((g) => !g.name.trim()) ? "group names" : "group times");
   }
   if (!campStepAnswered("price", draft, today)) missing.push("price per athlete");
+  if (campWaiverUrlError(draft.waiverUrl)) missing.push("a waiver link that starts with https://");
   return missing;
 };
 
@@ -401,6 +407,7 @@ export const draftToPayload = (draft: CampDraft): { camp: CampInputPayload; grou
     cover_url: draft.coverUrl,
     included: draft.included.map((item) => item.trim()).filter(Boolean),
     pay_direct: draft.payDirect,
+    waiver_url: campWaiverUrl(draft.waiverUrl),
     linked_coach_id: draft.linkedCoach?.id ?? null,
   },
   groups: draft.groups.map((g) => ({
@@ -416,3 +423,71 @@ export const draftToPayload = (draft: CampDraft): { camp: CampInputPayload; grou
 /** Local calendar day, "YYYY-MM-DD". */
 export const localIsoDay = (date = new Date()) =>
   `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}-${String(date.getDate()).padStart(2, "0")}`;
+
+// ---------------------------------------------------------------------------
+// Waiver
+// ---------------------------------------------------------------------------
+
+/** Same rule as save_camp: https, a host with a dot, no spaces, up to 1000 characters. */
+const WAIVER_URL = /^https:\/\/[^\s/?#]+\.\S*$/;
+export const CAMP_WAIVER_MAX_BYTES = 10 * 1024 * 1024;
+
+/** The waiver link to save, or null when there is none or it isn't a safe https link. */
+export const campWaiverUrl = (text: string | null | undefined): string | null => {
+  const url = (text ?? "").trim();
+  return url && url.length <= 1000 && WAIVER_URL.test(url) ? url : null;
+};
+
+/** Why a typed waiver link can't be saved, or null (an empty field is fine: the waiver is optional). */
+export const campWaiverUrlError = (text: string | null | undefined): string | null => {
+  const url = (text ?? "").trim();
+  if (!url) return null;
+  return campWaiverUrl(url) ? null : "Add a link that starts with https://";
+};
+
+/** Why a waiver file can't be uploaded, or null. PDF only, up to 10 MB (the bucket's limit). */
+export const campWaiverFileError = (file: { name: string; type: string; size: number }): string | null => {
+  const pdf = file.type === "application/pdf" || (!file.type && /\.pdf$/i.test(file.name));
+  if (!pdf) return "Choose a PDF file.";
+  if (file.size > CAMP_WAIVER_MAX_BYTES) return "The waiver must be under 10 MB.";
+  if (file.size === 0) return "That file is empty. Choose another PDF.";
+  return null;
+};
+
+/** "camp-waiver.pdf" for an uploaded waiver, else the link's host and path, for the editor. */
+export const campWaiverLabel = (url: string): string => {
+  try {
+    const parsed = new URL(url);
+    if (parsed.pathname.includes("/camp-waivers/")) return "Waiver PDF";
+    return `${parsed.host}${parsed.pathname === "/" ? "" : parsed.pathname}`;
+  } catch {
+    return url;
+  }
+};
+
+// ---------------------------------------------------------------------------
+// Review and pay
+// ---------------------------------------------------------------------------
+
+/**
+ * What the family pays on the review step. Camps have no platform fee: card is the camp price
+ * plus card processing (shown only on the card option); paying the coach directly is the camp
+ * price and is offered whenever the camp allows it (quote.direct_allowed).
+ */
+export const campReviewPayment = (
+  quote: { direct_allowed: boolean; card: { listCents: number; totalCents: number; platformCents: number; processingCents: number } } | null | undefined,
+  pay: "card" | "direct",
+  fallbackListCents: number,
+) => {
+  const direct = pay === "direct" && Boolean(quote?.direct_allowed);
+  const card = quote?.card ?? null;
+  const listCents = card?.listCents ?? fallbackListCents;
+  return {
+    direct,
+    directOffered: Boolean(quote?.direct_allowed),
+    listCents,
+    /** Card processing on the card option; nothing when paying the coach directly. */
+    feeCents: direct || !card ? null : card.totalCents - card.listCents,
+    totalCents: direct ? listCents : card?.totalCents ?? null,
+  };
+};

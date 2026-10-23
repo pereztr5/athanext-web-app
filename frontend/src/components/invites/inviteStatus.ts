@@ -28,6 +28,8 @@ export const INVITE_FILTERS: [InviteFilter, string][] = [
 export const inviteStatus = (r: CoachInviteRow): InviteStatus => {
   if (r.initiated_by === "athlete" && r.status === "pending_confirmation") return "approval";
   if (r.status === "confirmed" && r.athlete_id) return "joined";
+  // Signed up for one of the coach's camps: already a client (no invite to chase).
+  if (r.status === "confirmed" && r.invited_via === "camp") return "joined";
   // A family who first booked on the marketplace answers "platform" and keeps the standard fee.
   // They belong on the roster only — excluded from the Invites work list.
   if (r.status === "declined") return r.relationship_source === "platform" ? "marketplace" : "declined";
@@ -60,7 +62,7 @@ export const inviteCounts = (statuses: InviteStatus[]) => {
 
 export const viaLabel = (r: CoachInviteRow) => {
   const via = r.invited_via ?? (r.initiated_by === "athlete" ? "link" : r.initiated_by === "admin" ? "admin" : "email");
-  return via === "link" ? "Link" : via === "import" ? "Import" : via === "admin" ? "AthaNext team" : "Email";
+  return via === "link" ? "Link" : via === "import" ? "Import" : via === "admin" ? "AthaNext team" : via === "camp" ? "Camp" : "Email";
 };
 
 export const parentName = (r: CoachInviteRow) => r.client_name?.trim() || r.client_email;

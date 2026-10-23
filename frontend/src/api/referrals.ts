@@ -19,7 +19,8 @@ export interface CoachClientReferral {
 
 /** A row on the Invites page: the referral plus what get_coach_invites adds. */
 export interface CoachInviteRow extends CoachClientReferral {
-  invited_via?: "email" | "import" | "link" | "admin" | null;
+  /** "camp": created when the family signed up for one of the coach's camps. */
+  invited_via?: "email" | "import" | "link" | "admin" | "camp" | null;
   opened_at?: string | null;
   email_bounced_at?: string | null;
   resend_count?: number;

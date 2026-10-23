@@ -9,11 +9,13 @@
 //   session, package  platform = list × platform %, waived for a coach's own clients
 //                     processing = grossed up on the total so AthaNext nets what Stripe takes:
 //                     total = round((list + platform + fixed) / (1 − processing %))
+//   camp              no platform fee for anyone (link, marketplace, coach-added); processing
+//                     grossed up as above when paying by card
 //   invoice           no platform fee; processing grossed up as above
 //   org_package       platform = list × platform %, processing absorbed (shown as one line)
 // The fixed processing amount is charged once per Checkout, however many lines it has.
 
-export type FeeKind = "session" | "package" | "org_package" | "invoice";
+export type FeeKind = "session" | "package" | "camp" | "org_package" | "invoice";
 
 export interface FeeConfig {
   /** Marketplace fee, percent of the list price (configurations.platform_fees). */
@@ -69,7 +71,8 @@ export const checkoutFees = (items: FeeItem[], config: FeeConfig): FeeBreakdown 
   const platformRate = milliPercent(config.platformPercent);
   const lines: FeeLine[] = items.map((item) => {
     const listCents = Math.max(0, Math.round(item.listCents));
-    const noPlatform = listCents === 0 || item.kind === "invoice" || (item.platformWaived && item.kind !== "org_package");
+    const noPlatform =
+      listCents === 0 || item.kind === "invoice" || item.kind === "camp" || (item.platformWaived && item.kind !== "org_package");
     const platformCents = noPlatform ? 0 : Math.round((listCents * platformRate) / PER_100_PERCENT);
     return { listCents, platformCents, processingCents: 0, totalCents: listCents + platformCents };
   });
@@ -106,7 +109,7 @@ export const checkoutFees = (items: FeeItem[], config: FeeConfig): FeeBreakdown 
   };
 };
 
-/** Fees when one item is the whole Checkout (a single session, package or invoice). */
+/** Fees when one item is the whole Checkout (a single session, package, camp or invoice). */
 export const feeLine = (listCents: number, kind: FeeKind, config: FeeConfig, platformWaived = false): FeeLine => {
   const fees = checkoutFees([{ listCents, kind, platformWaived }], config);
   return {

@@ -15,7 +15,7 @@ describe("one fee definition", () => {
   });
 
   it("shows the same total the payment functions charge, for every kind and price", () => {
-    const kinds: FeeKind[] = ["session", "package", "org_package", "invoice"];
+    const kinds: FeeKind[] = ["session", "package", "camp", "org_package", "invoice"];
     for (let cents = 0; cents <= 100000; cents += 137) {
       for (const kind of kinds) {
         for (const waived of [false, true]) {
@@ -78,5 +78,22 @@ describe("parseFeeConfig", () => {
   it("refuses missing rates instead of showing a price without fees", () => {
     expect(() => parseFeeConfig([])).toThrow();
     expect(() => parseFeeConfig([{ key: "platform_fees", value: "10" }])).toThrow();
+  });
+});
+
+describe("camps", () => {
+  it("never carry a platform fee: card processing only (2.9% + $0.30, grossed up)", () => {
+    const line = feeLine(25000, "camp", config);
+    expect(line).toEqual({ listCents: 25000, platformCents: 0, processingCents: 778, totalCents: 25778 });
+    expect(feeLine(25000, "camp", config, true)).toEqual(line);
+    expect(feeRows(line)).toEqual([{ label: "Card processing", cents: 778 }]);
+  });
+
+  it("charge the fixed $0.30 once for siblings in one Checkout", () => {
+    const fees = checkoutFees([{ listCents: 25000, kind: "camp" }, { listCents: 25000, kind: "camp" }], config);
+    expect(fees.platformCents).toBe(0);
+    // round((50000 + 30) / 0.971) = 51524
+    expect(fees.totalCents).toBe(51524);
+    expect(fees.lines[0].totalCents + fees.lines[1].totalCents).toBe(51524);
   });
 });
