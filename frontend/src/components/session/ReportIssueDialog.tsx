@@ -1,5 +1,5 @@
 /**
- * Report an issue with a session (My sessions and the session page). The button is outlined in
+ * Report an issue with a session (from the session page). The button is outlined in
  * red. Sending saves the report and emails AthaNext support right away; the family gets an email
  * confirmation too.
  */

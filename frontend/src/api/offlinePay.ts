@@ -1,5 +1,6 @@
 /** Coach offline payments to confirm (WC4). */
 import { supabase } from "@/integrations/supabase/client";
+import { toOfflineSummary, type OfflinePaymentsSummary } from "@/utils/offlinePayments";
 
 export type PendingOfflinePayment = {
   bookingId: string;
@@ -34,6 +35,13 @@ export const offlinePayAPI = {
     const { data, error } = await supabase.rpc("coach_pending_offline_payments" as never);
     if (error) throw error;
     return ((data as Row[]) ?? []).map(mapRow);
+  },
+
+  /** My Business: waiting, paid to you directly (this month, all time) and the latest 10. */
+  async summary(): Promise<OfflinePaymentsSummary> {
+    const { data, error } = await supabase.rpc("get_coach_offline_payments" as never);
+    if (error) throw error;
+    return toOfflineSummary(data);
   },
 
   async confirm(bookingId: string): Promise<void> {

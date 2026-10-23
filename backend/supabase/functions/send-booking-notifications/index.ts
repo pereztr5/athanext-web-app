@@ -2,9 +2,15 @@
 // package, a free session, paying the coach directly, or an accepted request. Called by
 // create-booking-payment with the service role and { booking_id }; it makes sure each
 // booking is emailed once.
+//
+// { action: "resend_receipt", stripe_session_id | booking_ids } with the family's own login
+// resends the receipt from the confirmation page: get_booking_receipt() (run as the caller)
+// only returns bookings they own, the email goes to the account's address, and
+// claim_receipt_resend() allows 3 resends per booking per hour.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { bookingEmailSender } from "../_shared/email_sender.ts";
+import { escapeHtml, familyPaymentLine, parseResendRequest, receiptEmail, usd } from "../_shared/receipt_email.ts";
 import { formatSessionWhen } from "../_shared/session_time.ts";
 
 const corsHeaders = {
@@ -18,15 +24,71 @@ const json = (body: unknown, status = 200) =>
     headers: { ...corsHeaders, "Content-Type": "application/json" },
   });
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+const sendEmail = (serviceRole: string, payload: Record<string, unknown>) =>
+  fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${serviceRole}`,
+    },
+    body: JSON.stringify(payload),
+  })
+    .then((res) => res.ok)
+    .catch((e) => {
+      console.error("send-email failed", e);
+      return false;
+    });
 
-const usd = (n: number) => `$${Number(n).toFixed(2).replace(/\.00$/, "")}`;
+// deno-lint-ignore no-explicit-any
+const resendReceipt = async (req: Request, body: any, serviceRole: string) => {
+  const url = Deno.env.get("SUPABASE_URL") ?? "";
+  const caller = createClient(url, Deno.env.get("SUPABASE_ANON_KEY") ?? "", {
+    global: { headers: { Authorization: req.headers.get("Authorization") ?? "" } },
+  });
+  const { data: userRes } = await caller.auth.getUser();
+  const me = userRes?.user;
+  if (!me) return json({ error: "Sign in first" }, 401);
+  if (!me.email) return json({ error: "Add an email to your account first" }, 400);
+
+  const request = parseResendRequest(body);
+  if (!request) return json({ error: "Receipt not found" }, 400);
+
+  // Run as the caller: it only returns bookings on their account.
+  const { data: receipt, error: receiptError } = await caller.rpc("get_booking_receipt", {
+    p_stripe_session_id: request.stripeSessionId,
+    p_booking_ids: request.bookingIds.length ? request.bookingIds : null,
+  });
+  // deno-lint-ignore no-explicit-any
+  const bookings = ((receipt as any)?.bookings ?? []) as { id: string }[];
+  if (receiptError || !bookings.length) return json({ error: "Receipt not found" }, 404);
+
+  const admin = createClient(url, serviceRole);
+  const { data: allowed, error: limitError } = await admin.rpc("claim_receipt_resend", {
+    p_user_id: me.id,
+    p_booking_ids: bookings.map((b) => b.id),
+  });
+  if (limitError) {
+    console.error("claim_receipt_resend failed", limitError);
+    return json({ error: "Couldn't send the receipt. Try again" }, 500);
+  }
+  if (allowed !== true) return json({ error: "You've resent this receipt 3 times in the last hour. Try again later" }, 429);
+
+  const { data: cfg } = await admin.from("configurations").select("value").eq("key", "smtp_email").maybeSingle();
+  const sender = bookingEmailSender(Deno.env.get("GMAIL_USER") || (cfg?.value as string | undefined));
+  if (!sender) return json({ error: "Email isn't set up. Contact support@athanext.com" }, 500);
+
+  const { data: profile } = await admin.from("user_profiles").select("timezone").eq("id", me.id).maybeSingle();
+  const { subject, html } = receiptEmail(receipt as never, (profile?.timezone as string | null) ?? null);
+  const sent = await sendEmail(serviceRole, {
+    to: me.email,
+    from: sender.from,
+    subject,
+    html,
+    ...(sender.replyTo ? { replyTo: sender.replyTo } : {}),
+  });
+  if (!sent) return json({ error: "Couldn't send the receipt. Try again" }, 502);
+  return json({ ok: true, email: me.email });
+};
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -34,9 +96,10 @@ serve(async (req) => {
   try {
     const serviceRole = Deno.env.get("SUPABASE_SERVICE_ROLE_KEY") ?? "";
     const bearer = (req.headers.get("Authorization") ?? "").replace(/^Bearer\s+/i, "");
+    const body = (await req.json().catch(() => ({}))) as { booking_id?: string; action?: string };
+    if (serviceRole && body.action === "resend_receipt") return await resendReceipt(req, body, serviceRole);
     if (!serviceRole || bearer !== serviceRole) return json({ error: "Unauthorized" }, 401);
 
-    const body = (await req.json().catch(() => ({}))) as { booking_id?: string };
     const bookingId = typeof body.booking_id === "string" ? body.booking_id : "";
     if (!bookingId) return json({ error: "booking_id required" }, 400);
 
@@ -75,14 +138,7 @@ serve(async (req) => {
     const price = Number(row.occurrence?.price ?? 0);
     const paymentStatus = String(row.payment_status ?? "");
     // How it was paid, in the family's and the coach's words.
-    const familyPayment = (() => {
-      if (paymentStatus === "credit") return "Paid with a session credit.";
-      if (paymentStatus === "outside") return price > 0 ? "Paid outside the app, as agreed with your coach." : "This session is free.";
-      if (paymentStatus === "direct" || paymentStatus === "pending_offline") {
-        return `Pay ${escapeHtml(coachName)} directly${price > 0 ? `: ${usd(price)}` : ""}.`;
-      }
-      return `Paid: ${usd(price)}. Cancel with enough notice and it comes back as a session credit.`;
-    })();
+    const familyPayment = familyPaymentLine(paymentStatus, price, coachName);
     const coachPayment = (() => {
       if (paymentStatus === "credit") return "Paid with a session credit.";
       if (paymentStatus === "outside") return price > 0 ? "Paid outside the app." : "This session is free.";
@@ -112,20 +168,8 @@ serve(async (req) => {
       familyEmail = userRes?.user?.email ?? null;
     }
 
-    const send = async (to: string, subject: string, html: string) => {
-      const res = await fetch(`${Deno.env.get("SUPABASE_URL")}/functions/v1/send-email`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${serviceRole}`,
-        },
-        body: JSON.stringify({ to, from, subject, html, ...(replyTo ? { replyTo } : {}) }),
-      }).catch((e) => {
-        console.error("send-email failed", e);
-        return null;
-      });
-      return Boolean(res?.ok);
-    };
+    const send = (to: string, subject: string, html: string) =>
+      sendEmail(serviceRole, { to, from, subject, html, ...(replyTo ? { replyTo } : {}) });
 
     // Account settings > Notifications: "<kind>_email": false turns this email off (missing = on).
     const emailOn = async (uid: string | null | undefined) => {

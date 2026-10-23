@@ -103,3 +103,33 @@ export const fetchBookingReceipt = async (source: ReceiptSource): Promise<Bookin
   await verifyPaymentStatus(source.stripeSessionId);
   return readReceipt(source);
 };
+
+/** The function's own error message ("You've resent this receipt 3 times…"), else the client's. */
+const functionErrorMessage = async (error: unknown): Promise<string> => {
+  const fallback = "Couldn't send the receipt. Try again";
+  const context = (error as { context?: Response }).context;
+  if (!context || typeof context.clone !== "function") return fallback;
+  try {
+    const body = (await context.clone().json()) as { error?: unknown };
+    if (typeof body?.error === "string" && body.error.trim()) return body.error.trim();
+  } catch {
+    // The client may already have read the body.
+  }
+  return fallback;
+};
+
+/**
+ * Emails the receipt again from support@athanext.com to the account's own address. The
+ * function checks the caller owns the bookings and allows 3 resends per booking an hour.
+ * Returns the address it went to.
+ */
+export const resendBookingReceipt = async ({ stripeSessionId, bookingIds }: ReceiptSource): Promise<string> => {
+  const { data, error } = await supabase.functions.invoke("send-booking-notifications", {
+    body: {
+      action: "resend_receipt",
+      ...(stripeSessionId ? { stripe_session_id: stripeSessionId } : { booking_ids: bookingIds ?? [] }),
+    },
+  });
+  if (error) throw new Error(await functionErrorMessage(error));
+  return String((data as { email?: string } | null)?.email ?? "");
+};

@@ -1,6 +1,6 @@
 import type { BookingReceiptData, ReceiptBooking } from "@/api/receipts";
 import type { PlanFees } from "@/utils/bookPlan";
-import { checkoutFees, feeRows, toCents } from "@/utils/fees";
+import { checkoutFees, toCents } from "@/utils/fees";
 import { zonedWallTimeToUtc } from "@/utils/dateHelpers";
 import type { CalendarEvent } from "@/utils/ics";
 import { formatLocationSentence } from "@/utils/sessionFormatting";
@@ -153,30 +153,3 @@ export const calendarEvents = (model: ReceiptModel): CalendarEvent[] =>
   model.lines
     .filter((l) => !l.request && l.start && l.end)
     .map((l) => ({ uid: `${l.id}@athanext.com`, title: l.title, start: l.start!, end: l.end!, location: l.locationLabel }));
-
-/** Plain-text copy of the receipt for the email draft. */
-export const receiptText = (model: ReceiptModel, supportEmail?: string) => {
-  const rows = [
-    `AthaNext ${model.isReceipt ? "receipt" : "confirmation"} #${model.number}`,
-    model.issuedLabel ? `Issued ${model.issuedLabel}` : "",
-    "",
-    ...model.lines.flatMap((l) => [
-      `${l.title}${l.request ? " (request sent, not charged)" : ""}`,
-      `${l.dateLabel}, ${l.timeLabel}, ${l.locationLabel}`,
-      "",
-    ]),
-  ];
-  if (model.isReceipt) {
-    if (model.sessions) rows.push(`Sessions: ${formatMoney(model.sessions)}`);
-    if (model.credits) rows.push(`Package credits used: ${model.credits}`);
-    if (model.amountsKnown) {
-      feeRows({ platformCents: toCents(model.platformFees), processingCents: toCents(model.processingFees) }).forEach((r) =>
-        rows.push(`${r.label}: ${formatMoney(r.cents / 100)}`)
-      );
-      rows.push(`Total paid: ${formatMoney(model.total)}`, "");
-    }
-  }
-  model.direct.forEach((d) => rows.push(`Pay ${d.firstName} directly: ${formatMoney(d.amount)}. ${d.note || "Not charged in AthaNext."}`, ""));
-  if (supportEmail) rows.push(`Questions go to ${supportEmail}`);
-  return rows.join("\n").trim();
-};

@@ -15,11 +15,14 @@ const BookingReceipt = ({
   supportEmail,
   onAddToCalendar,
   onEmail,
+  emailing,
 }: {
   model: ReceiptModel;
   supportEmail?: string;
   onAddToCalendar?: () => void;
+  /** Emails the receipt again to the account's address. */
   onEmail?: () => void;
+  emailing?: boolean;
 }) => (
   <section className="flex w-full max-w-[700px] flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] font-sans text-dark md:px-[25px] md:pb-[25px] md:pt-[30px]">
     <div className="flex items-start justify-between gap-4">
@@ -122,9 +125,9 @@ const BookingReceipt = ({
           </button>
         ) : null}
         {onEmail ? (
-          <button type="button" className={cn(secondaryButton, smallButton)} onClick={onEmail}>
+          <button type="button" className={cn(secondaryButton, smallButton)} disabled={emailing} onClick={onEmail}>
             <Mail strokeWidth={1.5} aria-hidden="true" />
-            Email {model.isReceipt ? "receipt" : "confirmation"}
+            {emailing ? "Sending…" : `Resend ${model.isReceipt ? "receipt" : "confirmation"}`}
           </button>
         ) : null}
       </div>

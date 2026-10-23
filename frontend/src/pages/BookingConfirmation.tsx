@@ -4,12 +4,12 @@
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle } from "@/components/icons";
 import { bookAPI } from "@/api/book";
-import { fetchBookingReceipt } from "@/api/receipts";
+import { fetchBookingReceipt, resendBookingReceipt } from "@/api/receipts";
 import BookingReceipt from "@/components/receipts/BookingReceipt";
-import { buildReceiptModel, calendarEvents, receiptText } from "@/components/receipts/receiptModel";
+import { buildReceiptModel, calendarEvents } from "@/components/receipts/receiptModel";
 import { primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { PageHeader } from "@/components/ui/page-header";
 import { useBookingFees } from "@/hooks/useBookingFees";
@@ -61,14 +61,15 @@ const BookingConfirmation = () => {
     downloadText(buildIcs(events), `athanext-${model.number || "sessions"}.ics`, "text/calendar");
   };
 
-  const emailReceipt = () => {
-    if (!model) return;
-    const to = model.email;
-    const subject = encodeURIComponent(`AthaNext ${model.isReceipt ? "receipt" : "confirmation"} ${model.number ? `#${model.number}` : ""}`.trim());
-    const body = encodeURIComponent(receiptText(model, SUPPORT));
-    window.location.href = to ? `mailto:${to}?subject=${subject}&body=${body}` : `mailto:?subject=${subject}&body=${body}`;
-    toast({ title: to ? `Draft opened for ${to}` : "Draft opened", description: "Send it from your mail app. Stripe also emails a receipt when you pay by card." });
-  };
+  const resend = useMutation({
+    mutationFn: () => resendBookingReceipt(source),
+    onSuccess: (to) => {
+      const kind = model?.isReceipt === false ? "Confirmation" : "Receipt";
+      toast({ title: to ? `${kind} sent to ${to}` : `${kind} sent` });
+    },
+    onError: (err) =>
+      toast({ title: "Couldn't send the receipt", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" }),
+  });
 
   if (!sessionId && !bookingIds.length) {
     return (
@@ -127,7 +128,13 @@ const BookingConfirmation = () => {
           }
         />
         {model ? (
-          <BookingReceipt model={model} supportEmail={SUPPORT} onAddToCalendar={addToCalendar} onEmail={emailReceipt} />
+          <BookingReceipt
+            model={model}
+            supportEmail={SUPPORT}
+            onAddToCalendar={addToCalendar}
+            onEmail={() => resend.mutate()}
+            emailing={resend.isPending}
+          />
         ) : (
           <div className="h-64 w-full max-w-[700px] animate-pulse rounded-card border border-light-525 bg-light-300" />
         )}

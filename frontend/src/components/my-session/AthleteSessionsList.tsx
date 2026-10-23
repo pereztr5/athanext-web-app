@@ -8,7 +8,6 @@ import { Calendar, CalendarPlus, ChevronRight, Clock, MapPin, Search, User, User
 import { BrandPill } from "@/components/brand";
 import { SessionDateTile } from "@/components/my-session/CoachSessionCard";
 import { PageHeader } from "@/components/ui/page-header";
-import { ReportIssueButton, ReportIssueDialog } from "@/components/session/ReportIssueDialog";
 import { card, input, meta, primaryButton, secondaryButton, segButton, segGroup } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -36,11 +35,6 @@ export const sessionListTitle = (s: UISession) => {
   return s.pillarSlot || (s.type === "group" ? "Group session" : "1-on-1");
 };
 
-const reportLabel = (s: UISession, timeZone: string) => {
-  const day = formatDayISO(getZonedISODate(new Date(s.start), timeZone), { weekday: "short", month: "short", day: "numeric" });
-  return `${sessionListTitle(s)}${s.coachName ? ` with ${s.coachName.split(" ")[0]}` : ""}, ${day}`;
-};
-
 const coachInitials = (name: string | null | undefined) =>
   (name || "?")
     .split(/\s+/)
@@ -64,12 +58,10 @@ const AthleteSessionCard = ({
   session,
   timeZone,
   onOpen,
-  onReport,
 }: {
   session: UISession;
   timeZone: string;
   onOpen: (s: UISession) => void;
-  onReport: (s: UISession) => void;
 }) => {
   const start = new Date(session.start);
   const end = new Date(session.end);
@@ -151,14 +143,13 @@ const AthleteSessionCard = ({
         <ChevronRight className="size-4 shrink-0 self-center text-dark-300 max-md:hidden" strokeWidth={1.5} aria-hidden="true" />
       ) : null}
     </button>
-      <span className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center md:w-auto md:flex-col md:items-end">
-        {actionLabel ? (
+      {actionLabel ? (
+        <span className="flex w-full shrink-0 flex-wrap items-center justify-end gap-2 self-center md:w-auto md:flex-col md:items-end">
           <button type="button" className={cn(secondaryButton, "h-9 px-3 text-body-m")} onClick={() => onOpen(session)}>
             {actionLabel}
           </button>
-        ) : null}
-        {session.bookingId ? <ReportIssueButton small onClick={() => onReport(session)} /> : null}
-      </span>
+        </span>
+      ) : null}
     </div>
   );
 };
@@ -186,7 +177,6 @@ export const AthleteSessionsList = ({
   const [q, setQ] = useState("");
   const [kind, setKind] = useState<Kind>("all");
   const [limit, setLimit] = useState(20);
-  const [reporting, setReporting] = useState<UISession | null>(null);
 
   const requested = useMemo(() => upcoming.filter((s) => s.dbStatus === "requested"), [upcoming]);
   const bookedUp = useMemo(() => upcoming.filter((s) => s.dbStatus !== "requested"), [upcoming]);
@@ -292,7 +282,7 @@ export const AthleteSessionsList = ({
               <span className="px-1 pb-1.5 pt-3 text-label-xsm text-dark-300 first:pt-0">{g}</span>
               <div className="flex flex-col gap-2">
                 {rows.map((s) => (
-                  <AthleteSessionCard key={s.bookingId || s.id} session={s} timeZone={timeZone} onOpen={onOpen} onReport={setReporting} />
+                  <AthleteSessionCard key={s.bookingId || s.id} session={s} timeZone={timeZone} onOpen={onOpen} />
                 ))}
               </div>
             </div>
@@ -319,11 +309,6 @@ export const AthleteSessionsList = ({
           ) : null}
         </section>
       )}
-      <ReportIssueDialog
-        bookingId={reporting?.bookingId ?? null}
-        sessionLabel={reporting ? reportLabel(reporting, timeZone) : null}
-        onClose={() => setReporting(null)}
-      />
     </div>
   );
 };

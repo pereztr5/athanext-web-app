@@ -1,6 +1,7 @@
 /**
  * Business (Working Copy `c-account`): the 5th phone tab for coaches. The profile card with
- * View and Edit profile, then Payments (money owed, next payout, overdue) and My organization.
+ * View and Edit profile, then Payments (money paid in the app: owed, next payout, overdue), My
+ * organization, and Offline payments (paid to the coach directly) for every coach.
  */
 import type { ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -9,6 +10,7 @@ import { Building2, ChevronRight, CreditCard, Eye, Pencil, Star } from "@/compon
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { payoutsAPI } from "@/api/payouts";
+import { OfflinePayments } from "@/components/business/OfflinePayments";
 import { PageHeader } from "@/components/ui/page-header";
 import { card, secondaryButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
@@ -68,7 +70,7 @@ const BusinessPage = () => {
   const paySub = selfPay
     ? "Booking only. Families pay you directly"
     : [
-        owed ? `${money(owed)} owed` : "Nothing owed",
+        owed ? `Paid in app: ${money(owed)} owed` : "Paid in app: nothing owed",
         nextPayout ? `payout ${new Date(nextPayout.arrival).toLocaleDateString("en-US", { month: "short", day: "numeric" })}` : "",
       ]
         .filter(Boolean)
@@ -126,6 +128,7 @@ const BusinessPage = () => {
             sub={org ? `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}` : "By invitation from AthaNext"}
           />
         </div>
+        <OfflinePayments />
       </div>
     </div>
   );
