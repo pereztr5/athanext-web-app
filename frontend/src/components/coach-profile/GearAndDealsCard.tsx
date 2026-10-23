@@ -18,6 +18,7 @@ import { coachesAPI } from "@/api/coaches";
 import { isShopifyConfigured } from "@/api/shopify";
 import { GearProductCard } from "@/components/gear/GearProductCard";
 import { useGearProducts } from "@/hooks/useGear";
+import { useCoachGearPicks } from "@/hooks/useCoachGearPicks";
 import type { Json } from "@/integrations/supabase/types";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -28,8 +29,9 @@ import {
   visibleDeals,
   type AffiliateLink,
 } from "@/utils/affiliateLinks";
-import { COACH_GEAR_STORE_LABEL, pickCoachGear } from "@/utils/gear";
+import { COACH_GEAR_STORE_LABEL, MAX_COACH_GEAR_PICKS, pickCoachGear } from "@/utils/gear";
 import { CoachProfileCard, CoachProfileCardHeader, CoachProfileChip } from "./CoachProfileCard";
+import { GearPicksEditor } from "./GearPicksEditor";
 
 type DraftLink = { brand: string; url: string; code: string };
 
@@ -59,7 +61,8 @@ interface GearAndDealsCardProps {
 
 /**
  * Gear and deals (ATH-88): one box with the coach's brand deals on top and store gear under it:
- * the coach's own brands, else AthaNext store items for the coach's sport (labelled as such).
+ * the coach's picks, else the coach's own brands, else AthaNext store items for the coach's
+ * sport (labelled as such, and varied per coach).
  * Never another sport's gear. Hidden from families when there is nothing to show.
  */
 export function GearAndDealsCard({
@@ -76,10 +79,12 @@ export function GearAndDealsCard({
   folded = false,
 }: GearAndDealsCardProps) {
   const [editorOpen, setEditorOpen] = useState(false);
+  const [picksOpen, setPicksOpen] = useState(false);
   const [open, setOpen] = useState(!folded);
   const { data: products = [] } = useGearProducts();
+  const { data: picks = [] } = useCoachGearPicks(isShopifyConfigured ? coachId : undefined);
   const { products: gear, source: gearSource } = isShopifyConfigured
-    ? pickCoachGear(products, brandNames, coachSport)
+    ? pickCoachGear(products, brandNames, coachSport, { picks, seed: coachId })
     : { products: [], source: null };
   const storeGear = gearSource === "store";
   const allDeals = parseAffiliateLinks(links);
@@ -187,7 +192,17 @@ export function GearAndDealsCard({
       {gear.length ? (
         <div className="flex flex-col gap-[10px] border-t border-light-525 pt-4">
           <div className="flex items-center justify-between gap-3">
-            <span className="text-label-sm text-dark">{storeGear ? COACH_GEAR_STORE_LABEL : isOwner ? "Gear from my brands" : `Gear from ${first}'s brands`}</span>
+            <span className="text-label-sm text-dark">
+              {storeGear
+                ? COACH_GEAR_STORE_LABEL
+                : gearSource === "picks"
+                  ? isOwner
+                    ? "My picks"
+                    : `${first}'s picks`
+                  : isOwner
+                    ? "Gear from my brands"
+                    : `Gear from ${first}'s brands`}
+            </span>
             <Link
               to={ROUTES.GEAR}
               className="text-label-sm text-primary hover:underline"
@@ -205,12 +220,30 @@ export function GearAndDealsCard({
         </div>
       ) : null}
 
-      {editing && gearSource !== "coach" ? (
-        <p className={cn(caption, gear.length ? "" : "border-t border-light-525 pt-4")}>
-          {brandNames.length
-            ? "None of your brands are in the AthaNext store yet. Their gear shows here once they are."
-            : "Add the brands you use under Brands, and their gear from the AthaNext store shows here."}
-        </p>
+      {editing && isShopifyConfigured ? (
+        <div className={cn("flex flex-col gap-2", gear.length ? "" : "border-t border-light-525 pt-4")}>
+          <p className={caption}>
+            {picks.length
+              ? gearSource === "picks"
+                ? `${picks.length} of ${MAX_COACH_GEAR_PICKS} picked. Sold-out picks stay hidden until they are back in stock.`
+                : "Your picks are sold out or no longer in the store, so families see other gear for now."
+              : gearSource === "coach"
+                ? "Families see gear from your brands. Pick products to choose exactly what shows."
+                : "Pick the store products you recommend. Until then, families see gear from the AthaNext store for your sport."}
+          </p>
+          <button
+            type="button"
+            onClick={() => setPicksOpen(true)}
+            className="inline-flex w-fit items-center gap-1 text-label-sm text-primary hover:underline"
+          >
+            <Plus className="size-4" strokeWidth={1.5} aria-hidden="true" />
+            {picks.length ? "Edit gear picks" : "Pick gear to recommend"}
+          </button>
+        </div>
+      ) : null}
+
+      {editing && isShopifyConfigured ? (
+        <GearPicksEditor open={picksOpen} onOpenChange={setPicksOpen} coachId={coachId} saved={picks} />
       ) : null}
 
       {editing ? (

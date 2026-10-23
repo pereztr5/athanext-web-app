@@ -18,7 +18,8 @@ test.describe("coach account", () => {
   test("create session opens from My schedule", async ({ page }) => {
     await signIn(page, coach!);
     await visit(page, "/schedule/create");
-    // Opens the form only. Nothing is saved.
-    await expect(page.getByText(/1-on-1|one-on-one/i).first()).toBeVisible();
+    // The week opens. Add is there. Nothing is saved.
+    await expect(page.getByRole("heading", { name: "Create session" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Add" }).first()).toBeVisible();
   });
 });

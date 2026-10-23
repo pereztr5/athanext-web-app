@@ -102,32 +102,95 @@ const productSports = (product: { tags?: string[] }) =>
 
 export const COACH_GEAR_PREVIEW_LIMIT = 4;
 
-export type CoachGearSource = "coach" | "store";
+/** Most store products a coach can pick for their profile (set_my_gear_picks enforces it too). */
+export const MAX_COACH_GEAR_PICKS = 12;
+
+export type CoachGearSource = "picks" | "coach" | "store";
 
 export type CoachGear<T> = {
   products: T[];
-  /** "coach": the coach's own brand picks. "store": AthaNext store items for the coach's sport. */
+  /**
+   * "picks": products the coach picked, in their order. "coach": the coach's own brand products.
+   * "store": AthaNext store items for the coach's sport.
+   */
   source: CoachGearSource | null;
 };
 
-type CoachGearProduct = Pick<ShopifyProduct, "vendor" | "availableForSale"> & { tags?: string[] };
+type CoachGearProduct = Pick<ShopifyProduct, "vendor" | "availableForSale"> & {
+  tags?: string[];
+  handle?: string;
+  id?: string;
+};
+
+export type CoachGearOptions = {
+  /** The coach's picked product handles, in their order (coach_gear_picks). */
+  picks?: string[];
+  /** Usually the coach id: the store fallback is shuffled by it, so coaches show different gear. */
+  seed?: string | null;
+  /** Most brand or store products to show. Picks show up to MAX_COACH_GEAR_PICKS. */
+  limit?: number;
+};
 
 /** The /gear catalog sport ("Soccer", "Rowing") for a coach sport like "soccer"; null when unknown. */
 export const toGearSport = (sport?: string | null): (typeof GEAR_SPORTS)[number] | null =>
   GEAR_SPORTS.find((gearSport) => gearSport.toLowerCase() === (sport ?? "").trim().toLowerCase()) ?? null;
 
+// FNV-1a with a murmur3 finish: a small, well-mixed 32-bit hash for the seeded shuffle.
+const hash32 = (text: string): number => {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < text.length; i += 1) {
+    h ^= text.charCodeAt(i);
+    h = Math.imul(h, 0x01000193);
+  }
+  h ^= h >>> 16;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h, 0xc2b2ae35);
+  h ^= h >>> 16;
+  return h >>> 0;
+};
+
 /**
- * Products for the Gear preview on a coach profile (ATH-65): in-stock products from the coach's
- * own brands (matched on Shopify vendor) first. Without any, in-stock AthaNext store products
- * tagged with the coach's sport (same tags as the /gear sport filter). Products tagged for
- * another sport never show, and gear hides (empty, source null) when nothing matches.
+ * Same seed, same order; different seeds, different orders. Each item is ranked by a hash of
+ * the seed and its key, so the order doesn't depend on the order the store returns products in.
+ */
+export const seededShuffle = <T>(items: T[], seed: string, keyOf: (item: T) => string): T[] =>
+  items
+    .map((item) => {
+      const key = keyOf(item);
+      return { item, key, rank: hash32(`${seed}\u0000${key}`) };
+    })
+    .sort((a, b) => a.rank - b.rank || a.key.localeCompare(b.key))
+    .map(({ item }) => item);
+
+/**
+ * Products for the Gear preview on a coach profile (ATH-65):
+ * 1. The coach's picks, in their order. Handles no longer in the store and sold-out products
+ *    are skipped.
+ * 2. Without any, in-stock products from the coach's own brands (matched on Shopify vendor).
+ * 3. Without any, in-stock AthaNext store products tagged with the coach's sport (same tags as
+ *    the /gear sport filter), shuffled by the seed so each coach shows their own set.
+ * Brand and store products tagged for another sport never show, and gear hides (empty, source
+ * null) when nothing matches.
  */
 export const pickCoachGear = <T extends CoachGearProduct>(
   products: T[],
   coachBrandNames: string[],
   coachSport?: string | null,
-  limit = COACH_GEAR_PREVIEW_LIMIT
+  { picks = [], seed = null, limit = COACH_GEAR_PREVIEW_LIMIT }: CoachGearOptions = {}
 ): CoachGear<T> => {
+  if (picks.length) {
+    const byHandle = new Map<string, T>();
+    products.forEach((product) => {
+      if (product.handle && !byHandle.has(product.handle)) byHandle.set(product.handle, product);
+    });
+    const picked = Array.from(new Set(picks))
+      .map((handle) => byHandle.get(handle))
+      .filter((product): product is T => Boolean(product?.availableForSale))
+      .slice(0, MAX_COACH_GEAR_PICKS);
+    if (picked.length) return { products: picked, source: "picks" };
+  }
+
   const sport = toGearSport(coachSport);
   const brandKeys = new Set(coachBrandNames.map((name) => brandKey(name)).filter(Boolean));
   const inStock = products.filter((product) => product.availableForSale);
@@ -143,7 +206,8 @@ export const pickCoachGear = <T extends CoachGearProduct>(
   if (own.length) return { products: own, source: "coach" };
 
   if (!sport) return { products: [], source: null };
-  const store = inStock.filter((product) => productSports(product).includes(sport)).slice(0, limit);
+  const forSport = inStock.filter((product) => productSports(product).includes(sport));
+  const store = (seed ? seededShuffle(forSport, seed, (product) => product.handle ?? product.id ?? "") : forSport).slice(0, limit);
   return store.length ? { products: store, source: "store" } : { products: [], source: null };
 };
 

@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown, CircleHelp, ExternalLink, Hash, Tag, type LucideIcon } from "@/components/icons";
 import { isShopifyConfigured } from "@/api/shopify";
 import { useGearProducts } from "@/hooks/useGear";
+import { useCoachGearPicks } from "@/hooks/useCoachGearPicks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -70,8 +71,9 @@ export const MoreList = ({
   const { toast } = useToast();
   const { channels } = useFamilyCoachChannels(coachId);
   const { data: products = [] } = useGearProducts();
+  const { data: picks = [] } = useCoachGearPicks(isShopifyConfigured ? coachId : undefined);
   const { products: gear, source: gearSource } = isShopifyConfigured
-    ? pickCoachGear(products, brandNames, coachSport)
+    ? pickCoachGear(products, brandNames, coachSport, { picks, seed: coachId })
     : { products: [], source: null };
   const storeGear = gearSource === "store";
   const deals = visibleDeals(affiliateLinks, dealsEnabled);
@@ -109,7 +111,7 @@ export const MoreList = ({
     );
   }
   if (deals.length || gear.length) {
-    const sub = [deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : `${plural(gear.length, "product")} in ${first}'s store`) : ""]
+    const sub = [deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : gearSource === "picks" ? `${plural(gear.length, "product")} ${first} picked` : `${plural(gear.length, "product")} in ${first}'s store`) : ""]
       .filter(Boolean)
       .join(" · ");
     items.push(
@@ -140,7 +142,9 @@ export const MoreList = ({
             ) : null}
           </div>
         ))}
-        {storeGear ? <span className="text-label-xsm text-dark-300">{COACH_GEAR_STORE_LABEL}</span> : null}
+        {storeGear || gearSource === "picks" ? (
+          <span className="text-label-xsm text-dark-300">{storeGear ? COACH_GEAR_STORE_LABEL : `${first}'s picks`}</span>
+        ) : null}
         {gear.map((product) => (
           <Link key={product.id} to={`${ROUTES.GEAR}/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:text-primary">
             <span className={cn(medium, "truncate")}>{product.title}</span>

@@ -7,6 +7,7 @@ import { Link } from "react-router-dom";
 import { ChevronDown, CircleHelp, Hash, Tag, type LucideIcon } from "@/components/icons";
 import { isShopifyConfigured } from "@/api/shopify";
 import { useGearProducts } from "@/hooks/useGear";
+import { useCoachGearPicks } from "@/hooks/useCoachGearPicks";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { visibleDeals } from "@/utils/affiliateLinks";
@@ -53,9 +54,10 @@ export const MoreList = ({
   const [open, setOpen] = useState<Key | null>(null);
   const { data: channels = [] } = useOwnChannels(coachId);
   const { data: products = [] } = useGearProducts();
+  const { data: picks = [] } = useCoachGearPicks(isShopifyConfigured ? coachId : undefined);
   const deals = visibleDeals(links, dealsEnabled);
   const { products: gear, source: gearSource } = isShopifyConfigured
-    ? pickCoachGear(products, brandNames, coachSport)
+    ? pickCoachGear(products, brandNames, coachSport, { picks, seed: coachId })
     : { products: [], source: null };
   const storeGear = gearSource === "store";
   const toggle = (key: Key) => setOpen((cur) => (cur === key ? null : key));
@@ -100,7 +102,7 @@ export const MoreList = ({
         key="gear"
         icon={Tag}
         title="Gear and deals"
-        sub={[deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : `${plural(gear.length, "product")} in ${firstName}'s store`) : ""].filter(Boolean).join(" · ")}
+        sub={[deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : gearSource === "picks" ? `${plural(gear.length, "product")} ${firstName} picked` : `${plural(gear.length, "product")} in ${firstName}'s store`) : ""].filter(Boolean).join(" · ")}
         open={open === "gear"}
         onToggle={() => toggle("gear")}
       >
@@ -125,7 +127,9 @@ export const MoreList = ({
             ) : null}
           </div>
         ))}
-        {storeGear ? <span className="text-label-xsm text-dark-300">{COACH_GEAR_STORE_LABEL}</span> : null}
+        {storeGear || gearSource === "picks" ? (
+          <span className="text-label-xsm text-dark-300">{storeGear ? COACH_GEAR_STORE_LABEL : `${firstName}'s picks`}</span>
+        ) : null}
         {gear.map((product) => (
           <Link key={product.id} to={`/gear/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:underline">
             <span className="truncate text-label-sm text-dark">{product.title}</span>
