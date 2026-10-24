@@ -28,6 +28,7 @@ import {
   campWaiverUrl,
   emptyAthlete,
   emptyCampForm,
+  formatCampDates,
   formatCampMoney,
   formatCampTimes,
   parseCampRoute,
@@ -618,7 +619,11 @@ const Review = ({
   // No platform fee on camps: card processing on the card option only.
   const { direct, directOffered, feeCents, totalCents: total } = campReviewPayment(quote.data, pay, camp.price_cents * count);
   const card = quote.data?.card;
-  const groupName = (id: string) => camp.groups.find((g) => g.id === id)?.name ?? "";
+  const groupLine = (id: string) => {
+    const g = camp.groups.find((x) => x.id === id);
+    return g ? [g.name, formatCampTimes(g.start_time, g.end_time)].filter(Boolean).join(" · ") : "";
+  };
+  const when = [formatCampDates(camp.starts_on, camp.ends_on), camp.location].filter(Boolean).join(" · ");
 
   return (
     <div className={shell}>
@@ -626,13 +631,18 @@ const Review = ({
       <h1 className="text-page-title-phone text-dark">Review and pay</h1>
 
       <section className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px]">
+        <div className="flex flex-col gap-0.5">
+          <b className="text-label-sm">{camp.name}</b>
+          {when ? <span className="text-caption text-dark-300">{when}</span> : null}
+        </div>
+        <div className="h-px bg-light-525" />
         {form.athletes.map((a, i) => (
           <div key={i} className="flex items-start justify-between gap-3 text-body-m">
             <span className="flex min-w-0 flex-col">
               <b className="truncate text-label-sm">
                 {a.first} {a.last}
               </b>
-              <span className="text-caption text-dark-300">{groupName(a.groupId)}</span>
+              <span className="text-caption text-dark-300">{groupLine(a.groupId)}</span>
             </span>
             <span className="tabular-nums">{formatCampMoney(camp.price_cents)}</span>
           </div>

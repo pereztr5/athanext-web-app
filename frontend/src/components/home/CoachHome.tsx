@@ -1,6 +1,6 @@
 /**
  * Coach Home (ATH-76, Working Copy 4): today and this week first, in one wrapper column.
- * Money strip, intro calls, Today, Coming up camps, This week, and a Plan next week card from Thursday to Sunday.
+ * Coming up camps, money strip, intro calls, Today, This week, and a Plan next week card from Thursday to Sunday.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -345,6 +345,9 @@ export const CoachHome = () => {
         {!isEmpty || billing.trialActive || billing.locked ? (
           <>
             {!billing.locked ? <PaymentsToConfirm /> : null}
+            {/* Upcoming camps sit above money and planning so a coach sees sign-ups first, on phones too. */}
+            <ComingUpCamps />
+
             {/* Legacy booking-only coaches hid the money strip (ATH-86); WC4 keeps card on. */}
             {!paysDirect ? (
               <section aria-label="Money" className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-300 px-4 pb-4 pt-3 md:px-5">
@@ -597,8 +600,6 @@ export const CoachHome = () => {
                 </p>
               )}
             </section>
-
-            <ComingUpCamps />
 
             <section className={dayCard}>
               <div className="flex flex-wrap items-center justify-between gap-3">
