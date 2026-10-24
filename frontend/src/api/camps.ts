@@ -95,6 +95,9 @@ export type CoachCamp = {
   schedule_sessions?: number;
 };
 
+/** camp_schedule_overlaps(): open times that close while the camp is published, booked sessions in the way. */
+export type CampOverlaps = { open: number; booked: number };
+
 export type CampGroupInput = {
   /** Omit for a new group. Saved groups left out of the list are deleted (refused when athletes hold a spot). */
   id?: string;
@@ -287,6 +290,17 @@ export const campsAPI = {
   publish: (campId: string) => call<CoachCamp>("publish_camp", { p_camp_id: campId }, "Could not publish this camp."),
 
   unpublish: (campId: string) => call<CoachCamp>("unpublish_camp", { p_camp_id: campId }, "Could not unpublish this camp."),
+
+  /**
+   * Editor, before publishing: the coach's open times the camp's groups would close ("open")
+   * and booked sessions in the way ("booked", these block publishing). Unsaved dates and groups.
+   */
+  overlaps: (startsOn: string, endsOn: string | null, groups: { start_time: string; end_time: string }[]) =>
+    call<CampOverlaps>(
+      "camp_schedule_overlaps",
+      { p_starts_on: startsOn, p_ends_on: endsOn, p_groups: groups },
+      "Could not check your schedule.",
+    ),
 
   /** My Business > Camps: the coach's registrations (RLS: their own), summed by campMoneySummary. */
   async moneyRows(coachId: string): Promise<CampRegistrationMoneyRow[]> {

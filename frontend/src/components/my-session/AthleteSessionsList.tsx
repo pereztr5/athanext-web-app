@@ -15,7 +15,8 @@ import type { UISession } from "@/types/my-sessions";
 import { formatLocationSentence } from "@/utils/sessionFormatting";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { addDaysISO, formatDayISO } from "@/utils/schedule";
-import { formatInstantSpan, timeZoneAbbreviation } from "@/utils/viewerTime";
+import { formatInstantSpan, formatSessionSpan, sessionDisplayZone, timeZoneAbbreviation } from "@/utils/viewerTime";
+import { isCampBooking } from "@/utils/campSessions";
 
 type Tab = "up" | "req" | "past" | "cancel";
 type Kind = "all" | "individual" | "group";
@@ -66,7 +67,9 @@ const AthleteSessionCard = ({
   const start = new Date(session.start);
   const end = new Date(session.end);
   const now = Date.now();
-  const dayISO = getZonedISODate(start, timeZone);
+  // Camp days stay on the camp's clock ("4:00 to 5:30 pm ET"); other sessions show in the viewer's zone.
+  const isCamp = Boolean(session.camp) || isCampBooking(session.paymentStatus);
+  const dayISO = getZonedISODate(start, sessionDisplayZone(timeZone, isCamp));
   const group = session.type === "group";
   const pillar = session.pillarSlot;
   const title = sessionListTitle(session);
@@ -80,7 +83,8 @@ const AthleteSessionCard = ({
   const feedbackReady = past && Boolean(session.hasSlotFeedback);
   const soon = !past && !canceled && !requested ? startsInLabel(session.start, now) : "";
   const tz = timeZoneAbbreviation(timeZone, start);
-  const dateLine = `${formatDayISO(dayISO, { weekday: "short", month: "short", day: "numeric" })} · ${formatInstantSpan(start, end, timeZone)}${tz ? ` ${tz}` : ""}`;
+  const span = isCamp ? formatSessionSpan(start, end, timeZone, true) : `${formatInstantSpan(start, end, timeZone)}${tz ? ` ${tz}` : ""}`;
+  const dateLine = `${formatDayISO(dayISO, { weekday: "short", month: "short", day: "numeric" })} · ${span}`;
 
   const actionLabel =
     needsPay && offered ? "Confirm and pay" : needsPay ? "Pay now" : feedbackReady ? "View feedback" : null;

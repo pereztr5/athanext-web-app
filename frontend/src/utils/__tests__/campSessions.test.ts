@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { campDayTitle, campMoneySummary, isCampBooking } from "@/utils/campSessions";
+import { campDayTitle, campMoneySummary, campSignedUpLine, isCampBooking } from "@/utils/campSessions";
 
 describe("camp sessions", () => {
   it("labels a camp day", () => {
@@ -46,5 +46,24 @@ describe("camp sessions", () => {
     );
     expect(summary.registrationsThisMonth).toBe(1);
     expect(campMoneySummary([], new Date()).paidInApp).toBe(0);
+  });
+});
+
+describe("campSignedUpLine", () => {
+  it("names the camp, the day and the group with its time", () => {
+    expect(
+      campSignedUpLine({ name: "Thanksgiving Camp", dayIndex: 2, daysTotal: 5, groupName: "Under 12s" }, "4:00 to 5:30 pm ET"),
+    ).toEqual({ title: "You're signed up for Thanksgiving Camp, Day 2 of 5", detail: "Under 12s · 4:00 to 5:30 pm ET" });
+  });
+
+  it("copes with missing parts", () => {
+    expect(campSignedUpLine({ name: "Camp X", dayIndex: 3, daysTotal: null })).toEqual({
+      title: "You're signed up for Camp X, Day 3",
+      detail: null,
+    });
+    expect(campSignedUpLine({ name: " ", dayIndex: null, daysTotal: null }, "9:00 am to 12:00 pm ET")).toEqual({
+      title: "You're signed up for this camp",
+      detail: "9:00 am to 12:00 pm ET",
+    });
   });
 });

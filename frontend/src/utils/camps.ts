@@ -3,7 +3,8 @@
  * (dates, groups, price, what is still missing). The database checks the same limits again;
  * the form copy matches the camp-signup edge function (backend/.../_shared/camp_signup.ts).
  */
-import type { CampGroupInput, CampInputPayload, CoachCamp, CampCoachRef } from "@/api/camps";
+import type { CampGroupInput, CampInputPayload, CampOverlaps, CoachCamp, CampCoachRef } from "@/api/camps";
+import { campZoneLabel } from "@/utils/viewerTime";
 
 // ---------------------------------------------------------------------------
 // Link
@@ -121,9 +122,41 @@ export const formatCampTime = (time: string | null | undefined): string => {
   return m ? `${h12}:${String(m).padStart(2, "0")}${suffix}` : `${h12}${suffix}`;
 };
 
-/** "9am to 12pm" */
-export const formatCampTimes = (start: string | null | undefined, end: string | null | undefined) =>
-  start && end ? `${formatCampTime(start)} to ${formatCampTime(end)}` : formatCampTime(start || end);
+/**
+ * "9am to 12pm ET". Camp times are the camp's clock (Eastern, like every stored session), shown
+ * the same to every viewer with the zone. `zone: false` drops it (time pickers).
+ */
+export const formatCampTimes = (
+  start: string | null | undefined,
+  end: string | null | undefined,
+  { zone = true }: { zone?: boolean } = {},
+) => {
+  const span = start && end ? `${formatCampTime(start)} to ${formatCampTime(end)}` : formatCampTime(start || end);
+  return span && zone ? `${span} ${campZoneLabel()}` : span;
+};
+
+/** "Your spot is held": what the family does next on a pay-the-coach-directly sign-up. */
+export const campHeldNextStep = (coachFirst: string) => {
+  const name = coachFirst.trim() || "your coach";
+  return `Pay ${name} directly (cash, Zelle or Venmo). They'll mark you paid, and you'll get an email.`;
+};
+
+/**
+ * Editor line before publishing: open times under the camp close while it's published; booked
+ * sessions under it block publishing. Null when nothing overlaps.
+ */
+export const campOverlapNotice = (overlaps: CampOverlaps | null | undefined): { closes: string | null; blocks: string | null } => {
+  const open = Math.max(0, Number(overlaps?.open) || 0);
+  const booked = Math.max(0, Number(overlaps?.booked) || 0);
+  return {
+    closes: open
+      ? `${open} open 1-on-1 ${open === 1 ? "time overlaps" : "times overlap"} this camp and will be closed while it's published.`
+      : null,
+    blocks: booked
+      ? `${booked} booked ${booked === 1 ? "session overlaps" : "sessions overlap"} this camp. Move ${booked === 1 ? "it" : "them"} before you publish.`
+      : null,
+  };
+};
 
 /** Start times a group can pick (it must end by 9pm). */
 export const groupStartOptions = () => CAMP_TIMES.slice(0, -1);

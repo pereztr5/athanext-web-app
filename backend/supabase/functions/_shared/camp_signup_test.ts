@@ -3,10 +3,12 @@ import {
   birthYearRange,
   campCheckoutFees,
   campDirectAllowed,
+  campErrorMessage,
   campErrorStatus,
   campMetadata,
   campPath,
   CAMP_PLATFORM_WAIVED,
+  CAMP_RATE_LIMITS,
   campSource,
   clientIp,
   finishAccountUrl,
@@ -174,6 +176,21 @@ Deno.test("error hints map to status codes", () => {
   assertEquals(campErrorStatus("closed"), 404);
   assertEquals(campErrorStatus("invalid"), 400);
   assertEquals(campErrorStatus(null), 400);
+});
+
+Deno.test("device limit is 10 an hour; email and direct-pay limits unchanged", () => {
+  assertEquals(CAMP_RATE_LIMITS.perIpHour, 10);
+  assertEquals(CAMP_RATE_LIMITS.perEmailHour, 5);
+  assertEquals(CAMP_RATE_LIMITS.directPerEmail, 3);
+});
+
+Deno.test("device limit message is friendly; other messages pass through", () => {
+  assertEquals(
+    campErrorMessage("rate_ip", "Too many sign-ups from this device. Try again in an hour."),
+    "Too many sign-ups from this device. Wait a few minutes and try again.",
+  );
+  assertEquals(campErrorMessage("rate_email", "Too many sign-ups for this email. Try again in an hour."), "Too many sign-ups for this email. Try again in an hour.");
+  assertEquals(campErrorMessage(null, "This camp is not taking sign-ups"), "This camp is not taking sign-ups");
 });
 
 Deno.test("rate-limit window helpers", () => {

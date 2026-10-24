@@ -20,6 +20,9 @@ export default defineConfig({
   reporter: process.env.CI ? [["github"], ["html", { open: "never" }]] : [["list"], ["html", { open: "never" }]],
   use: {
     baseURL,
+    // Same browser locale and clock zone as CI, so a run here catches what CI catches.
+    locale: "en-US",
+    timezoneId: "UTC",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
   },

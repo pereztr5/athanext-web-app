@@ -15,7 +15,7 @@ import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { bookedAthletes, formatDayISO, sessionEnd, sessionStart } from "@/utils/schedule";
-import { formatInstantSpan } from "@/utils/viewerTime";
+import { formatSessionSpan, sessionDisplayZone } from "@/utils/viewerTime";
 import { campShareUrl } from "@/utils/camps";
 
 export const CampDaySheet = ({
@@ -33,7 +33,7 @@ export const CampDaySheet = ({
   const camp = session.camp;
   const start = sessionStart(session);
   const end = sessionEnd(session);
-  const day = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
+  const day = formatDayISO(getZonedISODate(start, sessionDisplayZone(timeZone, true)), { weekday: "short", month: "short", day: "numeric" });
   const where = session.location === "online" ? "Video call" : session.place || "In person";
   const link = coachSlug && camp.slug ? campShareUrl(window.location.origin, coachSlug, camp.slug) : null;
   const signed = camp.signedUp ?? 0;
@@ -59,7 +59,7 @@ export const CampDaySheet = ({
             Day {camp.dayIndex} of {camp.name}
           </DialogTitle>
           <DialogDescription className={meta}>
-            {day} · {formatInstantSpan(start, end, timeZone)} · {plural(camp.daysTotal)}
+            {day} · {formatSessionSpan(start, end, timeZone, true)} · {plural(camp.daysTotal)}
           </DialogDescription>
         </div>
         <div className="flex flex-col gap-4 px-5 pb-5 sm:px-[25px]">

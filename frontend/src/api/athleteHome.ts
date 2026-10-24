@@ -12,7 +12,17 @@ type Row = Record<string, any>;
 
 export interface HomeData {
   athlete: HomeAthlete | null;
-  next: { id: string; start: string; end: string; title: string; place: string | null; coachName: string; status: string } | null;
+  next: {
+    id: string;
+    start: string;
+    end: string;
+    title: string;
+    place: string | null;
+    coachName: string;
+    status: string;
+    /** A camp day: its time shows on the camp's clock with the zone. */
+    isCamp: boolean;
+  } | null;
   focus: { text: string; coachName: string; date: string } | null;
   coaches: { id: string; name: string; slug: string | null; photo: string | null; nextDate: string | null; creditsLeft: number }[];
 }
@@ -62,6 +72,8 @@ export const athleteHomeAPI = {
             place: next.place ?? null,
             coachName: next.coach_name ?? "Coach",
             status: next.status ?? "booked",
+            // is_camp from 20261027100000; before that the camp title ("Camp · …") gives it away.
+            isCamp: Boolean(next.is_camp) || String(next.title ?? "").startsWith("Camp · "),
           }
         : null,
       focus: focus?.text ? { text: focus.text, coachName: focus.coach_name ?? "Your coach", date: focus.date } : null,

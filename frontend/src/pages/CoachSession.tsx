@@ -38,7 +38,7 @@ import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { scoreWord } from "@/utils/feedback";
 import { formatDayISO, formatMinutes, minutesInZone, plural, sessionEnd, sessionStart } from "@/utils/schedule";
-import { isoDateInZone } from "@/utils/viewerTime";
+import { campZoneLabel, isoDateInZone, sessionDisplayZone } from "@/utils/viewerTime";
 import { campDayTitle, isCampBooking } from "@/utils/campSessions";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
@@ -169,9 +169,11 @@ const CoachSessionPage = () => {
   const noShow = s.feedback?.noShow;
   const who = first?.name ?? "an athlete";
   const title = camp ? campDayTitle(camp.name, camp.dayIndex) : group ? s.sessionName : `1-on-1 with ${who}`;
-  const dayLabel = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
+  // Camp days show on the camp's clock (with its zone in the header); other sessions in the viewer's zone.
+  const shownZone = sessionDisplayZone(timeZone, Boolean(camp));
+  const dayLabel = formatDayISO(getZonedISODate(start, shownZone), { weekday: "short", month: "short", day: "numeric" });
   const shortDay = (iso: string) => formatDayISO(iso, { month: "short", day: "numeric" });
-  const startLabel = formatMinutes(minutesInZone(start, timeZone));
+  const startLabel = `${formatMinutes(minutesInZone(start, shownZone))}${camp ? ` ${campZoneLabel(start)}` : ""}`;
 
   const statusPill = cancelled ? (
     <BrandPill tone="amber">Cancelled</BrandPill>
@@ -314,6 +316,7 @@ const CoachSessionPage = () => {
 
         <SessionHeader
           timeZone={timeZone}
+          campClock={Boolean(camp)}
           session={{
             title,
             sessionType: s.sessionType,
@@ -514,7 +517,7 @@ const CoachSessionPage = () => {
       <CancelDialog
         open={mode === "cancel"}
         occurrenceId={s.id}
-        sub={`${title}, ${shortDay(getZonedISODate(start, timeZone))} at ${startLabel}`}
+        sub={`${title}, ${shortDay(getZonedISODate(start, shownZone))} at ${startLabel}`}
         group={group}
         paymentStatus={group ? null : first?.paymentStatus ?? null}
         onClose={() => setMode(null)}
@@ -530,7 +533,7 @@ const CoachSessionPage = () => {
       <DeclineDialog
         open={mode === "decline"}
         bookingId={request ? first?.id ?? null : null}
-        sub={`${first?.parentName ? `${first.parentName} for ` : ""}${who}, ${shortDay(getZonedISODate(start, timeZone))} at ${startLabel}`}
+        sub={`${first?.parentName ? `${first.parentName} for ` : ""}${who}, ${shortDay(getZonedISODate(start, shownZone))} at ${startLabel}`}
         onClose={() => setMode(null)}
         onDeclined={() => {
           done("Request declined", "The slot is open again.");

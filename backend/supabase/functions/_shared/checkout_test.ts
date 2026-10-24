@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertNotEquals } from "jsr:@std/assert@1";
-import { checkoutExpiry, idempotencyKey, idsFromMetadata, minuteBucket } from "./checkout.ts";
+import { checkoutExpiry, idempotencyKey, idsFromMetadata, minuteBucket, USD_ONLY_CHECKOUT } from "./checkout.ts";
 
 Deno.test("checkoutExpiry is at least 32 minutes out and stable within a minute", () => {
   const now = Date.UTC(2026, 9, 21, 12, 0, 5);
@@ -45,4 +45,10 @@ Deno.test("idsFromMetadata splits, trims and drops blanks", () => {
   assertEquals(idsFromMetadata(" a, b,,a "), ["a", "b"]);
   assertEquals(idsFromMetadata(undefined), []);
   assertEquals(idsFromMetadata(""), []);
+});
+
+Deno.test("USD_ONLY_CHECKOUT turns Adaptive Pricing off and sets nothing else", () => {
+  assertEquals(USD_ONLY_CHECKOUT, { adaptive_pricing: { enabled: false } });
+  const params = { ...USD_ONLY_CHECKOUT, mode: "payment" };
+  assertEquals(params.adaptive_pricing.enabled, false);
 });

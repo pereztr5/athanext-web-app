@@ -7,6 +7,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { USD_ONLY_CHECKOUT } from "../_shared/checkout.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { feeLine, toCents } from "../_shared/fees.ts";
 
@@ -168,6 +169,7 @@ serve(async (req) => {
       const fees = feeLine(toCents(Number(inv.amount)), "invoice", await loadFeeConfig(admin));
       const fee = fees.processingCents / 100;
       const session = await stripe().checkout.sessions.create({
+        ...USD_ONLY_CHECKOUT,
         mode: "payment",
         customer_email: user.email ?? undefined,
         line_items: [

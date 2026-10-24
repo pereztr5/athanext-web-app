@@ -11,8 +11,8 @@ export const CAMP_MAX_ATHLETES = 6;
 
 /** Limits passed to camp_signup_start (enforced there, inside the camp lock). */
 export const CAMP_RATE_LIMITS = {
-  /** Sign-ups per hour from one device (hashed IP). */
-  perIpHour: 5,
+  /** Sign-ups per hour from one device (hashed IP). 10 so a family or a shared gym wifi can retry. */
+  perIpHour: 10,
   /** Sign-ups per hour for one parent email. */
   perEmailHour: 5,
   /** Unpaid "pay the coach directly" sign-ups one email may have at one camp. */
@@ -223,6 +223,13 @@ export const campErrorStatus = (hint: string | null | undefined): number => {
       return 400;
   }
 };
+
+/**
+ * The message a family sees for a camp RPC error. The device limit is a sliding hour, so the
+ * next try often works sooner than "an hour"; anything else keeps the database's own message.
+ */
+export const campErrorMessage = (hint: string | null | undefined, message: string): string =>
+  hint === "rate_ip" ? "Too many sign-ups from this device. Wait a few minutes and try again." : message;
 
 /** Start of the rate-limit window that contains `nowMs` for a sliding window of `windowMs`. */
 export const rateWindowStart = (nowMs: number, windowMs = 60 * 60 * 1000) => new Date(nowMs - windowMs).toISOString();

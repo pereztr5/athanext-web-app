@@ -107,6 +107,42 @@ export const timeZoneAbbreviation = (timeZone: string, at: Date = new Date()): s
   }
 };
 
+/**
+ * Camp times are the camp's own clock: stored like every session as Eastern wall time, and shown
+ * that way to everyone with the zone ("4:00 to 5:30 pm ET"), never moved to the viewer's zone.
+ */
+export const CAMP_TIME_ZONE = SESSION_TIME_ZONE;
+
+/** Short generic zone label ("ET", "CT"); the abbreviation ("GMT+1") where there's no short name. */
+export const shortZoneLabel = (timeZone: string, at: Date = new Date()): string => {
+  try {
+    const generic = new Intl.DateTimeFormat("en-US", { timeZone, timeZoneName: "shortGeneric" })
+      .formatToParts(at)
+      .find((p) => p.type === "timeZoneName")?.value;
+    if (generic && !/\s/.test(generic)) return generic;
+  } catch {
+    // Older engines without shortGeneric fall through.
+  }
+  return timeZoneAbbreviation(timeZone, at);
+};
+
+/** The camp clock's label: "ET". */
+export const campZoneLabel = (at?: Date): string => shortZoneLabel(CAMP_TIME_ZONE, at);
+
+/**
+ * Session span for display: camp sessions on the camp clock with its zone ("4:00 to 5:30 pm ET"),
+ * every other session in the viewer's zone, unchanged.
+ */
+export const formatSessionSpan = (start: Date, end: Date, viewerTimeZone: string, isCamp: boolean): string => {
+  if (!isCamp) return formatInstantSpan(start, end, viewerTimeZone);
+  const span = formatInstantSpan(start, end, CAMP_TIME_ZONE);
+  return span ? `${span} ${campZoneLabel(start)}` : span;
+};
+
+/** The zone a session's date and time show in: the camp clock for camp sessions. */
+export const sessionDisplayZone = (viewerTimeZone: string, isCamp: boolean): string =>
+  isCamp ? CAMP_TIME_ZONE : viewerTimeZone;
+
 export interface TimeZoneOption {
   value: string;
   label: string;

@@ -1,7 +1,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient as SupabaseClientOf } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { checkoutExpiry, idempotencyKey, idsFromMetadata } from "../_shared/checkout.ts";
+import { checkoutExpiry, idempotencyKey, idsFromMetadata, USD_ONLY_CHECKOUT } from "../_shared/checkout.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { checkoutFees, type FeeConfig, feeConfigFromMetadata, feeConfigMetadata, toCents } from "../_shared/fees.ts";
 import { isFullRefund, releaseCampSession, reverseCampCharge, settleCampSession } from "../_shared/camp_settle.ts";
@@ -1634,6 +1634,7 @@ serve(async (req) => {
       }
       const holdSession = await stripeApi().checkout.sessions.create(
         {
+          ...USD_ONLY_CHECKOUT,
           customer_email: user.email || undefined,
           payment_method_types: ["card"],
           mode: "payment",
@@ -1767,6 +1768,7 @@ serve(async (req) => {
       const attempt = `${previousSessionIds.length ? [...previousSessionIds].sort().join("+") : "new"}:${expiry.unix}`;
       session = await stripeApi().checkout.sessions.create(
         {
+          ...USD_ONLY_CHECKOUT,
           customer: customerId,
           customer_email: customerId ? undefined : user.email || undefined,
           // Card covers Apple Pay and Google Pay where the device supports them.

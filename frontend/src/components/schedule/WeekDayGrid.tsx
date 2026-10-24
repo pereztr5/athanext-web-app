@@ -17,6 +17,7 @@ import { striped } from "@/components/schedule/views/styles";
 import { cn } from "@/lib/utils";
 import type { ScheduleSession } from "@/api/schedule";
 import { campDayTitle } from "@/utils/campSessions";
+import { CAMP_TIME_ZONE, campZoneLabel } from "@/utils/viewerTime";
 import {
   bookedAthletes,
   formatClock,
@@ -41,7 +42,13 @@ export const WeekChip = ({
   timeZone: string;
   onOpen: WeekDayOpen;
 }) => {
-  const time = <span className="text-label-xsm text-dark-300">{formatClock(item.start, timeZone)}</span>;
+  // Camp days keep the camp's clock with its zone ("4:00 pm ET"); everything else is in the viewer's zone.
+  const campDay = Boolean(item.session?.camp);
+  const time = (
+    <span className="text-label-xsm text-dark-300">
+      {campDay ? `${formatClock(item.start, CAMP_TIME_ZONE)} ${campZoneLabel(item.start)}` : formatClock(item.start, timeZone)}
+    </span>
+  );
   const kind = item.kind;
 
   if (kind === "busy") {

@@ -14,7 +14,7 @@ import { primaryButton, secondaryButton, textButton } from "@/components/schedul
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { campPath, formatCampDates, formatCampDay, formatCampTimes } from "@/utils/camps";
+import { campHeldNextStep, campPath, formatCampDates, formatCampDay, formatCampTimes } from "@/utils/camps";
 import { finishAccountPath } from "./campFinish";
 
 const POLLS = 8;
@@ -131,6 +131,7 @@ export const CampYoureIn = ({ signupId }: { signupId: string }) => {
         <div className="flex flex-col gap-1.5" aria-live="polite">
           <h1 className="text-page-title-phone text-dark">{title}</h1>
           <p className="text-body-m text-dark-300">{body}</p>
+          {held ? <p className="text-body-m text-dark">{campHeldNextStep(coachFirst)}</p> : null}
         </div>
         <CampSummary status={s} dates={dates} />
         {lapsed && s.camp.coach_slug && s.camp.slug ? (

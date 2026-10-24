@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { campCoachEmail, campDates, campDetailsEmail, campParentEmail, campTime, money } from "./camp_emails.ts";
+import { campCoachEmail, campDates, campDetailsEmail, campParentEmail, campTime, campTimes, money } from "./camp_emails.ts";
 
 const camp = {
   name: "Thanksgiving <Camp>",
@@ -14,10 +14,21 @@ Deno.test("dates, times and money", () => {
   assertEquals(campDates("2026-11-24", "2026-11-26"), "Nov 24 to Nov 26");
   assertEquals(campDates("2026-11-24", "2026-11-24"), "Nov 24");
   assertEquals(campDates(null, null), "");
-  assertEquals(campTime("09:00"), "9:00 AM");
-  assertEquals(campTime("12:30"), "12:30 PM");
-  assertEquals(campTime("20:00"), "8:00 PM");
+  assertEquals(campTime("09:00"), "9am");
+  assertEquals(campTime("12:30"), "12:30pm");
+  assertEquals(campTime("20:00"), "8pm");
+  assertEquals(campTime("00:30"), "12:30am");
+  assertEquals(campTime("16:00:00"), "4pm");
+  assertEquals(campTime("bad"), "");
   assertEquals(money(26845), "$268.45");
+});
+
+Deno.test("camp times carry the Eastern label", () => {
+  assertEquals(campTimes("16:00", "17:30"), "4pm to 5:30pm ET");
+  assertEquals(campTimes("09:00:00", "12:30:00"), "9am to 12:30pm ET");
+  assertEquals(campTimes("09:00", null), "9am ET");
+  assertEquals(campTimes(null, null), "");
+  assertEquals(campTimes("", "bad"), "");
 });
 
 Deno.test("parent receipt escapes names and offers Finish your account only when given", () => {
@@ -33,7 +44,7 @@ Deno.test("parent receipt escapes names and offers Finish your account only when
   assertStringIncludes(paid.html, "Thanksgiving &lt;Camp&gt;");
   assert(!paid.html.includes("<b>Diaz</b>"));
   assertStringIncludes(paid.html, "$268.45");
-  assertStringIncludes(paid.html, "9:00 AM to 12:00 PM");
+  assertStringIncludes(paid.html, "9am to 12pm ET");
   assertStringIncludes(paid.html, "Finish your account");
   assertStringIncludes(paid.html, "Water bottle");
 

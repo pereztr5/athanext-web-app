@@ -1,6 +1,11 @@
 import { describe, it, expect } from "vitest";
 import {
+  CAMP_TIME_ZONE,
+  campZoneLabel,
   formatInstantSpan,
+  formatSessionSpan,
+  sessionDisplayZone,
+  shortZoneLabel,
   formatSlotForViewer,
   isValidTimeZone,
   resolveTimeZone,
@@ -58,5 +63,35 @@ describe("time zone resolution", () => {
   it("labels Eastern by season", () => {
     expect(timeZoneAbbreviation("America/New_York", new Date("2026-07-15T12:00:00Z"))).toBe("EDT");
     expect(timeZoneAbbreviation("America/New_York", new Date("2026-12-15T12:00:00Z"))).toBe("EST");
+  });
+});
+
+describe("camp times", () => {
+  // Nov 9 2026, 4:00 to 5:30 pm Eastern (EST, UTC-5).
+  const start = new Date(sessionInstantISO("2026-11-09", "16:00:00"));
+  const end = new Date(sessionInstantISO("2026-11-09", "17:30:00"));
+
+  it("shows camp sessions on the camp clock with its zone, wherever the viewer is", () => {
+    expect(CAMP_TIME_ZONE).toBe("America/New_York");
+    expect(formatSessionSpan(start, end, "America/Chicago", true)).toBe("4:00 to 5:30 pm ET");
+    expect(formatSessionSpan(start, end, "Europe/Berlin", true)).toBe("4:00 to 5:30 pm ET");
+    expect(formatSessionSpan(start, end, "America/New_York", true)).toBe("4:00 to 5:30 pm ET");
+  });
+
+  it("leaves other sessions in the viewer's zone", () => {
+    expect(formatSessionSpan(start, end, "America/Chicago", false)).toBe("3:00 to 4:30 pm");
+    expect(formatSessionSpan(new Date("bad"), end, "America/Chicago", true)).toBe("");
+  });
+
+  it("picks the zone dates show in", () => {
+    expect(sessionDisplayZone("America/Chicago", true)).toBe("America/New_York");
+    expect(sessionDisplayZone("America/Chicago", false)).toBe("America/Chicago");
+  });
+
+  it("labels zones short", () => {
+    expect(campZoneLabel(start)).toBe("ET");
+    expect(shortZoneLabel("America/Chicago", start)).toBe("CT");
+    // No short generic name: falls back to the abbreviation.
+    expect(shortZoneLabel("Europe/Berlin", start)).toMatch(/^(GMT\+1|CET)$/);
   });
 });

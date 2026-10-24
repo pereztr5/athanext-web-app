@@ -1,6 +1,6 @@
 /**
  * Coach Home (ATH-76, Working Copy 4): today and this week first, in one wrapper column.
- * Money strip, intro calls, Today, This week, and a Plan next week card from Thursday to Sunday.
+ * Money strip, intro calls, Today, Coming up camps, This week, and a Plan next week card from Thursday to Sunday.
  */
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -19,6 +19,7 @@ import { card, primaryButton, secondaryButton, segButton, segGroup, smallButton,
 import { invoicesAPI } from "@/api/invoices";
 import { useToast } from "@/hooks/use-toast";
 import { IntroCallsHomeCard } from "@/components/intro-calls";
+import { ComingUpCamps } from "@/components/home/ComingUpCamps";
 import { PaymentsToConfirm } from "@/components/home/PaymentsToConfirm";
 import { WeekOffDialog } from "@/components/home/WeekOffDialog";
 import { CreateSessionSheet } from "@/components/schedule/CreateSessionSheet";
@@ -596,6 +597,8 @@ export const CoachHome = () => {
                 </p>
               )}
             </section>
+
+            <ComingUpCamps />
 
             <section className={dayCard}>
               <div className="flex flex-wrap items-center justify-between gap-3">

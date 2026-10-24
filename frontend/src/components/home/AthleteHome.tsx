@@ -27,7 +27,7 @@ import { coachProfilePath } from "@/utils/coachSlug";
 import { REMOVE_COACH_NOTE, firstNameOf, removeCoachQuestion, withoutCoach } from "@/utils/myCoaches";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatDayISO, plural } from "@/utils/schedule";
-import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
+import { formatDateInZone, formatSessionSpan, sessionDisplayZone } from "@/utils/viewerTime";
 
 const h3 = "text-subtitle text-dark";
 const splitName = (full: string) => {
@@ -151,13 +151,13 @@ export const AthleteHome = () => {
             {next ? (
               <Link to={`/sessions/${next.id}`} className="flex items-center gap-3 text-left hover:opacity-90">
                 <span className="flex size-11 shrink-0 flex-col items-center justify-center rounded-control border border-light-525 bg-light-400">
-                  <small className="text-label-xsm text-dark-300">{formatDateInZone(new Date(next.start), timeZone, { weekday: "short" })}</small>
-                  <b className="text-subtitle">{formatDateInZone(new Date(next.start), timeZone, { day: "numeric" })}</b>
+                  <small className="text-label-xsm text-dark-300">{formatDateInZone(new Date(next.start), sessionDisplayZone(timeZone, next.isCamp), { weekday: "short" })}</small>
+                  <b className="text-subtitle">{formatDateInZone(new Date(next.start), sessionDisplayZone(timeZone, next.isCamp), { day: "numeric" })}</b>
                 </span>
                 <span className="flex min-w-0 flex-1 flex-col gap-0.5">
                   <b className="truncate text-label-sm">{next.title} with {next.coachName}</b>
                   <span className={meta}>
-                    {formatInstantSpan(new Date(next.start), new Date(next.end), timeZone)}
+                    {formatSessionSpan(new Date(next.start), new Date(next.end), timeZone, next.isCamp)}
                     {next.place ? ` · ${next.place === "online" ? "Video call" : next.place === "in-person" ? "In person" : next.place}` : ""}
                   </span>
                 </span>

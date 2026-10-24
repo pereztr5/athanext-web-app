@@ -67,10 +67,19 @@ import { PROFILE_TYPE } from "@/utils/db";
 import type { Enums } from "@/integrations/supabase/types";
 import { resolvePillarIcon } from "@/utils/pillarIcons";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
-import { formatDateInZone, timeZoneAbbreviation } from "@/utils/viewerTime";
+import { formatDateInZone, formatSessionSpan, sessionDisplayZone, timeZoneAbbreviation } from "@/utils/viewerTime";
+import { isCampBooking } from "@/utils/campSessions";
 import { sportFromText } from "@/utils/coachSport";
 
 type UserRole = typeof PROFILE_TYPE.coach | typeof PROFILE_TYPE.athlete | null;
+
+/** Camp days stay on the camp's clock with its zone ("4:00 to 5:30 pm ET"), wherever the viewer is. */
+const isCampSession = (session: UISession) => Boolean(session.camp) || isCampBooking(session.paymentStatus);
+const sessionZone = (session: UISession, timeZone: string) => sessionDisplayZone(timeZone, isCampSession(session));
+const sessionTimeSpan = (session: UISession, timeZone: string) =>
+  isCampSession(session)
+    ? formatSessionSpan(new Date(session.start), new Date(session.end), timeZone, true)
+    : formatTimeSpan(session.start, session.end, timeZone, true);
 
 /**
  * "Thu, Mar 12" for dates in the reference year, "Thu, Mar 12, 2027" otherwise.
@@ -316,8 +325,8 @@ const SessionCard = ({
           {role === PROFILE_TYPE.athlete && waived ? <BrandPill tone="green">No platform fee</BrandPill> : null}
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <CardField label="Date" value={formatWeekdayDate(session.start, now, timeZone)} />
-          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone, true)} />
+          <CardField label="Date" value={formatWeekdayDate(session.start, now, sessionZone(session, timeZone))} />
+          <CardField label="Time" value={sessionTimeSpan(session, timeZone)} />
           {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
         </div>
         {role === PROFILE_TYPE.coach ? (
@@ -376,8 +385,8 @@ const PastDraftCard = ({
           <BookingStatePill session={session} />
         </SessionTitleRow>
         <div className="flex flex-wrap gap-x-6 gap-y-3">
-          <CardField label="Date" value={formatWeekdayDate(session.start, new Date(), timeZone)} />
-          <CardField label="Time" value={formatTimeSpan(session.start, session.end, timeZone, true)} />
+          <CardField label="Date" value={formatWeekdayDate(session.start, new Date(), sessionZone(session, timeZone))} />
+          <CardField label="Time" value={sessionTimeSpan(session, timeZone)} />
           {session.location ? <CardField label="Location" value={formatLocationSentence(session.location)} /> : null}
           {session.pillarSlot ? <CardField label="Pillar" value={session.pillarSlot} /> : null}
         </div>
@@ -1039,13 +1048,13 @@ const MySessions = () => {
       session={session}
       kind={kind}
       now={now}
-      dayISO={getZonedISODate(new Date(session.start), timeZone)}
-      time={formatTimeSpan(session.start, session.end, timeZone, true)}
+      dayISO={getZonedISODate(new Date(session.start), sessionZone(session, timeZone))}
+      time={sessionTimeSpan(session, timeZone)}
       location={coachLocation(session)}
       info={session.occurrenceId ? occurrenceInfo[session.occurrenceId] : undefined}
       hasFeedback={hasSubmittedFeedback(session)}
       timeZone={timeZone}
-      timeZoneAbbr={tzAbbr}
+      timeZoneAbbr={isCampSession(session) ? undefined : tzAbbr}
       onViewDetails={() => openSession(session)}
       onCheckIn={() => handleFeedbackNavigate(feedbackSlotId(session), session)}
       onFeedback={() => handleFeedbackNavigate(feedbackSlotId(session), session)}
@@ -1127,8 +1136,8 @@ const MySessions = () => {
               ? resolvePillarIconForSession(selectedSessionSafe.pillarSlot)
               : null;
             const details: { label: string; value: ReactNode }[] = [
-              { label: "Date", value: formatWeekdayDate(selectedSessionSafe.start, now, timeZone) || "-" },
-              { label: "Time", value: formatTimeSpan(selectedSessionSafe.start, selectedSessionSafe.end, timeZone, true) || "-" },
+              { label: "Date", value: formatWeekdayDate(selectedSessionSafe.start, now, sessionZone(selectedSessionSafe, timeZone)) || "-" },
+              { label: "Time", value: sessionTimeSpan(selectedSessionSafe, timeZone) || "-" },
               { label: "Location", value: formatLocationSentence(selectedSessionSafe.location) || "-" },
               { label: "Total", value: totalLabel },
             ];

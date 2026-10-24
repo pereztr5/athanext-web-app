@@ -26,7 +26,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { checkoutExpiry, idempotencyKey } from "../_shared/checkout.ts";
+import { checkoutExpiry, idempotencyKey, USD_ONLY_CHECKOUT } from "../_shared/checkout.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { feeConfigMetadata } from "../_shared/fees.ts";
 import {
@@ -34,6 +34,7 @@ import {
   CAMP_RATE_LIMITS,
   campCheckoutFees,
   campDirectAllowed,
+  campErrorMessage,
   campErrorStatus,
   campMetadata,
   campPath,
@@ -45,7 +46,7 @@ import {
   resolveAppOrigin,
   validateCampSignup,
 } from "../_shared/camp_signup.ts";
-import { campDetailsEmail, campFinishAccountEmail, campTime } from "../_shared/camp_emails.ts";
+import { campDetailsEmail, campFinishAccountEmail, campTimes } from "../_shared/camp_emails.ts";
 import { appOrigin, isCampSessionPaid, sendCampEmail, sendCampSignupEmails, settleCampSession } from "../_shared/camp_settle.ts";
 
 const corsHeaders = {
@@ -64,7 +65,7 @@ const rpcFail = (error: RpcError, fallback: string) => {
   // Messages raised by the camp functions are written for families and coaches; anything
   // else (a database error) gets the fallback.
   const known = Boolean(hint) || (error?.code === "22023" || error?.code === "P0001" || error?.code === "P0002" || error?.code === "42501");
-  return json({ error: known && error?.message ? error.message : fallback, code: hint ?? undefined }, known ? status : 500);
+  return json({ error: known && error?.message ? campErrorMessage(hint, error.message) : fallback, code: hint ?? undefined }, known ? status : 500);
 };
 
 let stripeClient: Stripe | null = null;
@@ -174,6 +175,7 @@ serve(async (req) => {
       try {
         session = await stripeApi().checkout.sessions.create(
           {
+            ...USD_ONLY_CHECKOUT,
             mode: "payment",
             payment_method_types: ["card"],
             customer_email: input.parent.email,
@@ -187,7 +189,7 @@ serve(async (req) => {
                   name: `${camp.name}: ${a.first_name} ${a.last_name}`.slice(0, 250),
                   description: [
                     `With ${camp.coach_name}`,
-                    a.group_name ? `${a.group_name}${a.start_time && a.end_time ? `, ${campTime(a.start_time)} to ${campTime(a.end_time)}` : ""}` : "",
+                    a.group_name ? `${a.group_name}${a.start_time && a.end_time ? `, ${campTimes(a.start_time, a.end_time)}` : ""}` : "",
                     "Includes card processing",
                   ].filter(Boolean).join(" · ").slice(0, 500),
                 },

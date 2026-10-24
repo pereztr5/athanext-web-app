@@ -1,6 +1,7 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@14.21.0";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { USD_ONLY_CHECKOUT } from "../_shared/checkout.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { feeConfigMetadata, feeLine, toCents } from "../_shared/fees.ts";
 
@@ -113,6 +114,7 @@ serve(async (req) => {
       };
       const origin = req.headers.get("origin");
       const session = await stripe.checkout.sessions.create({
+        ...USD_ONLY_CHECKOUT,
         customer: customer.id,
         payment_method_types: ["card"],
         line_items: [{ price_data: pkg.renews_monthly ? { ...priceData, recurring: { interval: "month" } } : priceData, quantity: 1 }],
@@ -229,6 +231,7 @@ serve(async (req) => {
     expiryDate.setDate(expiryDate.getDate() + packageData.validity_days);
 
     const session = await stripe.checkout.sessions.create({
+      ...USD_ONLY_CHECKOUT,
       customer: customer.id,
       payment_method_types: ["card"],
       line_items: [

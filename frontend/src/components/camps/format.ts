@@ -1,4 +1,5 @@
 /** Display helpers for camp cards. Dates stay on the UTC calendar day stored in the database. */
+import { campZoneLabel } from "@/utils/viewerTime";
 
 export const packageKind = (pkg: object): string => ((pkg as { kind?: unknown }).kind === "camp" ? "camp" : "package");
 
@@ -43,6 +44,7 @@ const formatClock = (value: string | null): string | null => {
 export const formatDailyTime = (start: string | null, end: string | null): string | null => {
   const open = formatClock(start);
   const close = formatClock(end);
-  if (open && close) return `${open} to ${close}`;
-  return open || close;
+  // Camp times are the camp's clock (Eastern), labelled for every viewer.
+  const span = open && close ? `${open} to ${close}` : open || close;
+  return span ? `${span} ${campZoneLabel()}` : span;
 };

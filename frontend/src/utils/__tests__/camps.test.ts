@@ -15,6 +15,8 @@ import {
   formatCampDates,
   formatCampMoney,
   formatCampTimes,
+  campOverlapNotice,
+  campHeldNextStep,
   groupEndOptions,
   missingLine,
   moveGroupStart,
@@ -144,7 +146,9 @@ describe("group times", () => {
   });
 
   it("reads like the mockup", () => {
-    expect(formatCampTimes("09:00", "12:30")).toBe("9am to 12:30pm");
+    expect(formatCampTimes("09:00", "12:30")).toBe("9am to 12:30pm ET");
+    expect(formatCampTimes("09:00", "12:30", { zone: false })).toBe("9am to 12:30pm");
+    expect(formatCampTimes(null, null)).toBe("");
   });
 });
 
@@ -340,5 +344,31 @@ describe("paying the coach directly", () => {
     expect(cardOnly.totalCents).toBe(51524);
     // Quote still loading: no total for card yet.
     expect(campReviewPayment(undefined, "card", 50000)).toMatchObject({ direct: false, feeCents: null, totalCents: null });
+  });
+});
+
+describe("campOverlapNotice", () => {
+  it("says how many open times close and how many booked sessions block publishing", () => {
+    expect(campOverlapNotice({ open: 3, booked: 0 })).toEqual({
+      closes: "3 open 1-on-1 times overlap this camp and will be closed while it's published.",
+      blocks: null,
+    });
+    expect(campOverlapNotice({ open: 1, booked: 1 })).toEqual({
+      closes: "1 open 1-on-1 time overlaps this camp and will be closed while it's published.",
+      blocks: "1 booked session overlaps this camp. Move it before you publish.",
+    });
+    expect(campOverlapNotice({ open: 0, booked: 2 }).blocks).toBe("2 booked sessions overlap this camp. Move them before you publish.");
+  });
+
+  it("stays quiet with nothing to say", () => {
+    expect(campOverlapNotice(null)).toEqual({ closes: null, blocks: null });
+    expect(campOverlapNotice({ open: 0, booked: 0 })).toEqual({ closes: null, blocks: null });
+  });
+});
+
+describe("campHeldNextStep", () => {
+  it("tells the family how to pay the coach", () => {
+    expect(campHeldNextStep("Riley")).toBe("Pay Riley directly (cash, Zelle or Venmo). They'll mark you paid, and you'll get an email.");
+    expect(campHeldNextStep(" ")).toBe("Pay your coach directly (cash, Zelle or Venmo). They'll mark you paid, and you'll get an email.");
   });
 });

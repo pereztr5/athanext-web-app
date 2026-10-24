@@ -10,7 +10,7 @@ import { SessionDateTile } from "@/components/my-session/CoachSessionCard";
 import { cn } from "@/lib/utils";
 import { formatDayISO, sessionEnd, sessionStart } from "@/utils/schedule";
 import { getZonedISODate } from "@/utils/dateHelpers";
-import { formatInstantSpan } from "@/utils/viewerTime";
+import { formatSessionSpan, sessionDisplayZone } from "@/utils/viewerTime";
 
 export type SessionHeaderPerson = {
   name: string;
@@ -75,16 +75,19 @@ export const SessionPageHeader = ({
 export const SessionHeader = ({
   session,
   timeZone,
+  campClock = false,
   className,
 }: {
   session: SessionHeaderModel;
   timeZone: string;
+  /** A camp day: date and time on the camp's clock with the zone ("4:00 to 5:30 pm ET"). */
+  campClock?: boolean;
   className?: string;
 }) => {
   const group = session.sessionType === "group";
   const start = sessionStart(session);
   const end = sessionEnd(session);
-  const day = getZonedISODate(start, timeZone);
+  const day = getZonedISODate(start, sessionDisplayZone(timeZone, campClock));
   const where = session.location === "online" ? "Video call" : session.place || "In person";
   const people = session.people ?? [];
 
@@ -101,7 +104,7 @@ export const SessionHeader = ({
           <span className="text-card-title text-dark">{session.title}</span>
           <span className={cn(caption, "flex items-center gap-1.5")}>
             <Clock className="size-3.5 flex-none" strokeWidth={1.5} aria-hidden="true" />
-            {formatDayISO(day, { weekday: "short", month: "short", day: "numeric" })} · {formatInstantSpan(start, end, timeZone)}
+            {formatDayISO(day, { weekday: "short", month: "short", day: "numeric" })} · {formatSessionSpan(start, end, timeZone, campClock)}
           </span>
           <span className={cn(caption, "flex items-center gap-1.5")}>
             <MapPin className="size-3.5 flex-none" strokeWidth={1.5} aria-hidden="true" />

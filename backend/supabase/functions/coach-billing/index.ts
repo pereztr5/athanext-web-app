@@ -8,7 +8,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
-import { minuteBucket } from "../_shared/checkout.ts";
+import { minuteBucket, USD_ONLY_CHECKOUT } from "../_shared/checkout.ts";
 import { subscriptionIdFromInvoice } from "./subscription.ts";
 
 const corsHeaders = {
@@ -317,6 +317,7 @@ serve(async (req) => {
       const keepTrial = trialEnd > Math.floor(Date.now() / 1000) + 48 * 60 * 60;
       const session = await stripe().checkout.sessions.create(
         {
+          ...USD_ONLY_CHECKOUT,
           customer: customerId,
           mode: "subscription",
           line_items: [{ price: priceId, quantity: 1 }],

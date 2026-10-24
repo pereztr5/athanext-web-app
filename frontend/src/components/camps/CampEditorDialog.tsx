@@ -21,6 +21,7 @@ import {
   CAMP_STEPS,
   campDayCount,
   campMissing,
+  campOverlapNotice,
   campStepAnswered,
   campWaiverUrl,
   draftFromCamp,
@@ -201,12 +202,31 @@ export const CampEditorDialog = ({
     !waitingForCamp && campStepAnswered("name", draft, minDay) && campStepAnswered("groups", draft, minDay) && campStepAnswered("price", draft, minDay);
   const view = viewFromDraft(draft, coach, taken);
 
+  // Open times the camp would close, and booked sessions in its way, for the dates and groups as typed.
+  const overlapTimes = useMemo(() => draft.groups.map((g) => ({ start_time: g.start, end_time: g.end })), [draft.groups]);
+  const overlaps = useQuery({
+    queryKey: ["camp-overlaps", draft.startsOn, draft.endsOn, overlapTimes],
+    queryFn: () => campsAPI.overlaps(draft.startsOn as string, draft.endsOn, overlapTimes),
+    enabled: open && Boolean(coachId) && Boolean(draft.startsOn) && overlapTimes.length > 0,
+    retry: false,
+    staleTime: 30_000,
+  });
+  const overlapNotice = campOverlapNotice(overlaps.data);
+  const scheduleNotice =
+    overlapNotice.blocks || overlapNotice.closes ? (
+      <div className="flex flex-col gap-1 rounded-control border border-info-300 bg-info-50 px-3 py-2.5 text-body-m text-info-800">
+        {overlapNotice.blocks ? <p role="alert">{overlapNotice.blocks}</p> : null}
+        {overlapNotice.closes ? <p role="status">{overlapNotice.closes}</p> : null}
+      </div>
+    ) : null;
+
   const refresh = async () => {
     await Promise.all([
       queryClient.invalidateQueries({ queryKey: ["coach-camp-list"] }),
       queryClient.invalidateQueries({ queryKey: ["coach-schedule"] }),
       queryClient.invalidateQueries({ queryKey: ["camp-registrations"] }),
       queryClient.invalidateQueries({ queryKey: ["coach-camps"] }),
+      queryClient.invalidateQueries({ queryKey: ["camp-overlaps"] }),
     ]);
   };
 
@@ -366,6 +386,7 @@ export const CampEditorDialog = ({
               </>
             ) : null}
             {step === "review" ? <Review draft={draft} view={view} onEdit={edit} /> : null}
+            {step === "review" || step === "dates" || step === "groups" ? scheduleNotice : null}
             {error ? (
               <p role="alert" className="text-body-m text-error-700">
                 {error}
@@ -451,6 +472,7 @@ export const CampEditorDialog = ({
             </div>
             <WhereField draft={draft} patch={patch} places={coach.places} />
             <GroupsField draft={draft} patch={patch} taken={taken} />
+            {scheduleNotice}
             <div className="flex flex-col gap-4 border-t border-light-525 pt-5">
               <button
                 type="button"

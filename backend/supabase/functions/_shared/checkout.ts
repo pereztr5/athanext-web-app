@@ -1,4 +1,12 @@
-// Pure helpers shared by the Stripe Checkout functions (create-booking-payment, coach-billing).
+// Pure helpers shared by the Stripe Checkout functions (create-booking-payment, coach-billing,
+// camp-signup, create-package-payment, ...).
+
+/**
+ * Spread into every Checkout Session create. Our prices are in USD; with Adaptive Pricing on,
+ * Stripe shows them in the buyer's local currency (a Berlin browser saw EUR). Off here, so
+ * Checkout always shows and charges USD whatever the Dashboard setting is.
+ */
+export const USD_ONLY_CHECKOUT = { adaptive_pricing: { enabled: false } } as const;
 
 /** Stripe accepts a Checkout expiry 30 minutes to 24 hours out; 32 leaves room for clock drift. */
 export const CHECKOUT_HOLD_MINUTES = 32;

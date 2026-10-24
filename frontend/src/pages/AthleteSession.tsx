@@ -30,9 +30,9 @@ import { ROUTES } from "@/routes";
 import { coachProfilePath } from "@/utils/coachSlug";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, plural, sessionEnd, sessionStart } from "@/utils/schedule";
-import { formatInstantSpan } from "@/utils/viewerTime";
+import { formatSessionSpan, sessionDisplayZone } from "@/utils/viewerTime";
 import { helpLinkFrom } from "@/utils/helpBack";
-import { campDayTitle } from "@/utils/campSessions";
+import { campDayTitle, campSignedUpLine } from "@/utils/campSessions";
 import { campPath } from "@/utils/camps";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
@@ -143,7 +143,8 @@ const AthleteSessionPage = () => {
   const canReschedule = upcoming && !camp && !late && RESCHEDULABLE_PAYMENTS.has(s.booking.paymentStatus);
   const where = s.location === "online" ? "Video call" : s.place || "In person";
   const missed = s.ended && s.attendance && s.attendance !== "present";
-  const dayLabel = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
+  const dayLabel = formatDayISO(getZonedISODate(start, sessionDisplayZone(timeZone, Boolean(camp))), { weekday: "short", month: "short", day: "numeric" });
+  const campLine = camp ? campSignedUpLine(camp, formatSessionSpan(start, end, timeZone, true)) : null;
 
   const statusPill = cancelled ? (
     <BrandPill tone="amber">Cancelled</BrandPill>
@@ -279,6 +280,7 @@ const AthleteSessionPage = () => {
         <h1 className="sr-only">{title}</h1>
         <SessionHeader
           timeZone={timeZone}
+          campClock={Boolean(camp)}
           session={{
             title,
             sessionType: s.sessionType,
@@ -321,7 +323,9 @@ const AthleteSessionPage = () => {
               {fact(Ticket, s.booking.paymentStatus === "credit" ? "Package credit" : payLine)}
               {fact(Clock, "Duration", `${s.durationMinutes} minutes`)}
               {fact(Users, "Session type", s.pillar || (group ? "Group" : "1-on-1"))}
-              {group ? fact(Users, `${plural(s.taken, "athlete")} booked`, `${s.capacity - s.taken > 0 ? plural(s.capacity - s.taken, "spot") + " left" : "Full"}. Other athletes stay private.`) : null}
+              {campLine
+                ? fact(Users, campLine.title, campLine.detail)
+                : group ? fact(Users, `${plural(s.taken, "athlete")} booked`, `${s.capacity - s.taken > 0 ? plural(s.capacity - s.taken, "spot") + " left" : "Full"}. Other athletes stay private.`) : null}
               <Link to={coachProfilePath(s.coach.slug || s.coach.id)} className="flex items-center gap-3 py-3 hover:bg-light-400">
                 <span className="flex size-[36px] items-center justify-center overflow-hidden rounded-full border border-light-550 bg-primary-50 text-label-xsm text-primary">
                   {s.coach.photo ? <img src={s.coach.photo} alt="" className="size-full object-cover" /> : s.coach.name.split(" ").map((p) => p[0]).slice(0, 2).join("")}

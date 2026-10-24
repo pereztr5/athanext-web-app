@@ -64,3 +64,20 @@ export const campMoneySummary = (rows: CampRegistrationMoneyRow[], now = new Dat
   }
   return summary;
 };
+
+/**
+ * The family's camp-day line on their session page, instead of the group roster count:
+ * "You're signed up for Thanksgiving Camp, Day 2 of 5" over "Under 12s · 4:00 to 5:30 pm ET".
+ */
+export const campSignedUpLine = (
+  camp: { name: string | null | undefined; dayIndex: number | null | undefined; daysTotal: number | null | undefined; groupName?: string | null },
+  timeSpan?: string | null,
+): { title: string; detail: string | null } => {
+  const name = camp.name?.trim() || "this camp";
+  const day = Number(camp.dayIndex);
+  const total = Number(camp.daysTotal);
+  const dayPart =
+    Number.isFinite(day) && day > 0 ? (Number.isFinite(total) && total >= day ? `, Day ${day} of ${total}` : `, Day ${day}`) : "";
+  const detail = [camp.groupName?.trim(), timeSpan?.trim()].filter(Boolean).join(" · ");
+  return { title: `You're signed up for ${name}${dayPart}`, detail: detail || null };
+};

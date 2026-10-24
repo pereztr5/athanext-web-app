@@ -49,12 +49,27 @@ export const campDates = (starts: string | null | undefined, ends: string | null
   return `${a} to ${b}`;
 };
 
-/** "9:00 AM" from "09:00". */
+/**
+ * Camp times are Eastern wall-clock (SESSION_TIME_ZONE, America/New_York), so emails label
+ * them: families outside Eastern would otherwise read them as their own time.
+ */
+export const CAMP_TIME_ZONE_LABEL = "ET";
+
+/** "9am", "9:30am", "12pm" from "09:00" (same style as the app's formatCampTime). */
 export const campTime = (hhmm: string | null | undefined) => {
   if (!hhmm || !/^\d{2}:\d{2}/.test(hhmm)) return "";
   const [h, m] = hhmm.split(":").map(Number);
-  const suffix = h >= 12 ? "PM" : "AM";
-  return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${suffix}`;
+  const suffix = h >= 12 ? "pm" : "am";
+  const h12 = h % 12 || 12;
+  return m ? `${h12}:${String(m).padStart(2, "0")}${suffix}` : `${h12}${suffix}`;
+};
+
+/** "4pm to 5:30pm ET"; one time alone gets the label too; nothing when neither is set. */
+export const campTimes = (start: string | null | undefined, end: string | null | undefined) => {
+  const a = campTime(start);
+  const b = campTime(end);
+  const range = a && b ? `${a} to ${b}` : a || b;
+  return range ? `${range} ${CAMP_TIME_ZONE_LABEL}` : "";
 };
 
 export const money = (cents: number) => `$${(Math.max(0, Math.round(cents)) / 100).toFixed(2)}`;
@@ -70,7 +85,7 @@ const campLines = (camp: CampEmailCamp) => {
 const athleteList = (athletes: CampEmailAthlete[]) =>
   `<ul>${athletes
     .map((a) => {
-      const time = a.start_time && a.end_time ? `, ${campTime(a.start_time)} to ${campTime(a.end_time)}` : "";
+      const time = a.start_time && a.end_time ? `, ${campTimes(a.start_time, a.end_time)}` : "";
       const group = a.group_name ? ` (${e(a.group_name)}${e(time)})` : "";
       return `<li>${e([a.first_name, a.last_name].filter(Boolean).join(" "))}${group}</li>`;
     })
