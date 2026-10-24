@@ -9,6 +9,7 @@ import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { coachProfilePath } from "@/utils/coachSlug";
 import { formatCampDates, formatCampMoney, formatCampTimes, perDayLine } from "@/utils/camps";
+import { stripRichTextToPlainText } from "@/utils/richText";
 import { firstName, groupSpotsText, type CampView, type CampViewGroup } from "./campView";
 
 const initials = (name: string) =>
@@ -98,6 +99,8 @@ export const CampFamilyView = ({
   children?: ReactNode;
 }) => {
   const coachFirst = firstName(view.coachName);
+  // Bios from the old editor are stored as HTML; show them as plain paragraphs like the profile does.
+  const coachBio = stripRichTextToPlainText(view.coachBio);
   const dates = formatCampDates(view.startsOn, view.endsOn);
   const linked = view.linkedCoach;
   const coachLine = linked ? `${coachFirst} and ${linked.name}` : view.coachName;
@@ -186,10 +189,10 @@ export const CampFamilyView = ({
             ) : null}
           </div>
         ) : null}
-        {view.coachBio ? (
+        {coachBio ? (
           <div className="flex flex-col gap-1.5">
             <span className="text-label-xsm text-dark-300">About {coachFirst}</span>
-            <p className={cn("whitespace-pre-line text-paragraph text-dark", compact && "line-clamp-3")}>{view.coachBio}</p>
+            <p className={cn("whitespace-pre-line text-paragraph text-dark", compact && "line-clamp-3")}>{coachBio}</p>
             {!compact && view.coachSlug ? (
               <Link to={coachProfilePath(view.coachSlug)} className="self-start text-label-sm text-primary hover:text-primary-600">
                 View profile

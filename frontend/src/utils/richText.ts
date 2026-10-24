@@ -43,7 +43,9 @@ const decodeHtmlEntities = (value: string): string => {
       .replace(/&gt;/gi, ">")
       .replace(/&quot;/gi, '"')
       .replace(/&#x27;/gi, "'")
-      .replace(/&#x2F;/gi, "/");
+      .replace(/&#x2F;/gi, "/")
+      .replace(/&#(\d{1,6});/g, (_, n) => String.fromCodePoint(Number(n)))
+      .replace(/&#x([0-9a-f]{1,6});/gi, (_, n) => String.fromCodePoint(parseInt(n, 16)));
   }
 
   const textarea = document.createElement("textarea");
