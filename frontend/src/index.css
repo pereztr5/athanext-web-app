@@ -211,6 +211,24 @@ All colors MUST be HSL.
   }
 }
 
+/* Plain dropdowns: the browser's own arrow sits 4-6px from the edge whatever the padding, so we
+   hide it and draw the design system chevron 12px in, with room kept for it. Selects that draw
+   their own chevron use appearance-none and are left alone. */
+select:not([multiple]):not([size]):not(.appearance-none) {
+  -webkit-appearance: none;
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23686B72' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 16px 16px;
+  padding-right: 36px;
+  text-overflow: ellipsis;
+}
+
+select:not([multiple]):not([size]):not(.appearance-none):disabled {
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23A3A6AB' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+}
+
 .flex-center {
   @apply flex items-center justify-center;
 }
