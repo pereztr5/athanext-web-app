@@ -8,7 +8,8 @@ import {
   checkRateLimit,
   setRateLimit,
 } from "@/utils/contactValidation";
-import partnershipInquiryTemplate from "@/template/partnershipInquiryEmailTemplate.html?raw";
+import { sendPublicEmail } from "@/api/publicEmail";
+import { partnershipEmailRequest } from "@/utils/publicEmail";
 
 const RATE_LIMIT_KEY = "partnership_inquiry_last_submission";
 const RATE_LIMIT_MINUTES = 5;
@@ -48,22 +49,6 @@ const partnershipInquirySchema = z.object({
 });
 
 type PartnershipInquiryFormData = z.infer<typeof partnershipInquirySchema>;
-
-const populateTemplate = (
-  template: string,
-  data: {
-    name: string;
-    organization: string;
-    email: string;
-    partnershipInterest: string;
-  }
-): string => {
-  return template
-    .replace(/\{\{name\}\}/g, data.name)
-    .replace(/\{\{organization\}\}/g, data.organization)
-    .replace(/\{\{email\}\}/g, data.email)
-    .replace(/\{\{partnershipInterest\}\}/g, data.partnershipInterest);
-};
 
 export const usePartnershipInquirySubmission = () => {
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -112,95 +97,8 @@ export const usePartnershipInquirySubmission = () => {
         throw new Error(dbError.message || "Failed to submit inquiry");
       }
 
-      const sendInquiryNotificationEmail = async () => {
-        const { data: configRows, error: configError } = await supabase
-          .from("configurations")
-          .select("key,value")
-          .in("key", ["contact_admin_email", "smtp_email"]);
-
-        if (configError) {
-          throw new Error(
-            configError.message ||
-              "Unable to load partnership email configuration from database."
-          );
-        }
-
-        const configMap = Object.fromEntries(
-          (configRows || []).map((row: { key: string; value: string }) => [
-            row.key,
-            row.value,
-          ])
-        );
-
-        const adminEmail = configMap.contact_admin_email;
-        const fromEmail = configMap.smtp_email || validatedData.email;
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-        if (!adminEmail) {
-          throw new Error("Admin notification email is not configured.");
-        }
-
-        const htmlMessage = populateTemplate(partnershipInquiryTemplate, {
-          name: validatedData.name,
-          organization: validatedData.organization,
-          email: validatedData.email,
-          partnershipInterest: validatedData.partnershipInterest,
-        });
-
-        const payload = {
-          to: adminEmail,
-          from: fromEmail,
-          subject: `New Partnership Inquiry: ${validatedData.organization}`,
-          html: htmlMessage,
-        };
-
-        const { error: functionError } = await supabase.functions.invoke(
-          "send-email",
-          {
-            body: payload,
-          }
-        );
-
-        if (functionError) {
-          console.error(
-            "Supabase function invoke failed, attempting fetch fallback:",
-            functionError
-          );
-
-          if (!supabaseUrl || !supabaseAnonKey) {
-            throw new Error(
-              functionError.message ||
-                "Email service is not configured correctly."
-            );
-          }
-
-          const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${supabaseAnonKey}`,
-            },
-            body: JSON.stringify(payload),
-          });
-
-          const responseText = await response.text();
-          if (!response.ok) {
-            let errorMessage =
-              response.statusText || "Failed to send notification email";
-            try {
-              const errorBody = responseText ? JSON.parse(responseText) : null;
-              errorMessage =
-                errorBody?.error || errorBody?.message || errorMessage;
-            } catch {
-              if (responseText) {
-                errorMessage = responseText;
-              }
-            }
-            throw new Error(errorMessage);
-          }
-        }
-      };
+      // send-email builds the email to support@ (and the visitor's confirmation) from these fields.
+      const sendInquiryNotificationEmail = () => sendPublicEmail(partnershipEmailRequest(validatedData));
 
       let emailNotificationFailed = false;
       try {

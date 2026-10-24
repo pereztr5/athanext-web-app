@@ -10,29 +10,11 @@ import {
 } from "@/utils/contactValidation";
 import type { ContactFormData } from "@/types/contact";
 import { z } from "zod";
-import contactSubmissionTemplate from "@/template/contactSubmissionEmailTemplate.html?raw";
+import { sendPublicEmail } from "@/api/publicEmail";
+import { contactEmailRequest } from "@/utils/publicEmail";
 
 const RATE_LIMIT_KEY = "contact_form_last_submission";
 const RATE_LIMIT_MINUTES = 5;
-
-/**
- * Replaces template placeholders with actual values
- */
-const populateTemplate = (
-  template: string,
-  data: {
-    subject: string;
-    fullName: string;
-    email: string;
-    message: string;
-  }
-): string => {
-  return template
-    .replace(/\{\{subject\}\}/g, data.subject)
-    .replace(/\{\{fullName\}\}/g, data.fullName)
-    .replace(/\{\{email\}\}/g, data.email)
-    .replace(/\{\{message\}\}/g, data.message);
-};
 
 /**
  * Custom hook for handling contact form submissions
@@ -105,99 +87,8 @@ export const useContactSubmission = () => {
         throw new Error("No response received from server");
       }
 
-      // Try to send notification email to admin via Supabase Edge Function with fetch fallback
-      const sendNotificationEmail = async () => {
-        const { data: configRows, error: configError } = await supabase
-          .from("configurations")
-          .select("key,value")
-          .in("key", ["contact_admin_email", "smtp_email"]);
-
-        if (configError) {
-          throw new Error(
-            configError.message ||
-              "Unable to load contact email configuration from database."
-          );
-        }
-
-        const configMap = Object.fromEntries(
-          (configRows || []).map((row: { key: string; value: string }) => [
-            row.key,
-            row.value,
-          ])
-        );
-
-        const adminEmail = configMap.contact_admin_email;
-        const fromEmail = configMap.smtp_email || sanitizedData.email;
-        const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
-        const supabaseAnonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
-
-        if (!adminEmail) {
-          throw new Error("Admin notification email is not configured.");
-        }
-
-        // Populate HTML template with dynamic values
-        const htmlMessage = populateTemplate(contactSubmissionTemplate, {
-          subject: validatedData.subject,
-          fullName: validatedData.fullName,
-          email: validatedData.email,
-          message: validatedData.message,
-        });
-
-        const payload = {
-          to: adminEmail,
-          from: fromEmail,
-          subject: `New Contact Submission: ${validatedData.subject}`,
-          html: htmlMessage,
-        };
-
-        const { data: functionData, error: functionError } =
-          await supabase.functions.invoke("send-email", {
-            body: payload,
-          });
-
-        if (functionError) {
-          console.error(
-            "Supabase function invoke failed, attempting fetch fallback:",
-            functionError
-          );
-
-          if (!supabaseUrl || !supabaseAnonKey) {
-            throw new Error(
-              functionError.message ||
-                "Email service is not configured correctly."
-            );
-          }
-
-          const response = await fetch(`${supabaseUrl}/functions/v1/send-email`, {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-              Authorization: `Bearer ${supabaseAnonKey}`,
-            },
-            body: JSON.stringify(payload),
-          });
-
-          const responseText = await response.text();
-          if (!response.ok) {
-            let errorMessage =
-              response.statusText || "Failed to send notification email";
-            try {
-              const errorBody = responseText ? JSON.parse(responseText) : null;
-              errorMessage =
-                errorBody?.error || errorBody?.message || errorMessage;
-            } catch {
-              if (responseText) {
-                errorMessage = responseText;
-              }
-            }
-            throw new Error(errorMessage);
-          }
-
-          return null;
-        }
-
-        return functionData;
-      };
+      // send-email builds the email to support@ (and the visitor's confirmation) from these fields.
+      const sendNotificationEmail = () => sendPublicEmail(contactEmailRequest(validatedData));
 
       let emailNotificationFailed = false;
       try {

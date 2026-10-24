@@ -32,6 +32,7 @@ import {
 import { authAPI } from "@/api/auth";
 import { coachesAPI, userProfilesAPI, type PublicCoach } from "@/api";
 import { createAthleteInitiatedReferral } from "@/api/referrals";
+import { sendPublicEmail } from "@/api/publicEmail";
 import { getSportPillars, setSportPillars } from "@/api/sport-pillars";
 import { pickedPillarIds } from "@/utils/sessionPillars";
 import { usePillarTitles } from "@/hooks/usePillarTitles";
@@ -51,6 +52,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
+import { parentInviteEmailRequest } from "@/utils/publicEmail";
 import { clearJoinCoach } from "@/utils/referralHelpers";
 import { clearCampFinish, readCampFinish } from "@/components/camps/campFinish";
 import {
@@ -683,34 +685,19 @@ export const SignUpFlow = ({
       return;
     }
     setBusy(true);
-    const summary = [
-      answers.sport,
-      answers.pos,
-      answers.level,
-      answers.pillars.slice(0, 3).join(", "),
-      answers.age === "u9" ? "Under 9" : answers.age ? `Age ${answers.age}` : "",
-      answers.zip ? `ZIP ${answers.zip}` : "",
-    ]
-      .filter(Boolean)
-      .join(" · ");
-    const link = `${window.location.origin}/auth?mode=signup`;
-    const html = `
-      <p>Your athlete started signing up for AthaNext and needs a parent or guardian to finish the account.</p>
-      <p><strong>What they chose:</strong> ${summary || "Their preferences are ready."}</p>
-      <p><a href="${link}">Create the parent account</a> to see coach matches and manage bookings.</p>
-    `;
     try {
-      const fromEmail = import.meta.env.VITE_CONTACT_FROM_EMAIL || "hello@athanext.com";
-      const { error } = await supabase.functions.invoke("send-email", {
-        body: {
-          to: answers.pemail.trim().toLowerCase(),
-          from: fromEmail,
-          subject: "Finish your athlete's AthaNext account",
-          html,
-          message: `Your athlete started signing up for AthaNext. Open ${link} to finish as a parent.`,
-        },
-      });
-      if (error) throw error;
+      // send-email writes the email (summary line and sign-up link) from these picks.
+      await sendPublicEmail(
+        parentInviteEmailRequest({
+          email: answers.pemail,
+          sport: answers.sport,
+          pos: answers.pos,
+          level: answers.level,
+          pillars: answers.pillars,
+          age: answers.age,
+          zip: answers.zip,
+        })
+      );
       clearSignupSession();
       go("sent");
     } catch (err) {
