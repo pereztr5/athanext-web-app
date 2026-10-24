@@ -249,6 +249,14 @@ const PriceBlock = ({ price }: { price: string }) => (
   </div>
 );
 
+/** In place of the per-session price on a camp day. */
+const CampBlock = () => (
+  <div className="flex flex-col items-start gap-1.5 md:items-end">
+    <BrandPill tone="teal">Camp</BrandPill>
+    <span className="text-caption text-dark-300">Part of the camp</span>
+  </div>
+);
+
 const cardShellClass =
   "grid w-full grid-cols-1 gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] text-left font-sans md:px-[25px] md:pb-[25px] md:pt-[30px] text-dark md:grid-cols-[1fr_auto] md:gap-x-6";
 const cardAsideClass = "flex flex-row flex-wrap items-end justify-between gap-5 md:flex-col md:items-end";
@@ -319,7 +327,8 @@ const SessionCard = ({
         ) : null}
       </div>
       <div className={cardAsideClass}>
-        <PriceBlock price={price} />
+        {/* Camp days are paid for with the camp, not per session. */}
+        {session.camp ? <CampBlock /> : <PriceBlock price={price} />}
         <div className="flex flex-wrap items-center gap-[10px] md:justify-end">
           {showPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
           <span className={showPay ? secondaryActionClass : primaryActionClass}>View details</span>
@@ -380,7 +389,8 @@ const PastDraftCard = ({
         ) : null}
       </div>
       <div className={cardAsideClass}>
-        <PriceBlock price={price} />
+        {/* Camp days are paid for with the camp, not per session. */}
+        {session.camp ? <CampBlock /> : <PriceBlock price={price} />}
         <div className="flex flex-wrap items-center gap-[10px] md:justify-end">
           {showPay && onPay ? <PayNowAction paying={paying} onPay={onPay} /> : null}
           {showFeedbackAction && (session.computedStatus === "past" || session.computedStatus === "completed") ? (

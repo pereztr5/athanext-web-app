@@ -1,7 +1,8 @@
 /**
  * The athlete's page for one session (ATH-97), with the same date-card header coaches see.
  * Message opens the thread with this coach. Upcoming paid sessions can move onto another
- * open time. A request is withdrawn, not cancelled.
+ * open time. A request is withdrawn, not cancelled. Camp days come with the camp sign-up: no
+ * pay, cancel or reschedule here; the coach manages them, and the camp page has the details.
  */
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -31,6 +32,8 @@ import { getZonedISODate } from "@/utils/dateHelpers";
 import { formatClock, formatDayISO, plural, sessionEnd, sessionStart } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
 import { helpLinkFrom } from "@/utils/helpBack";
+import { campDayTitle } from "@/utils/campSessions";
+import { campPath } from "@/utils/camps";
 
 const money = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: n % 1 ? 2 : 0, maximumFractionDigits: 2 })}`;
 
@@ -125,13 +128,19 @@ const AthleteSessionPage = () => {
   const status = s.booking.status;
   const cancelled = status === "canceled" || status === "refunded";
   const coachFirst = s.coach.name.split(" ")[0] || s.coach.name;
-  const title = group ? s.sessionName || "Group session" : `${s.pillar || "1-on-1"} with ${s.coach.name}`;
+  const camp = s.camp;
+  const campPage = camp?.slug && s.coach.slug ? campPath(s.coach.slug, camp.slug) : null;
+  const title = camp
+    ? campDayTitle(camp.name, camp.dayIndex)
+    : group
+      ? s.sessionName || "Group session"
+      : `${s.pillar || "1-on-1"} with ${s.coach.name}`;
   const noticeHours = s.cancelNoticeHours;
   const late = start.getTime() - Date.now() < noticeHours * 3600 * 1000;
   const freeUntil = new Date(start.getTime() - noticeHours * 3600 * 1000);
   const upcoming = !cancelled && !s.ended && !s.started && status === "booked";
   const requested = !cancelled && !s.started && status === "requested";
-  const canReschedule = upcoming && !late && RESCHEDULABLE_PAYMENTS.has(s.booking.paymentStatus);
+  const canReschedule = upcoming && !camp && !late && RESCHEDULABLE_PAYMENTS.has(s.booking.paymentStatus);
   const where = s.location === "online" ? "Video call" : s.place || "In person";
   const missed = s.ended && s.attendance && s.attendance !== "present";
   const dayLabel = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
@@ -154,6 +163,8 @@ const AthleteSessionPage = () => {
 
   const payLine = cancelled
     ? s.booking.cancellationReason || "Cancelled"
+    : camp
+      ? `Part of ${camp.name}`
     : s.booking.paymentStatus === "pending_offline"
       ? `Pending until ${coachFirst} confirms receipt, ${money(s.price)}${s.coach.payNote ? `. ${s.coach.payNote}` : ""}`
       : s.booking.paymentStatus === "direct"
@@ -228,7 +239,7 @@ const AthleteSessionPage = () => {
           Withdraw request
         </button>
       ) : null}
-      {!cancelled && !s.started && (status === "booked" || status === "pending_payment") ? (
+      {!camp && !cancelled && !s.started && (status === "booked" || status === "pending_payment") ? (
         <button type="button" className={dangerTextButton} onClick={() => setConfirmCancel(true)}>
           Cancel session
         </button>
@@ -239,13 +250,13 @@ const AthleteSessionPage = () => {
           Rate session
         </button>
       ) : null}
-      {s.ended && !cancelled ? (
+      {s.ended && !cancelled && !camp ? (
         <Link to={`${ROUTES.BOOK}?coach=${s.coach.id}`} className={primaryButton}>
           <Repeat strokeWidth={1.5} aria-hidden="true" />
           Book again
         </Link>
       ) : null}
-      {status === "pending_payment" && !s.started ? (
+      {status === "pending_payment" && !s.started && !camp ? (
         <button type="button" className={primaryButton} disabled={pay.isPending} onClick={() => pay.mutate()}>
           <CreditCard strokeWidth={1.5} aria-hidden="true" />
           {pay.isPending ? "Opening checkout…" : `Pay ${money(s.price)}`}
@@ -321,7 +332,16 @@ const AthleteSessionPage = () => {
                 </span>
                 <ChevronRight className="size-4 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
               </Link>
-              {upcoming ? (
+              {camp && !cancelled ? (
+                <p className={cn(meta, "py-3")}>
+                  Camp sessions are managed by your coach. To change or cancel, message {coachFirst}.{" "}
+                  {campPage ? (
+                    <Link to={campPage} className={cn(textButton, "inline")}>
+                      View the camp
+                    </Link>
+                  ) : null}
+                </p>
+              ) : upcoming ? (
                 <p className={cn(meta, "py-3")}>
                   {late
                     ? `Less than ${plural(noticeHours, "hour")} away. Cancelling now is not refunded.`

@@ -16,6 +16,7 @@ import {
 import { striped } from "@/components/schedule/views/styles";
 import { cn } from "@/lib/utils";
 import type { ScheduleSession } from "@/api/schedule";
+import { campDayTitle } from "@/utils/campSessions";
 import {
   bookedAthletes,
   formatClock,
@@ -74,7 +75,9 @@ export const WeekChip = ({
 
   const who =
     kind === "group"
-      ? session.sessionName
+      ? session.camp
+        ? campDayTitle(session.camp.name, session.camp.dayIndex)
+        : session.sessionName
       : kind === "request"
         ? requestsFor(session)[0]?.athleteName ?? "Request"
         : kind === "offered"

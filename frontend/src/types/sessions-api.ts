@@ -128,6 +128,8 @@ export interface SessionUIModel {
   athleteNamesDisplay: string; // Formatted string for display: "John, Jane, Bob" or single name
   hasSessionFeedback?: boolean; // True when a coach-level session_feedback_v2 entry exists
   hasSlotFeedback?: boolean; // True when an athlete has submitted slot-level feedback
+  /** Set on camp days (a camp registration's booking): managed through the camp, never paid or cancelled alone. */
+  camp?: { id: string; name: string; dayIndex: number | null } | null;
 }
 
 /**

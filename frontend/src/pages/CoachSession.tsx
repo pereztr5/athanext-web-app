@@ -4,6 +4,9 @@
  * time on upcoming 1-on-1s; each group athlete with payment and attendance; the feedback card
  * after the session. Requests get Decline and Accept; booked sessions get Message and
  * Reschedule, with Cancel as a quiet link. On a phone the buttons sit at the bottom.
+ * Camp days list the camp's registrations as the roster (attendance and feedback as usual);
+ * sign-ups, payments and the schedule are managed on the camp, so there is no Add, Reschedule
+ * or Cancel there.
  */
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
@@ -36,6 +39,7 @@ import { getZonedISODate } from "@/utils/dateHelpers";
 import { scoreWord } from "@/utils/feedback";
 import { formatDayISO, formatMinutes, minutesInZone, plural, sessionEnd, sessionStart } from "@/utils/schedule";
 import { isoDateInZone } from "@/utils/viewerTime";
+import { campDayTitle, isCampBooking } from "@/utils/campSessions";
 
 const money = (n: number) => `$${Math.round(n).toLocaleString("en-US")}`;
 const money2 = (n: number) => `$${n.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -48,6 +52,8 @@ const NOT_FAMILY = /^(Declined|Cancelled by coach|Request expired|Coach suggeste
 const payPill = (b: CoachSessionBooking) =>
   b.status === "requested" ? (
     <BrandPill tone="amber">Request</BrandPill>
+  ) : isCampBooking(b.paymentStatus) ? (
+    <BrandPill tone="teal">Camp</BrandPill>
   ) : b.paymentStatus === "pending_offline" ? (
     <BrandPill tone="amber">Pending</BrandPill>
   ) : b.paymentStatus === "direct" ? null : b.paymentStatus === "refunded" ? (
@@ -144,6 +150,8 @@ const CoachSessionPage = () => {
   if (!s) return <p className={cn(meta, "px-4 py-10 text-center")}>Loading…</p>;
 
   const group = s.sessionType === "group";
+  const camp = s.camp;
+  const campLink = camp ? `${ROUTES.PROFILE}?camp=${camp.id}&view=registrations` : null;
   const start = sessionStart(s);
   const end = sessionEnd(s);
   const live = s.bookings.filter((b) => LIVE.has(b.status));
@@ -160,7 +168,7 @@ const CoachSessionPage = () => {
   const isLive = !cancelled && !s.ended && !request && (group || booked.length > 0);
   const noShow = s.feedback?.noShow;
   const who = first?.name ?? "an athlete";
-  const title = group ? s.sessionName : `1-on-1 with ${who}`;
+  const title = camp ? campDayTitle(camp.name, camp.dayIndex) : group ? s.sessionName : `1-on-1 with ${who}`;
   const dayLabel = formatDayISO(getZonedISODate(start, timeZone), { weekday: "short", month: "short", day: "numeric" });
   const shortDay = (iso: string) => formatDayISO(iso, { month: "short", day: "numeric" });
   const startLabel = formatMinutes(minutesInZone(start, timeZone));
@@ -249,10 +257,16 @@ const CoachSessionPage = () => {
         <MessageCircle strokeWidth={1.5} aria-hidden="true" />
         Message{group ? " group" : ""}
       </button>
-      <button type="button" className={secondaryButton} onClick={() => setMode("reschedule")}>
-        <CalendarSync strokeWidth={1.5} aria-hidden="true" />
-        Reschedule
-      </button>
+      {campLink ? (
+        <Link to={campLink} className={secondaryButton}>
+          Manage camp
+        </Link>
+      ) : (
+        <button type="button" className={secondaryButton} onClick={() => setMode("reschedule")}>
+          <CalendarSync strokeWidth={1.5} aria-hidden="true" />
+          Reschedule
+        </button>
+      )}
     </>
   ) : s.ended && !cancelled && booked.length ? (
     <Link to={`${ROUTES.COACH_SESSION_FEEDBACK}?slotId=${s.id}`} className={s.feedback ? secondaryButton : primaryButton}>
@@ -311,11 +325,20 @@ const CoachSessionPage = () => {
             place: s.place,
             statusPills: statusPill,
             people: live.map((b) => ({ name: b.name, imageUrl: b.imageUrl, line: whoLine(b) })),
-            peopleLabel: group ? `${live.length} of ${s.capacity} spots · ${money(s.price)} per athlete` : undefined,
+            peopleLabel: camp
+              ? `${live.length} of ${s.capacity} spots${camp.groupName ? ` · ${camp.groupName}` : ""}`
+              : group
+                ? `${live.length} of ${s.capacity} spots · ${money(s.price)} per athlete`
+                : undefined,
           }}
         />
 
         {cancelLine ? <InfoBox>{cancelLine}</InfoBox> : null}
+        {camp && !cancelled ? (
+          <InfoBox>
+            {`Day ${camp.dayIndex ?? 1}${camp.daysTotal ? ` of ${camp.daysTotal}` : ""} of ${camp.name}. Everyone signed up for this group is on the roster. Sign-ups, payments and the camp schedule are managed on the camp.`}
+          </InfoBox>
+        ) : null}
 
         <section className={spCard}>
           {s.location === "online"
@@ -387,7 +410,11 @@ const CoachSessionPage = () => {
           <section className={spCard}>
             <div className="flex items-center justify-between gap-3">
               <h3 className={h3}>Athletes</h3>
-              {isLive && live.length < s.capacity ? (
+              {campLink ? (
+                <Link to={campLink} className={textButton}>
+                  Registrations
+                </Link>
+              ) : isLive && live.length < s.capacity ? (
                 <button type="button" className={textButton} onClick={() => setMode("add")}>
                   <Plus strokeWidth={1.5} aria-hidden="true" />
                   Add
@@ -407,7 +434,9 @@ const CoachSessionPage = () => {
                 )}
               </div>
             ) : (
-              <p className={cn(cap, "py-2")}>Nobody yet. Share it from My schedule.</p>
+              <p className={cn(cap, "py-2")}>
+                {camp ? "Nobody yet. Families who sign up for the camp show up here." : "Nobody yet. Share it from My schedule."}
+              </p>
             )}
             {live.length > SHOWN ? (
               <button type="button" className={cn(textButton, "self-start")} onClick={() => setShowAll(!showAll)}>
@@ -465,7 +494,7 @@ const CoachSessionPage = () => {
 
         {actions ? <div className="grid grid-cols-[minmax(0,1.3fr)_minmax(0,1fr)] gap-2 md:hidden [&>*]:w-full">{actions}</div> : null}
 
-        {isLive ? (
+        {isLive && !camp ? (
           <button type="button" className={cn(dangerTextButton, "self-center md:self-start")} onClick={() => setMode("cancel")}>
             Cancel session
           </button>
@@ -509,7 +538,7 @@ const CoachSessionPage = () => {
         }}
         onError={fail}
       />
-      {group ? (
+      {group && !camp ? (
         <AddToGroupDialog
           open={mode === "add"}
           occurrenceId={s.id}

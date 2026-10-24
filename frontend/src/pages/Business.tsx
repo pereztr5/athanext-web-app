@@ -1,7 +1,8 @@
 /**
  * Business (Working Copy `c-account`): the 5th phone tab for coaches. The profile card with
  * View and Edit profile, then Payments (money paid in the app: owed, next payout, overdue), My
- * organization, and Offline payments (paid to the coach directly) for every coach.
+ * organization, Camps (sign-ups and camp money, when the coach has any) and Offline payments
+ * (paid to the coach directly) for every coach.
  */
 import type { ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
@@ -10,6 +11,7 @@ import { Building2, ChevronRight, CreditCard, Eye, Pencil, Star } from "@/compon
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { payoutsAPI } from "@/api/payouts";
+import { CampMoney } from "@/components/business/CampMoney";
 import { OfflinePayments } from "@/components/business/OfflinePayments";
 import { PageHeader } from "@/components/ui/page-header";
 import { card, secondaryButton } from "@/components/schedule/styles";
@@ -128,6 +130,7 @@ const BusinessPage = () => {
             sub={org ? `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}` : "By invitation from AthaNext"}
           />
         </div>
+        {userProfile?.coach_id ? <CampMoney coachId={userProfile.coach_id} /> : null}
         <OfflinePayments />
       </div>
     </div>

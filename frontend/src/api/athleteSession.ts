@@ -2,6 +2,7 @@
  * The athlete's page for one of their sessions (ATH-97).
  */
 import { chatAPI } from "@/api/chat";
+import { toSessionCamp, type SessionCamp } from "@/api/coachSession";
 import { supabase } from "@/integrations/supabase/client";
 import { buildId } from "@/utils/chatHelpers";
 
@@ -63,6 +64,8 @@ export interface AthleteSession {
   /** "<Athlete> was marked as missed for …" when the coach marked them as missed. */
   missedMessage: string | null;
   note: string | null;
+  /** A camp day: booked through the camp registration, managed by the coach. */
+  camp: SessionCamp | null;
 }
 
 /** Confirmed bookings whose price must stay put. pending_offline is not settled yet. */
@@ -198,6 +201,7 @@ export const athleteSessionAPI = {
       score: raw.score != null ? Number(raw.score) || null : null,
       missedMessage: raw.missed_message ?? null,
       note: raw.note ?? null,
+      camp: toSessionCamp(raw.camp),
     };
   },
 };

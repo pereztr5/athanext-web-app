@@ -1,6 +1,8 @@
 /**
  * Tapping a camp day on My schedule: which day of the camp it is, the group and how full it is,
- * the sign-up link to copy, and the way to Registrations. Camp days aren't booked one by one.
+ * who is on the roster (each held or paid registration with an athlete is booked into every day of
+ * its group), the session page for attendance and feedback, the sign-up link to copy, and the way
+ * to Registrations. Camp days aren't booked one by one.
  */
 import { Link } from "react-router-dom";
 import { Link as LinkIcon, MapPin, Users } from "@/components/icons";
@@ -12,7 +14,7 @@ import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { getZonedISODate } from "@/utils/dateHelpers";
-import { formatDayISO, sessionEnd, sessionStart } from "@/utils/schedule";
+import { bookedAthletes, formatDayISO, sessionEnd, sessionStart } from "@/utils/schedule";
 import { formatInstantSpan } from "@/utils/viewerTime";
 import { campShareUrl } from "@/utils/camps";
 
@@ -36,6 +38,7 @@ export const CampDaySheet = ({
   const link = coachSlug && camp.slug ? campShareUrl(window.location.origin, coachSlug, camp.slug) : null;
   const signed = camp.signedUp ?? 0;
   const spots = camp.groupSpots ?? session.capacity;
+  const roster = bookedAthletes(session);
 
   const copy = () => {
     if (!link) return;
@@ -72,6 +75,13 @@ export const CampDaySheet = ({
               {where}
             </span>
           </div>
+          <div className="flex flex-col gap-1.5">
+            <span className="text-label-sm text-dark">{roster.length === 1 ? "1 athlete on the roster" : `${roster.length} athletes on the roster`}</span>
+            {roster.length ? <span className={meta}>{roster.map((b) => b.athleteName || "Athlete").join(", ")}</span> : null}
+            {signed > roster.length ? (
+              <span className={meta}>Athletes signed up without an account join the roster once their family signs in.</span>
+            ) : null}
+          </div>
           <p className={meta}>Families sign up for the whole camp, not day by day. Everyone in this group is expected every day.</p>
           <div className="flex flex-wrap gap-2.5">
             {link ? (
@@ -79,6 +89,11 @@ export const CampDaySheet = ({
                 <LinkIcon strokeWidth={1.5} aria-hidden="true" />
                 Copy sign-up link
               </button>
+            ) : null}
+            {roster.length ? (
+              <Link to={`/sessions/${session.id}`} className={secondaryButton} onClick={onClose}>
+                Open session
+              </Link>
             ) : null}
             <Link to={`${ROUTES.PROFILE}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton)} onClick={onClose}>
               Registrations

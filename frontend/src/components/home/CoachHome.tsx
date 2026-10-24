@@ -27,6 +27,7 @@ import { useCoachBillingAccess } from "@/hooks/useCoachBillingAccess";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { campDayTitle } from "@/utils/campSessions";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import {
   addDaysISO,
@@ -75,6 +76,8 @@ const Sparkline = ({ values }: { values: number[] }) => {
 
 const paidText = (s: ScheduleSession) => {
   const booked = bookedAthletes(s);
+  // Camp days are paid for with the camp (My Business > Camps).
+  if (s.camp) return `${booked.length} signed up`;
   const paid = booked.filter((b) => b.paymentStatus === "paid").length;
   if (s.sessionType === "group") return `${paid} of ${booked.length} paid`;
   const b = booked[0];
@@ -181,7 +184,8 @@ export const CoachHome = () => {
   const open = days.reduce((n, d) => n + d.items.filter((i) => i.kind === "open").length, 0);
   const createSession = () => setCreateOpen(true);
   const openDay = (date: string) => navigate(`${ROUTES.SCHEDULE}?day=${date}`);
-  const titleOf = (s: ScheduleSession) => (s.sessionType === "group" ? s.sessionName : bookedAthletes(s)[0]?.athleteName ?? "Open slot");
+  const titleOf = (s: ScheduleSession) =>
+    s.camp ? campDayTitle(s.camp.name, s.camp.dayIndex) : s.sessionType === "group" ? s.sessionName : bookedAthletes(s)[0]?.athleteName ?? "Open slot";
   const hasBio = Boolean((me as { bio?: string | null } | undefined)?.bio);
 
   // Plan next week card: Thursday (4) through Sunday (0).

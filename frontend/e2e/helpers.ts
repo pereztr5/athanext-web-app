@@ -56,11 +56,17 @@ export const signIn = async (page: Page, who: Account) => {
   await expect(page, "sign-in should leave the auth page").not.toHaveURL(/\/auth/, { timeout: 20_000 });
 };
 
+// Waits for the page to settle. Pages that stream many photos (the coach list) never go fully
+// quiet, so this gives up after a few seconds instead of failing the test.
+export const settle = async (page: Page) => {
+  await page.waitForLoadState("networkidle", { timeout: 8_000 }).catch(() => undefined);
+};
+
 // Opens a signed-in page and checks it renders, responds and fits the window.
 export const visit = async (page: Page, route: string) => {
   await page.goto(route);
   await expect(page.locator("main").first()).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  await settle(page);
   await expect(page, `${route} should not bounce back to sign-in`).not.toHaveURL(/\/auth/);
   await expectNoSidewaysScroll(page, route);
 };

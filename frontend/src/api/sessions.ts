@@ -14,6 +14,7 @@ import type {
   PaymentStatus,
 } from '@/types/sessions-api';
 import { sessionInstantISO } from '@/utils/viewerTime';
+import { campDayTitle } from '@/utils/campSessions';
 
 const buildApiError = (
   code: string,
@@ -324,6 +325,40 @@ async function getPendingAthleteSessions(athleteId: string, now: Date): Promise<
 }
 
 /**
+ * Camp days (bookings from a camp registration) read "Camp · <camp> · Day N" and carry the camp,
+ * so lists can drop per-session price and pay actions. Sessions stay as they are if this fails.
+ */
+async function withCampDays(sessions: SessionUIModel[]): Promise<SessionUIModel[]> {
+  const ids = [...new Set(sessions.map((session) => session.occurrenceId).filter((id): id is string => Boolean(id)))];
+  if (!ids.length) return sessions;
+  const { data, error } = await supabase
+    .from('coach_availability_slot_occurrences')
+    .select('id, camp_id, camp_day_index, camp:coach_packages!coach_availability_slot_occurrences_camp_id_fkey(package_name)')
+    .in('id', ids)
+    .not('camp_id', 'is', null);
+  if (error || !Array.isArray(data) || !data.length) {
+    if (error) console.warn('Camp days not labelled:', error);
+    return sessions;
+  }
+  const camps = new Map(
+    (data as unknown as { id: string; camp_id: string; camp_day_index: number | null; camp: { package_name: string | null } | null }[]).map(
+      (row) => [row.id, row]
+    )
+  );
+  return sessions.map((session) => {
+    const row = session.occurrenceId ? camps.get(session.occurrenceId) : undefined;
+    if (!row) return session;
+    // Without the camp row (a hidden camp), the session name is the camp's name.
+    const name = row.camp?.package_name || session.title;
+    return {
+      ...session,
+      title: campDayTitle(name, row.camp_day_index),
+      camp: { id: row.camp_id, name, dayIndex: row.camp_day_index ?? null },
+    };
+  });
+}
+
+/**
  * Get sessions for current user using optimized RPC function
  * Calls get_bookings_by_user_id with either athlete_id or coach_id
  * Returns only necessary fields for UI display
@@ -398,7 +433,7 @@ export async function getMySessions(
       sessions = [...sessions, ...pending.filter((session) => !seen.has(session.bookingId))];
     }
 
-    return { data: sessions, error: null };
+    return { data: await withCampDays(sessions), error: null };
   } catch (error) {
     console.error('Unexpected error in getMySessions:', error);
     return {

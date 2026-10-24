@@ -1,5 +1,6 @@
 import { supabase } from "@/integrations/supabase/client";
 import { campWaiverFileError } from "@/utils/camps";
+import type { CampRegistrationMoneyRow } from "@/utils/campSessions";
 
 /**
  * Camps for coaches (editor, publish, registrations) and the family portal.
@@ -286,6 +287,17 @@ export const campsAPI = {
   publish: (campId: string) => call<CoachCamp>("publish_camp", { p_camp_id: campId }, "Could not publish this camp."),
 
   unpublish: (campId: string) => call<CoachCamp>("unpublish_camp", { p_camp_id: campId }, "Could not unpublish this camp."),
+
+  /** My Business > Camps: the coach's registrations (RLS: their own), summed by campMoneySummary. */
+  async moneyRows(coachId: string): Promise<CampRegistrationMoneyRow[]> {
+    const { data, error } = await supabase
+      .from("camp_registrations")
+      .select("status, pay_method, price_cents, created_at")
+      .eq("coach_id", coachId)
+      .in("status", ["held", "paid"]);
+    if (error) throw new CampError("Could not load camp payments.");
+    return (data ?? []) as CampRegistrationMoneyRow[];
+  },
 
   /** Cover photo for the camp page (public URL for save()). */
   async uploadCover(file: File): Promise<string> {

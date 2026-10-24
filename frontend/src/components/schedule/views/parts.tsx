@@ -1,20 +1,23 @@
 import { BrandPill } from "@/components/brand";
 import type { ScheduleBooking } from "@/api/schedule";
+import { isCampBooking } from "@/utils/campSessions";
 import { fillBar, fillTrack } from "./styles";
 
 const OUTSIDE = new Set(["outside", "direct"]);
 
-/** Day row pay pill (Working Copy): Credit, Awaiting payment, Paid outside or Paid. */
+/** Day row pay pill (Working Copy): Camp, Credit, Awaiting payment, Paid outside or Paid. */
 export const PayPill = ({ booking }: { booking: ScheduleBooking | undefined }) => {
   if (!booking) return null;
+  if (isCampBooking(booking.paymentStatus)) return <BrandPill tone="teal">Camp</BrandPill>;
   if (booking.paymentStatus === "credit") return <BrandPill tone="green">Credit</BrandPill>;
   if (OUTSIDE.has(booking.paymentStatus)) return <BrandPill tone="neutral">Paid outside</BrandPill>;
   if (booking.paymentStatus === "paid") return <BrandPill tone="green">Paid</BrandPill>;
   return <BrandPill tone="amber">Awaiting payment</BrandPill>;
 };
 
-/** Group sheet pill per athlete: Credit, Paid outside, Paid in app or Awaiting payment. */
+/** Group sheet pill per athlete: Camp, Credit, Paid outside, Paid in app or Awaiting payment. */
 export const GroupPayPill = ({ booking }: { booking: ScheduleBooking }) => {
+  if (isCampBooking(booking.paymentStatus)) return <BrandPill tone="teal">Camp</BrandPill>;
   if (booking.paymentStatus === "credit") return <BrandPill tone="green">Credit</BrandPill>;
   if (OUTSIDE.has(booking.paymentStatus)) return <BrandPill tone="green">Paid outside</BrandPill>;
   if (booking.paymentStatus === "paid") return <BrandPill tone="green">Paid in app</BrandPill>;

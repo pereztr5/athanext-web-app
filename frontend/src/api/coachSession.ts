@@ -51,7 +51,33 @@ export interface CoachSessionDetail {
   lastFocus: { date: string; text: string } | null;
   /** Set when the coach cancelled the session. */
   cancel: { at: string | null; reason: string | null; refund: string | null } | null;
+  /** A camp day: its roster comes from camp registrations and is managed on the camp. */
+  camp: SessionCamp | null;
 }
+
+export interface SessionCamp {
+  id: string;
+  name: string;
+  slug: string | null;
+  dayIndex: number | null;
+  daysTotal: number | null;
+  groupName: string | null;
+}
+
+/** The 'camp' object get_coach_session and get_athlete_session return on camp days. */
+export const toSessionCamp = (raw: unknown): SessionCamp | null => {
+  if (!raw || typeof raw !== "object") return null;
+  const c = raw as Row;
+  if (!c.id) return null;
+  return {
+    id: String(c.id),
+    name: c.name || "Camp",
+    slug: c.slug ?? null,
+    dayIndex: c.day_index != null ? Number(c.day_index) : null,
+    daysTotal: c.days_total != null ? Number(c.days_total) : null,
+    groupName: c.group_name ?? null,
+  };
+};
 
 export const coachSessionAPI = {
   async get(occurrenceId: string): Promise<CoachSessionDetail> {
@@ -103,6 +129,7 @@ export const coachSessionAPI = {
       lastSummary: raw.last_summary?.summary ? { date: raw.last_summary.date, summary: raw.last_summary.summary } : null,
       lastFocus: raw.last_focus?.text ? { date: raw.last_focus.date, text: raw.last_focus.text } : null,
       cancel: raw.cancel ? { at: raw.cancel.at ?? null, reason: raw.cancel.reason ?? null, refund: raw.cancel.refund ?? null } : null,
+      camp: toSessionCamp(raw.camp),
     };
   },
 

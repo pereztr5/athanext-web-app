@@ -73,6 +73,7 @@ const PAYMENT_LABELS: Record<string, string> = {
   released: "Card hold released",
   refunded: "Refunded",
   disputed: "Disputed",
+  camp: "Part of a camp",
 };
 
 const humanize = (value: unknown) =>

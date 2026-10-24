@@ -1,5 +1,5 @@
 import { expect, test } from "@playwright/test";
-import { expectNoSidewaysScroll, watchErrors } from "./helpers";
+import { expectNoSidewaysScroll, settle, watchErrors } from "./helpers";
 
 // Signed-out pages. No account needed.
 const pages = [
@@ -16,7 +16,7 @@ for (const { route, text } of pages) {
     const errors = watchErrors(page);
     await page.goto(route);
     await expect(page.getByText(text).first()).toBeVisible();
-    await page.waitForLoadState("networkidle");
+    await settle(page);
     await expectNoSidewaysScroll(page, route);
     expect(errors, `uncaught errors on ${route}`).toEqual([]);
   });
@@ -81,7 +81,7 @@ test("camp page: an unknown camp link shows a friendly not-found and fits the sc
   await page.goto("/no-such-coach-e2e/no-such-camp-e2e");
   await expect(page.getByRole("heading", { name: /this camp isn't open/i })).toBeVisible();
   await expect(page.getByRole("link", { name: /find a coach/i })).toBeVisible();
-  await page.waitForLoadState("networkidle");
+  await settle(page);
   await expectNoSidewaysScroll(page, "unknown camp");
 
   // The old /camps/<coach>/<camp> link lands on the same page.
