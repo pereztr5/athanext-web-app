@@ -385,7 +385,7 @@ export const campsAPI = {
   // ---------- Family ----------
   /** Call after sign-up / sign-in: links registrations made with this (confirmed) email. */
   claim: () =>
-    call<{ claimed: number; athletes_created: number; email_confirmed: boolean }>(
+    call<{ claimed: number; athletes_created: number; athletes_merged?: number; email_confirmed: boolean }>(
       "claim_camp_registrations",
       undefined,
       "Could not link your camp sign-ups.",

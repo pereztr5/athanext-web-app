@@ -23,6 +23,10 @@ export interface RosterAthlete {
   email: string | null;
   phone: string | null;
   isClient: boolean;
+  /** A camp athlete made from a sign-up without an account (only the coach sees it). */
+  fromCamp: boolean;
+  /** The family has an AthaNext account. */
+  hasAccount: boolean;
   joinedOn: string | null;
   pillars: string[];
   next: RosterSession | null;
@@ -101,6 +105,8 @@ const mapAthlete = (row: Row): RosterAthlete => ({
   email: row.email ?? null,
   phone: row.phone ?? null,
   isClient: Boolean(row.isClient),
+  fromCamp: Boolean(row.fromCamp),
+  hasAccount: row.hasAccount == null ? true : Boolean(row.hasAccount),
   joinedOn: row.joinedOn ?? null,
   pillars: Array.isArray(row.pillars) ? row.pillars : [],
   next: row.next ?? null,

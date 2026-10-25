@@ -75,7 +75,10 @@ export const RosterTable = ({ rows, sort, dir, timeZone, onSort, onBook }: Roste
                 {athlete.imageUrl ? <img src={athlete.imageUrl} alt="" className="size-full object-cover" /> : initials(athlete.name)}
               </span>
               <div className="flex min-w-0 flex-col gap-1">
-                <span className="truncate font-medium transition-colors group-hover:text-primary">{athlete.name}</span>
+                <span className="flex min-w-0 items-center gap-1.5">
+                  <span className="truncate font-medium transition-colors group-hover:text-primary">{athlete.name}</span>
+                  {athlete.fromCamp ? <BrandPill tone="teal" className="flex-none">Camp</BrandPill> : null}
+                </span>
                 <span className={cn(cap, "max-md:hidden")}>{rosterSubtitle(athlete)}</span>
                 <span className={cn(cap, "truncate md:hidden")}>
                   {next || "Not booked"}

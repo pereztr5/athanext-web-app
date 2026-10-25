@@ -1,6 +1,8 @@
 /**
- * Business (ATH-89, Working Copy): money in and invoices. Money in has a line or bar chart
- * for 1, 7, 30, 60 days or a custom range, split into your clients, marketplace and gear.
+ * Business (ATH-89, Working Copy): money in and invoices. Money in counts every payment the coach
+ * received (sessions, packages, camps, invoices; in the app or paid directly) with a line or bar
+ * chart for 1, 7, 30, 60 days or a custom range, split into your clients, marketplace, paid to
+ * you directly and gear.
  * Invoices fold away under a summary; on phone each one opens like an accordion. Org owners
  * also get Org coaches and Org sessions tabs. Marketplace families always pay in the app;
  * invoices are only for families the coach brought to AthaNext.
@@ -43,6 +45,7 @@ import { addDaysISO, plural } from "@/utils/schedule";
 
 const TONE: Record<PaymentRow["status"], BrandPillTone> = {
   paid_in_app: "green",
+  paid_direct: "green",
   paid: "green",
   overdue: "red",
   pending: "amber",
@@ -129,11 +132,12 @@ const MoneyIn = ({ entries, today }: { entries: MoneyEntry[]; today: string }) =
       ) : (
         <div className="rounded-control border border-dashed border-light-600 p-4 text-center text-body-m text-dark-300">No money in for this period yet.</div>
       )}
-      <div className="grid grid-cols-1 gap-3 border-t border-light-525 pt-4 md:grid-cols-3">
+      <div className="grid grid-cols-1 gap-3 border-t border-light-525 pt-4 sm:grid-cols-2 md:grid-cols-4">
         {(
           [
             ["Your clients, no fee", s.own],
             ["Marketplace", s.marketplace],
+            ["Paid to you directly", s.direct],
             ["Gear and deals", s.gear],
           ] as const
         ).map(([l, v]) => (
@@ -143,6 +147,7 @@ const MoneyIn = ({ entries, today }: { entries: MoneyEntry[]; today: string }) =
           </div>
         ))}
       </div>
+      <span className={cn(cap, "-mt-2")}>Sessions, packages, camps and invoices. Camps and Offline payments on My Business are part of this total.</span>
     </section>
   );
 };
@@ -189,16 +194,16 @@ const PaymentsPage = () => {
   });
 
   const invoices = data.data?.invoices ?? [];
-  const inApp = data.data?.inApp ?? [];
+  const moneyIn = data.data?.moneyIn ?? [];
   const rows = useMemo(
-    () => paymentRows(invoices, inApp, today, toDay),
+    () => paymentRows(invoices, moneyIn, today, toDay),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [invoices, inApp, today, timeZone]
+    [invoices, moneyIn, today, timeZone]
   );
   const entries = useMemo(
-    () => [...moneyEntries(invoices, inApp, toDay), ...(gear.data ?? []).map((g) => ({ day: g.date, amount: g.amount, own: false, gear: true }))],
+    () => [...moneyEntries(moneyIn, toDay), ...(gear.data ?? []).map((g) => ({ day: g.date, amount: g.amount, own: false, gear: true }))],
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [invoices, inApp, gear.data, timeZone]
+    [moneyIn, gear.data, timeZone]
   );
 
   if (!ready) return null;
@@ -208,7 +213,7 @@ const PaymentsPage = () => {
   const q = query.trim().toLowerCase();
   const list = rows.filter(
     (r) =>
-      (filter === "all" || (filter === "out" && r.invoice?.status === "open") || (filter === "paid" && (r.status === "paid" || r.status === "paid_in_app"))) &&
+      (filter === "all" || (filter === "out" && r.invoice?.status === "open") || (filter === "paid" && (r.status === "paid" || r.status === "paid_in_app" || r.status === "paid_direct"))) &&
       (!q || `${r.family} ${r.athlete} ${r.service}`.toLowerCase().includes(q))
   );
   const pickFilter = (f: typeof filter) => {

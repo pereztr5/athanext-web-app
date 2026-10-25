@@ -3,7 +3,7 @@
  * and paid by card through the coach-invoices function, which emails the family.
  */
 import { supabase } from "@/integrations/supabase/client";
-import type { Client, InAppPayment, Invoice } from "@/utils/payments";
+import { legacyMoneyIn, type Client, type InAppPayment, type Invoice, type MoneyInItem } from "@/utils/payments";
 
 type Row = Record<string, any>;
 
@@ -29,35 +29,55 @@ export interface FamilyInvoice {
 }
 
 export const invoicesAPI = {
-  async payments(): Promise<{ invoices: Invoice[]; inApp: InAppPayment[]; clients: Client[] }> {
+  async payments(): Promise<{ invoices: Invoice[]; moneyIn: MoneyInItem[]; clients: Client[] }> {
     const { data, error } = await supabase.rpc("get_coach_payments");
     if (error) throw error;
     const raw = (data ?? {}) as Row;
+    const invoices: Invoice[] = ((raw.invoices as Row[]) ?? []).map((i) => ({
+      id: i.id,
+      athleteId: i.athlete_id ?? null,
+      family: i.family || "Family",
+      athlete: i.athlete || "",
+      service: i.service,
+      amount: Number(i.amount),
+      due: i.due,
+      note: i.note ?? null,
+      status: i.status,
+      paidAt: i.paid_at ?? null,
+      paidMethod: i.paid_method ?? null,
+      reminders: Number(i.reminders) || 0,
+      createdAt: i.created_at,
+    }));
+    // Every payment received; before money_in existed, sessions paid in the app plus paid invoices.
+    const moneyIn: MoneyInItem[] = Array.isArray(raw.money_in)
+      ? (raw.money_in as Row[]).map((p) => ({
+          id: String(p.id),
+          kind: p.kind,
+          channel: p.channel === "direct" ? "direct" : "in_app",
+          own: Boolean(p.own),
+          date: String(p.date),
+          amount: Number(p.amount) || 0,
+          athlete: p.athlete || "Athlete",
+          family: p.family || "Family",
+          service: p.service || "Payment",
+        }))
+      : legacyMoneyIn(
+          invoices,
+          ((raw.in_app as Row[]) ?? []).map(
+            (p): InAppPayment => ({
+              bookingId: p.booking_id,
+              athlete: p.athlete,
+              family: p.family,
+              service: p.service,
+              date: p.date,
+              amount: Number(p.amount) || 0,
+              own: Boolean(p.own),
+            })
+          )
+        );
     return {
-      invoices: ((raw.invoices as Row[]) ?? []).map((i) => ({
-        id: i.id,
-        athleteId: i.athlete_id ?? null,
-        family: i.family || "Family",
-        athlete: i.athlete || "",
-        service: i.service,
-        amount: Number(i.amount),
-        due: i.due,
-        note: i.note ?? null,
-        status: i.status,
-        paidAt: i.paid_at ?? null,
-        paidMethod: i.paid_method ?? null,
-        reminders: Number(i.reminders) || 0,
-        createdAt: i.created_at,
-      })),
-      inApp: ((raw.in_app as Row[]) ?? []).map((p) => ({
-        bookingId: p.booking_id,
-        athlete: p.athlete,
-        family: p.family,
-        service: p.service,
-        date: p.date,
-        amount: Number(p.amount) || 0,
-        own: Boolean(p.own),
-      })),
+      invoices,
+      moneyIn,
       clients: ((raw.clients as Row[]) ?? [])
         .map((c) => ({ athleteId: c.athlete_id, athlete: c.athlete || "Athlete", family: c.family || "" }))
         .sort((a, b) => a.athlete.localeCompare(b.athlete)),

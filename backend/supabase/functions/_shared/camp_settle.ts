@@ -29,6 +29,23 @@ export interface CampSession {
 
 const FOLLOWUP_LEASE_MS = 5 * 60 * 1000;
 
+/**
+ * A readable Error from a PostgREST error object ({ message, code, details, hint }), which is not
+ * an Error and logs without a label. A stale API schema shows here, for example
+ * "column camp_signups.followup_claimed_at does not exist (42703)".
+ */
+export const postgrestError = (context: string, error: unknown): Error => {
+  if (error instanceof Error) return new Error(`${context}: ${error.message}`);
+  const e = (error ?? {}) as { message?: unknown; code?: unknown; details?: unknown; hint?: unknown };
+  const parts = [
+    typeof e.message === "string" && e.message ? e.message : "unknown error",
+    typeof e.code === "string" && e.code ? `(${e.code})` : "",
+    typeof e.details === "string" && e.details ? `details: ${e.details}` : "",
+    typeof e.hint === "string" && e.hint ? `hint: ${e.hint}` : "",
+  ].filter(Boolean);
+  return new Error(`${context}: ${parts.join(" ")}`);
+};
+
 export const appOrigin = () => Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL") || "https://athanext.com";
 
 /** Where the coach sees a camp's registrations. */
@@ -170,7 +187,11 @@ export const runCampFollowups = async (admin: CampAdmin, signupId: string, origi
     .or(`followup_claimed_at.is.null,followup_claimed_at.lt."${leaseCutoff}"`)
     .select("id, purchase_id")
     .maybeSingle();
-  if (error) throw error;
+  if (error) {
+    const err = postgrestError(`Camp follow-up claim failed for sign-up ${signupId}`, error);
+    console.error(err.message);
+    throw err;
+  }
   if (!claimed) {
     const { data: row } = await admin.from("camp_signups").select("followup_at").eq("id", signupId).maybeSingle();
     return Boolean(row?.followup_at);

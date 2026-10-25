@@ -35,6 +35,9 @@ const compare: Record<RosterSort, (a: RosterAthlete, b: RosterAthlete) => number
 export const sortRoster = (rows: RosterAthlete[], sort: RosterSort, dir: 1 | -1) =>
   rows.slice().sort((a, b) => dir * compare[sort](a, b) || a.name.localeCompare(b.name));
 
+/** A camp athlete whose family hasn't made an account yet. */
+export const campWithoutAccount = (athlete: Pick<RosterAthlete, "fromCamp" | "hasAccount">) => athlete.fromCamp && !athlete.hasAccount;
+
 export const rosterSubtitle = (athlete: RosterAthlete) => {
   const bits = [
     athlete.age != null ? String(athlete.age) : null,
@@ -44,6 +47,7 @@ export const rosterSubtitle = (athlete: RosterAthlete) => {
       : athlete.age != null && athlete.age >= 18
         ? "18+"
         : null,
+    campWithoutAccount(athlete) ? "Account not set up yet" : null,
   ].filter(Boolean);
   return bits.join(" · ");
 };

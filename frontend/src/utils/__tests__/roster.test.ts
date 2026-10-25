@@ -11,6 +11,8 @@ const athlete = (overrides: Partial<RosterAthlete> & Pick<RosterAthlete, "id" | 
   email: null,
   phone: null,
   isClient: false,
+  fromCamp: false,
+  hasAccount: true,
   joinedOn: "2026-01-01",
   pillars: [],
   next: null,
@@ -46,6 +48,13 @@ describe("rosterSubtitle", () => {
     expect(rosterSubtitle(athlete({ id: "1", name: "Casey", age: 12, team: "Club", accountName: "Pat Lee" }))).toBe(
       "12 · Club · parent Pat Lee",
     );
+  });
+
+  it("says when a camp athlete's family has no account yet", () => {
+    expect(rosterSubtitle(athlete({ id: "2", name: "Ali Valiev", age: 16, accountName: "Sam Valiev", fromCamp: true, hasAccount: false }))).toBe(
+      "16 · parent Sam Valiev · Account not set up yet",
+    );
+    expect(rosterSubtitle(athlete({ id: "3", name: "Jo", age: 12, fromCamp: true, hasAccount: true }))).toBe("12");
   });
 });
 

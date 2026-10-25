@@ -216,7 +216,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     campsAPI
       .claim()
       .then((result) => {
-        if (result.claimed > 0 || result.athletes_created > 0) void queryClient.invalidateQueries({ queryKey: ["my-camps"] });
+        if (result.claimed > 0 || result.athletes_created > 0 || (result.athletes_merged ?? 0) > 0) void queryClient.invalidateQueries({ queryKey: ["my-camps"] });
       })
       .catch((err) => console.warn("Linking camp sign-ups failed", err));
   }, [claimUserId, emailConfirmed, familyReady, queryClient]);
