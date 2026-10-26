@@ -32,6 +32,7 @@ import MyOrganization from "./pages/MyOrganization";
 import OrganizationInvite from "./pages/OrganizationInvite";
 import Payments from "./pages/Payments";
 import Business from "./pages/Business";
+import Camps from "./pages/Camps";
 import Account from "./pages/Account";
 import FamilyInvoice from "./pages/FamilyInvoice";
 import SignupConfirmation from "./pages/SignupConfirmation";
@@ -109,6 +110,8 @@ export const ROUTES = {
   CONTACT_US: "/contact",
   HELP: "/help",
   PROFILE: "/profile",
+  /** Coach camp management (exact). Family signup stays at CAMP_SIGNUP / CAMP_PAGE. */
+  CAMPS: "/camps",
   CHAT: "/chat",
   INVITE: "/invite/:token",
   MY_ORGANIZATION: "/organization",
@@ -194,6 +197,7 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.MY_ORGANIZATION, element: <ProtectedRoute><MyOrganization /></ProtectedRoute> },
   { path: ROUTES.PAYMENTS, element: <ProtectedRoute><Payments /></ProtectedRoute> },
   { path: ROUTES.BUSINESS, element: <ProtectedRoute><Business /></ProtectedRoute> },
+  { path: ROUTES.CAMPS, element: <ProtectedRoute><Camps /></ProtectedRoute> },
   { path: ROUTES.ACCOUNT, element: <ProtectedRoute><Account /></ProtectedRoute> },
   { path: ROUTES.FAMILY_INVOICE, element: <ProtectedRoute><FamilyInvoice /></ProtectedRoute> },
   { path: ROUTES.ORG_INVITE, element: <ProtectedRoute><OrganizationInvite /></ProtectedRoute> },

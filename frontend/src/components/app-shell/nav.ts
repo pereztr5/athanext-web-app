@@ -1,21 +1,22 @@
-import { Briefcase, Building2, Calendar, CalendarDays, CalendarPlus, House, Search, ShoppingBag, Store, Users } from "@/components/icons";
+import { Briefcase, Building2, Calendar, CalendarDays, CalendarPlus, Flag, House, Search, ShoppingBag, Store, Users } from "@/components/icons";
 import { ROUTES } from "@/routes";
 
 export type NavItem = { title: string; short: string; url: string; icon: typeof House; also?: string[] };
 
-// Coach navigation (ATH-75, Working Copy): Home, Sessions, Athletes, Schedule and My Business.
+// Coach navigation (ATH-75, Working Copy): Home, Sessions, Athletes, Schedule, Camps and My Business.
 export const COACH_NAV: NavItem[] = [
   { title: "Home", short: "Home", url: ROUTES.DASHBOARD, icon: House },
   { title: "My sessions", short: "Sessions", url: ROUTES.MY_SESSIONS, icon: Calendar },
   { title: "My athletes", short: "Athletes", url: ROUTES.ATHLETES, icon: Users },
   { title: "My schedule", short: "Schedule", url: ROUTES.SCHEDULE, icon: CalendarDays },
+  { title: "Camps", short: "Camps", url: ROUTES.CAMPS, icon: Flag },
   { title: "My Business", short: "My Business", url: ROUTES.PAYMENTS, icon: Briefcase, also: [ROUTES.BUSINESS] },
 ];
 
-// Phone tab bar: the 5th tab opens the My Business page with Payments and My Organization.
+// Phone tab bar: keep five tabs. Camps is reached from Home, Business, or the desktop sidebar.
 export const COACH_TABS: NavItem[] = [
   ...COACH_NAV.slice(0, 4),
-  { title: "My Business", short: "My Business", url: ROUTES.BUSINESS, icon: Briefcase, also: [ROUTES.PAYMENTS, ROUTES.MY_ORGANIZATION] },
+  { title: "My Business", short: "My Business", url: ROUTES.BUSINESS, icon: Briefcase, also: [ROUTES.PAYMENTS, ROUTES.MY_ORGANIZATION, ROUTES.CAMPS] },
 ];
 
 // "Public pages": My Profile, and the Organization page for org owners (ATH-90).

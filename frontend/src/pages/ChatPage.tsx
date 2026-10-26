@@ -770,8 +770,7 @@ const ChatPage = () => {
 
     const messagesBeforeSend = [...messages];
     const lastMessageBeforeSend = messagesBeforeSend[messagesBeforeSend.length - 1];
-    const isFirstMessageInConversation =
-      messagesBeforeSend.length === 0 && !selectedConversation?.last_message_at;
+    const isFirstMessageInConversation = messagesBeforeSend.length === 0;
     const isReplyToCoach =
       Boolean(lastMessageBeforeSend) && lastMessageBeforeSend.sender_id !== user.id;
 

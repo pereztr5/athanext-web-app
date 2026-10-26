@@ -199,7 +199,12 @@ const CoachProfile = () => {
       );
 
       if (coachProfileError || !coachProfile?.id) {
-        throw coachProfileError || new Error("Coach profile not found");
+        toast({
+          title: "Can't open chat",
+          description: "This coach hasn't finished account setup yet.",
+          variant: "destructive",
+        });
+        return;
       }
 
       const coachUserId = coachProfile.id;
@@ -216,11 +221,9 @@ const CoachProfile = () => {
 
       if (!conversationId) {
         const newConversationId = buildId();
-        const nowIso = new Date().toISOString();
         const { error: conversationError } = await chatAPI.createConversation({
           id: newConversationId,
           created_by: user.id,
-          last_message_at: nowIso,
           title: coach.name, // store other user's name as the title for easy display
           is_group: false,
         });

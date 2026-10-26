@@ -1,7 +1,7 @@
 /**
  * Coach Home "Coming up" camps: every published camp that hasn't ended, soonest first, with
  * sign-ups, money still to collect, and links to Registrations and its next day on the schedule.
- * Always shows a Camps entry so coaches can reach the editor from Home (phone has no Profile tab).
+ * Always shows a Camps entry so coaches can reach /camps from Home (phone has no Camps tab).
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -33,17 +33,17 @@ export const ComingUpCamps = () => {
                   : `${list.length} camps`}
           </h2>
         </div>
-        <Link to={ROUTES.PROFILE} className={textButton}>
+        <Link to={ROUTES.CAMPS} className={textButton}>
           {list.length ? "All camps" : "Manage camps"}
           <ChevronRight strokeWidth={1.5} aria-hidden="true" />
         </Link>
       </div>
       {camps.isError ? (
-        <p className="text-body-m text-error-700">Couldn't load camps. Open My profile to manage them.</p>
+        <p className="text-body-m text-error-700">Couldn't load camps. Open Camps to manage them.</p>
       ) : null}
       {!camps.isLoading && !camps.isError && list.length === 0 ? (
         <p className={meta}>
-          Create a camp on My profile. Families sign up from a link with no account needed.
+          Create a camp on Camps. Families sign up from a link with no account needed.
         </p>
       ) : null}
       {list.length ? (
@@ -59,7 +59,7 @@ export const ComingUpCamps = () => {
                 </span>
               </div>
               <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
-                <Link to={`${ROUTES.PROFILE}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
+                <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
                   Registrations
                 </Link>
                 <Link to={`${ROUTES.SCHEDULE}?day=${nextDay}`} className={textButton}>

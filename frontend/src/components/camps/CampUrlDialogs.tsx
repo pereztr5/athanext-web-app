@@ -1,6 +1,6 @@
 /**
- * The camp editor and Registrations on My profile, driven by the URL so links can open them:
- * /profile?camp=<id>&view=registrations, /profile?camp=<id>&view=edit, /profile?camp=new&view=edit.
+ * The camp editor and Registrations on /camps, driven by the URL so links can open them:
+ * /camps?camp=<id>&view=registrations, /camps?camp=<id>&view=edit, /camps?camp=new&view=edit.
  */
 import { useSearchParams } from "react-router-dom";
 import { useCampDialogs } from "./useCampDialogs";

@@ -20,16 +20,23 @@ export const useStartCoachChat = () => {
     setStarting(true);
     try {
       const { data: coachProfile, error: profileError } = await chatAPI.getCoachUserProfile(coachId);
-      if (profileError || !coachProfile?.id) throw profileError || new Error("Coach profile not found");
+      if (profileError || !coachProfile?.id) {
+        toast({
+          title: "Can't open chat",
+          description: "This coach hasn't finished account setup yet.",
+          variant: "destructive",
+        });
+        return;
+      }
       const { data: existing, error: existingError } = await chatAPI.findConversationBetweenUsers(user.id, coachProfile.id);
       if (existingError) throw existingError;
       let conversationId = existing?.id || null;
       if (!conversationId) {
         conversationId = buildId();
+        // Leave last_message_at null until the first real message so email notify fires.
         const { error } = await chatAPI.createConversation({
           id: conversationId,
           created_by: user.id,
-          last_message_at: new Date().toISOString(),
           title,
           is_group: false,
         });

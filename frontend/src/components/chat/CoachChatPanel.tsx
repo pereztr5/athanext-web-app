@@ -158,12 +158,10 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
       let isNew = false;
 
       if (!newConversationId) {
-        const nowIso = new Date().toISOString();
         const createdId = buildId();
         const { error: conversationError } = await chatAPI.createConversation({
           id: createdId,
           created_by: user.id,
-          last_message_at: nowIso,
           title: coach.name,
           is_group: false,
         });

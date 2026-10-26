@@ -35,14 +35,25 @@ import { detectCoachSport } from "@/utils/coachSport";
 import { Plus, X } from "@/components/icons";
 import { CoachOwnProfile } from "@/components/coach-profile/CoachOwnProfile";
 import { PackageEditorDialog } from "@/components/coach-profile/PackageEditorDialog";
-import { CampUrlDialogs } from "@/components/camps/CampUrlDialogs";
 import { useSportPillars } from "@/hooks/useSportPillars";
 import { sanitizePathwayTags } from "@/constants/pathwayTags";
+import { ROUTES } from "@/routes";
 
 const Profile = () => {
     const { toast } = useToast();
     const navigate = useNavigate();
     const [searchParams, setSearchParams] = useSearchParams();
+
+    // Old camp deep links lived on /profile; send them to /camps.
+    useEffect(() => {
+        if (!searchParams.get("camp")) return;
+        const next = new URLSearchParams();
+        const camp = searchParams.get("camp");
+        const view = searchParams.get("view");
+        if (camp) next.set("camp", camp);
+        if (view) next.set("view", view);
+        navigate(`${ROUTES.CAMPS}?${next.toString()}`, { replace: true });
+    }, [navigate, searchParams]);
 
     const { user, loading: authLoading, setUserImg, setUserName, refreshUserProfile } = useAuth();
 
@@ -440,8 +451,6 @@ const Profile = () => {
 
     const modals = (
         <>
-            {/* /profile?camp=<id>&view=registrations (or view=edit) opens the camp here. */}
-            <CampUrlDialogs />
             <ReviewModal
                 open={showReviewModal}
                 onOpenChange={setShowReviewModal}

@@ -39,8 +39,6 @@ import { ServiceEditorDialog } from "./ServiceEditorDialog";
 import { useSaveServices, type StepName } from "./hooks";
 import { Avatar } from "./parts";
 import { caption, chip, coachTitle, money, sessionTypesFromWhere } from "./shared";
-import { CampEditorList } from "@/components/camps/CampEditorList";
-import { useCampDialogs } from "@/components/camps/useCampDialogs";
 import { packageKind } from "@/components/camps/format";
 
 const BIO_MAX = 600;
@@ -125,8 +123,6 @@ export const OwnProfileEditor = ({
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<ProfileService | null>(null);
   const [removingPackage, setRemovingPackage] = useState<CoachPackage | null>(null);
-  const campDialogs = useCampDialogs();
-
   useEffect(() => () => {
     if (photoPreview) URL.revokeObjectURL(photoPreview);
   }, [photoPreview]);
@@ -366,8 +362,8 @@ export const OwnProfileEditor = ({
             <label className={field}>
               <span className={label}>About you</span>
               <textarea
-                className={cn(input, "h-auto py-2 text-paragraph")}
-                rows={4}
+                className={cn(input, "h-auto min-h-[140px] resize-y py-2 text-paragraph")}
+                rows={6}
                 maxLength={Math.max(BIO_MAX, bio.length)}
                 placeholder="Your background, who you coach and how a session runs"
                 value={bio}
@@ -396,11 +392,11 @@ export const OwnProfileEditor = ({
             </div>
           </section>
 
-          <section className={card} aria-label="Sessions, packages and camps">
+          <section className={card} aria-label="Sessions and packages">
             <div className="flex items-center justify-between gap-3">
               <h2 className={h2}>
                 <Layers strokeWidth={1.5} aria-hidden="true" />
-                Sessions, packages and camps
+                Sessions and packages
               </h2>
               {onSharePricing ? (
                 <button type="button" className={cn(secondaryButton, smallButton)} onClick={onSharePricing}>
@@ -408,6 +404,12 @@ export const OwnProfileEditor = ({
                   Share pricing
                 </button>
               ) : null}
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-light-400 px-4 py-3">
+              <span className="text-body-m text-dark-300">Camps live on their own page now.</span>
+              <Link to={ROUTES.CAMPS} className={cn(textButton, "shrink-0")}>
+                Manage camps
+              </Link>
             </div>
             <span className={label}>Packages</span>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
@@ -442,12 +444,6 @@ export const OwnProfileEditor = ({
                 Add package
               </button>
             </div>
-
-            <CampEditorList
-              coverFallback={coach.profile_image_url || coach.image_url || null}
-              onEdit={campDialogs.openEditor}
-              onRegistrations={campDialogs.openRegistrations}
-            />
 
             <span className={cn(label, "-mb-1.5")}>Single sessions</span>
             <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3">

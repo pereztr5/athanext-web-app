@@ -1,4 +1,4 @@
-/** Opens the camp editor or Registrations on My profile through the URL (see CampUrlDialogs). */
+/** Opens the camp editor or Registrations on /camps through the URL (see CampUrlDialogs). */
 import { useSearchParams } from "react-router-dom";
 
 export const useCampDialogs = () => {

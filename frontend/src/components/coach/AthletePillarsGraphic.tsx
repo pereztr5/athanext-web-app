@@ -413,11 +413,9 @@ const AthletePillarsGraphic = ({ initialSport = "soccer" }: AthletePillarsGraphi
 
       if (!conversationId) {
         const newConversationId = buildId();
-        const nowIso = new Date().toISOString();
         const { error: conversationError } = await chatAPI.createConversation({
           id: newConversationId,
           created_by: user.id,
-          last_message_at: nowIso,
           title: coach.name,
           is_group: false,
         });

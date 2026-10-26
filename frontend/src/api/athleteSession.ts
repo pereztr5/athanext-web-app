@@ -91,7 +91,6 @@ const tellCoach = async (coachId: string, coachName: string, body: string): Prom
     const { error } = await chatAPI.createConversation({
       id: conversationId,
       created_by: userId,
-      last_message_at: new Date().toISOString(),
       title: coachName,
       is_group: false,
     });

@@ -1,10 +1,12 @@
 /** Athlete "New message": pick one of your coaches and open (or start) that chat. */
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { athleteHomeAPI } from "@/api/athleteHome";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { dialogContent, meta, secondaryButton } from "@/components/schedule/styles";
+import { dialogContent, meta, secondaryButton, textButton } from "@/components/schedule/styles";
 import { useStartCoachChat } from "@/hooks/useStartCoachChat";
 import { cn } from "@/lib/utils";
+import { ROUTES } from "@/routes";
 
 export const NewMessageDialog = ({ open, onClose }: { open: boolean; onClose: () => void }) => {
   const home = useQuery({ queryKey: ["athlete-home"], queryFn: () => athleteHomeAPI.get(), enabled: open });
@@ -21,7 +23,14 @@ export const NewMessageDialog = ({ open, onClose }: { open: boolean; onClose: ()
         <div className="flex flex-col gap-2 px-5 pb-5 sm:px-[25px]">
           {home.isLoading ? <p className={meta}>Loading coaches…</p> : null}
           {!home.isLoading && !coaches.length ? (
-            <p className={meta}>Book a session first, then you can message that coach here.</p>
+            <div className="flex flex-col gap-3">
+              <p className={meta}>
+                Book a session first to message from here. You can also message a coach from their profile before booking.
+              </p>
+              <Link to={ROUTES.COACHES} className={cn(textButton, "self-start")} onClick={onClose}>
+                Browse coaches
+              </Link>
+            </div>
           ) : null}
           {coaches.map((c) => (
             <button

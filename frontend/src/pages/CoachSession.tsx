@@ -152,7 +152,7 @@ const CoachSessionPage = () => {
 
   const group = s.sessionType === "group";
   const camp = s.camp;
-  const campLink = camp ? `${ROUTES.PROFILE}?camp=${camp.id}&view=registrations` : null;
+  const campLink = camp ? `${ROUTES.CAMPS}?camp=${camp.id}&view=registrations` : null;
   const start = sessionStart(s);
   const end = sessionEnd(s);
   const live = s.bookings.filter((b) => LIVE.has(b.status));

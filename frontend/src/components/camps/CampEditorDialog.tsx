@@ -489,7 +489,7 @@ export const CampEditorDialog = ({
               {showDetails ? <DetailsFields draft={draft} patch={patch} coachPhoto={coach.photo} selfId={coach.id} /> : null}
             </div>
           </div>
-          <aside className="flex w-[400px] flex-none flex-col gap-3 overflow-y-auto border-l border-light-525 bg-light-400 px-6 py-5 max-lg:w-[340px]">
+          <aside className="flex min-h-0 w-[400px] flex-none flex-col gap-3 overflow-y-auto border-l border-light-525 bg-light-400 px-6 py-5 max-lg:w-[340px]">
             <div className="flex items-baseline justify-between gap-2">
               <span className="text-label-sm text-dark">What families see</span>
               <span className={meta}>Updates as you type</span>

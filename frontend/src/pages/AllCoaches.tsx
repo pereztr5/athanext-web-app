@@ -372,7 +372,6 @@ const AllCoaches = () => {
         const { error: conversationError } = await chatAPI.createConversation({
           id: newConversationId,
           created_by: user.id,
-          last_message_at: new Date().toISOString(),
           title: coach.name,
           is_group: false,
         });

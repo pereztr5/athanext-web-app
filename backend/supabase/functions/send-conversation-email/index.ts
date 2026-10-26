@@ -157,7 +157,10 @@ const shouldSendNotification = (
 
   const isFirstMessage = priorMessages.length === 0;
   if (isFirstMessage) {
-    return { firstMessage: actorPersona === "athlete", firstReply: false };
+    // Athlete, parent, or coach opening the thread all count as a first message.
+    const opens =
+      actorPersona === "athlete" || actorPersona === "parent" || actorPersona === "coach";
+    return { firstMessage: opens, firstReply: false };
   }
 
   const last = priorMessages[0];
@@ -276,9 +279,11 @@ Deno.serve(async (req) => {
       firstReplyFlag
     );
 
+    const persona = actor.profile.persona_type;
+    const familyOpens = persona === "athlete" || persona === "parent";
     const shouldNotify =
-      (actor.profile.persona_type === "athlete" && (firstMessage || firstReply)) ||
-      (actor.profile.persona_type === "coach" && firstReply);
+      (familyOpens && (firstMessage || firstReply)) ||
+      (persona === "coach" && (firstMessage || firstReply));
 
     if (!shouldNotify) {
       return new Response(JSON.stringify({ success: true, notified: false }), {

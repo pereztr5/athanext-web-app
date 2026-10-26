@@ -144,7 +144,7 @@ const BusinessPage = () => {
             sub={org ? `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}` : "By invitation from AthaNext"}
           />
           <Row
-            to={ROUTES.PROFILE}
+            to={ROUTES.CAMPS}
             icon={<CalendarDays strokeWidth={1.5} />}
             title="Camps"
             sub="Create, share links, and see who signed up"

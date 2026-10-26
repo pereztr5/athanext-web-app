@@ -42,7 +42,7 @@ export const CampMoney = ({ coachId }: { coachId: string }) => {
           <CalendarDays className="size-5 text-dark-300" strokeWidth={1.5} aria-hidden="true" />
           Camps
         </h2>
-        <Link to={ROUTES.PROFILE} className={cn(meta, "hover:underline")}>
+        <Link to={ROUTES.CAMPS} className={cn(meta, "hover:underline")}>
           {data ? `${plural(data.registrationsThisMonth, "registration")} this month` : "Registrations"}
         </Link>
       </div>

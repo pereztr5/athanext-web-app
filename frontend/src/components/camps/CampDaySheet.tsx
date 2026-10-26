@@ -100,7 +100,7 @@ export const CampDaySheet = ({
                 Open session
               </Link>
             ) : null}
-            <Link to={`${ROUTES.PROFILE}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton)} onClick={onClose}>
+            <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton)} onClick={onClose}>
               Registrations
             </Link>
           </div>
