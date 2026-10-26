@@ -382,6 +382,17 @@ export const campsAPI = {
   resendInvite: (referralId: string) =>
     invokeCampFunction<{ invite_link?: string; emailed?: boolean }>({ action: "resend_invite", referral_id: referralId }, "Could not resend the invite."),
 
+  /**
+   * Attach a parent email to a walk-in row that had none, so invite + claim/finish can match.
+   * Call before sending the family invite.
+   */
+  setParentEmail: (registrationId: string, email: string, parentName?: string | null) =>
+    call<{ id: string; parent_email: string; parent_name: string | null }>(
+      "set_camp_registration_parent_email",
+      { p_id: registrationId, p_email: email, p_parent_name: parentName ?? null },
+      "Could not save that email.",
+    ),
+
   // ---------- Family ----------
   /** Call after sign-up / sign-in: links registrations made with this (confirmed) email. */
   claim: () =>

@@ -58,13 +58,14 @@ const CampSignup = () => {
   const location = useLocation();
   const search = new URLSearchParams(location.search);
   const signupId = search.get("signup");
+  const sessionId = search.get("session_id");
   const canceled = search.get("canceled") === "1";
   const route = parseCampRoute(params.coachSlug, params.campSlug);
 
   // athanext.com/<coach>/pricing is the coach's prices, not a camp.
   if (params.coachSlug && params.campSlug === "pricing") return <Navigate to={coachPricingPath(params.coachSlug)} replace />;
   if (!route) return <CampNotFound />;
-  if (signupId && !canceled) return <CampYoureIn signupId={signupId} />;
+  if (signupId && !canceled) return <CampYoureIn signupId={signupId} sessionId={sessionId} />;
   return <CampFlow coachSlug={route.coachSlug} campSlug={route.campSlug} canceled={canceled} />;
 };
 

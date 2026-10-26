@@ -219,7 +219,14 @@ export const campSignupAPI = {
   },
 
   /** "You're in" page. Confirms a fresh card payment with Stripe when the webhook is late. */
-  status(signupId: string) {
-    return invoke<CampSignupStatus>({ action: "status", signup_id: signupId }, "Could not load your sign-up.");
+  status(signupId: string, sessionId?: string | null) {
+    return invoke<CampSignupStatus>(
+      {
+        action: "status",
+        signup_id: signupId,
+        ...(sessionId ? { session_id: sessionId } : {}),
+      },
+      "Could not load your sign-up.",
+    );
   },
 };

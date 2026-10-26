@@ -24,7 +24,7 @@ const cardBox = "flex flex-col gap-4 rounded-card border border-light-525 bg-lig
 
 const first = (name: string) => name.trim().split(/\s+/)[0] || name;
 
-export const CampYoureIn = ({ signupId }: { signupId: string }) => {
+export const CampYoureIn = ({ signupId, sessionId }: { signupId: string; sessionId?: string | null }) => {
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const polls = useRef(0);
@@ -33,20 +33,29 @@ export const CampYoureIn = ({ signupId }: { signupId: string }) => {
   const [googleError, setGoogleError] = useState<string | null>(null);
 
   const status = useQuery({
-    queryKey: ["camp-signup-status", signupId],
+    queryKey: ["camp-signup-status", signupId, sessionId ?? ""],
     queryFn: async () => {
       polls.current += 1;
-      return campSignupAPI.status(signupId);
+      return campSignupAPI.status(signupId, sessionId);
     },
     retry: false,
     refetchOnWindowFocus: false,
-    refetchInterval: (query) => (query.state.data?.any_pending && polls.current < POLLS ? 2000 : false),
+    refetchInterval: (query) => {
+      const data = query.state.data;
+      if (!data || polls.current >= POLLS) return false;
+      // Keep polling while Stripe may still be settling (live hold or unpaid card return).
+      if (data.any_pending) return 2000;
+      if (data.pay_method === "card" && !data.all_paid && sessionId) return 2000;
+      return false;
+    },
   });
 
   // Signed in already: link this sign-up to the account now (claim runs once per session otherwise).
   const claimed = useRef(false);
   useEffect(() => {
     if (!user || !status.data || status.data.any_pending || claimed.current) return;
+    const confirmed = status.data.athletes.some((a) => a.status === "paid" || a.status === "held");
+    if (!confirmed) return;
     claimed.current = true;
     campsAPI
       .claim()
@@ -80,11 +89,14 @@ export const CampYoureIn = ({ signupId }: { signupId: string }) => {
 
   const s = status.data;
   const coachFirst = first(s.camp.coach_name);
-  const active = s.athletes.filter((a) => a.status === "paid" || a.status === "held" || a.status === "pending_payment");
-  const lapsed = active.length === 0;
-  const held = s.pay_method === "direct" && active.some((a) => a.status === "held");
+  const confirmed = s.athletes.filter((a) => a.status === "paid" || a.status === "held");
   const pending = s.any_pending;
-  const stillPending = pending && polls.current >= POLLS;
+  const cardStillOpen =
+    s.pay_method === "card" && !s.all_paid && Boolean(sessionId) && polls.current < POLLS && confirmed.length === 0;
+  const confirming = pending || cardStillOpen;
+  const stillPending = confirming && polls.current >= POLLS;
+  const lapsed = !confirming && confirmed.length === 0;
+  const held = s.pay_method === "direct" && confirmed.some((a) => a.status === "held");
   const dates = formatCampDates(s.camp.starts_on, s.camp.ends_on);
 
   const startGoogle = async () => {
@@ -112,7 +124,7 @@ export const CampYoureIn = ({ signupId }: { signupId: string }) => {
   } else if (stillPending) {
     title = "Your payment is still going through";
     body = `We'll email ${s.parent_email} as soon as it's confirmed. You don't need to pay again.`;
-  } else if (pending) {
+  } else if (confirming) {
     title = "Confirming your payment…";
     body = "This takes a few seconds.";
   }
@@ -123,11 +135,11 @@ export const CampYoureIn = ({ signupId }: { signupId: string }) => {
         <span
           className={cn(
             "flex size-11 items-center justify-center rounded-full border",
-            lapsed ? "border-light-600 bg-light-400 text-dark-300" : pending ? "border-info-300 bg-info-100 text-info-800" : "border-success-300 bg-success-100 text-success-800",
+            lapsed ? "border-light-600 bg-light-400 text-dark-300" : confirming ? "border-info-300 bg-info-100 text-info-800" : "border-success-300 bg-success-100 text-success-800",
           )}
           aria-hidden="true"
         >
-          {pending && !stillPending ? <Loader2 className="size-5 animate-spin" strokeWidth={1.5} /> : <Check className="size-5" strokeWidth={2} />}
+          {confirming && !stillPending ? <Loader2 className="size-5 animate-spin" strokeWidth={1.5} /> : <Check className="size-5" strokeWidth={2} />}
         </span>
         <div className="flex flex-col gap-1.5" aria-live="polite">
           <h1 className="text-page-title-phone text-dark">{title}</h1>

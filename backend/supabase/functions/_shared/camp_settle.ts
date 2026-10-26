@@ -237,9 +237,16 @@ export const settleCampSession = async (admin: CampAdmin, session: CampSession, 
     console.error("PAID CAMP WITHOUT SPOT: no sign-up for this Checkout, refund by hand", session.id, meta.signupId);
     return { handled: true, paid: true, followupsDone: true };
   }
+  const paidCount = Number(data.paid_count ?? 0);
   const without = Array.isArray(data.without_spot) ? data.without_spot : [];
-  if (without.length) {
-    console.error("PAID CAMP WITHOUT SPOT: refund these athletes by hand", session.id, meta.signupId, without);
+  if (without.length || paidCount === 0) {
+    console.error("PAID CAMP WITHOUT SPOT: refund these athletes by hand", session.id, meta.signupId, without, {
+      paid_count: paidCount,
+    });
+  }
+  // No spot secured → skip emails/payout follow-ups; ops refund from the log above.
+  if (paidCount === 0) {
+    return { handled: true, paid: true, followupsDone: true, result: data };
   }
   const followupsDone = await runCampFollowups(admin, meta.signupId, origin);
   return { handled: true, paid: true, followupsDone, result: data };

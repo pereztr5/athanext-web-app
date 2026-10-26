@@ -1019,6 +1019,13 @@ serve(async (req) => {
       if (session.metadata?.kind === "camp") {
         if (session.status === "expired") await releaseCampSession(supabaseClient, session.id);
         const camp = await settleCampSession(supabaseClient, session as any);
+        // Same as the webhook: incomplete follow-ups must not look done (retry / ops alert).
+        if (camp.paid && camp.followupsDone === false) {
+          return new Response(JSON.stringify({ error: "Camp follow-ups still pending", session_id: sessionId }), {
+            status: 500,
+            headers: { ...corsHeaders, "Content-Type": "application/json" },
+          });
+        }
         return ok({ session_id: sessionId, payment_status: session.payment_status, status: session.status, paid: camp.paid, camp: true });
       }
 

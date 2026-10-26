@@ -19,8 +19,8 @@ export const campPath = (coachSlug: string, campSlug: string) =>
 
 /**
  * Where a family's "Register" on a profile camp card goes: the camp page (no src, so
- * marketplace pricing) when the camp has a published link, otherwise null and the caller
- * falls back to the old package checkout.
+ * marketplace pricing) when the camp has a published link. Null means the camp is not
+ * open for registration (no legacy package Checkout).
  */
 export const campPagePathFor = (
   coachSlug: string | null | undefined,

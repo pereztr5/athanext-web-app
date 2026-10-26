@@ -143,57 +143,19 @@ serve(async (req) => {
       return json({ error: "Package not found" }, 404);
     }
 
-    // Camps are one registration. Reconcile copies sessions_total onto the purchase and
-    // treats 0 as 1, and package_purchases requires sessions_total > 0. Metadata therefore
-    // sends 1. The camp purchase trigger sets sessions_remaining to 0, which is what
-    // booking spends, so the family does not get a session credit. The purchase row still
-    // counts toward capacity and the coach is still paid the list price.
-    const isCamp = packageData.kind === "camp";
-    if (isCamp) {
-      if (packageData.is_active === false) {
-        return json({ error: "This camp is not open for registration" }, 400);
-      }
-      const endsOn = typeof packageData.camp_ends_on === "string" ? packageData.camp_ends_on.slice(0, 10) : null;
-      const today = new Date().toISOString().slice(0, 10);
-      if (endsOn && endsOn < today) {
-        return json({ error: "This camp has ended" }, 400);
-      }
-      if (packageData.camp_capacity != null) {
-        const capacity = Number(packageData.camp_capacity);
-        if (!Number.isFinite(capacity)) {
-          return json({ error: "Could not check how many spots are left. Try again." }, 500);
-        }
-        // camp_spots_left counts these purchases plus camp sign-up registrations (camp-signup),
-        // so the two ways in never oversell. Before that migration: purchases only, as before.
-        const { data: spotsLeft, error: spotsError } = await admin.rpc("camp_spots_left", { p_camp_id: packageData.id });
-        if (!spotsError && typeof spotsLeft === "number") {
-          if (spotsLeft <= 0) return json({ error: "This camp is full" }, 409);
-        } else {
-          const { count, error: countError } = await admin
-            .from("package_purchases")
-            .select("id", { count: "exact", head: true })
-            .eq("package_id", packageData.id)
-            .in("status", ["active", "expired", "completed"]);
-          if (countError) {
-            console.error("Camp capacity check failed", countError);
-            return json({ error: "Could not check how many spots are left. Try again." }, 500);
-          }
-          if ((count ?? 0) >= capacity) {
-            return json({ error: "This camp is full" }, 409);
-          }
-        }
-      }
+    // Camps register only via /:coach/:camp → camp-signup (capacity, holds, settle). Never open
+    // package Checkout for kind=camp — that was a second capacity path and could oversell.
+    if (packageData.kind === "camp") {
+      return json({ error: "Register for this camp from its camp page." }, 400);
     }
 
-    const campWhen = [packageData.camp_starts_on, packageData.camp_ends_on].filter(Boolean).join(" to ");
-    const campLine = [packageData.camp_location, campWhen].filter(Boolean).join(" · ");
-
-    // Camps carry no platform fee for anyone (card processing only). Packages: same referral
-    // waiver as booking, a confirmed coach-client pair for an athlete the caller owns.
-    let platformWaived = isCamp;
-    const { data: athleteRows } = isCamp
-      ? { data: [] }
-      : await supabaseClient.from("athlete_profiles").select("id").eq("user_id", user.id).limit(20);
+    // Same referral waiver as booking: a confirmed coach-client pair for an athlete the caller owns.
+    let platformWaived = false;
+    const { data: athleteRows } = await supabaseClient
+      .from("athlete_profiles")
+      .select("id")
+      .eq("user_id", user.id)
+      .limit(20);
     const athleteIds = (athleteRows ?? []).map((a) => a.id as string);
     if (athleteIds.length) {
       const { data: waiverRows } = await supabaseClient
@@ -208,7 +170,7 @@ serve(async (req) => {
 
     // coach_packages.total_price is stored in cents.
     const listPrice = Number(packageData.total_price) / 100;
-    const unitAmount = feeLine(toCents(listPrice), isCamp ? "camp" : "package", fees, platformWaived).totalCents;
+    const unitAmount = feeLine(toCents(listPrice), "package", fees, platformWaived).totalCents;
 
     let customer;
     const existingCustomers = await stripe.customers.list({
@@ -241,9 +203,7 @@ serve(async (req) => {
             unit_amount: unitAmount,
             product_data: {
               name: `${packageData.package_name} - ${packageData.coaches.name}`,
-              description: isCamp
-                ? campLine || "One registration. This does not add session credits."
-                : `${packageData.session_count} sessions × ${packageData.duration_minutes} min | Valid for ${packageData.validity_days} days`,
+              description: `${packageData.session_count} sessions × ${packageData.duration_minutes} min | Valid for ${packageData.validity_days} days`,
             },
           },
           quantity: 1,
@@ -256,9 +216,9 @@ serve(async (req) => {
         package_id: packageData.id,
         coach_id: packageData.coach_id,
         user_id: user.id,
-        sessions_total: isCamp ? "1" : packageData.session_count.toString(),
-        sessions_remaining: isCamp ? "0" : packageData.session_count.toString(),
-        camp: isCamp ? "1" : "0",
+        sessions_total: packageData.session_count.toString(),
+        sessions_remaining: packageData.session_count.toString(),
+        camp: "0",
         expiry_date: expiryDate.toISOString(),
         type: "package_purchase",
         list_price: String(listPrice),

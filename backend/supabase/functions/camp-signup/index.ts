@@ -238,10 +238,15 @@ serve(async (req) => {
       let { data, error } = await read();
       if (error) return rpcFail(error, "Could not load your sign-up.");
       if (!data) return json({ error: "Not found" }, 404);
-      // Back from Stripe before the webhook: settle it the same way the webhook does.
-      if (data.any_pending && typeof data.stripe_session_id === "string" && data.stripe_session_id) {
+      // Back from Stripe before the webhook (or after the hold window): settle when not all paid.
+      // Prefer the return-URL session_id; fall back to the sign-up's stored Checkout id.
+      const sessionId =
+        (typeof body.session_id === "string" && body.session_id.startsWith("cs_") && body.session_id) ||
+        (typeof data.stripe_session_id === "string" && data.stripe_session_id) ||
+        null;
+      if (!data.all_paid && sessionId) {
         try {
-          const session = await stripeApi().checkout.sessions.retrieve(data.stripe_session_id, { expand: ["payment_intent"] });
+          const session = await stripeApi().checkout.sessions.retrieve(sessionId, { expand: ["payment_intent"] });
           if (isCampSessionPaid(session as never)) {
             await settleCampSession(admin, session as never, origin);
             ({ data, error } = await read());

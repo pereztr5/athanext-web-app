@@ -397,13 +397,15 @@ const RegistrationRow = ({
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
-/** "Invite family" on a row without an email: the usual family invite. */
+/** "Invite family" on a row without an email: save the email on the registration, then invite. */
 const InviteBox = ({ row, onDone }: { row: CampRegistrationRow; onDone: () => void }) => {
   const { toast } = useToast();
   const [email, setEmail] = useState("");
   const send = useMutation({
     mutationFn: async () => {
       const clean = email.trim().toLowerCase();
+      // Persist on the camp row first so claim/finish can match after the family joins.
+      await campsAPI.setParentEmail(row.id, clean, row.parent_name || clean.split("@")[0]);
       const { error } = await addClientReferrals([
         { name: row.parent_name || clean.split("@")[0], email: clean, athlete_first_name: row.athlete_first_name },
       ]);

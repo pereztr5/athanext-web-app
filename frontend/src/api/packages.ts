@@ -384,7 +384,7 @@ export const packagesAPI = {
 
   /**
    * Create Stripe checkout session for a package purchase (edge function).
-   * Camps use this same call: one payment, no bookable session credits.
+   * Camps are not supported here — use camp-signup / the camp page instead.
    */
   async createPackagePayment(input: PurchasePackageInput): Promise<ApiResponse<PackagePaymentRedirect>> {
     try {

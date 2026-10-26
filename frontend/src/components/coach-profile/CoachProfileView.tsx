@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
-import { packagesAPI, type Camp } from "@/api/packages";
+import { type Camp } from "@/api/packages";
 import type { CampRegisterResult } from "@/components/camps/CampCards";
 import { ChevronLeft } from "@/components/icons";
 import { formatRichTextForRender } from "@/utils/richText";
@@ -195,21 +195,16 @@ export function CoachProfileView({
       toast({ title: "This is your own profile", description: "Families register for your camps here." });
       return { redirect: false, message: null };
     }
+    // Camps always use /:coach/:camp → camp-signup. Never open package Checkout (dual capacity).
     const page = campPagePathFor(coach.slug, camp);
     if (page) {
       navigate(page);
       return { redirect: true, message: null };
     }
-    if (!user) {
-      navigate(`${ROUTES.AUTH}?mode=signin`, { state: { from: location } });
-      return { redirect: false, message: null };
-    }
-    const payment = await packagesAPI.createPackagePayment({ package_id: camp.id, coach_id: camp.coachId });
-    if (payment.error || !payment.data?.url) {
-      return { redirect: false, message: payment.error?.message || "Could not start registration." };
-    }
-    window.location.assign(payment.data.url);
-    return { redirect: true, message: null };
+    return {
+      redirect: false,
+      message: "This camp isn't open for registration yet. Ask the coach for their camp link.",
+    };
   };
 
   const buy = (pkg: CoachPackage) => {
