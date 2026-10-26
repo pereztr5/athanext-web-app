@@ -41,9 +41,10 @@ import { feeRows } from "@/utils/fees";
 type Step = "page" | "details" | "review";
 type PayMethod = "card" | "direct";
 
-const shell = "mx-auto flex w-full max-w-[560px] flex-col gap-4 px-4 pb-6 pt-4 md:pt-8";
+// Same content width as the public coach profile (max-w-wrapper + px-4 / md:px-10).
+const shell = "mx-auto flex w-full max-w-wrapper flex-col gap-4 px-4 pb-6 pt-4 md:px-10 md:pt-8";
 const footer =
-  "sticky bottom-0 z-10 -mx-4 mt-2 flex flex-col gap-2.5 border-t border-light-525 bg-light-300 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3";
+  "sticky bottom-0 z-10 -mx-4 mt-2 flex flex-col gap-2.5 border-t border-light-525 bg-light-300 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3 md:-mx-10 md:px-10";
 const fieldBox = "flex min-w-0 flex-col gap-1.5";
 
 /** Signed in on a phone, the app's tab bar sits at the bottom: keep the footer above it. */

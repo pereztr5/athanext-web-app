@@ -18,7 +18,8 @@ import { campHeldNextStep, campPath, formatCampDates, formatCampDay, formatCampT
 import { finishAccountPath } from "./campFinish";
 
 const POLLS = 8;
-const shell = "mx-auto flex w-full max-w-[560px] flex-col gap-4 px-4 pb-10 pt-6 md:pt-10";
+// Match CampSignup / public coach profile width so post-pay doesn't feel like a different layout.
+const shell = "mx-auto flex w-full max-w-wrapper flex-col gap-4 px-4 pb-10 pt-6 md:px-10 md:pt-10";
 const cardBox = "flex flex-col gap-4 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px]";
 
 const first = (name: string) => name.trim().split(/\s+/)[0] || name;
