@@ -2,6 +2,7 @@
 // The database functions check the caller owns the org; this only builds the link and emails it.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { emailButton, emailShell, escapeEmailHtml } from "../_shared/email_shell.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -29,36 +30,26 @@ const resolveSiteUrl = (origin: string | null): string => {
   return DEFAULT_SITE_URL;
 };
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
-
+const escapeHtml = escapeEmailHtml;
 const pct = (rate: number) => `${Number(Number(rate).toFixed(2))}%`;
 
-const emailHtml = (kind: "join" | "rate", org: string, owner: string, rate: number, link: string) => `
-  <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-    <h2 style="color:#0054B4;">${
-      kind === "join"
-        ? `${escapeHtml(owner)} invited you to join ${escapeHtml(org)}`
-        : `${escapeHtml(org)} asked to change your rate`
-    }</h2>
-    <p>${
-      kind === "join"
-        ? `Join ${escapeHtml(org)} on AthaNext. You keep your own profile, athletes and payouts.
-           ${pct(rate)} of each paid session goes to ${escapeHtml(org)} and the rest is yours.`
-        : `${escapeHtml(owner)} would like ${escapeHtml(org)}'s share of each paid session to be ${pct(rate)}.
-           It starts once you accept and only applies to sessions booked after that.`
-    }</p>
-    <p><a href="${link}" style="background:#0054B4;color:#fff;padding:12px 20px;
-    border-radius:6px;text-decoration:none;">${kind === "join" ? "See the invite" : "Review the new rate"}</a></p>
-    <p style="color:#767980;font-size:13px;">${
-      kind === "join" ? "Sign in or sign up as a coach with this email address to accept." : "Sign in with your coach account to accept or decline."
-    }</p>
-  </div>`;
+const emailHtml = (kind: "join" | "rate", org: string, owner: string, rate: number, link: string) => {
+  const title =
+    kind === "join"
+      ? `${owner} invited you to join ${org}`
+      : `${org} asked to change your rate`;
+  const body =
+    kind === "join"
+      ? `<p>Join ${escapeHtml(org)} on AthaNext. You keep your own profile, athletes and payouts.</p>`
+      : `<p>${escapeHtml(owner)} would like ${escapeHtml(org)}'s share of each paid session to be ${pct(rate)}.
+           It starts once you accept and only applies to sessions booked after that.</p>`;
+  const note =
+    kind === "join"
+      ? "Sign in or sign up as a coach with this email address to accept."
+      : "Sign in with your coach account to accept or decline.";
+  return emailShell(title, [body, emailButton(link, kind === "join" ? "See the invite" : "Review the new rate")],
+    `<p style="color:#686B72;font-size:13px;margin:24px 0 0;">${note}</p>`);
+};
 
 const sendEmail = async (service: SupabaseClient, to: string, subject: string, html: string) => {
   const { data: cfg } = await service.from("configurations").select("value").eq("key", "smtp_email").maybeSingle();

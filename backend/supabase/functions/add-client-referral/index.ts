@@ -1,5 +1,6 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { EMAIL_MUTED, emailButton, emailShell, escapeEmailHtml } from "../_shared/email_shell.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -34,31 +35,26 @@ const resolveSiteUrl = (origin: string | null): string => {
   return DEFAULT_SITE_URL;
 };
 
-const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+const escapeHtml = escapeEmailHtml;
 
 const inviteEmailHtml = (
   coachName: string,
   clientName: string | null,
   link: string,
   athleteFirstName: string | null = null,
-) => `
-  <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-    <h2 style="color:#0054B4;">${escapeHtml(coachName)} invited you to AthaNext</h2>
-    <p>${clientName ? `Hi ${escapeHtml(clientName)},` : "Hi,"}</p>
-    <p>${escapeHtml(coachName)} manages their sessions on AthaNext. As an existing client,
-    you book with them with <strong>no platform service fee</strong>.</p>
-    <p>${athleteFirstName ? `After you accept, add ${escapeHtml(athleteFirstName)} as your athlete.` : "After you accept, add your athlete (or yourself, if you're 18 or older)."}</p>
-    <p><a href="${link}" style="background:#0054B4;color:#fff;padding:12px 20px;
-    border-radius:6px;text-decoration:none;">Accept invite</a></p>
-    <p style="color:#767980;font-size:13px;">Use this email address when you sign up or log in.
-    This invite expires in ${INVITE_TTL_DAYS} days.</p>
-  </div>`;
+) =>
+  emailShell(
+    `${coachName} invited you to AthaNext`,
+    [
+      `<p>${clientName ? `Hi ${escapeHtml(clientName)},` : "Hi,"}</p>`,
+      `<p>${escapeHtml(coachName)} manages their sessions on AthaNext. As an existing client,
+    you book with them with <strong>no platform service fee</strong>.</p>`,
+      `<p>${athleteFirstName ? `After you accept, add ${escapeHtml(athleteFirstName)} as your athlete.` : "After you accept, add your athlete (or yourself, if you're 18 or older)."}</p>`,
+      emailButton(link, "Accept invite"),
+    ],
+    `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">Use this email address when you sign up or log in.
+    This invite expires in ${INVITE_TTL_DAYS} days.</p>`,
+  );
 
 type ClientInput = { email: string; name: string | null; athleteFirstName: string | null };
 

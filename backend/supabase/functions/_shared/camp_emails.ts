@@ -1,5 +1,6 @@
 // Camp emails: receipt / spot held (to the parent), new sign-up (to the coach), finish your
 // account, and camp details for an athlete the coach added. Pure, so the copy is tested.
+import { emailButton, emailShell, escapeEmailHtml } from "./email_shell.ts";
 
 export interface CampEmailCamp {
   name: string;
@@ -18,20 +19,9 @@ export interface CampEmailAthlete {
   end_time?: string | null;
 }
 
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
-
-const e = (value: unknown) => escapeHtml(String(value ?? ""));
-
-const wrap = (title: string, parts: string[]) =>
-  `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1A202C;">
-    <h2 style="color:#0054B4;">${e(title)}</h2>
-    ${parts.join("\n    ")}
-    <p style="color:#686B72;font-size:13px;">Questions? Reply to this email or write to support@athanext.com.</p>
-  </div>`;
-
-const button = (href: string, label: string) =>
-  `<p><a href="${e(href)}" style="background:#0054B4;color:#fff;padding:12px 20px;border-radius:8px;text-decoration:none;display:inline-block;">${e(label)}</a></p>`;
+const e = (value: unknown) => escapeEmailHtml(String(value ?? ""));
+const wrap = (title: string, parts: string[]) => emailShell(title, parts);
+const button = (href: string, label: string) => emailButton(href, label);
 
 /** "Nov 24" from "2026-11-24", read as a calendar date (no time zone shift). */
 export const campDay = (iso: string | null | undefined) => {

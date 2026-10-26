@@ -7,7 +7,7 @@
 import type { ReactNode } from "react";
 import { Link, Navigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
-import { Building2, ChevronRight, CreditCard, Eye, Pencil, Star } from "@/components/icons";
+import { Building2, CalendarDays, ChevronRight, CreditCard, Eye, Pencil, Star } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { homeAPI } from "@/api/home";
 import { payoutsAPI } from "@/api/payouts";
@@ -128,6 +128,12 @@ const BusinessPage = () => {
             icon={<Building2 strokeWidth={1.5} />}
             title="My organization"
             sub={org ? `${org.name} · ${plural(org.coaches.length, "coach", "coaches")}` : "By invitation from AthaNext"}
+          />
+          <Row
+            to={ROUTES.PROFILE}
+            icon={<CalendarDays strokeWidth={1.5} />}
+            title="Camps"
+            sub="Create, share links, and see who signed up"
           />
         </div>
         {userProfile?.coach_id ? <CampMoney coachId={userProfile.coach_id} /> : null}

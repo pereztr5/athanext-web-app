@@ -3,15 +3,10 @@
 // send-booking-notifications uses familyPaymentLine for the "You're booked" email, and
 // receiptEmail when the family taps "Resend receipt" on the confirmation page. The receipt
 // rows are what get_booking_receipt() returns (the same data the page shows).
+import { EMAIL_MUTED, emailShell, escapeEmailHtml } from "./email_shell.ts";
 import { formatSessionWhen } from "./session_time.ts";
 
-export const escapeHtml = (value: string) =>
-  value
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;")
-    .replace(/"/g, "&quot;")
-    .replace(/'/g, "&#39;");
+export const escapeHtml = escapeEmailHtml;
 
 export const usd = (n: number) => `$${Number(n).toFixed(2).replace(/\.00$/, "")}`;
 
@@ -105,13 +100,15 @@ export const receiptEmail = (data: ReceiptData, timeZone?: string | null) => {
     })
     .join("");
 
-  const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-      <h2 style="color:#0054B4;">Your ${kind}</h2>
-      ${number ? `<p style="color:#686B72;">${isReceipt ? "Receipt" : "Confirmation"} #${escapeHtml(number)}</p>` : ""}
-      <table style="width:100%;border-collapse:collapse;">${rows}</table>
-      ${charged > 0 ? `<p><strong>Total paid in the app: ${usd(Math.round(charged * 100) / 100)}</strong></p>` : ""}
-      <p style="color:#686B72;font-size:13px;">You asked for this copy on AthaNext. Questions go to support@athanext.com.</p>
-    </div>`;
+  const html = emailShell(
+    `Your ${kind}`,
+    [
+      number ? `<p style="color:${EMAIL_MUTED};">${isReceipt ? "Receipt" : "Confirmation"} #${escapeHtml(number)}</p>` : "",
+      `<table style="width:100%;border-collapse:collapse;">${rows}</table>`,
+      charged > 0 ? `<p><strong>Total paid in the app: ${usd(Math.round(charged * 100) / 100)}</strong></p>` : "",
+    ].filter(Boolean),
+    `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">You asked for this copy on AthaNext. Questions go to support@athanext.com.</p>`,
+  );
 
   return { subject, html, isReceipt };
 };

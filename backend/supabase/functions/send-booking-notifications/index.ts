@@ -10,6 +10,7 @@
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { bookingEmailSender } from "../_shared/email_sender.ts";
+import { EMAIL_MUTED, emailShell } from "../_shared/email_shell.ts";
 import { escapeHtml, familyPaymentLine, parseResendRequest, receiptEmail, usd } from "../_shared/receipt_email.ts";
 import { formatSessionWhen } from "../_shared/session_time.ts";
 
@@ -190,12 +191,11 @@ serve(async (req) => {
       results.coach = await send(
         coachEmail,
         `Booked: ${athleteName} · ${sessionName}`,
-        `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-          <h2 style="color:#0054B4;">New booking</h2>
-          <p><strong>${escapeHtml(athleteName)}</strong> booked <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>
-          ${videoHtml("coach")}
-          <p>${coachPayment}</p>
-        </div>`,
+        emailShell("New booking", [
+          `<p><strong>${escapeHtml(athleteName)}</strong> booked <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>`,
+          videoHtml("coach"),
+          `<p>${coachPayment}</p>`,
+        ]),
       );
     }
 
@@ -203,13 +203,12 @@ serve(async (req) => {
       results.family = await send(
         familyEmail,
         `Confirmed with ${coachName}`,
-        `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-          <h2 style="color:#0054B4;">You're booked</h2>
-          <p>Hi,</p>
-          <p>Your session with <strong>${escapeHtml(coachName)}</strong> is confirmed: <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>
-          ${videoHtml("family")}
-          <p>${familyPayment}</p>
-        </div>`,
+        emailShell("You're booked", [
+          `<p>Hi,</p>`,
+          `<p>Your session with <strong>${escapeHtml(coachName)}</strong> is confirmed: <strong>${escapeHtml(sessionName)}</strong> on ${escapeHtml(when)}.</p>`,
+          videoHtml("family"),
+          `<p>${familyPayment}</p>`,
+        ]),
       );
     }
 
@@ -225,13 +224,15 @@ serve(async (req) => {
         const ok = await send(
           g.email as string,
           `Confirmed with ${coachName} for ${athleteName.split(" ")[0]}`,
-          `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-            <h2 style="color:#0054B4;">${escapeHtml(athleteName.split(" ")[0])} is booked</h2>
-            <p>${escapeHtml(sessionName)} with <strong>${escapeHtml(coachName)}</strong> on ${escapeHtml(when)}.</p>
-            <p>${familyPayment}</p>
-            ${videoHtml("family")}
-            <p style="color:#686B72;font-size:13px;">You get this copy as a guardian on the family's AthaNext account.</p>
-          </div>`,
+          emailShell(
+            `${athleteName.split(" ")[0]} is booked`,
+            [
+              `<p>${escapeHtml(sessionName)} with <strong>${escapeHtml(coachName)}</strong> on ${escapeHtml(when)}.</p>`,
+              `<p>${familyPayment}</p>`,
+              videoHtml("family"),
+            ],
+            `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">You get this copy as a guardian on the family's AthaNext account.</p>`,
+          ),
         );
         if (ok) guardians += 1;
       }

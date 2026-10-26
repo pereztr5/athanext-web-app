@@ -190,9 +190,9 @@ export const CampFamilyView = ({
           </div>
         ) : null}
         {coachBio ? (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-3">
             <span className="text-label-xsm text-dark-300">About {coachFirst}</span>
-            <p className={cn("whitespace-pre-line text-paragraph text-dark", compact && "line-clamp-3")}>{coachBio}</p>
+            <p className={cn("whitespace-pre-line text-paragraph leading-relaxed text-dark", compact && "line-clamp-4")}>{coachBio}</p>
             {!compact && view.coachSlug ? (
               <Link to={coachProfilePath(view.coachSlug)} className="self-start text-label-sm text-primary hover:text-primary-600">
                 View profile

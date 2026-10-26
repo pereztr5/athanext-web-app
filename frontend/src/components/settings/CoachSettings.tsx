@@ -441,6 +441,9 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
 
   return (
     <Card icon={<Wallet className="size-5 text-dark-300" strokeWidth={1.5} />} title="How families pay">
+      <p className={meta}>
+        Card payouts to your bank are set up under Payouts above. The options below are only for families who pay you directly (cash, Venmo, or Zelle).
+      </p>
       <div className="flex items-start gap-3 rounded-control border border-light-525 bg-light-400 px-4 py-3">
         <CreditCard className="mt-0.5 size-5 flex-none text-dark-300" strokeWidth={1.5} aria-hidden="true" />
         <span className="flex min-w-0 grow flex-col gap-1">
@@ -514,8 +517,8 @@ const BookingTab = ({ coachId, offlinePay }: { coachId: string; offlinePay: unkn
 
   return (
     <>
-      <HowFamiliesPay coachId={coachId} offlinePay={offlinePay} />
       <PayoutsCard />
+      <HowFamiliesPay coachId={coachId} offlinePay={offlinePay} />
       <Card icon={<CalendarSync className="size-5 text-dark-300" strokeWidth={1.5} />} title="Booking and calendar">
         {schedule.isLoading ? <p className={meta}>Loading…</p> : null}
         <BookingRulesSection rules={schedule.data?.rules} />

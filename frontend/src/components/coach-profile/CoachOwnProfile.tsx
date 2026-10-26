@@ -8,6 +8,7 @@ import { fetchLocationFromZipCode, formatLocationDisplay } from "@/utils/geoloca
 import { useFAQItems } from "@/hooks/useFAQItems";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { useToast } from "@/hooks/use-toast";
+import { useOpenStripePayout } from "@/hooks/useOpenStripePayout";
 import { useCoachBrands } from "@/hooks/useBrands";
 import { isPublicCoachRatingVisible } from "@/utils/publicRating";
 import { coachProfilePath, coachProfileUrl } from "@/utils/coachSlug";
@@ -72,6 +73,7 @@ export function CoachOwnProfile({
 }: CoachOwnProfileProps) {
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { opening: openingPayout, openOnboard } = useOpenStripePayout();
   const c: CoachProfileData & CoachDraft = editing && draft ? { ...coach, ...draft } : coach;
   const [locationLabel, setLocationLabel] = useState(coach.locations?.[0] || "");
   const [sharePricingOpen, setSharePricingOpen] = useState(false);
@@ -131,7 +133,11 @@ export function CoachOwnProfile({
 
   const onStep = (step: StepName) => {
     if (step === "Certifications") onEditCertifications();
-    else if (step === "Payout details") navigate(`${ROUTES.SETTINGS}?tab=booking`);
+    else if (step === "Payout details") {
+      if (openingPayout) return;
+      toast({ title: "Opening Stripe…" });
+      void openOnboard();
+    }
     else if (step === "Availability") navigate(ROUTES.SCHEDULE);
     else {
       if (!editing) onStartEdit();

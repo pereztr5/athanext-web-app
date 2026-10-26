@@ -1,5 +1,6 @@
 // Account emails (Account settings): deletion scheduled, deletion cancelled, coach deactivated.
 // Pure helpers so the copy and the deletion date can be tested without sending anything.
+import { emailShell, escapeEmailHtml } from "./email_shell.ts";
 
 export type AccountEmailEvent = "deletion_requested" | "deletion_cancelled" | "coach_deactivated";
 
@@ -27,15 +28,10 @@ export const scheduledDeletionAt = (requestedAt: string | Date): Date => {
 export const formatDeletionDate = (requestedAt: string | Date) =>
   scheduledDeletionAt(requestedAt).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "UTC" });
 
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const escapeHtml = escapeEmailHtml;
 
 const wrap = (title: string, paragraphs: string[]) =>
-  `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1A202C;">
-    <h2 style="color:#0054B4;">${title}</h2>
-    ${paragraphs.map((p) => `<p>${p}</p>`).join("\n    ")}
-    <p style="color:#686B72;font-size:13px;">Questions? Reply to this email or write to support@athanext.com.</p>
-  </div>`;
+  emailShell(title, paragraphs.map((p) => `<p>${p}</p>`));
 
 export type AccountEmailInput = {
   event: AccountEmailEvent;

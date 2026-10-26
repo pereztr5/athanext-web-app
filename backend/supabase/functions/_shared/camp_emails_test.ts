@@ -1,5 +1,6 @@
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
 import { campCoachEmail, campDates, campDetailsEmail, campParentEmail, campTime, campTimes, money } from "./camp_emails.ts";
+import { EMAIL_CARD, EMAIL_CREAM } from "./email_shell.ts";
 
 const camp = {
   name: "Thanksgiving <Camp>",
@@ -47,6 +48,8 @@ Deno.test("parent receipt escapes names and offers Finish your account only when
   assertStringIncludes(paid.html, "9am to 12pm ET");
   assertStringIncludes(paid.html, "Finish your account");
   assertStringIncludes(paid.html, "Water bottle");
+  assertStringIncludes(paid.html, EMAIL_CREAM);
+  assertStringIncludes(paid.html, EMAIL_CARD);
 
   const held = campParentEmail({ kind: "held", parentName: null, camp, athletes: [{ first_name: "Leo" }], finishUrl: null });
   assertEquals(held.subject, "Spot held: Thanksgiving <Camp>");

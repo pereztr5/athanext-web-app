@@ -20,6 +20,7 @@ import { getCoachName } from "@/api/referrals";
 import { useReferralInvite } from "@/hooks/useReferrals";
 import { INVITE_TOKEN_STORAGE_KEY, readJoinCoach } from "@/utils/referralHelpers";
 import { clearSignupSession } from "@/utils/signup";
+import { buildOAuthRedirectPath, whoFromPersona } from "@/utils/authRedirect";
 import { SignUpFlow } from "@/components/auth/SignUpFlow";
 import { ROUTES } from "@/routes";
 import logo from "@/assets/AthaNext-Logo.svg";
@@ -114,6 +115,11 @@ const Auth = () => {
           }
           const next = new URLSearchParams({ mode: "signup" });
           if (inviteToken) next.set("invite", inviteToken);
+          if (!inviteToken && coachParam) next.set("coach", coachParam);
+          if (campSignupParam) {
+            next.set("camp_signup", campSignupParam);
+            if (campEmailParam) next.set("email", campEmailParam);
+          }
           navigate(`${ROUTES.AUTH}?${next.toString()}`, { replace: true, state: location.state });
         }
         setCheckedUserId(userId);
@@ -189,8 +195,14 @@ const Auth = () => {
     clearSignupSession();
     setIsLoading(true);
     try {
-      // A new Google account comes back to the sign-up flow via ProtectedRoute.
-      const redirectTo = `${window.location.origin}${invitePath ?? "/"}`;
+      // Keep invite / coach share / camp finish on the return URL so a new Google
+      // account still lands in the right wizard (complete accounts leave /auth via the check above).
+      const redirectTo = `${window.location.origin}${buildOAuthRedirectPath({
+        invite: inviteToken,
+        coach: coachParam,
+        campSignup: campSignupParam,
+        email: campEmailParam,
+      })}`;
 
       const { error } = await authAPI.signInWithOAuth('google', { redirectTo });
 
@@ -390,6 +402,7 @@ const Auth = () => {
                   inviteToken={inviteToken}
                   joinCoachId={joinCoachId}
                   camp={campFinish}
+                  personaWho={whoFromPersona(searchParams.get("persona"))}
                   onSaving={() => {
                     signupSavingRef.current = true;
                   }}

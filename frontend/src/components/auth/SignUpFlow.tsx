@@ -55,6 +55,7 @@ import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
 import { parentInviteEmailRequest } from "@/utils/publicEmail";
 import { clearJoinCoach } from "@/utils/referralHelpers";
 import { clearCampFinish, readCampFinish } from "@/components/camps/campFinish";
+import { buildOAuthRedirectPath } from "@/utils/authRedirect";
 import {
   COACH_POS_TO_DB,
   LEVEL_TO_PATHWAY,
@@ -269,12 +270,15 @@ export const SignUpFlow = ({
   joinCoachId,
   onSaving,
   camp = null,
+  personaWho = null,
 }: {
   inviteToken: string | null;
   joinCoachId: string | null;
   /** Called before the account is verified or saved, so Auth doesn't navigate away mid-save. */
   onSaving?: () => void;
   camp?: CampFinishParams | null;
+  /** From ?persona= on Become a coach / invite links; seeds the "who" step when unset. */
+  personaWho?: SignupWho | null;
 }) => {
   const { user, refreshUserProfile, signOut } = useAuth();
   const { toast } = useToast();
@@ -282,13 +286,21 @@ export const SignUpFlow = ({
 
   // A signed-in account that isn't finished (Google from either tab, an imported user) lands
   // here too. Saved answers skip to the account step; otherwise the questions start with the
-  // name and email filled in.
+  // name and email filled in. ?persona=coach (etc.) pre-selects who when nothing is saved yet.
   const [answers, setAnswers] = useState<SignupAnswers>(() => {
     const saved = readSignupAnswers() ?? emptySignupAnswers();
-    const base = camp ? campAnswers(saved, camp) : saved;
+    const withPersona =
+      !saved.who && personaWho ? { ...saved, who: personaWho } : saved;
+    const base = camp ? campAnswers(withPersona, camp) : withPersona;
     return user ? prefillFromUser(base, user) : base;
   });
-  const [step, setStep] = useState<StepId>(() => (camp ? "account" : initialSignupStep(Boolean(user), readSignupAnswers())));
+  const [step, setStep] = useState<StepId>(() => {
+    if (camp) return "account";
+    const saved = readSignupAnswers();
+    const who = saved?.who ?? personaWho;
+    if (who && !saved?.who && personaWho) return "sport";
+    return initialSignupStep(Boolean(user), saved ?? (personaWho ? { who: personaWho } : null));
+  });
   const prefilledFor = useRef<string | null>(user?.id ?? null);
   // Titles from sport_pillars (built-in list offline), so a coach's picks link to those rows.
   const pillarTitles = usePillarTitles(answers.sport ?? "Soccer");
@@ -333,16 +345,14 @@ export const SignUpFlow = ({
 
   const patch = (partial: Partial<SignupAnswers>) => setAnswers((cur) => ({ ...cur, ...partial }));
 
-  // Where email confirmation and Google come back to: this flow, still in camp mode.
-  const returnQuery = (() => {
-    const q = new URLSearchParams({ mode: "signup" });
-    if (inviteToken) q.set("invite", inviteToken);
-    if (camp) {
-      q.set("camp_signup", camp.signupId);
-      if (camp.email) q.set("email", camp.email);
-    }
-    return q.toString();
-  })();
+  // Where email confirmation and Google come back to: this flow, still in camp / invite mode.
+  const returnPath = buildOAuthRedirectPath({
+    signup: true,
+    invite: inviteToken,
+    coach: joinCoachId,
+    campSignup: camp?.signupId ?? null,
+    email: camp?.email ?? null,
+  });
   const campBirthYear = camp ? readCampFinish(camp.signupId)?.birthYear ?? null : null;
 
   const go = (id: StepId) => setStep(id);
@@ -432,7 +442,7 @@ export const SignUpFlow = ({
       password: answers.pw,
       name,
       metadata: { name, persona_type: persona, phone_number: answers.phone },
-      emailRedirectTo: `${window.location.origin}/auth?${returnQuery}`,
+      emailRedirectTo: `${window.location.origin}${returnPath}`,
     });
     setBusy(false);
     if (error) {
@@ -447,7 +457,7 @@ export const SignUpFlow = ({
     writeSignupRole(roleFromWho(answers.who));
     setBusy(true);
     const { error } = await authAPI.signInWithOAuth("google", {
-      redirectTo: `${window.location.origin}/auth?${returnQuery}`,
+      redirectTo: `${window.location.origin}${returnPath}`,
     });
     setBusy(false);
     if (error) {

@@ -8,6 +8,7 @@ import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import Stripe from "https://esm.sh/stripe@18.5.0";
 import { createClient, type SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
 import { USD_ONLY_CHECKOUT } from "../_shared/checkout.ts";
+import { EMAIL_MUTED, emailButton, emailShell, escapeEmailHtml } from "../_shared/email_shell.ts";
 import { loadFeeConfig } from "../_shared/fee_config.ts";
 import { feeLine, toCents } from "../_shared/fees.ts";
 
@@ -39,8 +40,7 @@ const stripe = () => {
   return (stripeClient ??= new Stripe(key, { apiVersion: "2025-08-27.basil" }));
 };
 
-const escapeHtml = (v: string) =>
-  v.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const escapeHtml = escapeEmailHtml;
 const usd = (n: number) => `$${Number(n).toFixed(2).replace(/\.00$/, "")}`;
 
 const sendEmail = async (admin: SupabaseClient, to: string, subject: string, html: string) => {
@@ -72,15 +72,16 @@ const emailInvoice = async (admin: SupabaseClient, invoiceId: string, site: stri
   const due = new Date(`${inv.due_date}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" });
   const link = `${site}/invoices/${inv.id}`;
   const subject = reminder ? `Reminder: ${coach}'s invoice for ${usd(inv.amount)}` : `${coach} sent you an invoice for ${usd(inv.amount)}`;
-  const html = `
-    <div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;">
-      <h2 style="color:#0054B4;">${escapeHtml(subject)}</h2>
-      <p>${inv.family_name ? `Hi ${escapeHtml(inv.family_name)},` : "Hi,"}</p>
-      <p>${escapeHtml(inv.service)}: <strong>${usd(inv.amount)}</strong>, due ${escapeHtml(due)}.</p>
-      ${inv.note ? `<p>${escapeHtml(inv.note)}</p>` : ""}
-      <p><a href="${link}" style="background:#0054B4;color:#fff;padding:12px 20px;border-radius:6px;text-decoration:none;">Pay by card</a></p>
-      <p style="color:#767980;font-size:13px;">Paid ${escapeHtml(coach)} another way? Let them know and they'll mark it as paid.</p>
-    </div>`;
+  const html = emailShell(
+    reminder ? `Reminder: invoice from ${coach}` : `Invoice from ${coach}`,
+    [
+      `<p>${inv.family_name ? `Hi ${escapeHtml(inv.family_name)},` : "Hi,"}</p>`,
+      `<p>${escapeHtml(inv.service)}: <strong>${usd(inv.amount)}</strong>, due ${escapeHtml(due)}.</p>`,
+      inv.note ? `<p>${escapeHtml(inv.note)}</p>` : "",
+      emailButton(link, "Pay by card"),
+    ].filter(Boolean),
+    `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">Paid ${escapeHtml(coach)} another way? Let them know and they'll mark it as paid.</p>`,
+  );
   return await sendEmail(admin, to, subject, html);
 };
 

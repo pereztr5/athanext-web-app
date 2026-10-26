@@ -2,7 +2,9 @@
  * The camp editor's questions (Michael's "Camps in Create session" + the coach mockup). The
  * desktop sheet shows them all at once; the phone shows one per screen.
  */
-import { useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import Cropper, { type Area } from "react-easy-crop";
 import { useQuery } from "@tanstack/react-query";
 import { FileText, Image as ImageIcon, MapPin, Plus, Search, X } from "@/components/icons";
 import { coachesAPI } from "@/api";
@@ -10,8 +12,9 @@ import { campsAPI, type CampCoachRef, type CoachCamp } from "@/api/camps";
 import { Calendar } from "@/components/ui/calendar";
 import { Switch } from "@/components/ui/switch";
 import { chip } from "@/components/schedule/create/classes";
-import { input, label, meta, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
+import { input, label, meta, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
+import { getCroppedFile } from "@/utils/imageUtils";
 import {
   campDayCount,
   campWaiverLabel,
@@ -343,25 +346,57 @@ export const RunAgain = ({ camps, onUse }: { camps: CoachCamp[]; onUse: (camp: C
     </div>
   ) : null;
 
+const COVER_ASPECT = 16 / 9;
+
 const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Patch; coachPhoto: string | null }) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [cropFile, setCropFile] = useState<File | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedArea, setCroppedArea] = useState<Area | null>(null);
   const shown = draft.coverUrl ?? coachPhoto;
-  const upload = async (file: File | undefined) => {
-    if (!file) return;
+  const objectUrl = useMemo(() => (cropFile ? URL.createObjectURL(cropFile) : null), [cropFile]);
+  useEffect(() => () => {
+    if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }, [objectUrl]);
+
+  const onCropComplete = useCallback((_: Area, pixels: Area) => setCroppedArea(pixels), []);
+
+  const closeCrop = () => {
+    setCropFile(null);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedArea(null);
+    if (fileRef.current) fileRef.current.value = "";
+  };
+
+  const uploadCropped = async () => {
+    if (!cropFile || !croppedArea) return;
     setBusy(true);
     setError(null);
     try {
+      const file = await getCroppedFile(cropFile, croppedArea, "-camp-cover");
       const url = await campsAPI.uploadCover(file);
       patch({ coverUrl: url });
+      closeCrop();
     } catch (err) {
       setError(err instanceof Error ? err.message : "The photo didn't upload. Try again.");
     } finally {
       setBusy(false);
-      if (fileRef.current) fileRef.current.value = "";
     }
   };
+
+  const pick = (file: File | undefined) => {
+    if (!file) return;
+    setError(null);
+    setCropFile(file);
+    setCrop({ x: 0, y: 0 });
+    setZoom(1);
+    setCroppedArea(null);
+  };
+
   return (
     <div className={fieldBox}>
       <span className={label}>Cover photo</span>
@@ -378,12 +413,69 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
             {busy ? "Uploading…" : "Change photo"}
           </button>
         </div>
-        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => void upload(e.target.files?.[0])} />
+        <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
       </div>
       <span className={meta}>
         {draft.coverUrl ? "" : "Your profile photo until you pick one. "}A photo of you coaching works best. Skip posters with text on them: the details already show under the photo.
       </span>
       {error ? <span className="text-caption text-error-700">{error}</span> : null}
+      {cropFile && objectUrl && typeof document !== "undefined"
+        ? createPortal(
+            <div className="pointer-events-auto fixed inset-0 z-[2000] flex items-center justify-center bg-dark/50 px-4">
+              <div
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="camp-cover-crop-title"
+                className="w-full max-w-lg rounded-card border border-light-525 bg-light-300 shadow-overlay"
+              >
+                <div className="flex items-center justify-between gap-2 px-5 py-4">
+                  <h3 id="camp-cover-crop-title" className="text-section text-dark">
+                    Crop cover photo
+                  </h3>
+                  <button type="button" className={textButton} onClick={closeCrop} aria-label="Close">
+                    <X strokeWidth={1.5} aria-hidden="true" />
+                  </button>
+                </div>
+                <div className="h-px bg-light-525" />
+                <div className="flex flex-col gap-4 px-5 py-4">
+                  <div className="relative h-[200px] w-full overflow-hidden rounded-control bg-dark">
+                    <Cropper
+                      image={objectUrl}
+                      crop={crop}
+                      zoom={zoom}
+                      aspect={COVER_ASPECT}
+                      onCropChange={setCrop}
+                      onZoomChange={setZoom}
+                      onCropComplete={onCropComplete}
+                    />
+                  </div>
+                  <label className="flex items-center gap-3">
+                    <span className="text-label-sm text-dark-400">Zoom</span>
+                    <input
+                      type="range"
+                      min={1}
+                      max={3}
+                      step={0.01}
+                      value={zoom}
+                      onChange={(e) => setZoom(Number(e.target.value))}
+                      className="h-[5px] w-full cursor-pointer accent-primary"
+                    />
+                  </label>
+                </div>
+                <div className="h-px bg-light-525" />
+                <div className="flex flex-col-reverse gap-2 px-5 py-4 sm:flex-row sm:justify-end">
+                  <button type="button" className={secondaryButton} onClick={closeCrop} disabled={busy}>
+                    Cancel
+                  </button>
+                  <button type="button" className={primaryButton} disabled={busy || !croppedArea} onClick={() => void uploadCropped()}>
+                    {busy ? "Uploading…" : "Save crop"}
+                  </button>
+                </div>
+              </div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 };

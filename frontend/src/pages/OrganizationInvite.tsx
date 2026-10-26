@@ -65,7 +65,7 @@ const OrganizationInvitePage = () => {
         </b>
         <p className="max-w-[460px] text-paragraph text-dark-400">
           {inv.kind === "join"
-            ? `${inv.owner} invited you to join ${inv.organization}. You keep your own profile, athletes and payouts. ${rateLabel(inv.rate)} of each paid session goes to ${inv.organization}, ${rateLabel(100 - inv.rate)} is yours.`
+            ? `${inv.owner} invited you to join ${inv.organization}. You keep your own profile, athletes and payouts.`
             : `${inv.owner} asked to change ${inv.organization}'s share of each paid session from ${rateLabel(inv.currentRate ?? 0)} to ${rateLabel(inv.rate)}. It applies to sessions booked after you accept, never to ones already paid.`}
         </p>
         {blocked ? <p className="text-body-m text-error-700">{blocked}</p> : null}

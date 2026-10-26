@@ -40,7 +40,12 @@ export const CampEditorList = ({
     const url = campShareUrl(window.location.origin, camp.coach_slug, camp.slug);
     void navigator.clipboard
       .writeText(url)
-      .then(() => toast({ title: "Camp link copied", description: "Families who sign up become your clients." }))
+      .then(() =>
+        toast({
+          title: "Camp link copied",
+          description: "No account needed to sign up. Families who sign up become your clients.",
+        }),
+      )
       .catch(() => toast({ title: "Couldn't copy", description: url }));
   };
 

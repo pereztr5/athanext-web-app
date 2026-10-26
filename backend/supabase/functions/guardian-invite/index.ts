@@ -3,6 +3,7 @@
 // owns it again, sends one email and stamps emailed_at.
 import { serve } from "https://deno.land/std@0.190.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { EMAIL_MUTED, emailShell, escapeEmailHtml } from "../_shared/email_shell.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -12,8 +13,7 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const escapeHtml = (value: string) =>
-  value.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#39;");
+const escapeHtml = escapeEmailHtml;
 
 serve(async (req) => {
   if (req.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
@@ -47,12 +47,14 @@ serve(async (req) => {
     const from = (cfg?.value as string | undefined) ?? "";
     if (!from) return json({ emailed: false, reason: "smtp_email not configured" });
 
-    const html = `<div style="font-family:Arial,sans-serif;max-width:560px;margin:0 auto;color:#1A202C;">
-      <h2 style="color:#0054B4;">${escapeHtml(holderName)} added you as ${escapeHtml(athleteFirst)}'s ${escapeHtml(String(g.relationship).toLowerCase())}</h2>
-      <p>Hi ${escapeHtml(String(g.name).split(" ")[0])},</p>
-      <p>You'll get a copy of booking receipts for ${escapeHtml(athleteFirst)}'s AthaNext sessions. ${escapeHtml(holderName)} manages the account and can remove you at any time in Account settings.</p>
-      <p style="color:#686B72;font-size:13px;">Not expecting this? You can ignore it, or reply to let us know.</p>
-    </div>`;
+    const html = emailShell(
+      `${holderName} added you as ${athleteFirst}'s ${String(g.relationship).toLowerCase()}`,
+      [
+        `<p>Hi ${escapeHtml(String(g.name).split(" ")[0])},</p>`,
+        `<p>You'll get a copy of booking receipts for ${escapeHtml(athleteFirst)}'s AthaNext sessions. ${escapeHtml(holderName)} manages the account and can remove you at any time in Account settings.</p>`,
+      ],
+      `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">Not expecting this? You can ignore it, or reply to let us know.</p>`,
+    );
     const res = await fetch(`${url}/functions/v1/send-email`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${serviceRole}` },

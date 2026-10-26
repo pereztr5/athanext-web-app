@@ -118,7 +118,12 @@ export const CampRegistrations = ({
     if (!share) return;
     void navigator.clipboard
       .writeText(share)
-      .then(() => toast({ title: "Camp link copied", description: "Families who sign up become your clients." }))
+      .then(() =>
+        toast({
+          title: "Camp link copied",
+          description: "No account needed to sign up. Families who sign up become your clients.",
+        }),
+      )
       .catch(() => toast({ title: "Couldn't copy", description: share }));
   };
 
