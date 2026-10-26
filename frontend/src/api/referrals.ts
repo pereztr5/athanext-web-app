@@ -83,14 +83,6 @@ export const getMyReferrals = async (athleteId: string) =>
     error: { message: string } | null;
   };
 
-export const getAllReferrals = async () =>
-  (await table()
-    .select("*")
-    .order("created_at", { ascending: false })) as unknown as {
-    data: CoachClientReferral[] | null;
-    error: { message: string } | null;
-  };
-
 export const addClientReferrals = async (clients: ClientInviteInput[], coachId?: string) =>
   supabase.functions.invoke<{ results: AddClientResult[] }>("add-client-referral", {
     body: { clients, ...(coachId ? { coach_id: coachId } : {}) },
@@ -118,17 +110,6 @@ export const acknowledgeReferral = async (referralId: string, accept: boolean) =
     _referral_id: referralId,
     _accept: accept,
   });
-
-/** Admin override (RLS: ccr_admin_all). Without a linked athlete the token stays
- * live so the athlete links the row when they sign up with that email. */
-export const adminConfirmReferral = async (referral: Pick<CoachClientReferral, "id" | "athlete_id">) =>
-  table()
-    .update({
-      status: "confirmed",
-      confirmed_at: new Date().toISOString(),
-      ...(referral.athlete_id ? { invite_token: null } : {}),
-    })
-    .eq("id", referral.id);
 
 export const removeReferral = async (referralId: string) =>
   table().delete().eq("id", referralId);

@@ -1,7 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   addClientReferrals,
-  adminConfirmReferral,
   attestReferral,
   acknowledgeReferral,
   claimReferral,
@@ -122,17 +121,6 @@ export const useClaimReferral = () => {
       queryClient.invalidateQueries({ queryKey: REFERRAL_KEYS.all });
       queryClient.invalidateQueries({ queryKey: ["referral-invite"] });
     },
-  });
-};
-
-export const useAdminConfirmReferral = () => {
-  const invalidate = useInvalidateReferrals();
-  return useMutation({
-    mutationFn: async (referral: Pick<CoachClientReferral, "id" | "athlete_id">) => {
-      const { error } = await adminConfirmReferral(referral);
-      if (error) throw new Error(error.message);
-    },
-    onSuccess: invalidate,
   });
 };
 

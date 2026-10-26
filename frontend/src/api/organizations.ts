@@ -356,14 +356,4 @@ export const organizationsAPI = {
     }));
   },
 
-  async adminOwnerIds(): Promise<string[]> {
-    const { data, error } = await supabase.rpc("admin_org_owner_ids");
-    if (error) throw error;
-    return (data as string[]) ?? [];
-  },
-
-  async adminSetOwner(coachId: string, enabled: boolean) {
-    const { error } = await supabase.rpc("admin_set_org_owner", { p_coach_id: coachId, p_enabled: enabled });
-    if (error) throw error;
-  },
 };

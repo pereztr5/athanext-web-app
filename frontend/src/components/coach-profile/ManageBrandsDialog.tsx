@@ -14,7 +14,6 @@ import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { BRANDS_QUERY_KEY, coachBrandsQueryKey, useBrands } from "@/hooks/useBrands";
 import { brandsAPI } from "@/api/brands";
 import {
@@ -65,7 +64,6 @@ function BrandThumb({ brand }: { brand: Pick<Brand, "name" | "logo_url"> }) {
 export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands }: ManageBrandsDialogProps) {
   const { toast } = useToast();
   const { user } = useAuth();
-  const { isAdmin } = useIsAdmin();
   const queryClient = useQueryClient();
   const { data: allBrands = [] } = useBrands(open);
 
@@ -98,7 +96,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
   const exactMatch = findBrandByName(allBrands, query);
   const formDuplicate = form ? findBrandByName(allBrands, form.name) : undefined;
   const duplicateOfOther = formDuplicate && formDuplicate.id !== form?.brandId ? formDuplicate : undefined;
-  const canEdit = (brand: Brand) => isAdmin || (Boolean(user?.id) && brand.created_by === user?.id);
+  const canEdit = (brand: Brand) => Boolean(user?.id) && brand.created_by === user?.id;
 
   const addBrand = (brand: Brand) => {
     setDraft((prev) => (prev.some((b) => b.id === brand.id) ? prev : [...prev, brand]));

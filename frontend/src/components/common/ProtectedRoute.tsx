@@ -1,11 +1,9 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useRole } from "@/hooks/useRole";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 
 interface ProtectedRouteProps {
   children: ReactNode;
-  requireAdmin?: boolean;
 }
 
 const Spinner = () => (
@@ -14,9 +12,8 @@ const Spinner = () => (
   </div>
 );
 
-export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) => {
+export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const { isAuthenticated, isProfileComplete, ready } = useRole();
-  const { isAdmin, ready: adminReady } = useIsAdmin();
   const location = useLocation();
 
   if (!ready) {
@@ -30,11 +27,6 @@ export const ProtectedRoute = ({ children, requireAdmin }: ProtectedRouteProps) 
   if (!isProfileComplete) {
     // Every unfinished account finishes in the sign-up flow (questions, then phone and terms).
     return <Navigate to="/auth?mode=signup" replace />;
-  }
-
-  if (requireAdmin) {
-    if (!adminReady) return <Spinner />;
-    if (!isAdmin) return <Navigate to="/" replace />;
   }
 
   return <>{children}</>;

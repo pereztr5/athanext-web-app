@@ -1,5 +1,4 @@
 import { Link, useLocation } from "react-router-dom";
-import { Shield, Users } from "@/components/icons";
 import {
   Sidebar,
   SidebarMenu,
@@ -10,7 +9,6 @@ import {
 import { UserMenu } from "@/components/common/UserMenu";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
-import { useIsAdmin } from "@/hooks/useIsAdmin";
 import { ROUTES } from "@/routes";
 import { AthaNextLogo } from "@/assets";
 import { useMyOrganization } from "@/hooks/useOrganizations";
@@ -33,7 +31,6 @@ const navBadgeFailed = "border-error-300 bg-error-100 text-error-700";
 export const AppSidebar = () => {
   const location = useLocation();
   const { isCoach } = useRole();
-  const { isAdmin } = useIsAdmin();
   const { userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
   const { data: myOrg } = useMyOrganization();
@@ -51,15 +48,7 @@ export const AppSidebar = () => {
           ? `${overdue} overdue`
           : null;
   const publicPages = isCoach ? [PROFILE_NAV, ...(myOrg ? [ORG_NAV] : [])] : [];
-  const items = [
-    ...(isCoach ? COACH_NAV : ATHLETE_NAV),
-    ...(isAdmin
-      ? [
-          { title: "Accounts", short: "Accounts", url: ROUTES.ADMIN_ACCOUNTS, icon: Shield },
-          { title: "Referrals", short: "Referrals", url: ROUTES.ADMIN_REFERRALS, icon: Users },
-        ]
-      : []),
-  ] as NavItem[];
+  const items = (isCoach ? COACH_NAV : ATHLETE_NAV) as NavItem[];
 
   const displayName = userName || userProfile?.name || "Account";
   const firstName = displayName.split(" ")[0] || displayName;

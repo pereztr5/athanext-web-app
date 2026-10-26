@@ -46,13 +46,11 @@ import BookingConfirmation from "./pages/BookingConfirmation";
 import PackageConfirmation from "./pages/PackageConfirmation";
 import CreateAthleteProfile from "./pages/CreateAthleteProfile";
 import Dashboard from "./pages/Dashboard";
-import AdminAccounts from "./pages/AdminAccounts";
 import { HomeSwitch } from "./layouts/HomeSwitch";
 import { MyClientsRedirect } from "./components/invites/MyClientsRedirect";
 import MyAthletes from "./pages/MyAthletes";
 import AthleteDetail from "./pages/AthleteDetail";
 import MyCoaches from "./pages/MyCoaches";
-import AdminReferrals from "./pages/AdminReferrals";
 import InviteClaim from "./pages/InviteClaim";
 import Gear from "./pages/Gear";
 import GearProduct from "./pages/GearProduct";
@@ -93,7 +91,6 @@ export const ROUTES = {
   MY_COACHES: "/my-coaches",
   CREATE_ATHLETE_PROFILE: "/athlete-profile/create",
   SETTINGS: "/settings",
-  ADMIN_ACCOUNTS: "/admin/accounts",
   CHANGE_PASSWORD: "/settings/password",
   BOOK: "/book",
   SCHEDULE: "/schedule",
@@ -113,7 +110,6 @@ export const ROUTES = {
   HELP: "/help",
   PROFILE: "/profile",
   CHAT: "/chat",
-  ADMIN_REFERRALS: "/admin/referrals",
   INVITE: "/invite/:token",
   MY_ORGANIZATION: "/organization",
   ORG_INVITE: "/org-invite/:token",
@@ -181,7 +177,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.CHAT, element: <ProtectedRoute><ChatPage /></ProtectedRoute> },
   { path: ROUTES.SETTINGS, element: <ProtectedRoute><AccountSettings /></ProtectedRoute> },
   { path: ROUTES.HELP, element: <ProtectedRoute><Help /></ProtectedRoute> },
-  { path: ROUTES.ADMIN_ACCOUNTS, element: <ProtectedRoute><AdminAccounts /></ProtectedRoute> },
   { path: ROUTES.CHANGE_PASSWORD, element: <ProtectedRoute><Navigate to={`${ROUTES.SETTINGS}?tab=security`} replace /></ProtectedRoute> },
   { path: ROUTES.BOOK, element: <ProtectedRoute><BookSession /></ProtectedRoute> },
   { path: ROUTES.SCHEDULE, element: <ProtectedRoute><MySchedule /></ProtectedRoute> },
@@ -202,7 +197,6 @@ export const APP_ROUTES: AppRoute[] = [
   { path: ROUTES.ACCOUNT, element: <ProtectedRoute><Account /></ProtectedRoute> },
   { path: ROUTES.FAMILY_INVOICE, element: <ProtectedRoute><FamilyInvoice /></ProtectedRoute> },
   { path: ROUTES.ORG_INVITE, element: <ProtectedRoute><OrganizationInvite /></ProtectedRoute> },
-  { path: ROUTES.ADMIN_REFERRALS, element: <ProtectedRoute requireAdmin><AdminReferrals /></ProtectedRoute> },
 ];
 
 export const NOT_FOUND_ROUTE: AppRoute = {

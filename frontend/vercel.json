@@ -1,8 +1,30 @@
+{
+  "redirects": [
     {
-      "rewrites": [
-        {
-          "source": "/(.*)",
-          "destination": "/index.html"
-        }
-      ]
+      "source": "/admin/accounts",
+      "destination": "https://admin.athanext.com/users",
+      "permanent": false
+    },
+    {
+      "source": "/admin/referrals",
+      "destination": "https://admin.athanext.com/referrals",
+      "permanent": false
+    },
+    {
+      "source": "/admin",
+      "destination": "https://admin.athanext.com/",
+      "permanent": false
+    },
+    {
+      "source": "/admin/:path*",
+      "destination": "https://admin.athanext.com/",
+      "permanent": false
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ]
+}
