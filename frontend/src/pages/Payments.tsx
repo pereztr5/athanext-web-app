@@ -26,6 +26,7 @@ import { useRole } from "@/hooks/useRole";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { COACH_MONEY_STALE_MS, invalidateCoachMoney } from "@/utils/coachMoney";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { downloadText } from "@/utils/download";
 import {
@@ -171,7 +172,13 @@ const PaymentsPage = () => {
   const setTab = (t: BizTab) => setParams(t === "money" ? {} : { tab: t }, { replace: true });
   const today = getZonedISODate(new Date(), timeZone);
   const toDay = (iso: string) => (iso.length > 10 ? getZonedISODate(new Date(iso), timeZone) : iso);
-  const data = useQuery({ queryKey: ["coach-payments"], queryFn: () => invoicesAPI.payments(), enabled: isCoach });
+  const data = useQuery({
+    queryKey: ["coach-payments"],
+    queryFn: () => invoicesAPI.payments(),
+    enabled: isCoach,
+    staleTime: COACH_MONEY_STALE_MS,
+    refetchOnMount: "always",
+  });
   const gear = useQuery({ queryKey: ["coach-gear-earnings"], queryFn: () => invoicesAPI.gearEarnings(400), enabled: isCoach, staleTime: 300_000 });
   const [invoicesOpen, setInvoicesOpen] = useState(false);
   const [filter, setFilter] = useState<"all" | "out" | "paid">("all");
@@ -184,7 +191,7 @@ const PaymentsPage = () => {
   const remind = useMutation({
     mutationFn: (inv: Invoice) => invoicesAPI.remind(inv.id),
     onSuccess: (res, inv) => {
-      qc.invalidateQueries({ queryKey: ["coach-payments"] });
+      void invalidateCoachMoney(qc);
       toast({
         title: res.emailed ? `Reminder ${res.reminders} of ${MAX_REMINDERS} sent to ${inv.family}` : `Reminder saved for ${inv.family}`,
         description: res.emailed ? undefined : "The email didn't go out. Try again later.",

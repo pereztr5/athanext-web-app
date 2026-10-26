@@ -12,6 +12,7 @@ import { card, meta, secondaryButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { COACH_MONEY_STALE_MS, invalidateCoachMoney } from "@/utils/coachMoney";
 import { markPaidError, payerLine } from "@/utils/offlinePayments";
 import { money } from "@/utils/payments";
 import { formatDayISO } from "@/utils/schedule";
@@ -21,12 +22,16 @@ const day = (iso: string) => (iso ? formatDayISO(iso, { month: "short", day: "nu
 export const OfflinePayments = () => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
-  const offline = useQuery({ queryKey: ["coach-offline-payments"], queryFn: () => offlinePayAPI.summary() });
+  const offline = useQuery({
+    queryKey: ["coach-offline-payments"],
+    queryFn: () => offlinePayAPI.summary(),
+    staleTime: COACH_MONEY_STALE_MS,
+    refetchOnMount: "always",
+  });
   const markPaid = useMutation({
     mutationFn: (bookingId: string) => offlinePayAPI.confirm(bookingId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["coach-offline-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["pending-offline-payments"] });
+      void invalidateCoachMoney(queryClient);
       toast({ title: "Marked as paid" });
     },
     onError: (err) => {

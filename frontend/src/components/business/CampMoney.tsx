@@ -11,6 +11,7 @@ import { card, meta } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { campMoneySummary } from "@/utils/campSessions";
+import { COACH_MONEY_STALE_MS } from "@/utils/coachMoney";
 import { money } from "@/utils/payments";
 import { plural } from "@/utils/schedule";
 
@@ -23,7 +24,12 @@ const Stat = ({ label, value, sub }: { label: string; value: string; sub?: strin
 );
 
 export const CampMoney = ({ coachId }: { coachId: string }) => {
-  const rows = useQuery({ queryKey: ["coach-camp-money", coachId], queryFn: () => campsAPI.moneyRows(coachId) });
+  const rows = useQuery({
+    queryKey: ["coach-camp-money", coachId],
+    queryFn: () => campsAPI.moneyRows(coachId),
+    staleTime: COACH_MONEY_STALE_MS,
+    refetchOnMount: "always",
+  });
   const data = rows.data ? campMoneySummary(rows.data) : null;
 
   // Coaches without camp sign-ups don't get an empty card.

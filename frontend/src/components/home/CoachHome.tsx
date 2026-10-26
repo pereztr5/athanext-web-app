@@ -29,6 +29,7 @@ import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import { campDayTitle } from "@/utils/campSessions";
+import { COACH_MONEY_STALE_MS } from "@/utils/coachMoney";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import {
   addDaysISO,
@@ -125,7 +126,12 @@ export const CoachHome = () => {
     queryKey: ["coach-schedule", "home", todayISO],
     queryFn: () => scheduleAPI.get(addDaysISO(todayISO, -1), addDaysISO(nextMonday, 7)),
   });
-  const earningsQuery = useQuery({ queryKey: ["coach-earnings", range], queryFn: () => homeAPI.earnings(range) });
+  const earningsQuery = useQuery({
+    queryKey: ["coach-earnings", range],
+    queryFn: () => homeAPI.earnings(range),
+    staleTime: COACH_MONEY_STALE_MS,
+    refetchOnMount: "always",
+  });
   const feedbackQuery = useQuery({ queryKey: ["feedback-due"], queryFn: () => homeAPI.feedbackDue() });
   const rosterQuery = useQuery({ queryKey: ["coach-roster"], queryFn: () => rosterAPI.roster() });
 

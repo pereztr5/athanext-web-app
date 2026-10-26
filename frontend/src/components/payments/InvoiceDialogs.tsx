@@ -10,6 +10,7 @@ import { dialogContent, input, label, meta, primaryButton, secondaryButton } fro
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { addDaysISO } from "@/utils/schedule";
+import { invalidateCoachMoney } from "@/utils/coachMoney";
 import { money, type Client, type Invoice } from "@/utils/payments";
 
 const SERVICES = ["Individual session", "Group session", "Session package", "Other"];
@@ -59,7 +60,7 @@ export const CreateInvoiceDialog = ({ open, clients, today, onClose }: { open: b
   const send = useMutation({
     mutationFn: () => invoicesAPI.create({ ...form, amount: Number(form.amount) }),
     onSuccess: (res) => {
-      qc.invalidateQueries({ queryKey: ["coach-payments"] });
+      void invalidateCoachMoney(qc);
       const who = client?.family || client?.athlete || "the family";
       toast(res.emailed ? { title: `Invoice sent to ${who}` } : { title: `Invoice saved for ${who}`, description: "The email didn't go out. Use Remind to try again." });
       close();
@@ -128,7 +129,7 @@ export const MarkPaidDialog = ({ invoice, onClose }: { invoice: Invoice | null; 
   const mark = useMutation({
     mutationFn: () => invoicesAPI.markPaid(invoice!.id),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["coach-payments"] });
+      void invalidateCoachMoney(qc);
       toast({ title: `${invoice!.family}'s invoice marked as paid` });
       onClose();
     },

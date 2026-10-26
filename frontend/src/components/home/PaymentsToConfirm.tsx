@@ -7,6 +7,7 @@ import { BrandPill } from "@/components/brand";
 import { card, meta, secondaryButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { invalidateCoachMoney } from "@/utils/coachMoney";
 import { formatDayISO, plural } from "@/utils/schedule";
 
 const money = (n: number) =>
@@ -20,8 +21,7 @@ export const PaymentsToConfirm = () => {
     mutationFn: (bookingId: string) => offlinePayAPI.confirm(bookingId),
     onSuccess: (_data, bookingId) => {
       const row = pending.data?.find((p) => p.bookingId === bookingId);
-      queryClient.invalidateQueries({ queryKey: ["pending-offline-payments"] });
-      queryClient.invalidateQueries({ queryKey: ["coach-earnings"] });
+      void invalidateCoachMoney(queryClient);
       toast({
         title: "Marked paid",
         description: row ? `${row.payerName.split(" ")[0]} sees it as paid` : undefined,

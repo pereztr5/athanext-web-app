@@ -35,6 +35,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { invalidateCoachMoney } from "@/utils/coachMoney";
 import { getZonedISODate } from "@/utils/dateHelpers";
 import { scoreWord } from "@/utils/feedback";
 import { formatDayISO, formatMinutes, minutesInZone, plural, sessionEnd, sessionStart } from "@/utils/schedule";
@@ -131,7 +132,7 @@ const CoachSessionPage = () => {
   const confirmOffline = useMutation({
     mutationFn: (bookingId: string) => offlinePayAPI.confirm(bookingId),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["pending-offline-payments"] });
+      invalidateCoachMoney(queryClient);
       done("Marked paid", "The family sees it as paid.");
     },
     onError: fail,

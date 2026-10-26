@@ -17,6 +17,7 @@ import { closeButtonOverride, input, label, meta, modalSurface, primaryButton, s
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ageGroupFor, campShareUrl, formatCampDates, formatCampMoney, formatCampTimes, plural } from "@/utils/camps";
+import { invalidateCoachMoney } from "@/utils/coachMoney";
 import { CampAvatar } from "./CampFamilyView";
 
 const STATUS: Record<CampDisplayStatus, { text: string; tone: "green" | "neutral" | "amber" | "muted" }> = {
@@ -67,6 +68,7 @@ export const CampRegistrations = ({
       queryClient.invalidateQueries({ queryKey: ["camp-registrations", campId] }),
       queryClient.invalidateQueries({ queryKey: ["coach-camp-list"] }),
       queryClient.invalidateQueries({ queryKey: ["coach-schedule"] }),
+      invalidateCoachMoney(queryClient),
     ]);
   const fail = (title: string) => (err: unknown) => toast({ title, description: errorText(err, "Try again."), variant: "destructive" });
 

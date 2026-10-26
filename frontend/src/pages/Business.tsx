@@ -23,6 +23,7 @@ import { useOverdueInvoices } from "@/hooks/useOverdueInvoices";
 import { useRole } from "@/hooks/useRole";
 import { cn, getInitials } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { COACH_MONEY_STALE_MS } from "@/utils/coachMoney";
 import { money } from "@/utils/payments";
 import { plural } from "@/utils/schedule";
 
@@ -57,8 +58,21 @@ const BusinessPage = () => {
   const selfPay = payMode.data === "self";
   const { data: org } = useMyOrganization();
   const overdue = useOverdueInvoices();
-  const earnings = useQuery({ queryKey: ["coach-earnings", 1], queryFn: () => homeAPI.earnings(1), enabled: isCoach && !selfPay });
-  const payouts = useQuery({ queryKey: ["coach-payouts"], queryFn: () => payoutsAPI.summary(), enabled: isCoach && !selfPay, retry: false });
+  const earnings = useQuery({
+    queryKey: ["coach-earnings", 1],
+    queryFn: () => homeAPI.earnings(1),
+    enabled: isCoach && !selfPay,
+    staleTime: COACH_MONEY_STALE_MS,
+    refetchOnMount: "always",
+  });
+  const payouts = useQuery({
+    queryKey: ["coach-payouts"],
+    queryFn: () => payoutsAPI.summary(),
+    enabled: isCoach && !selfPay,
+    retry: false,
+    staleTime: COACH_MONEY_STALE_MS,
+    refetchOnMount: "always",
+  });
 
   if (!ready) return null;
   if (!isCoach) return <Navigate to={ROUTES.DASHBOARD} replace />;
