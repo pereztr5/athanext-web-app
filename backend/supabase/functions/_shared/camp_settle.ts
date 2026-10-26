@@ -8,7 +8,7 @@
 // whole thing is claimed with a short lease, so a failed step is retried (Stripe retries the
 // webhook while we answer 500) without sending a step twice.
 
-import { bookingEmailSender } from "./email_sender.ts";
+import { bookingEmailSender, emailAddress, SUPPORT_EMAIL } from "./email_sender.ts";
 import { campCoachEmail, campParentEmail, campReversedEmail } from "./camp_emails.ts";
 import { finishAccountUrl, parseCampMetadata } from "./camp_signup.ts";
 
@@ -88,7 +88,15 @@ export const sendCampEmail = async (admin: CampAdmin, to: string | null | undefi
     console.error("smtp_email is not configured: camp email not sent");
     return false;
   }
-  const r = await serviceCall("send-email", { to, from: sender.from, replyTo: sender.replyTo, subject, html });
+  // BCC support so ops see camp receipts / holds / coach notices without appearing on To.
+  const r = await serviceCall("send-email", {
+    to,
+    from: sender.from,
+    replyTo: sender.replyTo,
+    ...(emailAddress(to) === SUPPORT_EMAIL ? {} : { bcc: SUPPORT_EMAIL }),
+    subject,
+    html,
+  });
   if (!r.ok) console.error("Camp email failed:", r.status, r.text);
   return r.ok;
 };

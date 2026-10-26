@@ -43,7 +43,15 @@ function corsHeaders() {
 const json = (body: unknown, status: number) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders(), "Content-Type": "application/json" } });
 
-const send = (mail: { from: string; to: string; replyTo?: string; subject: string; text?: string; html?: string }) =>
+const send = (mail: {
+  from: string;
+  to: string;
+  replyTo?: string;
+  bcc?: string;
+  subject: string;
+  text?: string;
+  html?: string;
+}) =>
   new Promise<void>((resolve, reject) => {
     transport.sendMail(mail, (error: Error | null) => {
       if (error) return reject(error);
@@ -110,7 +118,7 @@ serve(async (req) => {
       return await handlePublic(req, body);
     }
 
-    const { to, from, subject, message, html, replyTo } = body ?? {};
+    const { to, from, subject, message, html, replyTo, bcc } = body ?? {};
 
     if (!to || !from || !subject || (!message && !html)) {
       return new Response(
@@ -119,11 +127,16 @@ serve(async (req) => {
       );
     }
 
+    // Optional BCC for ops copies (e.g. camp mail → support@). Only a bare email is accepted.
+    const bccAddress =
+      typeof bcc === "string" && /^[^\s@<>]+@[^\s@<>]+\.[^\s@<>]+$/.test(bcc.trim()) ? bcc.trim().toLowerCase() : undefined;
+
     await send({
       from: from,
       to: to,
       // Only support@ or this mailbox; any other Reply-To is ignored.
       replyTo: allowedReplyTo(replyTo, smtpUser),
+      ...(bccAddress ? { bcc: bccAddress } : {}),
       subject: subject,
       text: message,
       html: html,
