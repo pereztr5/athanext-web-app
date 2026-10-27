@@ -1,6 +1,7 @@
 // deno-lint-ignore-file no-explicit-any
 import nodemailer from "npm:nodemailer@6.9.10";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.57.2";
+import { EMAIL_BLUE, EMAIL_DARK, EMAIL_MUTED, emailButton, emailShell } from "../_shared/email_shell.ts";
 
 type SupabaseClient = ReturnType<typeof createClient>;
 
@@ -208,25 +209,17 @@ const renderEmail = ({
 }: {
   actorName: string;
   recipientName: string;
+  /** Already escaped. */
   messageBody: string;
 }) => {
-  return `
-    <div style="font-family: Arial, sans-serif; color: #0f172a; line-height: 1.6;">
-      <h2 style="color:#0d7ff2;">New message from ${actorName}</h2>
-      <p>Hi ${recipientName},</p>
-      <p>You have a new message in AthaNext:</p>
-      <blockquote style="border-left: 3px solid #0d7ff2; padding-left: 12px; color:#334155;">
-        ${messageBody}
-      </blockquote>
-      <p>
-        <a href="${(Deno.env.get("APP_ORIGIN") || "https://athanext.com") +
-          `/chat`}" style="display:inline-block;padding:10px 16px;background:#0d7ff2;color:white;text-decoration:none;border-radius:8px;">
-          View Conversation
-        </a>
-      </p>
-      <p style="font-size: 12px; color: #64748b;">If the button doesn't work, copy and paste this link in your browser.</p>
-    </div>
-  `;
+  const link = `${Deno.env.get("APP_ORIGIN") || "https://athanext.com"}/chat`;
+  return emailShell(`New message from ${actorName}`, [
+    `<p>Hi ${escapeHtml(recipientName)},</p>`,
+    `<p>You have a new message in AthaNext:</p>`,
+    `<blockquote style="margin:0 0 16px;border-left:3px solid ${EMAIL_BLUE};padding-left:12px;color:${EMAIL_DARK};">${messageBody}</blockquote>`,
+    emailButton(link, "View conversation"),
+    `<p style="color:${EMAIL_MUTED};font-size:13px;">If the button doesn't work, paste this link into your browser: <a href="${escapeHtml(link)}" style="color:${EMAIL_BLUE};">${escapeHtml(link)}</a></p>`,
+  ]);
 };
 
 Deno.serve(async (req) => {

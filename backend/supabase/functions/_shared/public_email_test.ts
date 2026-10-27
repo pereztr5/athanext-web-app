@@ -7,6 +7,7 @@ import {
   jwtRole,
   validEmail,
 } from "./public_email.ts";
+import { EMAIL_CREAM } from "./email_shell.ts";
 
 const b64url = (value: unknown) =>
   btoa(JSON.stringify(value)).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
@@ -155,4 +156,17 @@ Deno.test("parent_invite goes to the parent with a fixed body and no links from 
 
   const bad = buildPublicEmails({ kind: "parent_invite", email: "nope" }, options);
   assert(!bad.ok && bad.status === 400);
+});
+
+Deno.test("every public email uses the cream shell", () => {
+  const bodies = [
+    { kind: "contact", name: "Pat", email: "pat@example.com", topic: "Hi", message: "Hello" },
+    { kind: "partnership", name: "Pat", organization: "Northside FC", email: "pat@example.com", message: "Hello" },
+    { kind: "parent_invite", email: "p@example.com" },
+  ];
+  for (const body of bodies) {
+    const r = buildPublicEmails(body, options);
+    assert(r.ok);
+    for (const mail of r.emails) assertStringIncludes(mail.html, EMAIL_CREAM);
+  }
 });

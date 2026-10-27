@@ -11,6 +11,7 @@
 //       -> "finish your athlete's account" to the parent, with a link to sign-up
 
 import { SUPPORT_EMAIL } from "./email_sender.ts";
+import { EMAIL_MUTED, emailButton, emailShell } from "./email_shell.ts";
 
 export const PUBLIC_EMAIL_KINDS = ["contact", "partnership", "parent_invite"] as const;
 export type PublicEmailKind = typeof PUBLIC_EMAIL_KINDS[number];
@@ -112,18 +113,23 @@ const pick = (value: unknown, max = 40): string =>
     : "";
 
 const row = (label: string, value: string) =>
-  `<tr><td style="padding:4px 12px 4px 0;color:#555;vertical-align:top"><strong>${escapeHtml(label)}</strong></td>` +
+  `<tr><td style="padding:4px 12px 4px 0;color:${EMAIL_MUTED};vertical-align:top"><strong>${escapeHtml(label)}</strong></td>` +
   `<td style="padding:4px 0;white-space:pre-wrap">${escapeHtml(value)}</td></tr>`;
 
-const page = (inner: string) =>
-  `<div style="font-family:Arial,Helvetica,sans-serif;font-size:14px;line-height:1.5;color:#111">${inner}</div>`;
+/** A form submission for support, in the cream shell; replying answers the visitor. */
+const supportNote = (title: string, intro: string, lines: [string, string][], name: string) =>
+  emailShell(
+    title,
+    [`<p>${escapeHtml(intro)}</p>`, `<table role="presentation" style="border-collapse:collapse;">${lines.map(([l, v]) => row(l, v)).join("")}</table>`],
+    `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">Reply to this email to answer ${escapeHtml(name)}.</p>`,
+  );
 
 const confirmation = (to: string, from: string, supportEmail: string): OutgoingEmail => ({
   to,
   from,
   replyTo: supportEmail,
   subject: "We got your message",
-  html: page(`<p>${escapeHtml(CONFIRMATION_TEXT)}</p><p>AthaNext</p>`),
+  html: emailShell("We got your message", [`<p>${escapeHtml(CONFIRMATION_TEXT)}</p>`]),
   text: `${CONFIRMATION_TEXT}\n\nAthaNext`,
 });
 
@@ -173,7 +179,7 @@ export const buildPublicEmails = (input: unknown, options: PublicEmailOptions): 
           from: options.from,
           replyTo: email,
           subject: `Contact form: ${oneLine(topic)}`,
-          html: page(`<p>New message from the contact form.</p><table>${shown.map(([l, v]) => row(l, v)).join("")}</table>`),
+          html: supportNote("Contact form", "New message from the contact form.", shown, name),
           text: shown.map(([l, v]) => `${l}: ${v}`).join("\n"),
         },
         confirmation(email, options.from, supportEmail),
@@ -199,7 +205,7 @@ export const buildPublicEmails = (input: unknown, options: PublicEmailOptions): 
           from: options.from,
           replyTo: email,
           subject: `Partnership inquiry: ${oneLine(organization)}`,
-          html: page(`<p>New partnership inquiry.</p><table>${lines.map(([l, v]) => row(l, v)).join("")}</table>`),
+          html: supportNote("Partnership inquiry", "New partnership inquiry.", lines, name),
           text: lines.map(([l, v]) => `${l}: ${v}`).join("\n"),
         },
         confirmation(email, options.from, supportEmail),
@@ -234,11 +240,12 @@ export const buildPublicEmails = (input: unknown, options: PublicEmailOptions): 
         from: options.from,
         replyTo: supportEmail,
         subject: "Finish your athlete's AthaNext account",
-        html: page(
-          `<p>Your athlete started signing up for AthaNext and needs a parent or guardian to finish the account.</p>` +
-            `<p><strong>What they chose:</strong> ${escapeHtml(summary || "Their preferences are ready.")}</p>` +
-            `<p><a href="${escapeHtml(link)}">Create the parent account</a> to see coach matches and manage bookings.</p>`,
-        ),
+        html: emailShell("Finish your athlete's account", [
+          `<p>Your athlete started signing up for AthaNext and needs a parent or guardian to finish the account.</p>`,
+          `<p><strong>What they chose:</strong> ${escapeHtml(summary || "Their preferences are ready.")}</p>`,
+          emailButton(link, "Create the parent account"),
+          `<p>Then you can see coach matches and manage bookings.</p>`,
+        ]),
         text: `Your athlete started signing up for AthaNext. Open ${link} to finish as a parent.`,
       },
     ],
