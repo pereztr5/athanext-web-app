@@ -58,6 +58,7 @@ const STEP_TITLES: Record<CampStep, string> = {
 const viewFromDraft = (draft: CampDraft, coach: CoachInfo, taken: Record<string, number>): CampView => ({
   name: draft.name.trim(),
   coverUrl: draft.coverUrl ?? coach.photo,
+  coverIsUpload: Boolean(draft.coverUrl),
   coachName: coach.name,
   coachPhoto: coach.photo,
   coachBio: coach.bio,
@@ -83,6 +84,7 @@ const viewFromDraft = (draft: CampDraft, coach: CoachInfo, taken: Record<string,
     };
   }),
   included: draft.included.map((i) => i.trim()).filter(Boolean),
+  waiverUrl: campWaiverUrl(draft.waiverUrl),
 });
 
 /** The pay step as families see it, under the preview: card processing, and the pay-directly link. */
@@ -117,20 +119,7 @@ export const CampEditorDialog = ({
   const queryClient = useQueryClient();
   const isMobile = useIsMobile();
   const { userProfile } = useAuth();
-  const coachId = userProfile?.coach_id ?? null;
-  const coachDetails = useCoachDetails(open && coachId ? coachId : undefined);
-  const coach: CoachInfo = useMemo(() => {
-    const c = coachDetails.coach;
-    return {
-      id: coachId,
-      name: c?.name || userProfile?.name || "You",
-      photo: c?.profile_image_url || c?.image_url || null,
-      bio: c?.bio ?? null,
-      slug: c?.slug ?? null,
-      places: Array.isArray(c?.locations) ? (c?.locations as string[]) : [],
-    };
-  }, [coachDetails.coach, coachId, userProfile?.name]);
-
+  const ownCoachId = userProfile?.coach_id ?? null;
   const [savedId, setSavedId] = useState<string | null>(campId);
   const editing = useQuery({
     queryKey: ["camp-editor", savedId],
@@ -139,6 +128,20 @@ export const CampEditorDialog = ({
     retry: false,
     queryFn: () => campsAPI.editor(savedId as string),
   });
+  // Admin editing another coach's camp: show that coach in the family preview.
+  const coachId = editing.data?.coach_id ?? ownCoachId;
+  const coachDetails = useCoachDetails(open && coachId ? coachId : undefined);
+  const coach: CoachInfo = useMemo(() => {
+    const c = coachDetails.coach;
+    return {
+      id: coachId,
+      name: c?.name || userProfile?.name || "You",
+      photo: c?.profile_image_url || c?.image_url || null,
+      bio: c?.bio ?? null,
+      slug: c?.slug ?? editing.data?.coach_slug ?? null,
+      places: Array.isArray(c?.locations) ? (c?.locations as string[]) : [],
+    };
+  }, [coachDetails.coach, coachId, editing.data?.coach_slug, userProfile?.name]);
   const runAgain = useQuery({
     queryKey: ["camp-run-again"],
     enabled: open && !campId,

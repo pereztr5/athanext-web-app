@@ -1682,9 +1682,22 @@ serve(async (req) => {
     try {
       if (coversAllPending) {
         reusingPendingBookings = true;
-        // The bookings were opened with an earlier Checkout: close it first so paying the old
-        // tab can't charge again. If it was paid meanwhile, the bookings are now paid.
+        // Same family coming back for the same held spots: reopen the open Checkout instead of
+        // expiring it (that was blocking return-to-pay). Spot holds stay until Stripe expires them.
         previousSessionIds = [...new Set(myPendingBookings.map((b) => b.stripe_session_id).filter(Boolean))] as string[];
+        for (const sid of previousSessionIds) {
+          try {
+            const existing = await stripeApi().checkout.sessions.retrieve(sid);
+            if (existing.payment_status === "paid") {
+              return json({ booked: true, already_paid: true, booking_ids: myPendingBookings.map((b) => b.id) });
+            }
+            if (existing.status === "open" && existing.url) {
+              return json({ url: existing.url, session_id: existing.id, resumed: true, credits_used: 0 });
+            }
+          } catch (e) {
+            console.error("Could not resume Checkout", sid, e);
+          }
+        }
         if (await closeCheckouts(stripeApi(), supabaseClient, previousSessionIds)) {
           return json({ booked: true, already_paid: true, booking_ids: myPendingBookings.map((b) => b.id) });
         }

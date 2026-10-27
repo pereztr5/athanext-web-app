@@ -116,7 +116,8 @@ const CoachProfile = () => {
         scrollToSection(availabilitySectionRef);
         return;
       }
-      navigate(`${ROUTES.BOOK}?coach=${coach.id}`);
+      // Open that session on Book a Session (pre-selected), not the generic coach book page.
+      navigate(`${ROUTES.BOOK}?coach=${coach.id}&session=${sharedSessionId}`);
     })();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [sharedSessionId, loading, coach?.id, user, canBookSlots, navigate]);

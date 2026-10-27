@@ -266,8 +266,11 @@ const invokeCampFunction = async <T>(body: Record<string, unknown>, fallback: st
 
 export const campsAPI = {
   // ---------- Coach: camps ----------
-  /** The signed-in coach's camps (profile row "Sessions, packages and camps", My schedule). */
-  list: () => call<CoachCamp[]>("get_coach_camps", undefined, "Could not load your camps."),
+  /** The signed-in coach's camps, or another coach's when an admin passes coachId. */
+  list: (coachId?: string) =>
+    coachId
+      ? call<CoachCamp[]>("admin_list_camps", { p_coach_id: coachId }, "Could not load that coach's camps.")
+      : call<CoachCamp[]>("get_coach_camps", undefined, "Could not load your camps."),
 
   editor: (campId: string) => call<CoachCamp>("get_camp_editor", { p_camp_id: campId }, "Could not open this camp."),
 

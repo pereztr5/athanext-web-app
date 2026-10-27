@@ -4,11 +4,11 @@
  */
 import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { Calendar, Check, MapPin } from "@/components/icons";
+import { Calendar, Check, FileText, MapPin } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { cn } from "@/lib/utils";
 import { coachProfilePath } from "@/utils/coachSlug";
-import { formatCampDates, formatCampMoney, formatCampTimes, perDayLine } from "@/utils/camps";
+import { campWaiverUrl, formatCampDates, formatCampMoney, formatCampTimes, perDayLine } from "@/utils/camps";
 import { stripRichTextToPlainText } from "@/utils/richText";
 import { firstName, groupSpotsText, type CampView, type CampViewGroup } from "./campView";
 
@@ -108,7 +108,12 @@ export const CampFamilyView = ({
     <article className="flex min-w-0 flex-col overflow-hidden rounded-card border border-light-525 bg-light-300">
       <div className={cn("w-full flex-none bg-dark", compact ? "h-[130px]" : "h-[200px] md:h-[260px]")}>
         {view.coverUrl ? (
-          <img src={view.coverUrl} alt="" className="size-full object-cover" style={{ objectPosition: "50% 22%" }} />
+          <img
+            src={view.coverUrl}
+            alt=""
+            className="size-full object-cover"
+            style={view.coverIsUpload ? undefined : { objectPosition: "50% 22%" }}
+          />
         ) : null}
       </div>
       <div className={cn("flex flex-col gap-4", compact ? "px-4 py-4" : "px-[18px] pb-5 pt-[22px] md:px-[25px]")}>
@@ -147,6 +152,17 @@ export const CampFamilyView = ({
             {dates ? <Fact icon={Calendar} label="Dates" value={dates} /> : null}
             {view.location ? <Fact icon={MapPin} label="Location" value={view.location} /> : null}
           </div>
+        ) : null}
+        {campWaiverUrl(view.waiverUrl) ? (
+          <a
+            href={campWaiverUrl(view.waiverUrl)!}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center gap-2 self-start text-label-sm text-primary underline-offset-2 hover:text-primary-700 hover:underline"
+          >
+            <FileText className="size-4 flex-none" strokeWidth={1.5} aria-hidden="true" />
+            Camp waiver
+          </a>
         ) : null}
         {view.groups.length ? (
           <div className="flex flex-col gap-2" role="radiogroup" aria-label="Pick a group">

@@ -44,7 +44,7 @@ const groups = [
 ];
 
 const filledForm = (): CampForm => ({
-  parent: { name: "Maria Rivera", email: "maria@example.com", phone: "(239) 555-0142" },
+  parent: { name: "Maria Rivera", email: "maria@example.com", phone: "+12395550142" },
   athletes: [{ first: "Diego", last: "Rivera", year: "2013", groupId: "g-elite", note: "" }],
   waiver: true,
 });
@@ -110,7 +110,7 @@ describe("sign-up form", () => {
     form.athletes[0].year = "2025";
     const errors = validateCampForm(form, groups, NOW);
     expect(errors["parent.email"]).toBe("Add an email we can send the receipt to");
-    expect(errors["parent.phone"]).toBe("Add a phone number, like 555 123 4567");
+    expect(errors["parent.phone"]).toBe("Add a phone number with the country code");
     expect(errors["athletes.0.birth_year"]).toBe("Add a birth year, like 2013");
     const noPhone = filledForm();
     noPhone.parent.phone = "";

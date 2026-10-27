@@ -1,7 +1,7 @@
 /** The camp page's view model, shared by the public page and the editor preview. */
 import type { CampCoachRef } from "@/api/camps";
 import type { CampPage } from "@/api/campSignup";
-import { plural } from "@/utils/camps";
+import { campWaiverUrl, plural } from "@/utils/camps";
 
 export type CampViewGroup = {
   id: string;
@@ -18,6 +18,8 @@ export type CampViewGroup = {
 export type CampView = {
   name: string;
   coverUrl: string | null;
+  /** True when coverUrl is an uploaded camp cover (not the coach profile photo fallback). */
+  coverIsUpload: boolean;
   coachName: string;
   coachPhoto: string | null;
   coachBio: string | null;
@@ -31,11 +33,14 @@ export type CampView = {
   location: string | null;
   groups: CampViewGroup[];
   included: string[];
+  /** Safe https waiver link, or null. */
+  waiverUrl: string | null;
 };
 
 export const campViewFromPage = (page: CampPage): CampView => ({
   name: page.name,
   coverUrl: page.cover_url,
+  coverIsUpload: Boolean(page.cover_url),
   coachName: page.coach.name,
   coachPhoto: page.coach.photo_url,
   coachBio: page.coach.bio,
@@ -58,6 +63,7 @@ export const campViewFromPage = (page: CampPage): CampView => ({
     full: g.full,
   })),
   included: page.included,
+  waiverUrl: campWaiverUrl(page.waiver_url),
 });
 
 export const firstName = (name: string) => name.trim().split(/\s+/)[0] || name;

@@ -139,6 +139,7 @@ type StepId =
   | "cwhere"
   | "account"
   | "verify"
+  | "password"
   | "matches"
   | "cprofile"
   | "invite"
@@ -146,7 +147,7 @@ type StepId =
 
 const FAMILY_FLOW: StepId[] = ["who", "sport", "pillars", "level", "age", "where", "account"];
 const COACH_FLOW: StepId[] = ["who", "sport", "pillars", "clevels", "cwhere", "account"];
-const OFF_FLOW: StepId[] = ["verify", "matches", "cprofile", "invite", "sent"];
+const OFF_FLOW: StepId[] = ["verify", "password", "matches", "cprofile", "invite", "sent"];
 
 const LEVELS: { id: string; title: string; detail: string; Icon: typeof User }[] = [
   { id: "Recreational", title: "Recreational", detail: "Any age, playing for fun and fitness", Icon: User },
@@ -360,7 +361,8 @@ export const SignUpFlow = ({
   const nextFrom = (id: StepId) => {
     if (id === "who") return go("sport");
     if (id === "age" && isMinorSelf) return go("invite");
-    if (id === "verify") return go(isCoach ? "cprofile" : "matches");
+    if (id === "verify") return go("password");
+    if (id === "password") return go(isCoach ? "cprofile" : "matches");
     const i = flow.indexOf(id);
     if (i >= 0 && i < flow.length - 1) go(flow[i + 1]!);
   };
@@ -368,6 +370,7 @@ export const SignUpFlow = ({
   const back = () => {
     if (step === "invite") return go("age");
     if (step === "verify") return go("account");
+    if (step === "password") return go("verify");
     if (step === "matches" || step === "cprofile") return go("account");
     const i = flow.indexOf(step);
     if (i > 0) go(flow[i - 1]!);
@@ -408,7 +411,6 @@ export const SignUpFlow = ({
       answers.last.trim() &&
       /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email.trim()) &&
       isValidE164(answers.phone) &&
-      passwordOk &&
       (!isParent || answers.ath.trim())
     );
   };
@@ -437,9 +439,11 @@ export const SignUpFlow = ({
     setBusy(true);
     const name = `${answers.first.trim()} ${answers.last.trim()}`;
     const persona = isCoach ? "coach" : isParent ? "parent" : "athlete";
+    // Temporary password until the email is confirmed; the real password is set on the next step.
+    const tempPassword = `${crypto.randomUUID()}Aa1!`;
     const { error } = await authAPI.signUp({
       email: answers.email.trim().toLowerCase(),
-      password: answers.pw,
+      password: tempPassword,
       name,
       metadata: { name, persona_type: persona, phone_number: answers.phone },
       emailRedirectTo: `${window.location.origin}${returnPath}`,
@@ -485,6 +489,21 @@ export const SignUpFlow = ({
           ? "That code has expired. Send a new one."
           : "That code didn't work. Check it and try again.",
       });
+      return;
+    }
+    go("password");
+  };
+
+  const setPassword = async () => {
+    if (!passwordOk) {
+      setErrors({ password: "Choose a stronger password" });
+      return;
+    }
+    setBusy(true);
+    const { error } = await supabase.auth.updateUser({ password: answers.pw });
+    setBusy(false);
+    if (error) {
+      setErrors({ password: error.message });
       return;
     }
     await finishProfile();
@@ -1216,28 +1235,6 @@ export const SignUpFlow = ({
           <PhoneInput value={answers.phone} onChange={(v) => patch({ phone: v })} />
           <span className={meta}>{isCoach ? "For booking alerts." : "Coaches use it to reach you about sessions."} Never shown publicly.</span>
         </Field>
-        {!googleMode ? (
-          <Field text="Password" error={errors.password}>
-            <div className="relative">
-              <input
-                className={cn(input, "pr-10")}
-                type={showPassword ? "text" : "password"}
-                value={answers.pw}
-                onChange={(e) => patch({ pw: e.target.value })}
-                autoComplete="new-password"
-              />
-              <button
-                type="button"
-                onClick={() => setShowPassword((v) => !v)}
-                className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                aria-label={showPassword ? "Hide password" : "Show password"}
-              >
-                {showPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
-              </button>
-            </div>
-            {answers.pw ? <PasswordRequirements items={passwordItems} /> : <span className={meta}>8 or more characters with a number and a symbol</span>}
-          </Field>
-        ) : null}
         <label className="flex items-start gap-2 text-body-m text-dark-300">
           <input
             type="checkbox"
@@ -1287,6 +1284,34 @@ export const SignUpFlow = ({
         <button type="button" className={cn(textButton, "self-center")} onClick={resend}>
           Resend code
         </button>
+      </div>
+    );
+  } else if (step === "password") {
+    body = (
+      <div className="flex flex-col gap-3">
+        <Head title="Choose a password" sub="Your email is confirmed. Set a password to sign in next time." />
+        <Field text="Password" error={errors.password}>
+          <div className="relative">
+            <input
+              className={cn(input, "pr-10")}
+              type={showPassword ? "text" : "password"}
+              value={answers.pw}
+              onChange={(e) => patch({ pw: e.target.value })}
+              autoComplete="new-password"
+              autoFocus
+            />
+            <button
+              type="button"
+              onClick={() => setShowPassword((v) => !v)}
+              className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+              aria-label={showPassword ? "Hide password" : "Show password"}
+            >
+              {showPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+            </button>
+          </div>
+          {answers.pw ? <PasswordRequirements items={passwordItems} /> : <span className={meta}>8 or more characters with a number and a symbol</span>}
+        </Field>
+        <Continue ok={passwordOk} onClick={setPassword} label={busy ? "Saving…" : "Save password"} />
       </div>
     );
   } else if (step === "matches") {

@@ -54,21 +54,83 @@ const sendEmail = async (admin: SupabaseClient, to: string, subject: string, htm
   return Boolean(res?.ok);
 };
 
-/** Emails the account holder of the invoice's athlete. */
-const emailInvoice = async (admin: SupabaseClient, invoiceId: string, site: string, reminder: boolean) => {
+type InvoiceRow = {
+  id: string;
+  service: string;
+  amount: number;
+  due_date: string;
+  note: string | null;
+  family_name: string | null;
+  athlete_id: string;
+  coach_id: string;
+  coach?: { name?: string } | null;
+};
+
+const loadInvoice = async (admin: SupabaseClient, invoiceId: string) => {
   const { data: inv } = await admin
     .from("coach_invoices")
-    .select("id, service, amount, due_date, note, family_name, athlete_id, coach:coaches(name)")
+    .select("id, service, amount, due_date, note, family_name, athlete_id, coach_id, coach:coaches(name)")
     .eq("id", invoiceId)
     .single();
+  return inv as InvoiceRow | null;
+};
+
+/** Direct chat with the family so the invoice shows in Messages and the bell. */
+const messageInvoice = async (admin: SupabaseClient, inv: InvoiceRow, coachUserId: string, site: string, reminder: boolean) => {
+  const { data: athlete } = await admin.from("athlete_profiles").select("user_id, full_name").eq("id", inv.athlete_id).maybeSingle();
+  if (!athlete?.user_id || athlete.user_id === coachUserId) return false;
+  const coach = inv.coach?.name ?? "Your coach";
+  const link = `${site}/invoices/${inv.id}`;
+  const body = reminder
+    ? `Reminder: invoice for ${inv.service} (${usd(inv.amount)}). Pay here: ${link}`
+    : `${coach} sent an invoice for ${inv.service} (${usd(inv.amount)}). Pay here: ${link}`;
+
+  let conversationId: string | null = null;
+  const { data: existing } = await admin
+    .from("conversations")
+    .select("id")
+    .eq("is_group", false)
+    .is("owner_coach_id", null)
+    .order("last_message_at", { ascending: false, nullsFirst: false });
+  for (const c of existing ?? []) {
+    const { data: parts } = await admin.from("conversation_participants").select("user_id").eq("conversation_id", c.id);
+    const ids = new Set((parts ?? []).map((p) => p.user_id));
+    if (ids.has(coachUserId) && ids.has(athlete.user_id) && ids.size === 2) {
+      conversationId = c.id;
+      break;
+    }
+  }
+  if (!conversationId) {
+    const { data: created, error } = await admin
+      .from("conversations")
+      .insert({ created_by: coachUserId, is_group: false, title: athlete.full_name || inv.family_name || "Family" })
+      .select("id")
+      .single();
+    if (error || !created) return false;
+    conversationId = created.id as string;
+    await admin.from("conversation_participants").insert([
+      { conversation_id: conversationId, user_id: coachUserId, role: "owner" },
+      { conversation_id: conversationId, user_id: athlete.user_id, role: "member" },
+    ]);
+  }
+  await admin.from("messages").insert({ conversation_id: conversationId, sender_id: coachUserId, body });
+  await admin
+    .from("conversations")
+    .update({ last_message_at: new Date().toISOString(), last_message_text: body.slice(0, 200) })
+    .eq("id", conversationId);
+  return true;
+};
+
+/** Emails the account holder, and a copy to the platform admin when configured. */
+const emailInvoice = async (admin: SupabaseClient, invoiceId: string, site: string, reminder: boolean) => {
+  const inv = await loadInvoice(admin, invoiceId);
   if (!inv?.athlete_id) return false;
   const { data: athlete } = await admin.from("athlete_profiles").select("user_id").eq("id", inv.athlete_id).maybeSingle();
   if (!athlete?.user_id) return false;
   const { data: userRes } = await admin.auth.admin.getUserById(athlete.user_id as string);
   const to = userRes?.user?.email;
   if (!to) return false;
-  // deno-lint-ignore no-explicit-any
-  const coach = ((inv as any).coach?.name as string) ?? "Your coach";
+  const coach = inv.coach?.name ?? "Your coach";
   const due = new Date(`${inv.due_date}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric" });
   const link = `${site}/invoices/${inv.id}`;
   const subject = reminder ? `Reminder: ${coach}'s invoice for ${usd(inv.amount)}` : `${coach} sent you an invoice for ${usd(inv.amount)}`;
@@ -80,9 +142,38 @@ const emailInvoice = async (admin: SupabaseClient, invoiceId: string, site: stri
       inv.note ? `<p>${escapeHtml(inv.note)}</p>` : "",
       emailButton(link, "Pay by card"),
     ].filter(Boolean),
-    `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">Paid ${escapeHtml(coach)} another way? Let them know and they'll mark it as paid.</p>`,
+    `<p style="color:${EMAIL_MUTED};font-size:13px;margin:24px 0 0;">Paying offline? Let ${escapeHtml(coach)} know and they'll mark it as paid.</p>`,
   );
-  return await sendEmail(admin, to, subject, html);
+  const emailed = await sendEmail(admin, to, subject, html);
+  const { data: adminCfg } = await admin.from("configurations").select("value").eq("key", "contact_admin_email").maybeSingle();
+  const adminTo = typeof adminCfg?.value === "string" ? adminCfg.value.trim() : "";
+  if (adminTo && adminTo.toLowerCase() !== to.toLowerCase()) {
+    await sendEmail(
+      admin,
+      adminTo,
+      `[Admin copy] ${subject}`,
+      emailShell(`Admin copy: invoice from ${coach}`, [
+        `<p>${escapeHtml(coach)} → ${escapeHtml(inv.family_name || to)} · ${escapeHtml(inv.service)} · ${usd(inv.amount)}</p>`,
+        emailButton(link, "Open invoice"),
+      ]),
+    );
+  }
+  return emailed;
+};
+
+/** Message + email + admin copy when an invoice is created or reminded. */
+const deliverInvoice = async (
+  admin: SupabaseClient,
+  invoiceId: string,
+  site: string,
+  reminder: boolean,
+  coachUserId: string,
+) => {
+  const inv = await loadInvoice(admin, invoiceId);
+  if (!inv) return { emailed: false, messaged: false };
+  const messaged = await messageInvoice(admin, inv, coachUserId, site, reminder).catch(() => false);
+  const emailed = await emailInvoice(admin, invoiceId, site, reminder);
+  return { emailed, messaged };
 };
 
 const callTransfers = async (invoiceId: string) => {
@@ -150,13 +241,60 @@ serve(async (req) => {
         p_note: body.note ?? null,
       });
       if (error) return json({ error: error.message }, 400);
-      return json({ id, emailed: await emailInvoice(admin, id as string, site, false) });
+      const delivered = await deliverInvoice(admin, id as string, site, false, user.id);
+      return json({ id, emailed: delivered.emailed, messaged: delivered.messaged });
     }
 
     if (body.action === "remind") {
       const { data: count, error } = await userClient.rpc("remind_coach_invoice", { p_invoice_id: invoiceId });
       if (error) return json({ error: error.message }, 400);
-      return json({ reminders: count, emailed: await emailInvoice(admin, invoiceId, site, true) });
+      const delivered = await deliverInvoice(admin, invoiceId, site, true, user.id);
+      return json({ reminders: count, emailed: delivered.emailed, messaged: delivered.messaged });
+    }
+
+    // Family asks to pay offline: message the coach; coach still marks the invoice paid.
+    if (body.action === "request_offline") {
+      const { data: inv, error } = await userClient.rpc("get_family_invoice", { p_invoice_id: invoiceId });
+      if (error || !inv) return json({ error: "Invoice not found" }, 404);
+      if (inv.status !== "open") return json({ error: "This invoice is already settled" }, 400);
+      const full = await loadInvoice(admin, invoiceId);
+      if (!full) return json({ error: "Invoice not found" }, 404);
+      const { data: coachProfile } = await admin.from("user_profiles").select("id").eq("coach_id", full.coach_id).maybeSingle();
+      if (!coachProfile?.id) return json({ error: "Couldn't reach the coach" }, 400);
+      const { data: athlete } = await admin.from("athlete_profiles").select("user_id, full_name").eq("id", full.athlete_id).maybeSingle();
+      const familyUserId = athlete?.user_id || user.id;
+      const bodyText = `${athlete?.full_name || full.family_name || "A family"} will pay offline for "${full.service}" (${usd(full.amount)}). Mark it paid when you have the money.`;
+      let conversationId: string | null = null;
+      const { data: existing } = await admin.from("conversations").select("id").eq("is_group", false).is("owner_coach_id", null);
+      for (const c of existing ?? []) {
+        const { data: parts } = await admin.from("conversation_participants").select("user_id").eq("conversation_id", c.id);
+        const ids = new Set((parts ?? []).map((p) => p.user_id));
+        if (ids.has(coachProfile.id) && ids.has(familyUserId)) {
+          conversationId = c.id;
+          break;
+        }
+      }
+      if (!conversationId) {
+        const { data: created } = await admin
+          .from("conversations")
+          .insert({ created_by: familyUserId, is_group: false, title: full.coach?.name || "Coach" })
+          .select("id")
+          .single();
+        conversationId = created?.id ?? null;
+        if (conversationId) {
+          await admin.from("conversation_participants").insert([
+            { conversation_id: conversationId, user_id: familyUserId, role: "owner" },
+            { conversation_id: conversationId, user_id: coachProfile.id, role: "member" },
+          ]);
+        }
+      }
+      if (!conversationId) return json({ error: "Couldn't message the coach" }, 400);
+      await admin.from("messages").insert({ conversation_id: conversationId, sender_id: familyUserId, body: bodyText });
+      await admin
+        .from("conversations")
+        .update({ last_message_at: new Date().toISOString(), last_message_text: bodyText.slice(0, 200) })
+        .eq("id", conversationId);
+      return json({ ok: true });
     }
 
     if (body.action === "checkout" || body.action === "verify") {

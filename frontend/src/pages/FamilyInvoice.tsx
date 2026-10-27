@@ -1,16 +1,18 @@
 /**
  * An invoice from a coach (ATH-89), opened from the email. The account holder pays by card on
- * Stripe's page; coming back checks the payment and pays the coach.
+ * Stripe's page; coming back checks the payment and pays the coach. Paying offline tells the coach.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams, useSearchParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { CheckCircle2, FileText } from "@/components/icons";
 import { invoicesAPI } from "@/api/invoices";
-import { card, meta, primaryButton } from "@/components/schedule/styles";
+import { card, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
+import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
+import { feeLine, toCents } from "@/utils/fees";
 import { money } from "@/utils/payments";
 
 const FamilyInvoicePage = () => {
@@ -18,7 +20,10 @@ const FamilyInvoicePage = () => {
   const [params] = useSearchParams();
   const { toast } = useToast();
   const qc = useQueryClient();
+  const { config } = useFeeConfig();
   const [opening, setOpening] = useState(false);
+  const [offlineBusy, setOfflineBusy] = useState(false);
+  const [offlineSent, setOfflineSent] = useState(false);
   const invoice = useQuery({ queryKey: ["family-invoice", id], queryFn: () => invoicesAPI.familyInvoice(id) });
   const returned = params.get("paid") === "1";
 
@@ -30,6 +35,11 @@ const FamilyInvoicePage = () => {
       .catch(() => undefined);
   }, [returned, invoice.data?.status, id, qc]);
 
+  const fees = useMemo(() => {
+    if (!invoice.data || !config) return null;
+    return feeLine(toCents(invoice.data.amount), "invoice", config);
+  }, [invoice.data, config]);
+
   const pay = async () => {
     setOpening(true);
     try {
@@ -40,8 +50,23 @@ const FamilyInvoicePage = () => {
     }
   };
 
+  const payOffline = async () => {
+    setOfflineBusy(true);
+    try {
+      await invoicesAPI.requestOffline(id);
+      setOfflineSent(true);
+      toast({ title: "Told the coach", description: "They'll mark this paid once they have the money." });
+    } catch (e) {
+      toast({ title: "Couldn't send that", description: (e as Error).message, variant: "destructive" });
+    } finally {
+      setOfflineBusy(false);
+    }
+  };
+
   const inv = invoice.data;
   const due = inv ? new Date(`${inv.due}T12:00:00`).toLocaleDateString("en-US", { month: "long", day: "numeric", year: "numeric" }) : "";
+  const processing = fees && fees.processingCents > 0 ? fees.processingCents / 100 : 0;
+  const cardTotal = fees ? fees.totalCents / 100 : inv?.amount ?? 0;
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
@@ -73,17 +98,36 @@ const FamilyInvoicePage = () => {
                 <div className="flex justify-between gap-3"><dt className="text-dark-300">For</dt><dd>{inv.service}</dd></div>
                 {inv.athlete ? <div className="flex justify-between gap-3"><dt className="text-dark-300">Athlete</dt><dd>{inv.athlete}</dd></div> : null}
                 <div className="flex justify-between gap-3"><dt className="text-dark-300">Amount</dt><dd className="font-medium tabular-nums">{money(inv.amount)}</dd></div>
+                {inv.status === "open" && processing > 0 ? (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-dark-300">Card processing</dt>
+                    <dd className="tabular-nums">+{money(processing)}</dd>
+                  </div>
+                ) : null}
+                {inv.status === "open" && processing > 0 ? (
+                  <div className="flex justify-between gap-3">
+                    <dt className="text-dark-300">Card total</dt>
+                    <dd className="font-medium tabular-nums">{money(cardTotal)}</dd>
+                  </div>
+                ) : null}
               </dl>
               {inv.note ? <p className="text-body-m text-dark-400">{inv.note}</p> : null}
               {inv.status === "open" ? (
                 <>
                   {returned ? <p className={meta}>Checking your payment…</p> : null}
                   <button type="button" className={cn(primaryButton, "self-start")} disabled={opening} onClick={pay}>
-                    {opening ? "Opening…" : `Pay ${money(inv.amount)} by card`}
+                    {opening ? "Opening…" : `Pay ${money(cardTotal)} by card`}
+                  </button>
+                  <button
+                    type="button"
+                    className={cn(secondaryButton, "self-start")}
+                    disabled={offlineBusy || offlineSent}
+                    onClick={payOffline}
+                  >
+                    {offlineSent ? "Told the coach" : offlineBusy ? "Sending…" : "Pay offline"}
                   </button>
                   <p className={meta}>
-                    Card payments open Stripe's secure page; a small card processing fee is added. Paid {inv.coach} another way? Let them know
-                    and they'll mark it as paid.
+                    Card includes processing when you pay by card. Paying offline: {inv.coach} marks it paid once they have the money.
                   </p>
                 </>
               ) : null}

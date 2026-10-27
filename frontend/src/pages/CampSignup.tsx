@@ -13,6 +13,7 @@ import { CampFamilyView } from "@/components/camps/CampFamilyView";
 import { campViewFromPage, firstName } from "@/components/camps/campView";
 import { CampYoureIn } from "@/components/camps/CampYoureIn";
 import { writeCampFinish } from "@/components/camps/campFinish";
+import { PhoneInput } from "@/components/common/PhoneInput";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
 import { input, label as labelClass, primaryButton, textButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
@@ -461,7 +462,7 @@ const Details = ({
           <input id="parent.email" type="email" inputMode="email" autoComplete="email" className={fieldInput(err("parent.email"))} value={form.parent.email} onChange={(e) => setParent("email", e.target.value)} {...aria("parent.email")} />
         </Field>
         <Field id="parent.phone" label="Mobile" error={err("parent.phone")} help={`So ${coachFirst} can reach you on camp days.`}>
-          <input id="parent.phone" type="tel" inputMode="tel" autoComplete="tel" className={fieldInput(err("parent.phone"))} value={form.parent.phone} onChange={(e) => setParent("phone", e.target.value)} {...aria("parent.phone")} />
+          <PhoneInput id="parent.phone" value={form.parent.phone} onChange={(v) => setParent("phone", v)} invalid={Boolean(err("parent.phone"))} />
         </Field>
       </section>
 

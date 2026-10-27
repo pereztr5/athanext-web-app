@@ -130,6 +130,19 @@ export const bookAPI = {
     };
   },
 
+  /** A shared session link (`?session=`): the one session a family can book. */
+  async sessionForBooking(occurrenceId: string): Promise<BookableSession | null> {
+    const { data, error } = await supabase.rpc("get_session_for_booking", { p_occurrence_id: occurrenceId });
+    if (error) throw error;
+    if (!data) return null;
+    const row = data as Row;
+    return mapSession({
+      ...row,
+      capacity: row.capacity ?? row.max_bookings_per_slot,
+      pillar: row.pillar ?? row.pillar_slot,
+    });
+  },
+
   async pillarCoaches(pillar: string, position: string | null): Promise<BookingCoach[]> {
     const { data, error } = await supabase.rpc("get_pillar_coaches", { p_pillar: pillar, p_position: position ?? undefined });
     if (error) throw error;

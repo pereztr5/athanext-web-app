@@ -171,39 +171,9 @@ const PlanGroupsPage = () => {
       toast({ title: "Couldn't remove", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
   });
 
-  const publishOneOnOnes = async (list: ScheduleSession[]) => {
-    for (const s of list) {
-      await scheduleAPI.removeSession(s.id);
-      await scheduleAPI.createSessions({
-        sessionType: s.sessionType,
-        visibility: s.visibility,
-        times: [{ date: s.date, start: s.startTime.slice(0, 5) }],
-        repeat: "none",
-        durationMinutes: s.durationMinutes,
-        sessionName: s.sessionName,
-        price: s.price,
-        capacity: s.capacity,
-        location: s.location,
-        place: s.place,
-        pillar: s.pillar,
-        position: s.position,
-        details: s.details,
-        isDraft: false,
-      });
-    }
-  };
-
   const publish = useMutation({
     mutationFn: async () => {
-      const groupish = drafts.filter((s) => s.sessionType === "group");
-      const ones = drafts.filter((s) => s.sessionType === "individual");
-      const liveGroups = sessions.filter((s) => !s.isDraft && s.sessionType === "group");
-      // Offer insert needs group occurrence ids; 1-on-1-only weeks clear drafts without an empty offer.
-      if (!groupish.length && !liveGroups.length) {
-        await publishOneOnOnes(ones);
-        return { offerId: null as string | null, posted: [] as string[], copied: false, tagsFailed: false };
-      }
-
+      // Group and open 1-on-1 drafts both go on the week card (schedule_publish_groups).
       const eightPm = zonedWallTimeToUtc(addDaysISO(from, -1), "20:00:00", timeZone) ?? new Date();
       const first = sessions.map(sessionStart).find((d) => d > new Date());
       const closesAt = eightPm > new Date() ? eightPm : first ?? new Date();
@@ -213,7 +183,7 @@ const PlanGroupsPage = () => {
         to,
         title: label,
         closesAt: closesAt.toISOString(),
-        message: `Next week's group sessions are up. Tick the ones you're in for and pay once.${withLink ? " {link}" : ""}`,
+        message: `Next week's sessions are up. Tick the ones you're in for and pay once.${withLink ? " {link}" : ""}`,
         linkBase: `${window.location.origin}/offers/`,
       };
       const chosenIds = chosen.map((c) => c.conversationId);

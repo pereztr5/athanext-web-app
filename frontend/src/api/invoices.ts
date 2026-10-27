@@ -124,4 +124,9 @@ export const invoicesAPI = {
 
   checkoutUrl: async (invoiceId: string) => (await call({ action: "checkout", invoice_id: invoiceId })).url as string,
   verify: async (invoiceId: string) => (await call({ action: "verify", invoice_id: invoiceId })).status as string,
+
+  /** Family will pay offline; coach still marks the invoice paid. */
+  requestOffline: async (invoiceId: string) => {
+    await call({ action: "request_offline", invoice_id: invoiceId });
+  },
 };

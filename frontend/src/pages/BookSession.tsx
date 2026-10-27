@@ -92,6 +92,7 @@ const BookSessionPage = () => {
   const myCoaches = useMemo(() => myCoachesQuery.data ?? [], [myCoachesQuery.data]);
 
   const linkedCoachId = searchParams.get("coach");
+  const linkedSessionId = searchParams.get("session");
   const [mode, setMode] = useState<Mode | null>(null);
   const [coachId, setCoachId] = useState<string | null>(linkedCoachId);
   const [pillar, setPillar] = useState<string | null>(searchParams.get("pillar"));
@@ -105,6 +106,7 @@ const BookSessionPage = () => {
   const [reviewOpen, setReviewOpen] = useState(false);
   const [requestCoach, setRequestCoach] = useState<BookingCoach | null>(null);
   const [packagesCoach, setPackagesCoach] = useState<BookingCoach | null>(null);
+  const [sharedSessionDone, setSharedSessionDone] = useState(false);
   const fees = useBookingFees(athleteId);
 
   useEffect(() => {
@@ -121,6 +123,33 @@ const BookSessionPage = () => {
     queryFn: () => bookAPI.sessions(selectedCoachId!, todayISO, todayISO).then((r) => r.coach),
   });
   const selectedCoach = myCoaches.find((c) => c.id === selectedCoachId) ?? linkedCoachQuery.data ?? null;
+
+  // Shared link: pre-select that session and open review once the coach row is ready.
+  useEffect(() => {
+    if (!linkedSessionId || sharedSessionDone || !selectedCoach) return;
+    let cancelled = false;
+    void (async () => {
+      try {
+        const session = await bookAPI.sessionForBooking(linkedSessionId);
+        if (cancelled || !session || session.coachId !== selectedCoach.id) {
+          setSharedSessionDone(true);
+          return;
+        }
+        setMode("coach");
+        setCoachId(selectedCoach.id);
+        setPickedCoaches((cur) => ({ ...cur, [selectedCoach.id]: selectedCoach }));
+        setPicked([session]);
+        setReviewOpen(true);
+      } catch {
+        // Session gone or not bookable; leave the normal book page.
+      } finally {
+        if (!cancelled) setSharedSessionDone(true);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [linkedSessionId, sharedSessionDone, selectedCoach]);
 
   const usesPosition = Boolean(pillar) && !NO_POSITION_PILLARS.includes(pillar!);
   const pillarQuery = useQuery({

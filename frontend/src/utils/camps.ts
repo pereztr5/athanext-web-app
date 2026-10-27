@@ -4,6 +4,7 @@
  * the form copy matches the camp-signup edge function (backend/.../_shared/camp_signup.ts).
  */
 import type { CampGroupInput, CampInputPayload, CampOverlaps, CoachCamp, CampCoachRef } from "@/api/camps";
+import { isValidE164 } from "@/utils/phone";
 import { campZoneLabel } from "@/utils/viewerTime";
 
 // ---------------------------------------------------------------------------
@@ -217,8 +218,6 @@ export const emptyCampForm = (groupId = ""): CampForm => ({
 });
 
 const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const PHONE = /^[0-9+()\-. ]{7,30}$/;
-
 /** Birth years the form takes: 2 to 80 years old this year (same as the server). */
 export const birthYearRange = (now = new Date()) => ({ min: now.getUTCFullYear() - 80, max: now.getUTCFullYear() - 2 });
 
@@ -237,7 +236,7 @@ export const validateCampForm = (
   const email = form.parent.email.trim();
   if (!email || email.length > 254 || !EMAIL.test(email)) errors["parent.email"] = "Add an email we can send the receipt to";
   const phone = form.parent.phone.trim();
-  if (phone && !PHONE.test(phone)) errors["parent.phone"] = "Add a phone number, like 555 123 4567";
+  if (phone && !isValidE164(phone)) errors["parent.phone"] = "Add a phone number with the country code";
   const { min, max } = birthYearRange(now);
   const seen = new Set<string>();
   form.athletes.slice(0, CAMP_MAX_ATHLETES).forEach((a, i) => {

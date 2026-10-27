@@ -70,7 +70,7 @@ export const OfferEditSheet = ({
   const [closed, setClosed] = useState(offer.closed);
   const [cur, setCur] = useState<string | null>(null);
   const [form, setForm] = useState<Det | null>(null);
-  const usual = useMemo(() => (open ? loadSavedUsual(coachId).filter((u) => !u.isOneOnOne) : []), [open, coachId]);
+  const usual = useMemo(() => (open ? loadSavedUsual(coachId) : []), [open, coachId]);
 
   useEffect(() => {
     if (!open) return;
@@ -330,7 +330,7 @@ export const OfferEditSheet = ({
                         start,
                         durationMinutes: u.durationMinutes,
                         where: u.place,
-                        capacity: Math.max(2, u.capacity),
+                        capacity: u.isOneOnOne ? 1 : Math.max(2, u.capacity),
                         price: u.price,
                         pillar: u.pillar,
                       };
@@ -412,7 +412,7 @@ export const OfferEditSheet = ({
                       <button
                         type="button"
                         className={iconButton}
-                        disabled={form.capacity <= Math.max(2, cur.startsWith("new") ? 0 : live.find((s) => s.id === cur)?.bookedCount ?? 0)}
+                        disabled={form.capacity <= Math.max(1, cur.startsWith("new") ? 0 : live.find((s) => s.id === cur)?.bookedCount ?? 0)}
                         onClick={() => setForm({ ...form, capacity: form.capacity - 1 })}
                         aria-label="Fewer spots"
                       >

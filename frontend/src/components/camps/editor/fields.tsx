@@ -401,7 +401,14 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
     <div className={fieldBox}>
       <span className={label}>Cover photo</span>
       <div className="relative h-[150px] overflow-hidden rounded-control bg-dark">
-        {shown ? <img src={shown} alt="" className="size-full object-cover" style={{ objectPosition: "50% 22%" }} /> : null}
+        {shown ? (
+          <img
+            src={shown}
+            alt=""
+            className="size-full object-cover"
+            style={draft.coverUrl ? undefined : { objectPosition: "50% 22%" }}
+          />
+        ) : null}
         <div className="absolute bottom-3 right-3 flex gap-2">
           {draft.coverUrl ? (
             <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => patch({ coverUrl: null })}>
