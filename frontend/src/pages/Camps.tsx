@@ -10,6 +10,7 @@ import { campsAPI } from "@/api/camps";
 import { CampEditorList } from "@/components/camps/CampEditorList";
 import { CampUrlDialogs } from "@/components/camps/CampUrlDialogs";
 import { useCampDialogs } from "@/components/camps/useCampDialogs";
+import { useSeeNewCampSignups } from "@/components/camps/useNewCampSignups";
 import { PageHeader } from "@/components/ui/page-header";
 import { card, label, meta } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
@@ -27,6 +28,8 @@ const CampsPage = () => {
   const viewingOther = Boolean(isAdmin && adminCoachId && adminCoachId !== ownCoachId);
   const { coach } = useCoachDetails(viewingCoachId ?? undefined);
   const campDialogs = useCampDialogs();
+  // Own camps only: keeps "2 new" on each camp for this visit, then clears the nav count and bell.
+  const newSignups = useSeeNewCampSignups(ready && isCoach && Boolean(ownCoachId) && !viewingOther);
   const coaches = useQuery({
     queryKey: ["camps-admin-coach-picker"],
     enabled: ready && isAdmin,
@@ -88,6 +91,7 @@ const CampsPage = () => {
               onRegistrations={campDialogs.openRegistrations}
               coachId={viewingOther ? adminCoachId : undefined}
               enabled={Boolean(viewingCoachId)}
+              newSignups={viewingOther ? undefined : newSignups.camps}
             />
           )}
         </section>

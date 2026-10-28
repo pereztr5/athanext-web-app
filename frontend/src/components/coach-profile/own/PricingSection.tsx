@@ -12,6 +12,7 @@ import { packageKind } from "@/components/camps/format";
 import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
 import { card, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
+import { ownCampPath } from "@/utils/camps";
 import { caption, money, sectionTitle, sp2Card } from "./shared";
 
 export const PricingSection = ({
@@ -21,6 +22,7 @@ export const PricingSection = ({
   mostBookedId,
   cancellation,
   onEdit,
+  coachSlug,
 }: {
   coachId: string;
   packages: CoachPackage[];
@@ -29,6 +31,8 @@ export const PricingSection = ({
   mostBookedId: string | null;
   cancellation: string;
   onEdit: () => void;
+  /** Each camp opens its page, the same one a camp opens on Camps. */
+  coachSlug?: string | null;
 }) => {
   const [all, setAll] = useState(false);
   const sorted = packages.filter((p) => p.is_active && packageKind(p) !== "camp").sort((a, b) => a.total_price - b.total_price);
@@ -73,7 +77,7 @@ export const PricingSection = ({
         </div>
       ) : null}
 
-      <CampCards coachId={coachId} />
+      <CampCards coachId={coachId} openTo={(camp) => ownCampPath(coachSlug, camp.slug)} />
 
       <CoachAcademyPackages coachId={coachId} canBuy={false} />
 

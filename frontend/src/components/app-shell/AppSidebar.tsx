@@ -18,6 +18,8 @@ import { useCoachReferrals } from "@/hooks/useReferrals";
 import { isAwaitingCoachApproval } from "@/utils/referralHelpers";
 import { ADMIN_CAMPS_NAV, ATHLETE_NAV, COACH_NAV, ORG_NAV, PROFILE_NAV, isNavActive, type NavItem } from "./nav";
 import { useOverdueInvoices } from "@/hooks/useOverdueInvoices";
+import { useNewCampSignups } from "@/components/camps/useNewCampSignups";
+import { newSignupsBadge } from "@/utils/campSignupAlerts";
 import { cn } from "@/lib/utils";
 
 // Design system NavItem: 34px in every state with 10px padding, so clicking never shifts the list.
@@ -39,14 +41,17 @@ export const AppSidebar = () => {
   const requests = useQuery({ queryKey: ["booking-requests"], queryFn: () => bookingRequestsAPI.listForCoach(), enabled: isCoach, staleTime: 60_000 });
   const referrals = useCoachReferrals(isCoach ? userProfile?.coach_id ?? undefined : undefined);
   const approvals = (referrals.data ?? []).filter(isAwaitingCoachApproval).length;
+  const newCampSignups = useNewCampSignups(isCoach).total;
   const badgeFor = (url: string) =>
     url === ROUTES.SCHEDULE && requests.data?.length
       ? String(requests.data.length)
       : url === ROUTES.ATHLETES && approvals
         ? `${approvals} new`
-        : url === ROUTES.PAYMENTS && isCoach && overdue
-          ? `${overdue} overdue`
-          : null;
+        : url === ROUTES.CAMPS && isCoach && newCampSignups
+          ? newSignupsBadge(newCampSignups)
+          : url === ROUTES.PAYMENTS && isCoach && overdue
+            ? `${overdue} overdue`
+            : null;
   const publicPages = isCoach ? [PROFILE_NAV, ...(myOrg ? [ORG_NAV] : [])] : [];
   const items = (isCoach ? COACH_NAV : userProfile?.is_admin ? [...ATHLETE_NAV, ADMIN_CAMPS_NAV] : ATHLETE_NAV) as NavItem[];
 

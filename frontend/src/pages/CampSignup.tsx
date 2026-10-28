@@ -358,11 +358,11 @@ const OwnerBar = ({ camp, own }: { camp: CampPage; own: boolean }) => (
       </span>
     </div>
     <div className="flex flex-wrap gap-2">
-      <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
-        Registrations
-      </Link>
       <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=edit`} className={cn(primaryButton, smallButton)}>
         Edit camp
+      </Link>
+      <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
+        Registrations
       </Link>
     </div>
   </div>

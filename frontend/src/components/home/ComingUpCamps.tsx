@@ -1,28 +1,38 @@
 /**
  * Coach Home "Coming up" camps: every published camp that hasn't ended, soonest first, with
  * sign-ups, money still to collect, and links to Registrations and its next day on the schedule.
+ * New sign-ups since the coach last opened Camps show as "2 new sign-ups".
  * Always shows a Camps entry so coaches can reach /camps from Home (phone has no Camps tab).
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { ChevronRight } from "@/components/icons";
 import { campsAPI } from "@/api/camps";
+import { BrandPill } from "@/components/brand";
+import { CampCardLink, campCardActions } from "@/components/camps/CampCardLink";
+import { useNewCampSignups } from "@/components/camps/useNewCampSignups";
 import { card, label, meta, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { formatCampDates } from "@/utils/camps";
+import { formatCampDates, ownCampPath } from "@/utils/camps";
+import { newSignupsLabel } from "@/utils/campSignupAlerts";
 import { comingUpCamps } from "@/utils/coachHomeCamps";
 
 export const ComingUpCamps = () => {
   // Same key as the camp list on My profile, so camp edits and registration changes refresh it.
   const camps = useQuery({ queryKey: ["coach-camp-list"], queryFn: () => campsAPI.list(), retry: false });
   const list = camps.data ? comingUpCamps(camps.data) : [];
+  const fresh = useNewCampSignups();
+  const freshLine = newSignupsLabel(fresh.total);
 
   return (
     <section className={card} aria-label="Coming up camps">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex flex-col gap-1">
-          <span className={label}>Camps</span>
+          <span className="flex flex-wrap items-center gap-2">
+            <span className={label}>Camps</span>
+            {freshLine ? <BrandPill tone="blue">{freshLine}</BrandPill> : null}
+          </span>
           <h2 className="text-card-title text-dark">
             {camps.isLoading
               ? "Coming up"
@@ -49,16 +59,25 @@ export const ComingUpCamps = () => {
       {list.length ? (
         <div className="flex flex-col">
           {list.map(({ camp, nextDay, signUps, toCollect }) => (
-            <div key={camp.id} className="flex flex-wrap items-center justify-between gap-3 border-t border-light-525 py-3 last:pb-0">
+            <div key={camp.id} className="relative flex flex-wrap items-center justify-between gap-3 border-t border-light-525 py-3 last:pb-0">
               <div className="flex min-w-0 flex-col gap-1">
-                <span className="break-words text-subtitle text-dark">{camp.name}</span>
+                <span className="flex flex-wrap items-center gap-2">
+                  <CampCardLink
+                    to={ownCampPath(camp.coach_slug, camp.slug)}
+                    label={`Open ${camp.name}`}
+                    className="break-words text-subtitle text-dark hover:text-primary"
+                  >
+                    {camp.name}
+                  </CampCardLink>
+                  {newSignupsLabel(fresh.camps[camp.id]) ? <BrandPill tone="blue">{newSignupsLabel(fresh.camps[camp.id])}</BrandPill> : null}
+                </span>
                 <span className={meta}>{formatCampDates(camp.starts_on, camp.ends_on)}</span>
                 <span className={meta}>
                   {signUps}
                   {toCollect ? <b className="font-medium text-dark"> · {toCollect}</b> : null}
                 </span>
               </div>
-              <div className="flex flex-wrap items-center gap-x-3 gap-y-2">
+              <div className={cn("flex flex-wrap items-center gap-x-3 gap-y-2", campCardActions)}>
                 <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
                   Registrations
                 </Link>

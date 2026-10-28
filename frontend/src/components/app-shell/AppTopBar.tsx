@@ -17,6 +17,7 @@ import { AthaNextLogo } from "@/assets";
 import { ROUTES } from "@/routes";
 import { chatAPI } from "@/api/chat";
 import { notificationsAPI, type AppNotification } from "@/api/notifications";
+import { NEW_CAMP_SIGNUPS_KEY } from "@/components/camps/useNewCampSignups";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { formatDateInZone, lowerPeriod } from "@/utils/viewerTime";
 
@@ -145,7 +146,10 @@ export const AppTopBar = () => {
                     void notificationsAPI
                       .markSeen()
                       .catch(() => undefined)
-                      .then(() => queryClient.invalidateQueries({ queryKey: ["notifications"] }));
+                      .then(() => {
+                        void queryClient.invalidateQueries({ queryKey: NEW_CAMP_SIGNUPS_KEY });
+                        return queryClient.invalidateQueries({ queryKey: ["notifications"] });
+                      });
                   }}
                 >
                   Mark all read

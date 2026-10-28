@@ -1,6 +1,7 @@
 import { supabase } from "@/integrations/supabase/client";
 import { campWaiverFileError } from "@/utils/camps";
 import type { CampRegistrationMoneyRow } from "@/utils/campSessions";
+import { parseNewCampSignups, type NewCampSignups } from "@/utils/campSignupAlerts";
 
 /**
  * Camps for coaches (editor, publish, registrations) and the family portal.
@@ -271,6 +272,16 @@ export const campsAPI = {
     coachId
       ? call<CoachCamp[]>("admin_list_camps", { p_coach_id: coachId }, "Could not load that coach's camps.")
       : call<CoachCamp[]>("get_coach_camps", undefined, "Could not load your camps."),
+
+  /**
+   * Sign-ups (held or paid by card) since the coach last opened Camps or read the bell,
+   * in total and per camp id. Zero for anyone who isn't a coach.
+   */
+  newSignups: async (): Promise<NewCampSignups> =>
+    parseNewCampSignups(await call<unknown>("get_my_new_camp_signups", undefined, "Could not load new sign-ups.")),
+
+  /** Opening Camps marks camp sign-ups read (bell items and the "new" counts). */
+  markSignupsSeen: () => call<null>("mark_camp_signups_seen", undefined, "Could not update."),
 
   /** Admin /camps picker: every coach with a camp, public profile or not. */
   adminCoaches: () =>

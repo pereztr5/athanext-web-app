@@ -5,6 +5,7 @@ import { Calendar, Clock, MapPin, Users } from "@/components/icons";
 import { secondaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { CampBubbles } from "./CampBubbles";
+import { CampCardLink, campCardActions, campCardHover } from "./CampCardLink";
 import { formatCampDates } from "@/utils/camps";
 import { campEnded, campMoney, formatAges, formatDailyTime, spotsLabel, todayUtc } from "./format";
 import { useCamps } from "./useCamps";
@@ -28,6 +29,7 @@ const CampCard = ({
   paysDirect,
   onAsk,
   onRegister,
+  openTo,
 }: {
   camp: Camp;
   interactive: boolean;
@@ -35,6 +37,8 @@ const CampCard = ({
   paysDirect: boolean;
   onAsk?: () => void;
   onRegister?: (camp: Camp) => Promise<CampRegisterResult>;
+  /** The camp page: the whole card opens it (the coach's own profile). */
+  openTo?: string | null;
 }) => {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -60,12 +64,23 @@ const CampCard = ({
   const label = ended ? "Ended" : full ? "Full" : paysDirect ? `Ask ${first}` : busy ? "Opening…" : "Register";
 
   return (
-    <article className="flex min-w-0 flex-col gap-3 rounded-card border border-light-525 bg-light px-[14px] pb-[14px] pt-4">
+    <article
+      className={cn(
+        "flex min-w-0 flex-col gap-3 rounded-card border border-light-525 bg-light px-[14px] pb-[14px] pt-4",
+        openTo && cn("relative", campCardHover),
+      )}
+    >
       <BrandPill tone="teal" className="self-start">
         Camp
       </BrandPill>
       <div className="flex items-start justify-between gap-3">
-        <span className={medium}>{camp.name}</span>
+        {openTo ? (
+          <CampCardLink to={openTo} label={`Open ${camp.name}`} radius="after:rounded-card" className={medium}>
+            {camp.name}
+          </CampCardLink>
+        ) : (
+          <span className={medium}>{camp.name}</span>
+        )}
         <span className="text-highlight tabular-nums text-dark">{campMoney(camp.totalPriceCents / 100)}</span>
       </div>
       {dates || time || camp.location || ages ? (
@@ -79,7 +94,7 @@ const CampCard = ({
       {camp.description ? <p className="line-clamp-3 text-paragraph-sm text-dark-300">{camp.description}</p> : null}
       <CampBubbles coaches={camp.coCoaches} extra={extra} />
       {interactive ? (
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-3">
+        <div className={cn("mt-auto flex flex-wrap items-center justify-between gap-3", openTo && campCardActions)}>
           <span className={caption}>{spots ?? ""}</span>
           <button
             type="button"
@@ -106,7 +121,7 @@ const CampCard = ({
   );
 };
 
-/** Family and own-preview camp cards. The editor has its own list. */
+/** Family and own-profile camp cards. The Camps page has its own list (CampEditorList). */
 export const CampCards = ({
   coachId,
   interactive = false,
@@ -114,6 +129,7 @@ export const CampCards = ({
   paysDirect = false,
   onAsk,
   onRegister,
+  openTo,
 }: {
   coachId: string;
   interactive?: boolean;
@@ -121,6 +137,8 @@ export const CampCards = ({
   paysDirect?: boolean;
   onAsk?: () => void;
   onRegister?: (camp: Camp) => Promise<CampRegisterResult>;
+  /** The coach's own views: each card opens its camp page, as on Camps. */
+  openTo?: (camp: Camp) => string | null;
 }) => {
   const camps = useCamps(coachId);
   if (camps.isLoading) return null;
@@ -147,6 +165,7 @@ export const CampCards = ({
             paysDirect={paysDirect}
             onAsk={onAsk}
             onRegister={onRegister}
+            openTo={openTo?.(camp) ?? null}
           />
         ))}
       </div>

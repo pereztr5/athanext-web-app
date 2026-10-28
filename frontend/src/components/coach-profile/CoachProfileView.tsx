@@ -16,7 +16,7 @@ import { useToast } from "@/hooks/use-toast";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import type { Brand } from "@/utils/brands";
 import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
-import { campPagePathFor } from "@/utils/camps";
+import { campPagePathFor, ownCampPath } from "@/utils/camps";
 import { detectCoachSport } from "@/utils/coachSport";
 import { CoachIntroCallCard } from "@/components/intro-calls";
 import { WhoCard } from "./family/WhoCard";
@@ -192,6 +192,12 @@ export function CoachProfileView({
 
   const registerCamp = async (camp: Camp): Promise<CampRegisterResult> => {
     if (isOwn) {
+      // Same camp page as on Camps, with the coach's Edit camp / Registrations bar.
+      const own = ownCampPath(coach.slug, camp.slug);
+      if (own) {
+        navigate(own);
+        return { redirect: true, message: null };
+      }
       toast({ title: "This is your own profile", description: "Families register for your camps here." });
       return { redirect: false, message: null };
     }
@@ -275,6 +281,7 @@ export function CoachProfileView({
           onBuy={buy}
           onAsk={onMessage}
           onRegister={registerCamp}
+          openCamp={isOwn ? (camp) => ownCampPath(coach.slug, camp.slug) : undefined}
           mostBookedId={extras?.mostBookedPackageId}
         />
 

@@ -1,12 +1,12 @@
 /**
  * Notifications bell (ATH-98): built on the server from messages, requests, feedback,
- * reviews, open invoices and upcoming sessions. Each item links to the screen it refers to.
+ * reviews, open invoices, camp sign-ups and upcoming sessions. Each item links to the screen it refers to.
  */
 import { supabase } from "@/integrations/supabase/client";
 
 type Row = Record<string, any>;
 
-export type NotificationKind = "message" | "request" | "feedback_due" | "review" | "accepted" | "feedback" | "upcoming" | "invoice";
+export type NotificationKind = "message" | "request" | "feedback_due" | "review" | "accepted" | "feedback" | "upcoming" | "invoice" | "camp";
 
 export interface AppNotification {
   id: string;

@@ -18,8 +18,11 @@ export const iconButton =
 export const card =
   "flex flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]";
 
-/** Text panel: long text someone wrote (bio, organization about, coach feedback). Outline only, no fill. */
-export const textPanel = "min-w-0 rounded-control border border-light-550 px-4 py-3.5 md:px-5 md:py-4";
+/**
+ * Text panel: long text someone wrote (bio, organization about, coach feedback). A soft light-400
+ * fill with no border, so it reads as quoted content and never like an input box.
+ */
+export const textPanel = "min-w-0 rounded-control bg-light-400 px-4 py-3.5 md:px-5 md:py-4";
 
 /** Page title: t-page-title, t-page-title-phone on phone. */
 export const pageTitle = "text-page-title-phone text-dark md:text-page-title";

@@ -38,6 +38,7 @@ export const PricingCard = ({
   onBuy,
   onAsk,
   onRegister,
+  openCamp,
   mostBookedId,
 }: {
   coachId: string;
@@ -52,6 +53,8 @@ export const PricingCard = ({
   onBuy: (pkg: CoachPackage) => void;
   onAsk?: () => void;
   onRegister: (camp: Camp) => Promise<CampRegisterResult>;
+  /** The coach looking at his own public profile: a camp card opens its page, as on Camps. */
+  openCamp?: (camp: Camp) => string | null;
 }) => {
   const [allSessions, setAllSessions] = useState(false);
   const camps = useCamps(coachId);
@@ -104,7 +107,15 @@ export const PricingCard = ({
         </div>
       ) : null}
 
-      <CampCards coachId={coachId} interactive first={first} paysDirect={paysDirect} onAsk={onAsk} onRegister={onRegister} />
+      <CampCards
+        coachId={coachId}
+        interactive
+        first={first}
+        paysDirect={paysDirect}
+        onAsk={onAsk}
+        onRegister={onRegister}
+        openTo={openCamp}
+      />
 
       <CoachAcademyPackages coachId={coachId} canBuy={!paysDirect} />
 

@@ -247,6 +247,7 @@ export const OwnProfilePreview = ({
         mostBookedId={extras?.mostBookedPackageId ?? null}
         cancellation={cancellation}
         onEdit={onStartEdit}
+        coachSlug={coach.slug}
       />
 
       <OwnReviews coachId={coach.id} averageRating={averageRating} totalReviews={totalReviews} showRating={showRating} fallback={reviews} />

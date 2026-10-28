@@ -33,6 +33,16 @@ export const campPagePathFor = (
   return campPath(coach, slug);
 };
 
+/**
+ * The coach's own camp cards (My profile, own public profile): the camp page, drafts included,
+ * where the coach gets the Edit camp / Registrations bar. Same page a camp opens on Camps.
+ */
+export const ownCampPath = (coachSlug: string | null | undefined, campSlug: string | null | undefined): string | null => {
+  const coach = coachSlug?.trim();
+  const slug = campSlug?.trim();
+  return coach && slug ? campPath(coach, slug) : null;
+};
+
 /** The coach's share link. src=link tells the coach the family came from his link. */
 export const campShareUrl = (origin: string, coachSlug: string, campSlug: string) =>
   `${origin}${campPath(coachSlug, campSlug)}?src=link`;

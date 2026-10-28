@@ -1,6 +1,7 @@
 /**
- * Camps row on My profile's "Sessions, packages and camps" card: each camp with its status,
- * spots, Edit, Registrations and the share link, then Add camp. Camps never touch credits.
+ * The coach's camps on Camps: each camp with its status, spots, Edit, Registrations and the
+ * share link, then Add camp. Clicking anywhere on a camp opens its page (with the coach's Edit
+ * bar); a camp with no link yet opens the editor. Camps never touch credits.
  */
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
@@ -10,6 +11,8 @@ import { BrandPill } from "@/components/brand";
 import { label, meta, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
+import { newSignupsBadge } from "@/utils/campSignupAlerts";
+import { CampCardLink, campCardActions, campCardHover } from "./CampCardLink";
 import { campPath, campShareUrl, formatCampDates, formatCampMoney, localIsoDay, plural } from "@/utils/camps";
 
 const useCoachCampList = (enabled = true, coachId?: string | null) =>
@@ -31,6 +34,7 @@ export const CampEditorList = ({
   onRegistrations,
   coachId,
   enabled = true,
+  newSignups = {},
 }: {
   /** The coach's photo: a camp without a cover shows it, like the camp page does. */
   coverFallback: string | null;
@@ -40,6 +44,8 @@ export const CampEditorList = ({
   /** Admin editing another coach: list that coach's camps. */
   coachId?: string | null;
   enabled?: boolean;
+  /** "2 new" on a camp: sign-ups since the coach last opened Camps, by camp id. */
+  newSignups?: Record<string, number>;
 }) => {
   const { toast } = useToast();
   const camps = useCoachCampList(enabled, coachId);
@@ -88,7 +94,10 @@ export const CampEditorList = ({
           .filter(Boolean)
           .join(" · ");
         return (
-          <div key={camp.id} className="flex items-start gap-3 rounded-control bg-light-400 p-3 sm:items-stretch">
+          <div
+            key={camp.id}
+            className={cn("relative flex items-start gap-3 rounded-control border border-transparent bg-light-400 p-3 sm:items-stretch", campCardHover)}
+          >
             <div className="h-[72px] w-[88px] flex-none overflow-hidden rounded-control bg-dark sm:h-[96px] sm:w-[120px]">
               {cover ? (
                 <img
@@ -101,10 +110,18 @@ export const CampEditorList = ({
             </div>
             <div className="flex min-w-0 flex-1 flex-col gap-1.5">
               <div className="flex items-start justify-between gap-2">
-                <span className="min-w-0 break-words text-label-sm text-dark">{camp.name}</span>
-                <BrandPill tone={status.tone} className="flex-none">
-                  {status.text}
-                </BrandPill>
+                <CampCardLink
+                  to={familyHref}
+                  onOpen={() => onEdit(camp.id)}
+                  label={`Open ${camp.name}`}
+                  className="min-w-0 break-words text-label-sm text-dark"
+                >
+                  {camp.name}
+                </CampCardLink>
+                <span className="flex flex-none flex-wrap items-center justify-end gap-1.5">
+                  {newSignups[camp.id] ? <BrandPill tone="blue">{newSignupsBadge(newSignups[camp.id])}</BrandPill> : null}
+                  <BrandPill tone={status.tone}>{status.text}</BrandPill>
+                </span>
               </div>
               <span className="text-caption text-dark-300">
                 {[formatCampDates(camp.starts_on, camp.ends_on) ?? "Dates not set", formatCampMoney(camp.price_cents)].join(" · ")}
@@ -113,7 +130,7 @@ export const CampEditorList = ({
                 {registeredLine}
                 {camp.groups.length > 1 ? ` · ${plural(camp.groups.length, "group")}` : ""}
               </span>
-              <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
+              <div className={cn("mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 self-start pt-1", campCardActions)}>
                 {familyHref ? (
                   <Link to={familyHref} className={cn(secondaryButton, smallButton)}>
                     <Eye strokeWidth={1.5} aria-hidden="true" />
