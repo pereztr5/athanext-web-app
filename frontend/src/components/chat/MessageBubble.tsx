@@ -1,6 +1,8 @@
+import { Link } from "react-router-dom";
 import { CheckCheck } from "@/components/icons";
 
 import { cn } from "@/lib/utils";
+import { splitMessageLinks } from "@/utils/messageLinks";
 
 type MessageBubbleProps = {
   text: string;
@@ -24,6 +26,27 @@ const ThreadAvatar = ({ initials, avatarUrl }: { initials: string; avatarUrl?: s
       </span>
     )}
   </div>
+);
+
+const linkClass = "underline underline-offset-2 text-primary hover:text-primary-700 break-all";
+
+/** Message text with web addresses as links; AthaNext links stay in the app. */
+const MessageText = ({ text }: { text: string }) => (
+  <>
+    {splitMessageLinks(text, window.location.origin).map((part, i) =>
+      part.kind === "text" ? (
+        part.text
+      ) : part.appPath ? (
+        <Link key={i} to={part.appPath} className={linkClass}>
+          {part.text}
+        </Link>
+      ) : (
+        <a key={i} href={part.href} target="_blank" rel="noopener noreferrer" className={linkClass}>
+          {part.text}
+        </a>
+      ),
+    )}
+  </>
 );
 
 const MessageBubble = ({
@@ -54,7 +77,7 @@ const MessageBubble = ({
                 isUser ? "bg-primary-100" : "bg-light"
               )}
             >
-              {text}
+              <MessageText text={text} />
             </div>
           </div>
           {!isUser ? (
@@ -79,7 +102,7 @@ const MessageBubble = ({
             : "border border-light-525 bg-light-300 text-dark"
         )}
       >
-        {text}
+        <MessageText text={text} />
       </div>
       <span
         className={cn(

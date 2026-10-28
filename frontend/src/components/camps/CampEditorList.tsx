@@ -3,6 +3,7 @@
  * spots, Edit, Registrations and the share link, then Add camp. Camps never touch credits.
  */
 import { useQuery } from "@tanstack/react-query";
+import { Link } from "react-router-dom";
 import { Eye, Link as LinkIcon, Plus } from "@/components/icons";
 import { campsAPI, type CoachCamp } from "@/api/camps";
 import { BrandPill } from "@/components/brand";
@@ -77,8 +78,8 @@ export const CampEditorList = ({
         const cover = camp.cover_url ?? coverFallback;
         const isUploadedCover = Boolean(camp.cover_url);
         const shareable = camp.published && camp.coach_slug && camp.slug && status.text !== "Ended";
-        const familyHref =
-          camp.coach_slug && camp.slug ? `${campPath(camp.coach_slug, camp.slug)}${camp.published ? "?src=link" : ""}` : null;
+        // Same tab: the camp page shows the coach an Edit bar on top (drafts too).
+        const familyHref = camp.coach_slug && camp.slug ? campPath(camp.coach_slug, camp.slug) : null;
         const registeredLine = [
           `${camp.taken} registered`,
           spots ? `of ${spots} spots` : null,
@@ -114,15 +115,10 @@ export const CampEditorList = ({
               </span>
               <div className="mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
                 {familyHref ? (
-                  <a
-                    href={familyHref}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={cn(secondaryButton, smallButton)}
-                  >
+                  <Link to={familyHref} className={cn(secondaryButton, smallButton)}>
                     <Eye strokeWidth={1.5} aria-hidden="true" />
                     View as family
-                  </a>
+                  </Link>
                 ) : null}
                 <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => onEdit(camp.id)}>
                   Edit

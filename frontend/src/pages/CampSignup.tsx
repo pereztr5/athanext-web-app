@@ -15,7 +15,7 @@ import { CampYoureIn } from "@/components/camps/CampYoureIn";
 import { writeCampFinish } from "@/components/camps/campFinish";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
-import { input, label as labelClass, primaryButton, textButton } from "@/components/schedule/styles";
+import { input, label as labelClass, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -151,8 +151,10 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
   const prefill = useFamilyPrefill();
   const footerClass = useFooterClass();
 
+  const { user } = useAuth();
   const page = useQuery({
-    queryKey: ["camp-page", coachSlug, campSlug],
+    // The viewer matters: the camp's coach also sees drafts and the Edit bar.
+    queryKey: ["camp-page", coachSlug, campSlug, user?.id ?? null],
     queryFn: () => campSignupAPI.page(coachSlug, campSlug),
     retry: false,
   });
@@ -318,10 +320,13 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
 
   return (
     <div className={shell}>
+      {camp.can_edit ? <OwnerBar camp={camp} /> : null}
       {submitError ? <Notice>{submitError}</Notice> : null}
       <CampFamilyView view={view} groupId={groupId} onGroup={(id) => setGroupId(id)} />
       <div className={footerClass}>
-        {!camp.open ? (
+        {camp.published === false ? (
+          <p className="text-center text-caption text-dark-300">This is a draft. Publish it to let families sign up.</p>
+        ) : !camp.open ? (
           <p className="text-center text-caption text-dark-300">Sign-ups for this camp are closed.</p>
         ) : allFull ? (
           <p className="text-center text-caption text-dark-300">Every group is fully booked.</p>
@@ -332,7 +337,7 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
             {group.name} · {formatCampMoney(camp.price_cents)} per athlete
           </p>
         )}
-        <button type="button" className={cn(primaryButton, "h-11 w-full")} disabled={!camp.open || !group || group.full} onClick={startDetails}>
+        <button type="button" className={cn(primaryButton, "h-11 w-full")} disabled={camp.published === false || !camp.open || !group || group.full} onClick={startDetails}>
           Sign up
         </button>
         <span className="text-center text-caption text-dark-300">No account needed. With {coachFirst}.</span>
@@ -340,6 +345,24 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
     </div>
   );
 };
+
+/** The camp's coach (or an admin) sees the page as families do, with Edit and Registrations on top. */
+const OwnerBar = ({ camp }: { camp: CampPage }) => (
+  <div className="flex flex-col gap-3 rounded-control border border-primary-300 bg-primary-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
+    <div className="flex min-w-0 flex-col gap-0.5">
+      <b className="text-label-sm text-dark">This is how families see your camp</b>
+      <span className="text-caption text-dark-300">{camp.published === false ? "Draft: only you can see it." : "Only you see this bar."}</span>
+    </div>
+    <div className="flex flex-wrap gap-2">
+      <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
+        Registrations
+      </Link>
+      <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=edit`} className={cn(primaryButton, smallButton)}>
+        Edit camp
+      </Link>
+    </div>
+  </div>
+);
 
 const Notice = ({ children }: { children: ReactNode }) => (
   <p role="alert" className="flex items-start gap-2 rounded-control border border-info-300 bg-info-50 px-3 py-2.5 text-body-m text-info-800">
@@ -689,7 +712,7 @@ const Review = ({
         )}
         {directOffered ? (
           <button type="button" className={cn(textButton, "min-h-[44px] self-start", !direct && "text-dark-300 hover:text-dark")} onClick={() => setPay(direct ? "card" : "direct")}>
-            {direct ? "Pay by card instead" : "Paying in cash?"}
+            {direct ? "Pay by card instead" : "Paying offline?"}
           </button>
         ) : null}
         <p className="text-body-m text-dark-300">

@@ -104,6 +104,23 @@ export const invoicesAPI = {
     if (error) throw error;
   },
 
+  /** The family's invoices (Home): open ones first. */
+  async myInvoices(): Promise<FamilyInvoice[]> {
+    const { data, error } = await supabase.rpc("get_my_invoices" as never);
+    if (error) throw error;
+    return ((data as unknown as Row[]) ?? []).map((i) => ({
+      id: i.id,
+      coach: i.coach,
+      athlete: i.athlete,
+      service: i.service,
+      amount: Number(i.amount),
+      due: i.due,
+      note: null,
+      status: i.status,
+      paidAt: i.paid_at ?? null,
+    }));
+  },
+
   async familyInvoice(invoiceId: string): Promise<FamilyInvoice | null> {
     const { data, error } = await supabase.rpc("get_family_invoice", { p_invoice_id: invoiceId });
     if (error) throw error;

@@ -49,7 +49,8 @@ export type CampFieldErrors = Record<string, string>;
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
-const PHONE_RE = /^[0-9+()\-. ]{7,30}$/;
+// Same as the form's country-code field (frontend utils/phone.ts isValidE164).
+const PHONE_RE = /^\+[1-9]\d{7,14}$/;
 
 export const isUuid = (value: unknown): value is string => typeof value === "string" && UUID_RE.test(value);
 
@@ -89,7 +90,7 @@ export const validateCampSignup = (
     errors["parent.email"] = "Add an email we can send the receipt to";
   }
   const phone = str(parent.phone);
-  if (phone && !PHONE_RE.test(phone)) errors["parent.phone"] = "Add a phone number, like 555 123 4567";
+  if (phone && !PHONE_RE.test(phone)) errors["parent.phone"] = "Add a phone number with the country code";
 
   const note = str(b.note);
   if (note.length > 500) errors.note = "Keep the note under 500 characters";

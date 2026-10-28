@@ -157,7 +157,7 @@ export const CampYoureIn = ({ signupId, sessionId }: { signupId: string; session
       {!lapsed && !user && !s.account_exists && !skipped ? (
         <section className={cardBox}>
           <div className="flex flex-col gap-1.5">
-            <h2 className="text-card-title text-dark">Finish your account</h2>
+            <h2 className="text-card-title text-dark">Get the camp on your schedule</h2>
             <p className="text-body-m text-dark-300">
               See the camp schedule, get updates from {coachFirst} and book again. We already have your details, so it&apos;s one step.
             </p>
@@ -168,7 +168,7 @@ export const CampYoureIn = ({ signupId, sessionId }: { signupId: string; session
           </button>
           {googleError ? <p className="text-caption text-error-700">{googleError}</p> : null}
           <Link to={finishAccountPath(s.parent_email, s.signup_id)} className={cn(primaryButton, "h-11 w-full")}>
-            Set a password
+            Finish your account
           </Link>
           <button type="button" className={cn(textButton, "min-h-[44px] self-center text-dark-300 hover:text-dark")} onClick={() => setSkipped(true)}>
             Not now

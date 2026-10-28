@@ -100,7 +100,7 @@ const PayPreview = ({ draft }: { draft: CampDraft }) => {
         <span className="text-label-sm">Card, Apple Pay or Google Pay</span>
         {fee ? <span className="flex-none text-caption text-dark-300">+ {formatCampMoney(fee.totalCents - fee.listCents)} card processing</span> : null}
       </div>
-      {draft.payDirect ? <span className="text-caption text-primary">Paying in cash?</span> : null}
+      {draft.payDirect ? <span className="text-caption text-primary">Paying offline?</span> : null}
     </div>
   );
 };

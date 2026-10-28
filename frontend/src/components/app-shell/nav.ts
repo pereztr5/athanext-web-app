@@ -13,6 +13,9 @@ export const COACH_NAV: NavItem[] = [
   { title: "My Business", short: "My Business", url: ROUTES.PAYMENTS, icon: Briefcase, also: [ROUTES.BUSINESS] },
 ];
 
+// Staff admins who aren't coaches still edit coaches' camps on /camps (desktop sidebar).
+export const ADMIN_CAMPS_NAV: NavItem = { title: "Camps (admin)", short: "Camps", url: ROUTES.CAMPS, icon: Flag };
+
 // Phone tab bar: keep five tabs. Camps is reached from Home, Business, or the desktop sidebar.
 export const COACH_TABS: NavItem[] = [
   ...COACH_NAV.slice(0, 4),

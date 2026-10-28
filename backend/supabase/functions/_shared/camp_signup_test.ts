@@ -229,3 +229,12 @@ Deno.test("client ip and hash: first forwarded address, never stored raw", async
   assert(a && a.length === 64 && !a.includes("203"));
   assertEquals(await hashIp("", "salt"), null);
 });
+
+Deno.test("validateCampSignup wants the phone with its country code", () => {
+  const parent = (phone: string) => ({ name: "Ana Diaz", email: "ana@example.com", phone });
+  const bad = validateCampSignup(form({ parent: parent("555 123 4567") }), NOW);
+  assert(!bad.ok);
+  const good = validateCampSignup(form({ parent: parent("+15551234567") }), NOW);
+  assert(good.ok);
+  if (good.ok) assertEquals(good.value.parent.phone, "+15551234567");
+});

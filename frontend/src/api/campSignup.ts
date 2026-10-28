@@ -55,6 +55,10 @@ export type CampPage = {
   waiver_url?: string | null;
   /** False once the camp has ended. */
   open: boolean;
+  /** False for a draft, which only its coach (or an admin) can open. */
+  published?: boolean;
+  /** The viewer is the camp's coach or an admin: show Edit on top. */
+  can_edit?: boolean;
   spots_left: number | null;
   coach: {
     id: string;
@@ -79,7 +83,7 @@ export type CampQuote = {
   athletes: number;
   /** Always true: camps have no platform fee. */
   platform_waived: boolean;
-  /** Offer "Paying in cash?" (the camp allows paying the coach directly). */
+  /** Offer "Paying offline?" (the camp allows paying the coach directly). */
   direct_allowed: boolean;
   /** Card total for `athletes` athletes: what Checkout charges. */
   card: FeeBreakdown;
@@ -193,7 +197,7 @@ export const campSignupAPI = {
     return (data as CampPage | null) ?? null;
   },
 
-  /** Review step: card total for this link and whether "Paying in cash?" is offered. */
+  /** Review step: card total for this link and whether "Paying offline?" is offered. */
   quote(input: { campId: string; src: "link" | null; athletes: number }) {
     return invoke<CampQuote>(
       { action: "quote", camp_id: input.campId, src: input.src, athletes: input.athletes },

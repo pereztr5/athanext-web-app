@@ -432,6 +432,11 @@ export const SignUpFlow = ({
 
     // Google path: account already exists (or will after OAuth). Skip verify.
     if (user || answers.google) {
+      // Confirmed the email last time but left before choosing a password: ask for it now.
+      if (user?.user_metadata?.password_pending === true) {
+        go("password");
+        return;
+      }
       await finishProfile();
       return;
     }
@@ -445,7 +450,7 @@ export const SignUpFlow = ({
       email: answers.email.trim().toLowerCase(),
       password: tempPassword,
       name,
-      metadata: { name, persona_type: persona, phone_number: answers.phone },
+      metadata: { name, persona_type: persona, phone_number: answers.phone, password_pending: true },
       emailRedirectTo: `${window.location.origin}${returnPath}`,
     });
     setBusy(false);
@@ -500,7 +505,7 @@ export const SignUpFlow = ({
       return;
     }
     setBusy(true);
-    const { error } = await supabase.auth.updateUser({ password: answers.pw });
+    const { error } = await supabase.auth.updateUser({ password: answers.pw, data: { password_pending: false } });
     setBusy(false);
     if (error) {
       setErrors({ password: error.message });

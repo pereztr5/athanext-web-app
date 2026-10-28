@@ -16,7 +16,7 @@ import { useQuery } from "@tanstack/react-query";
 import { bookingRequestsAPI } from "@/api/bookingRequests";
 import { useCoachReferrals } from "@/hooks/useReferrals";
 import { isAwaitingCoachApproval } from "@/utils/referralHelpers";
-import { ATHLETE_NAV, COACH_NAV, ORG_NAV, PROFILE_NAV, isNavActive, type NavItem } from "./nav";
+import { ADMIN_CAMPS_NAV, ATHLETE_NAV, COACH_NAV, ORG_NAV, PROFILE_NAV, isNavActive, type NavItem } from "./nav";
 import { useOverdueInvoices } from "@/hooks/useOverdueInvoices";
 import { cn } from "@/lib/utils";
 
@@ -48,7 +48,7 @@ export const AppSidebar = () => {
           ? `${overdue} overdue`
           : null;
   const publicPages = isCoach ? [PROFILE_NAV, ...(myOrg ? [ORG_NAV] : [])] : [];
-  const items = (isCoach ? COACH_NAV : ATHLETE_NAV) as NavItem[];
+  const items = (isCoach ? COACH_NAV : userProfile?.is_admin ? [...ATHLETE_NAV, ADMIN_CAMPS_NAV] : ATHLETE_NAV) as NavItem[];
 
   const displayName = userName || userProfile?.name || "Account";
   const firstName = displayName.split(" ")[0] || displayName;

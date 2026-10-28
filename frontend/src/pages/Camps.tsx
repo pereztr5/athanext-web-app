@@ -6,7 +6,7 @@
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Navigate } from "react-router-dom";
-import { coachesAPI } from "@/api/coaches";
+import { campsAPI } from "@/api/camps";
 import { CampEditorList } from "@/components/camps/CampEditorList";
 import { CampUrlDialogs } from "@/components/camps/CampUrlDialogs";
 import { useCampDialogs } from "@/components/camps/useCampDialogs";
@@ -31,11 +31,7 @@ const CampsPage = () => {
     queryKey: ["camps-admin-coach-picker"],
     enabled: ready && isAdmin,
     staleTime: 60_000,
-    queryFn: async () => {
-      const res = await coachesAPI.getPublicCoaches();
-      if (res.error) throw new Error(res.error.message || "Could not load coaches.");
-      return res.data ?? [];
-    },
+    queryFn: () => campsAPI.adminCoaches(),
   });
 
   const coachOptions = useMemo(() => {
@@ -75,7 +71,7 @@ const CampsPage = () => {
                 <option value="">{ownCoachId ? "Your camps" : "Select a coach"}</option>
                 {coachOptions.map((c) => (
                   <option key={c.id} value={c.id}>
-                    {c.name || c.slug || c.id}
+                    {c.name || c.slug || c.id} ({c.camps})
                   </option>
                 ))}
               </select>

@@ -272,6 +272,14 @@ export const campsAPI = {
       ? call<CoachCamp[]>("admin_list_camps", { p_coach_id: coachId }, "Could not load that coach's camps.")
       : call<CoachCamp[]>("get_coach_camps", undefined, "Could not load your camps."),
 
+  /** Admin /camps picker: every coach with a camp, public profile or not. */
+  adminCoaches: () =>
+    call<{ id: string; name: string | null; slug: string | null; camps: number }[]>(
+      "admin_list_camp_coaches",
+      undefined,
+      "Could not load coaches.",
+    ),
+
   editor: (campId: string) => call<CoachCamp>("get_camp_editor", { p_camp_id: campId }, "Could not open this camp."),
 
   /** "Run a camp again": the two most recent camps, dates left empty. */
