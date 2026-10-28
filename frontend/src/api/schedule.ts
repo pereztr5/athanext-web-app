@@ -525,6 +525,8 @@ export interface GroupOfferSession {
   bookedCount: number;
   pendingConfirmCount: number;
   myStatus: string | null;
+  /** The viewer picked it but hasn't paid yet (left Stripe). Unpaid picks don't hold a spot. */
+  myUnpaid: boolean;
   myBookingId: string | null;
   myPaidAmount: number | null;
   myChangeAsk: "pending" | "keep" | "cancel" | null;
@@ -598,6 +600,7 @@ const mapOfferSession = (s: Row): GroupOfferSession => {
     bookedCount: Number(s.booked_count) || 0,
     pendingConfirmCount: Number(s.pending_confirm_count) || 0,
     myStatus: s.my_status ?? null,
+    myUnpaid: Boolean(s.my_unpaid),
     myBookingId: s.my_booking_id ?? null,
     myPaidAmount: s.my_paid_amount != null ? Number(s.my_paid_amount) : null,
     myChangeAsk: s.my_change_ask === "pending" || s.my_change_ask === "keep" || s.my_change_ask === "cancel" ? s.my_change_ask : null,

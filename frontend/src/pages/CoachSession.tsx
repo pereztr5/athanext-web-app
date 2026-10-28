@@ -21,7 +21,7 @@ import { chatAPI } from "@/api/chat";
 import { coachSessionAPI, type CoachSessionBooking } from "@/api/coachSession";
 import { getMeetingUrl } from "@/api/meetingLinks";
 import { offlinePayAPI } from "@/api/offlinePay";
-import { meta, primaryButton, secondaryButton, smallButton, textButton, dangerTextButton } from "@/components/schedule/styles";
+import { meta, primaryButton, secondaryButton, smallButton, textButton, dangerTextButton, textPanel } from "@/components/schedule/styles";
 import { buttonVariants } from "@/components/ui/button";
 import { AddToGroupDialog } from "@/components/coach-session/AddToGroupDialog";
 import { CancelDialog } from "@/components/coach-session/CancelDialog";
@@ -462,7 +462,7 @@ const CoachSessionPage = () => {
                 ) : null}
               </div>
               {fb.summary ? (
-                <p className="whitespace-pre-wrap text-paragraph text-dark">{fb.summary}</p>
+                <p className={cn(textPanel, "whitespace-pre-wrap text-paragraph text-dark")}>{fb.summary}</p>
               ) : fb.noShow ? (
                 <p className="text-body-m text-dark-300">No message sent. The session stays charged.</p>
               ) : null}

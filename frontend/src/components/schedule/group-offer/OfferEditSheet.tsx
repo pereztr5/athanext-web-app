@@ -222,6 +222,7 @@ export const OfferEditSheet = ({
         bookedCount: 0,
         pendingConfirmCount: 0,
         myStatus: null,
+        myUnpaid: false,
         myBookingId: null,
         myPaidAmount: null,
         myChangeAsk: null,

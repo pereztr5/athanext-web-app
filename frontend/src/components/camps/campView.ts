@@ -18,8 +18,6 @@ export type CampViewGroup = {
 export type CampView = {
   name: string;
   coverUrl: string | null;
-  /** True when coverUrl is an uploaded camp cover (not the coach profile photo fallback). */
-  coverIsUpload: boolean;
   coachName: string;
   coachPhoto: string | null;
   coachBio: string | null;
@@ -40,7 +38,6 @@ export type CampView = {
 export const campViewFromPage = (page: CampPage): CampView => ({
   name: page.name,
   coverUrl: page.cover_url,
-  coverIsUpload: Boolean(page.cover_url),
   coachName: page.coach.name,
   coachPhoto: page.coach.photo_url,
   coachBio: page.coach.bio,

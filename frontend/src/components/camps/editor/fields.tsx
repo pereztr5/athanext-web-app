@@ -346,7 +346,9 @@ export const RunAgain = ({ camps, onUse }: { camps: CoachCamp[]; onUse: (camp: C
     </div>
   ) : null;
 
-const COVER_ASPECT = 16 / 9;
+// The camp page and the editor show the cover at this shape (aspect-[2/1]), so families see
+// exactly the area the coach framed.
+const COVER_ASPECT = 2;
 
 const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Patch; coachPhoto: string | null }) => {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -397,23 +399,45 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
     setCroppedArea(null);
   };
 
+  // Reframe the cover already uploaded: load it back into the cropper.
+  const adjust = async () => {
+    if (!draft.coverUrl) return;
+    setBusy(true);
+    setError(null);
+    try {
+      const res = await fetch(draft.coverUrl);
+      if (!res.ok) throw new Error("load");
+      const blob = await res.blob();
+      pick(new File([blob], "camp-cover.jpg", { type: blob.type || "image/jpeg" }));
+    } catch {
+      setError("Couldn't open this photo. Pick it again with Change photo.");
+    } finally {
+      setBusy(false);
+    }
+  };
+
   return (
     <div className={fieldBox}>
       <span className={label}>Cover photo</span>
-      <div className="relative h-[150px] overflow-hidden rounded-control bg-dark">
+      <div className="relative aspect-[2/1] w-full overflow-hidden rounded-control bg-dark">
         {shown ? (
           <img
             src={shown}
             alt=""
             className="size-full object-cover"
-            style={draft.coverUrl ? undefined : { objectPosition: "50% 22%" }}
+            style={{ objectPosition: "50% 22%" }}
           />
         ) : null}
         <div className="absolute bottom-3 right-3 flex gap-2">
           {draft.coverUrl ? (
-            <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => patch({ coverUrl: null })}>
-              Use my photo
-            </button>
+            <>
+              <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => patch({ coverUrl: null })}>
+                Use my photo
+              </button>
+              <button type="button" className={cn(secondaryButton, smallButton)} disabled={busy} onClick={() => void adjust()}>
+                Adjust
+              </button>
+            </>
           ) : null}
           <button type="button" className={cn(secondaryButton, smallButton)} disabled={busy} onClick={() => fileRef.current?.click()}>
             <ImageIcon strokeWidth={1.5} aria-hidden="true" />
@@ -456,6 +480,7 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
                       onCropComplete={onCropComplete}
                     />
                   </div>
+                  <span className={meta}>Drag to frame it. Families see exactly this area.</span>
                   <label className="flex items-center gap-3">
                     <span className="text-label-sm text-dark-400">Zoom</span>
                     <input

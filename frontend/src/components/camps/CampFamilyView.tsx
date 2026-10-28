@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Calendar, Check, FileText, MapPin } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
+import { textPanel } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { coachProfilePath } from "@/utils/coachSlug";
 import { campWaiverUrl, formatCampDates, formatCampMoney, formatCampTimes, perDayLine } from "@/utils/camps";
@@ -93,7 +94,7 @@ export const CampFamilyView = ({
   view: CampView;
   groupId?: string | null;
   onGroup?: (id: string) => void;
-  /** Editor preview: smaller cover, coach profile links off. */
+  /** Editor preview: tighter spacing, coach profile links off. */
   compact?: boolean;
   /** Below the groups (the public page puts nothing here; the editor shows the fee line). */
   children?: ReactNode;
@@ -106,13 +107,15 @@ export const CampFamilyView = ({
   const coachLine = linked ? `${coachFirst} and ${linked.name}` : view.coachName;
   return (
     <article className="flex min-w-0 flex-col overflow-hidden rounded-card border border-light-525 bg-light-300">
-      <div className={cn("w-full flex-none bg-dark", compact ? "h-[130px]" : "h-[200px] md:h-[260px]")}>
+      {/* Same 2:1 shape as the cover crop in the editor, so families see what the coach framed. */}
+      <div className="aspect-[2/1] w-full flex-none overflow-hidden bg-dark">
         {view.coverUrl ? (
           <img
             src={view.coverUrl}
             alt=""
             className="size-full object-cover"
-            style={view.coverIsUpload ? undefined : { objectPosition: "50% 22%" }}
+            // A cover cropped at 2:1 fits exactly; older covers and profile photos keep faces in view.
+            style={{ objectPosition: "50% 22%" }}
           />
         ) : null}
       </div>
@@ -208,7 +211,7 @@ export const CampFamilyView = ({
         {coachBio ? (
           <div className="flex flex-col gap-3">
             <span className="text-label-xsm text-dark-300">About {coachFirst}</span>
-            <p className={cn("whitespace-pre-line text-paragraph leading-relaxed text-dark", compact && "line-clamp-4")}>{coachBio}</p>
+            <p className={cn(textPanel, "whitespace-pre-line text-paragraph leading-relaxed text-dark", compact && "line-clamp-4")}>{coachBio}</p>
             {!compact && view.coachSlug ? (
               <Link to={coachProfilePath(view.coachSlug)} className="self-start text-label-sm text-primary hover:text-primary-600">
                 View profile

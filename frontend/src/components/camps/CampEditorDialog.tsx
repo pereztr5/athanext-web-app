@@ -58,7 +58,6 @@ const STEP_TITLES: Record<CampStep, string> = {
 const viewFromDraft = (draft: CampDraft, coach: CoachInfo, taken: Record<string, number>): CampView => ({
   name: draft.name.trim(),
   coverUrl: draft.coverUrl ?? coach.photo,
-  coverIsUpload: Boolean(draft.coverUrl),
   coachName: coach.name,
   coachPhoto: coach.photo,
   coachBio: coach.bio,

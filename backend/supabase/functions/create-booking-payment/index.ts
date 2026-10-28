@@ -298,7 +298,53 @@ const settlePaidSession = async (session: Stripe.Checkout.Session, client: Supab
   }
   const rows = await markSessionPaid(session, client);
   const followupsDone = await runPaidFollowups(client, rows);
+  if (rows.some((r) => r.newly)) {
+    await closeRivalCheckouts(session.id, client).catch((e: unknown) => console.error("Closing other Checkouts failed", session.id, e));
+  }
   return { paid: true, newlyPaid: rows.some((r) => r.newly), followupsDone };
+};
+
+/**
+ * Unpaid Checkouts don't hold spots (Oct 27: families must be able to come back and pay). Once
+ * a payment fills a session, other families' open Checkouts for it are expired and given back,
+ * so nobody else can pay for a spot that is gone.
+ */
+const closeRivalCheckouts = async (paidSessionId: string, client: SupabaseClient) => {
+  const { data: paidRows } = await client
+    .from("coach_slot_bookings" as any)
+    .select("occurrence_id")
+    .eq("stripe_session_id", paidSessionId);
+  const occIds = [...new Set(((paidRows ?? []) as any[]).map((r) => r.occurrence_id).filter(Boolean))] as string[];
+  if (!occIds.length) return;
+  const { data: occs } = await client
+    .from("coach_availability_slot_occurrences" as any)
+    .select("id, session_type, max_bookings_per_slot")
+    .in("id", occIds);
+  const { data: active } = await client
+    .from("coach_slot_bookings" as any)
+    .select("occurrence_id, stripe_session_id, hold_expires_at")
+    .in("occurrence_id", occIds)
+    .in("status", ACTIVE_BOOKING_STATUSES);
+  const groupDefault = await fetchDefaultGroupCapacity(client);
+  const rivals = new Set<string>();
+  for (const occ of (occs ?? []) as any[]) {
+    const rows = ((active ?? []) as any[]).filter((b) => b.occurrence_id === occ.id);
+    const capacity = occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : occ.session_type === "group" ? groupDefault : 1;
+    if (rows.filter((b) => !b.hold_expires_at).length < capacity) continue;
+    rows
+      .filter((b) => b.hold_expires_at && b.stripe_session_id && b.stripe_session_id !== paidSessionId)
+      .forEach((b) => rivals.add(b.stripe_session_id));
+  }
+  if (!rivals.size) return;
+  const key = Deno.env.get("STRIPE_SECRET_KEY");
+  if (!key) return;
+  const stripe = new Stripe(key, { apiVersion: "2025-08-27.basil" });
+  for (const id of rivals) {
+    // A rival that was paid meanwhile is settled inside closeCheckouts, not released.
+    if (await closeCheckouts(stripe, client, [id])) continue;
+    const { error } = await client.rpc("release_unpaid_checkout_holds" as any, { p_session_id: id, p_force: true });
+    if (error) console.error("Releasing a closed Checkout failed", id, error);
+  }
 };
 
 /** After a cancel / refund / dispute voids held shares, reverse any that were already sent. */
@@ -1323,6 +1369,11 @@ serve(async (req) => {
       bookingsByOccurrence.set(row.occurrence_id, list);
     });
 
+    // Rows of an unfinished Checkout (pending, or a credit in the same basket). They don't hold
+    // a spot: another family's unpaid Checkout never blocks booking (Oct 27 tech sync).
+    const isHold = (b: any) =>
+      Boolean(b.hold_expires_at) && (b.status === "pending_payment" || (b.status === "booked" && b.payment_status === "credit"));
+
     for (const occ of occurrences) {
       if (!occ.is_enabled || occ.is_draft) {
         throw new Error("This session isn't available to book.");
@@ -1331,17 +1382,14 @@ serve(async (req) => {
         ? (occ.max_bookings_per_slot && occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : defaultGroupCapacity)
         : (occ.max_bookings_per_slot && occ.max_bookings_per_slot > 0 ? occ.max_bookings_per_slot : 1);
       const bookingsForOcc = bookingsByOccurrence.get(occ.id) || [];
-      const currentCount = bookingsForOcc.length;
+      const currentCount = bookingsForOcc.filter((b) => !isHold(b)).length;
       const myBookingForOcc = bookingsForOcc.find((b) => b.athlete_id === athleteId);
-      if (currentCount >= capacity && !myBookingForOcc) {
+      if (currentCount >= capacity && !(myBookingForOcc && !isHold(myBookingForOcc))) {
         throw new Error(`Occurrence on ${occ.occurrence_date} is fully booked`);
       }
     }
 
     const myBookings = (existingBookings || []).filter((b) => b.athlete_id === athleteId);
-    // Spots this family's own unpaid Checkout holds (pending, or a credit in the same basket).
-    const isHold = (b: any) =>
-      Boolean(b.hold_expires_at) && (b.status === "pending_payment" || (b.status === "booked" && b.payment_status === "credit"));
     const hasPaidBooking = myBookings.some((b) => (b.status === "booked" || b.status === "completed") && !isHold(b));
     if (hasPaidBooking) {
       throw new Error("You already have a booking for this session.");

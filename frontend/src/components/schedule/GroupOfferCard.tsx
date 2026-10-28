@@ -38,7 +38,9 @@ import { PROFILE_TYPE } from "@/utils/db";
 import { formatDateInZone, formatInstantSpan } from "@/utils/viewerTime";
 import { formatClock, formatDayISO, plural, sessionEnd, sessionStart } from "@/utils/schedule";
 
-const inMine = (s: GroupOfferSession) => Boolean(s.myStatus && s.myStatus !== "canceled");
+const inMine = (s: GroupOfferSession) => Boolean(s.myStatus && s.myStatus !== "canceled" && !s.myUnpaid);
+// Picked, then left Stripe without paying. It doesn't hold the spot; Finish paying reopens checkout.
+const isUnpaid = (s: GroupOfferSession) => s.myUnpaid && !s.cancelled;
 
 export const GroupOfferCard = ({ offerId, className }: { offerId: string; className?: string }) => {
   const { user, userProfile } = useAuth();
@@ -50,6 +52,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
   const timeZone = useViewerTimeZone();
   const [picked, setPicked] = useState<string[]>([]);
   const [payOpen, setPayOpen] = useState(false);
+  const [payUnpaid, setPayUnpaid] = useState(false);
   const [editOpen, setEditOpen] = useState(false);
 
   const athleteId =
@@ -108,9 +111,10 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
   const booked = live.reduce((n, s) => n + s.bookedCount, 0);
   const capacity = live.reduce((n, s) => n + s.capacity, 0);
   // A coach's offer with one bookable session needs no ticking: Review and pay goes straight to it.
-  const openToPick = live.filter((s) => !inMine(s) && s.capacity - s.bookedCount > 0);
-  const single = isOfferCard && canPick && openToPick.length === 1;
-  const selected = single ? openToPick : live.filter((s) => picked.includes(s.id));
+  const unpaid = live.filter((s) => isUnpaid(s) && s.capacity - s.bookedCount > 0);
+  const openToPick = live.filter((s) => !inMine(s) && !isUnpaid(s) && s.capacity - s.bookedCount > 0);
+  const single = isOfferCard && canPick && !unpaid.length && openToPick.length === 1;
+  const selected = payUnpaid ? unpaid : single ? openToPick : live.filter((s) => picked.includes(s.id));
   const total = selected.reduce((n, s) => n + s.price, 0);
   const mineN = live.filter((s) => inMine(s)).length;
   const first = offer.coachName.split(" ")[0] || "Coach";
@@ -227,7 +231,9 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
         <div className={cardHead}>
           <b className="text-subtitle">{title}</b>
           <span className={meta}>
-            {mineN && !picked.length
+            {unpaid.length && !picked.length
+              ? `You left before paying, so ${unpaid.length === 1 ? "this spot isn't" : "these spots aren't"} held. Finish paying to book.`
+              : mineN && !picked.length
               ? `${athleteName.split(" ")[0] || "You're"} in ${plural(mineN, "session")}. Change anything from My sessions.`
               : single
                 ? "Review the details and pay to book it."
@@ -240,12 +246,13 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               const start = sessionStart({ date: s.date, startTime: s.startTime });
               const end = sessionEnd({ date: s.date, endTime: s.endTime });
               const mine = inMine(s);
+              const owed = isUnpaid(s);
               const left = s.capacity - s.bookedCount;
               const full = !mine && (left <= 0 || offer.closed || s.cancelled);
               const on = picked.includes(s.id);
               const ask = !s.cancelled && mine && s.myChangeAsk === "pending";
               const ans = !s.cancelled && mine && s.myChangeAsk === "keep";
-              const selectable = canPick && !mine && !full && !single;
+              const selectable = canPick && !mine && !owed && !full && !single;
               const lead = s.cancelled ? (
                 <span className="size-[18px] flex-none" aria-hidden="true" />
               ) : mine ? (
@@ -271,12 +278,14 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
                   <small
                     className={cn(
                       meta,
-                      mine ? "text-success-700" : !full && left <= 2 ? "font-medium text-info-800" : ""
+                      mine ? "text-success-700" : owed ? "font-medium text-info-800" : !full && left <= 2 ? "font-medium text-info-800" : ""
                     )}
                   >
                     {mine
                       ? `${athleteName.split(" ")[0] || "You're"} in`
-                      : offer.closed
+                      : owed && !full
+                        ? "Not paid yet"
+                        : offer.closed
                         ? "Closed"
                         : left <= 0
                           ? "Full"
@@ -376,7 +385,18 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
 
         {canPick && !offer.closed ? (
           <div className={cardFoot}>
-            {single ? (
+            {unpaid.length && !picked.length ? (
+              <button
+                type="button"
+                className={cn(primaryButton, "h-10 w-full")}
+                onClick={() => {
+                  setPayUnpaid(true);
+                  setPayOpen(true);
+                }}
+              >
+                Finish paying · {money(unpaid.reduce((n, s) => n + s.price, 0))}
+              </button>
+            ) : single ? (
               <button type="button" className={cn(primaryButton, "h-10 w-full")} onClick={() => setPayOpen(true)}>
                 Review and pay · {money(total)}
               </button>
@@ -396,7 +416,10 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
       {athleteId ? (
         <OfferPaySheet
           open={payOpen}
-          onOpenChange={setPayOpen}
+          onOpenChange={(next) => {
+            setPayOpen(next);
+            if (!next) setPayUnpaid(false);
+          }}
           offer={offer}
           sessions={selected}
           athleteId={athleteId}

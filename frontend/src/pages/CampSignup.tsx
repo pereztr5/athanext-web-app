@@ -15,7 +15,7 @@ import { CampYoureIn } from "@/components/camps/CampYoureIn";
 import { writeCampFinish } from "@/components/camps/campFinish";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
-import { input, label as labelClass, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
+import { input, label as labelClass, primaryButton, secondaryButton, smallButton, textButton, textPanel } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { supabase } from "@/integrations/supabase/client";
 import { cn } from "@/lib/utils";
@@ -754,7 +754,7 @@ const Review = ({
           .
         </span>
         {policyOpen && camp.coach.cancellation_policy ? (
-          <p className="whitespace-pre-line rounded-control bg-light-400 px-3 py-2.5 text-caption text-dark-400">{camp.coach.cancellation_policy}</p>
+          <p className={cn(textPanel, "whitespace-pre-line text-caption text-dark-400")}>{camp.coach.cancellation_policy}</p>
         ) : null}
       </div>
     </div>

@@ -14,6 +14,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { textPanel } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
 import type { AthleteSession } from "@/types/athlete-sessions";
@@ -157,7 +158,7 @@ export const RateCoachDialog = ({
               </div>
 
               {coachSummary || existingFeedback?.feedback_to_athlete ? (
-                <div className="flex flex-col gap-1.5 rounded-card border border-light-525 bg-light-400 p-4">
+                <div className={cn(textPanel, "flex flex-col gap-1.5")}>
                   <p className="text-label-sm text-dark">From your coach</p>
                   {coachSummary ? <p className="whitespace-pre-wrap text-paragraph text-dark-300">{coachSummary}</p> : null}
                   {existingFeedback?.feedback_to_athlete ? (
