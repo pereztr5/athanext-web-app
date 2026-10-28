@@ -47,7 +47,7 @@ import {
   validateCampSignup,
 } from "../_shared/camp_signup.ts";
 import { campDetailsEmail, campFinishAccountEmail, campTimes } from "../_shared/camp_emails.ts";
-import { appOrigin, isCampSessionPaid, sendCampEmail, sendCampSignupEmails, settleCampSession } from "../_shared/camp_settle.ts";
+import { appOrigin, isCampSessionPaid, runCampFollowups, sendCampEmail, sendCampSignupEmails, settleCampSession } from "../_shared/camp_settle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -255,6 +255,12 @@ serve(async (req) => {
         } catch (e) {
           console.error("Camp status check with Stripe failed", body.signup_id, e);
         }
+      } else if (data.all_paid) {
+        // Paid but its receipt and coach email may not have gone out (a failed webhook run):
+        // finish them now. Runs once per sign-up; a done sign-up returns straight away.
+        await runCampFollowups(admin, body.signup_id, origin).catch((e) =>
+          console.error("Camp follow-ups on status failed", body.signup_id, e)
+        );
       }
       const { stripe_session_id: _hidden, ...rest } = data as Record<string, unknown>;
       return json(rest);

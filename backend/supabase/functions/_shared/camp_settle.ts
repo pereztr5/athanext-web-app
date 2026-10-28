@@ -185,16 +185,23 @@ export const sendCampSignupEmails = async (
  * False when something is still left (the caller answers 500 so Stripe retries).
  */
 export const runCampFollowups = async (admin: CampAdmin, signupId: string, origin = appOrigin()): Promise<boolean> => {
+  // PostgREST answers an update filtered with or() on the claim column with "column ... does
+  // not exist" (42703), so unclaimed rows and expired leases are claimed in two plain steps.
   const leaseCutoff = new Date(Date.now() - FOLLOWUP_LEASE_MS).toISOString();
-  const { data: claimed, error } = await admin
-    .from("camp_signups")
-    .update({ followup_claimed_at: new Date().toISOString() })
-    .eq("id", signupId)
-    .not("paid_at", "is", null)
-    .is("followup_at", null)
-    .or(`followup_claimed_at.is.null,followup_claimed_at.lt."${leaseCutoff}"`)
-    .select("id, purchase_id")
-    .maybeSingle();
+  // deno-lint-ignore no-explicit-any
+  const claim = (lease: (q: any) => any) =>
+    lease(
+      admin
+        .from("camp_signups")
+        .update({ followup_claimed_at: new Date().toISOString() })
+        .eq("id", signupId)
+        .not("paid_at", "is", null)
+        .is("followup_at", null),
+    )
+      .select("id, purchase_id")
+      .maybeSingle();
+  let { data: claimed, error } = await claim((q) => q.is("followup_claimed_at", null));
+  if (!error && !claimed) ({ data: claimed, error } = await claim((q) => q.lt("followup_claimed_at", leaseCutoff)));
   if (error) {
     const err = postgrestError(`Camp follow-up claim failed for sign-up ${signupId}`, error);
     console.error(err.message);

@@ -255,16 +255,22 @@ const callCalendarForBookings = async (client: SupabaseClient, bookingIds: strin
 const runPaidFollowups = async (client: SupabaseClient, rows: PaidRow[]): Promise<boolean> => {
   const todo = rows.filter((r) => !r.followupDone).map((r) => r.id);
   if (!todo.length) return true;
+  // PostgREST answers an update filtered with or() on the claim column with "column ... does
+  // not exist" (42703), so unclaimed rows and expired leases are claimed in two plain steps.
   const leaseCutoff = new Date(Date.now() - FOLLOWUP_LEASE_MS).toISOString();
-  const { data: claimed, error } = await client
-    .from("coach_slot_bookings" as any)
-    .update({ paid_followup_claimed_at: new Date().toISOString() })
-    .in("id", todo)
-    .is("paid_followup_at", null)
-    .or(`paid_followup_claimed_at.is.null,paid_followup_claimed_at.lt."${leaseCutoff}"`)
-    .select("id, payment_status");
-  if (error) throw error;
-  const mine = (claimed ?? []) as { id: string; payment_status: string }[];
+  const claim = (lease: (q: any) => any) =>
+    lease(
+      client
+        .from("coach_slot_bookings" as any)
+        .update({ paid_followup_claimed_at: new Date().toISOString() })
+        .in("id", todo)
+        .is("paid_followup_at", null),
+    ).select("id, payment_status");
+  const fresh = await claim((q) => q.is("paid_followup_claimed_at", null));
+  if (fresh.error) throw fresh.error;
+  const stale = await claim((q) => q.lt("paid_followup_claimed_at", leaseCutoff));
+  if (stale.error) throw stale.error;
+  const mine = [...(fresh.data ?? []), ...(stale.data ?? [])] as { id: string; payment_status: string }[];
   if (!mine.length) return false;
 
   const paidIds = mine.filter((r) => r.payment_status === "paid").map((r) => r.id);
@@ -610,18 +616,23 @@ const notifyConfirmed = async (client: SupabaseClient, bookingIds: string[]) => 
   if (!ids.length) return;
   try {
     const leaseCutoff = new Date(Date.now() - FOLLOWUP_LEASE_MS).toISOString();
-    const { data: claimed, error } = await client
-      .from("coach_slot_bookings" as any)
-      .update({ paid_followup_claimed_at: new Date().toISOString() })
-      .in("id", ids)
-      .eq("status", "booked")
-      .in("payment_status", NON_CARD_PAYMENTS)
-      .is("hold_expires_at", null)
-      .is("paid_followup_at", null)
-      .or(`paid_followup_claimed_at.is.null,paid_followup_claimed_at.lt."${leaseCutoff}"`)
-      .select("id");
-    if (error) throw error;
-    const mine = ((claimed ?? []) as { id: string }[]).map((r) => r.id);
+    // Two plain claim steps, not or(): see runPaidFollowups.
+    const claim = (lease: (q: any) => any) =>
+      lease(
+        client
+          .from("coach_slot_bookings" as any)
+          .update({ paid_followup_claimed_at: new Date().toISOString() })
+          .in("id", ids)
+          .eq("status", "booked")
+          .in("payment_status", NON_CARD_PAYMENTS)
+          .is("hold_expires_at", null)
+          .is("paid_followup_at", null),
+      ).select("id");
+    const fresh = await claim((q) => q.is("paid_followup_claimed_at", null));
+    if (fresh.error) throw fresh.error;
+    const stale = await claim((q) => q.lt("paid_followup_claimed_at", leaseCutoff));
+    if (stale.error) throw stale.error;
+    const mine = [...(fresh.data ?? []), ...(stale.data ?? [])].map((r: { id: string }) => r.id);
     if (!mine.length) return;
     const notified = await callNotificationEndpointForBookings(mine);
     const missed = mine.filter((id) => !notified.has(id));
