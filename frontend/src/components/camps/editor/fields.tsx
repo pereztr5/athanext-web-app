@@ -259,14 +259,27 @@ const GroupRow = ({
   );
 };
 
-export const GroupsField = ({ draft, patch, taken }: { draft: CampDraft; patch: Patch; taken: Record<string, number> }) => {
+/** "your" / "Riley's": an admin editing another coach's camp passes that coach's first name. */
+const whose = (coachFirst?: string | null) => (coachFirst ? `${coachFirst}'s` : "your");
+
+export const GroupsField = ({
+  draft,
+  patch,
+  taken,
+  coachFirst,
+}: {
+  draft: CampDraft;
+  patch: Patch;
+  taken: Record<string, number>;
+  coachFirst?: string | null;
+}) => {
   const update = (key: string, next: CampDraftGroup) => patch((cur) => ({ groups: cur.groups.map((g) => (g.key === key ? next : g)) }));
   const badTimes = draft.groups.some((g) => timeToMinutes(g.end) <= timeToMinutes(g.start));
   return (
     <div className="flex flex-col gap-2.5">
       <div className="flex flex-col gap-0.5">
         <span className={sectionTitle}>Groups</span>
-        <span className={meta}>Families pick one when they sign up. Camp days go on your schedule for each group.</span>
+        <span className={meta}>Families pick one when they sign up. Camp days go on {whose(coachFirst)} schedule for each group.</span>
       </div>
       {draft.groups.map((group, i) => (
         <GroupRow
@@ -350,7 +363,29 @@ export const RunAgain = ({ camps, onUse }: { camps: CoachCamp[]; onUse: (camp: C
 // exactly the area the coach framed.
 const COVER_ASPECT = 2;
 
-const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Patch; coachPhoto: string | null }) => {
+/** The 2:1 area (percent of the image) the camp page shows for a photo: centred across, 22% down. */
+const coverStartArea = (width: number, height: number): Area => {
+  if (!width || !height) return { x: 0, y: 0, width: 100, height: 100 };
+  const ratio = width / height;
+  if (ratio <= COVER_ASPECT) {
+    const h = (ratio / COVER_ASPECT) * 100;
+    return { x: 0, y: (100 - h) * 0.22, width: 100, height: h };
+  }
+  const w = (COVER_ASPECT / ratio) * 100;
+  return { x: (100 - w) / 2, y: 0, width: w, height: 100 };
+};
+
+const CoverField = ({
+  draft,
+  patch,
+  coachPhoto,
+  coachFirst,
+}: {
+  draft: CampDraft;
+  patch: Patch;
+  coachPhoto: string | null;
+  coachFirst?: string | null;
+}) => {
   const fileRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -362,6 +397,16 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
   const objectUrl = useMemo(() => (cropFile ? URL.createObjectURL(cropFile) : null), [cropFile]);
   useEffect(() => () => {
     if (objectUrl) URL.revokeObjectURL(objectUrl);
+  }, [objectUrl]);
+  // Open the cropper framed like the camp page shows an uncropped photo (object-position 50% 22%).
+  const [startArea, setStartArea] = useState<Area | null>(null);
+  useEffect(() => {
+    setStartArea(null);
+    if (!objectUrl) return;
+    const img = new Image();
+    img.onload = () => setStartArea(coverStartArea(img.naturalWidth, img.naturalHeight));
+    img.onerror = () => setStartArea({ x: 0, y: 0, width: 100, height: 100 });
+    img.src = objectUrl;
   }, [objectUrl]);
 
   const onCropComplete = useCallback((_: Area, pixels: Area) => setCroppedArea(pixels), []);
@@ -447,7 +492,8 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
         <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={(e) => pick(e.target.files?.[0])} />
       </div>
       <span className={meta}>
-        {draft.coverUrl ? "" : "Your profile photo until you pick one. "}A photo of you coaching works best. Skip posters with text on them: the details already show under the photo.
+        {draft.coverUrl ? "" : `${coachFirst ? `${coachFirst}'s` : "Your"} profile photo until you pick one. `}A photo of{" "}
+        {coachFirst ?? "you"} coaching works best. Skip posters with text on them: the details already show under the photo.
       </span>
       {error ? <span className="text-caption text-error-700">{error}</span> : null}
       {cropFile && objectUrl && typeof document !== "undefined"
@@ -470,15 +516,18 @@ const CoverField = ({ draft, patch, coachPhoto }: { draft: CampDraft; patch: Pat
                 <div className="h-px bg-light-525" />
                 <div className="flex flex-col gap-4 px-5 py-4">
                   <div className="relative h-[200px] w-full overflow-hidden rounded-control bg-dark">
-                    <Cropper
-                      image={objectUrl}
-                      crop={crop}
-                      zoom={zoom}
-                      aspect={COVER_ASPECT}
-                      onCropChange={setCrop}
-                      onZoomChange={setZoom}
-                      onCropComplete={onCropComplete}
-                    />
+                    {startArea ? (
+                      <Cropper
+                        image={objectUrl}
+                        initialCroppedAreaPercentages={startArea}
+                        crop={crop}
+                        zoom={zoom}
+                        aspect={COVER_ASPECT}
+                        onCropChange={setCrop}
+                        onZoomChange={setZoom}
+                        onCropComplete={onCropComplete}
+                      />
+                    ) : null}
                   </div>
                   <span className={meta}>Drag to frame it. Families see exactly this area.</span>
                   <label className="flex items-center gap-3">
@@ -615,18 +664,18 @@ const LinkCoachField = ({ draft, patch, selfId }: { draft: CampDraft; patch: Pat
   );
 };
 
-const PayDirectField = ({ draft, patch }: { draft: CampDraft; patch: Patch }) => (
+const PayDirectField = ({ draft, patch, coachFirst }: { draft: CampDraft; patch: Patch; coachFirst?: string | null }) => (
   <label className="flex cursor-pointer items-start gap-3 rounded-card border border-light-525 bg-light-300 p-3.5 md:p-4">
     <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-      <b className="text-label-sm">Let families pay you directly (cash, Zelle, Venmo)</b>
+      <b className="text-label-sm">Let families pay {coachFirst ?? "you"} directly (cash, Zelle, Venmo)</b>
       <span className={meta}>
-        Any family can choose it at sign-up. Their spot shows as Waiting until you mark it paid. Card payments stay in the app.
+        Any family can choose it at sign-up. Their spot shows as Waiting until {coachFirst ? `${coachFirst} or an admin marks` : "you mark"} it paid. Card payments stay in the app.
       </span>
     </span>
     <Switch
       checked={draft.payDirect}
       onCheckedChange={(on) => patch({ payDirect: on })}
-      aria-label="Let families pay you directly (cash, Zelle, Venmo)"
+      aria-label={`Let families pay ${coachFirst ?? "you"} directly (cash, Zelle, Venmo)`}
     />
   </label>
 );
@@ -704,17 +753,20 @@ export const DetailsFields = ({
   patch,
   coachPhoto,
   selfId,
+  coachFirst,
 }: {
   draft: CampDraft;
   patch: Patch;
   coachPhoto: string | null;
   selfId: string | null;
+  /** Set when an admin edits another coach's camp: wording names that coach instead of "you". */
+  coachFirst?: string | null;
 }) => (
   <div className="flex flex-col gap-5">
-    <CoverField draft={draft} patch={patch} coachPhoto={coachPhoto} />
+    <CoverField draft={draft} patch={patch} coachPhoto={coachPhoto} coachFirst={coachFirst} />
     <IncludedField draft={draft} patch={patch} />
     <LinkCoachField draft={draft} patch={patch} selfId={selfId} />
-    <PayDirectField draft={draft} patch={patch} />
+    <PayDirectField draft={draft} patch={patch} coachFirst={coachFirst} />
     <WaiverField draft={draft} patch={patch} />
   </div>
 );

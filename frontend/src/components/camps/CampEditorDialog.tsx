@@ -141,6 +141,9 @@ export const CampEditorDialog = ({
       places: Array.isArray(c?.locations) ? (c?.locations as string[]) : [],
     };
   }, [coachDetails.coach, coachId, editing.data?.coach_slug, userProfile?.name]);
+  // An admin editing another coach's camp: name that coach where the editor says "you".
+  const coachFirst = coachId && coachId !== ownCoachId ? coach.name.split(" ")[0] || coach.name : null;
+  const yourSchedule = coachFirst ? `${coachFirst}'s schedule` : "your schedule";
   const runAgain = useQuery({
     queryKey: ["camp-run-again"],
     enabled: open && !campId,
@@ -379,15 +382,15 @@ export const CampEditorDialog = ({
             ) : null}
             {step === "dates" ? <DatesField draft={draft} patch={patch} minDay={minDay} /> : null}
             {step === "where" ? <WhereField draft={draft} patch={patch} places={coach.places} /> : null}
-            {step === "groups" ? <GroupsField draft={draft} patch={patch} taken={taken} /> : null}
+            {step === "groups" ? <GroupsField draft={draft} patch={patch} taken={taken} coachFirst={coachFirst} /> : null}
             {step === "price" ? <PriceField draft={draft} patch={patch} /> : null}
             {step === "details" ? (
               <>
                 <p className={meta}>All optional. Families see these on the camp page.</p>
-                <DetailsFields draft={draft} patch={patch} coachPhoto={coach.photo} selfId={coach.id} />
+                <DetailsFields draft={draft} patch={patch} coachPhoto={coach.photo} selfId={coach.id} coachFirst={coachFirst} />
               </>
             ) : null}
-            {step === "review" ? <Review draft={draft} view={view} onEdit={edit} /> : null}
+            {step === "review" ? <Review draft={draft} view={view} onEdit={edit} coachFirst={coachFirst} /> : null}
             {step === "review" || step === "dates" || step === "groups" ? scheduleNotice : null}
             {error ? (
               <p role="alert" className="text-body-m text-error-700">
@@ -473,7 +476,7 @@ export const CampEditorDialog = ({
               <PriceField draft={draft} patch={patch} />
             </div>
             <WhereField draft={draft} patch={patch} places={coach.places} />
-            <GroupsField draft={draft} patch={patch} taken={taken} />
+            <GroupsField draft={draft} patch={patch} taken={taken} coachFirst={coachFirst} />
             {scheduleNotice}
             <div className="flex flex-col gap-4 border-t border-light-525 pt-5">
               <button
@@ -484,11 +487,11 @@ export const CampEditorDialog = ({
               >
                 <span className="flex flex-col gap-0.5">
                   <span className={sectionTitle}>More details</span>
-                  <span className={meta}>Cover photo, what&apos;s included, a linked coach, paying you directly, a waiver</span>
+                  <span className={meta}>Cover photo, what&apos;s included, a linked coach, paying {coachFirst ?? "you"} directly, a waiver</span>
                 </span>
                 <span className={cn(textButton)}>{showDetails ? "Hide" : "Show"}</span>
               </button>
-              {showDetails ? <DetailsFields draft={draft} patch={patch} coachPhoto={coach.photo} selfId={coach.id} /> : null}
+              {showDetails ? <DetailsFields draft={draft} patch={patch} coachPhoto={coach.photo} selfId={coach.id} coachFirst={coachFirst} /> : null}
             </div>
           </div>
           <aside className="flex min-h-0 w-[400px] flex-none flex-col gap-3 overflow-y-auto border-l border-light-525 bg-light-400 px-6 py-5 max-lg:w-[340px]">
@@ -503,7 +506,8 @@ export const CampEditorDialog = ({
         </div>
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-light-525 px-[25px] py-4">
           <span className="min-w-0 flex-1 text-caption text-dark-300">
-            {missingLine(missing) ?? "Camp days go on your schedule for each group. Families can sign up from your profile or a shared link."}
+            {missingLine(missing) ??
+              `Camp days go on ${yourSchedule} for each group. Families can sign up from ${coachFirst ? `${coachFirst}'s` : "your"} profile or a shared link.`}
           </span>
           {error ? (
             <p role="alert" className="w-full text-body-m text-error-700">
@@ -531,7 +535,17 @@ export const CampEditorDialog = ({
 };
 
 /** Phone review: the family view, then each answer with Edit. */
-const Review = ({ draft, view, onEdit }: { draft: CampDraft; view: CampView; onEdit: (step: CampStep) => void }) => {
+const Review = ({
+  draft,
+  view,
+  onEdit,
+  coachFirst,
+}: {
+  draft: CampDraft;
+  view: CampView;
+  onEdit: (step: CampStep) => void;
+  coachFirst: string | null;
+}) => {
   const cents = parsePriceCents(draft.price);
   const rows: { step: CampStep; label: string; value: string }[] = [
     { step: "name", label: "Name", value: draft.name.trim() || "Not set" },
@@ -548,10 +562,10 @@ const Review = ({ draft, view, onEdit }: { draft: CampDraft; view: CampView; onE
       label: "Details",
       value:
         [
-          draft.coverUrl ? "Cover photo" : "Your profile photo as the cover",
+          draft.coverUrl ? "Cover photo" : `${coachFirst ? `${coachFirst}'s` : "Your"} profile photo as the cover`,
           draft.included.filter((i) => i.trim()).length ? plural(draft.included.filter((i) => i.trim()).length, "included item") : null,
           draft.linkedCoach ? `With ${draft.linkedCoach.name}` : null,
-          draft.payDirect ? "Families can pay you directly" : null,
+          draft.payDirect ? `Families can pay ${coachFirst ?? "you"} directly` : null,
           campWaiverUrl(draft.waiverUrl) ? "Waiver" : null,
         ]
           .filter(Boolean)
@@ -579,7 +593,10 @@ const Review = ({ draft, view, onEdit }: { draft: CampDraft; view: CampView; onE
           </div>
         ))}
       </div>
-      <p className={meta}>Camp days go on your schedule for each group. Families can sign up from your profile or a shared link.</p>
+      <p className={meta}>
+        Camp days go on {coachFirst ? `${coachFirst}'s` : "your"} schedule for each group. Families can sign up from{" "}
+        {coachFirst ? `${coachFirst}'s` : "your"} profile or a shared link.
+      </p>
     </div>
   );
 };

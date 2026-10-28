@@ -14,7 +14,8 @@ import { primaryButton, secondaryButton, textButton } from "@/components/schedul
 import { useAuth } from "@/contexts/AuthContext";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { campHeldNextStep, campPath, formatCampDates, formatCampDay, formatCampTimes } from "@/utils/camps";
+import { campHeldNextStep, campPath, formatCampDates, formatCampTimes } from "@/utils/camps";
+import { formatDateInZone } from "@/utils/viewerTime";
 import { finishAccountPath } from "./campFinish";
 
 const POLLS = 8;
@@ -119,7 +120,10 @@ export const CampYoureIn = ({ signupId, sessionId }: { signupId: string; session
   } else if (held) {
     title = "Your spot is held";
     body = `We hold your spot and ${coachFirst} confirms it once you've paid. Nothing is charged in AthaNext.${
-      s.camp.starts_on ? ` Pay ${coachFirst} before ${formatCampDay(s.camp.starts_on)} to confirm it.` : ""
+      // The hold ends after 7 days (the spot is released then), not at the camp start.
+      s.held_until
+        ? ` Pay ${coachFirst} by ${formatDateInZone(new Date(s.held_until), "America/New_York", { month: "short", day: "numeric" })} to keep it.`
+        : ""
     }`;
   } else if (stillPending) {
     title = "Your payment is still going through";

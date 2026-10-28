@@ -354,8 +354,9 @@ export const campsAPI = {
     call<CampRegistrations>("get_camp_registrations", { p_camp_id: campId }, "Could not load registrations."),
 
   /** Direct / outside rows only. Card rows are confirmed by Stripe. */
+  /** Marks a direct payment received; the family gets a "You're in" email. */
   markPaid: (registrationId: string) =>
-    call<{ id: string; status: "paid" }>("mark_camp_registration_paid", { p_id: registrationId }, "That didn't save."),
+    invokeCampFunction<{ id: string; status: "paid" }>({ action: "mark_paid", registration_id: registrationId }, "That didn't save."),
 
   /** Frees the spot. A card-paid row must be refunded first (code "card_paid"). */
   cancel: (registrationId: string) =>

@@ -254,7 +254,7 @@ export const validateCampForm = (
     if (first && last && seen.has(key)) errors[`athletes.${i}.first_name`] = `${first} is on the form twice`;
     seen.add(key);
   });
-  if (!form.waiver) errors.waiver = "Agree to the waiver to continue";
+  if (!form.waiver) errors.waiver = "Tick the box to continue";
   return errors;
 };
 

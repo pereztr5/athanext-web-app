@@ -20,6 +20,7 @@
 //     parent_email?, parent_name?, paid, send_details?, send_invite? }
 //       -> add_camp_athlete result + { invited, emailed }; the family becomes the coach's client
 //          (confirmed referral) and, without an account, gets the usual invite for that row
+//   { action: "mark_paid", registration_id }     -> { id, status: "paid" }; emails the family once
 //   { action: "resend_finish", registration_id } -> { emailed }
 //   { action: "send_details", registration_id }  -> { emailed }
 //   { action: "resend_invite", referral_id }     -> add-client-referral resend result
@@ -46,7 +47,7 @@ import {
   resolveAppOrigin,
   validateCampSignup,
 } from "../_shared/camp_signup.ts";
-import { campDetailsEmail, campFinishAccountEmail, campTimes } from "../_shared/camp_emails.ts";
+import { campDetailsEmail, campFinishAccountEmail, campMarkedPaidEmail, campTimes } from "../_shared/camp_emails.ts";
 import { appOrigin, isCampSessionPaid, runCampFollowups, sendCampEmail, sendCampSignupEmails, settleCampSession } from "../_shared/camp_settle.ts";
 
 const corsHeaders = {
@@ -145,8 +146,11 @@ serve(async (req) => {
       const page = `${origin}${campPath(camp.coach_slug ?? "", camp.slug ?? "")}`;
 
       if (input.pay_method === "direct") {
-        // Best effort: the spot is held either way; the coach also sees it in registrations.
-        await sendCampSignupEmails(admin, start.signup_id, "held", origin).catch((e) => console.error("Camp held emails failed", e));
+        // Best effort, after the answer (two emails took ~8 seconds): the spot is held either way
+        // and the coach also sees it in registrations.
+        await inBackground(
+          sendCampSignupEmails(admin, start.signup_id, "held", origin).catch((e) => console.error("Camp held emails failed", e)),
+        );
         return json({ signup_id: start.signup_id, status: "held", hold_expires_at: start.hold_expires_at, athletes: start.athletes });
       }
 
@@ -312,6 +316,20 @@ serve(async (req) => {
       return json({ ...added, invited, emailed });
     }
 
+    if (action === "mark_paid") {
+      if (!isUuid(body.registration_id)) return json({ error: "Registration not found" }, 404);
+      // Already paid: no second email.
+      const { data: before } = await admin.from("camp_registrations").select("status").eq("id", body.registration_id).maybeSingle();
+      const { data: marked, error } = await caller.rpc("mark_camp_registration_paid", { p_id: body.registration_id });
+      if (error || !marked) return rpcFail(error, "That didn't save.");
+      if (before?.status !== "paid") {
+        await inBackground(
+          sendMarkedPaid(caller, admin, body.registration_id, origin).catch((e) => console.error("Camp paid email failed", e)),
+        );
+      }
+      return json(marked);
+    }
+
     if (action === "resend_finish" || action === "send_details") {
       if (!isUuid(body.registration_id)) return json({ error: "Registration not found" }, 404);
       if (action === "send_details") return json({ emailed: await sendDetails(caller, admin, body.registration_id, origin) });
@@ -342,6 +360,38 @@ serve(async (req) => {
     return json({ error: e instanceof Error && /Payments aren't set up/.test(e.message) ? e.message : "Something went wrong. Try again." }, 500);
   }
 });
+
+/** Runs `task` after the response when the runtime allows it (EdgeRuntime.waitUntil), else now. */
+const inBackground = async (task: Promise<unknown>) => {
+  // deno-lint-ignore no-explicit-any
+  const runtime = (globalThis as any).EdgeRuntime;
+  if (runtime?.waitUntil) {
+    runtime.waitUntil(task);
+    return;
+  }
+  await task;
+};
+
+// deno-lint-ignore no-explicit-any
+const sendMarkedPaid = async (caller: any, admin: any, registrationId: string, origin: string) => {
+  const { data: contact, error } = await caller.rpc("camp_registration_contact", { p_id: registrationId, p_kind: "details" });
+  if (error || !contact?.parent_email) {
+    console.error("Camp paid email skipped", registrationId, error?.message);
+    return false;
+  }
+  const { subject, html } = campMarkedPaidEmail({
+    camp: contact.camp,
+    parentName: contact.parent_name,
+    athlete: {
+      first_name: contact.athlete_first_name,
+      group_name: contact.group_name,
+      start_time: contact.start_time,
+      end_time: contact.end_time,
+    },
+    finishUrl: contact.has_account ? null : finishAccountUrl(origin, contact.parent_email, contact.signup_id),
+  });
+  return await sendCampEmail(admin, contact.parent_email, subject, html);
+};
 
 // deno-lint-ignore no-explicit-any
 const sendDetails = async (caller: any, admin: any, registrationId: string, origin: string) => {

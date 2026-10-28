@@ -62,6 +62,10 @@ export const campTimes = (start: string | null | undefined, end: string | null |
   return range ? `${range} ${CAMP_TIME_ZONE_LABEL}` : "";
 };
 
+/** "Nov 4" for a hold's end (a timestamp), on Eastern time like the camp times. */
+export const holdDay = (iso: string | null | undefined) =>
+  iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", timeZone: "America/New_York" }) : null;
+
 export const money = (cents: number) => `$${(Math.max(0, Math.round(cents)) / 100).toFixed(2)}`;
 
 const campLines = (camp: CampEmailCamp) => {
@@ -94,14 +98,19 @@ export const campParentEmail = (input: {
   athletes: CampEmailAthlete[];
   amountCents?: number | null;
   finishUrl?: string | null;
+  /** When a direct-pay hold ends: the spot is released if the coach hasn't marked it paid. */
+  heldUntil?: string | null;
 }) => {
   const { kind, camp } = input;
+  const until = holdDay(input.heldUntil);
   const hi = input.parentName ? `Hi ${e(input.parentName.split(" ")[0])},` : "Hi,";
   const subject = kind === "paid" ? `You're in: ${camp.name}` : `Spot held: ${camp.name}`;
   const lead =
     kind === "paid"
       ? `<p>${hi} your spot at <strong>${e(camp.name)}</strong> with ${e(camp.coach_name)} is confirmed.</p>`
-      : `<p>${hi} we're holding your spot at <strong>${e(camp.name)}</strong>. ${e(camp.coach_name)} confirms it once you've paid him. Nothing was charged.</p>`;
+      : `<p>${hi} we're holding your spot at <strong>${e(camp.name)}</strong>. ${e(camp.coach_name)} confirms it once you've paid. Nothing was charged.${
+          until ? ` Pay ${e(camp.coach_name)} by <strong>${e(until)}</strong> to keep your spot.` : ""
+        }</p>`;
   const parts = [
     lead,
     athleteList(input.athletes),
@@ -164,6 +173,25 @@ export const campDetailsEmail = (input: {
     `<p>${input.parentName ? `Hi ${e(input.parentName.split(" ")[0])}, ` : ""}${e(input.camp.coach_name)} added ${e(
       input.athlete.first_name,
     )} to <strong>${e(input.camp.name)}</strong>.${input.status === "paid" ? "" : ` Pay ${e(input.camp.coach_name)} directly to confirm the spot.`}</p>`,
+    athleteList([input.athlete]),
+    ...campLines(input.camp),
+    includedList(input.camp.included),
+    input.finishUrl ? button(input.finishUrl, "Finish your account") : "",
+  ].filter(Boolean)),
+});
+
+/** To the parent when the coach marks a direct (offline) payment as received. */
+export const campMarkedPaidEmail = (input: {
+  camp: CampEmailCamp;
+  parentName: string | null;
+  athlete: CampEmailAthlete;
+  finishUrl: string | null;
+}) => ({
+  subject: `You're in: ${input.camp.name}`,
+  html: wrap("You're in", [
+    `<p>${input.parentName ? `Hi ${e(input.parentName.split(" ")[0])}, ` : ""}${e(input.camp.coach_name)} marked your payment as received, so ${e(
+      input.athlete.first_name,
+    )}'s spot at <strong>${e(input.camp.name)}</strong> is confirmed.</p>`,
     athleteList([input.athlete]),
     ...campLines(input.camp),
     includedList(input.camp.included),

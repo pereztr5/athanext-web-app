@@ -99,7 +99,7 @@ describe("sign-up form", () => {
       "athletes.0.first_name": "Add a first name",
       "athletes.0.last_name": "Add a last name",
       "athletes.0.birth_year": "Add a birth year, like 2013",
-      waiver: "Agree to the waiver to continue",
+      waiver: "Tick the box to continue",
     });
   });
 

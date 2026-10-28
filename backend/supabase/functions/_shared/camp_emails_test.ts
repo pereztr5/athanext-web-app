@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { campCoachEmail, campDates, campDetailsEmail, campParentEmail, campTime, campTimes, money } from "./camp_emails.ts";
+import { campCoachEmail, campDates, campDetailsEmail, campMarkedPaidEmail, campParentEmail, campTime, campTimes, holdDay, money } from "./camp_emails.ts";
 import { EMAIL_CARD, EMAIL_CREAM } from "./email_shell.ts";
 
 const camp = {
@@ -55,6 +55,29 @@ Deno.test("parent receipt escapes names and offers Finish your account only when
   assertEquals(held.subject, "Spot held: Thanksgiving <Camp>");
   assertStringIncludes(held.html, "Nothing was charged");
   assert(!held.html.includes("Finish your account"));
+  assert(!held.html.includes(" him"));
+
+  const dated = campParentEmail({
+    kind: "held",
+    parentName: null,
+    camp,
+    athletes: [{ first_name: "Leo" }],
+    finishUrl: null,
+    heldUntil: "2026-11-04T13:09:23Z",
+  });
+  assertStringIncludes(dated.html, "by <strong>Nov 4</strong> to keep your spot");
+});
+
+Deno.test("hold day is on Eastern time", () => {
+  assertEquals(holdDay("2026-11-05T03:00:00Z"), "Nov 4");
+  assertEquals(holdDay(null), null);
+});
+
+Deno.test("marked-paid email confirms the spot", () => {
+  const paid = campMarkedPaidEmail({ camp, parentName: "Ana Diaz", athlete: { first_name: "Leo" }, finishUrl: null });
+  assertEquals(paid.subject, "You're in: Thanksgiving <Camp>");
+  assertStringIncludes(paid.html, "marked your payment as received");
+  assertStringIncludes(paid.html, "Hi Ana,");
 });
 
 Deno.test("coach email says how the family pays", () => {

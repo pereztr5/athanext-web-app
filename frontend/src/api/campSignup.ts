@@ -135,6 +135,8 @@ export type CampSignupStatus = {
   parent_email: string;
   /** False: show "Finish your account" with parent_email filled in. */
   account_exists: boolean;
+  /** A direct-pay hold: the spot is released then unless the coach marks it paid. */
+  held_until?: string | null;
   camp: {
     id: string;
     name: string;

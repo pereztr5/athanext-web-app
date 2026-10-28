@@ -149,6 +149,7 @@ export const sendCampSignupEmails = async (
       camp,
       athletes,
       amountCents: signup.amount_total_cents,
+      heldUntil: kind === "held" ? (status.held_until as string | null) : null,
       finishUrl: status.account_exists ? null : finishAccountUrl(origin, signup.parent_email, signupId),
     });
     if (await sendCampEmail(admin, signup.parent_email, subject, html)) {

@@ -151,7 +151,7 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
   const prefill = useFamilyPrefill();
   const footerClass = useFooterClass();
 
-  const { user } = useAuth();
+  const { user, userProfile } = useAuth();
   const page = useQuery({
     // The viewer matters: the camp's coach also sees drafts and the Edit bar.
     queryKey: ["camp-page", coachSlug, campSlug, user?.id ?? null],
@@ -320,7 +320,7 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
 
   return (
     <div className={shell}>
-      {camp.can_edit ? <OwnerBar camp={camp} /> : null}
+      {camp.can_edit ? <OwnerBar camp={camp} own={Boolean(userProfile?.coach_id && userProfile.coach_id === camp.coach.id)} /> : null}
       {submitError ? <Notice>{submitError}</Notice> : null}
       <CampFamilyView view={view} groupId={groupId} onGroup={(id) => setGroupId(id)} />
       <div className={footerClass}>
@@ -347,11 +347,15 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
 };
 
 /** The camp's coach (or an admin) sees the page as families do, with Edit and Registrations on top. */
-const OwnerBar = ({ camp }: { camp: CampPage }) => (
+const OwnerBar = ({ camp, own }: { camp: CampPage; own: boolean }) => (
   <div className="flex flex-col gap-3 rounded-control border border-primary-300 bg-primary-100 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
     <div className="flex min-w-0 flex-col gap-0.5">
-      <b className="text-label-sm text-dark">This is how families see your camp</b>
-      <span className="text-caption text-dark-300">{camp.published === false ? "Draft: only you can see it." : "Only you see this bar."}</span>
+      <b className="text-label-sm text-dark">This is how families see {own ? "your" : `${camp.coach.name}'s`} camp</b>
+      <span className="text-caption text-dark-300">
+        {camp.published === false
+          ? `Draft: only ${own ? "you" : "the coach"} and admins can see it.`
+          : `Only ${own ? "you" : "the coach"} and admins see this bar.`}
+      </span>
     </div>
     <div className="flex flex-wrap gap-2">
       <Link to={`${ROUTES.CAMPS}?camp=${camp.id}&view=registrations`} className={cn(secondaryButton, smallButton)}>
@@ -579,21 +583,23 @@ const Details = ({
             }}
           />
           <span>
-            I agree to {coachFirst}&apos;s{" "}
             {waiverHref ? (
-              <a
-                href={waiverHref}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-primary underline underline-offset-2 hover:text-primary-700"
-                onClick={(e) => e.stopPropagation()}
-              >
-                camp waiver
-              </a>
+              <>
+                I agree to {coachFirst}&apos;s{" "}
+                <a
+                  href={waiverHref}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-primary underline underline-offset-2 hover:text-primary-700"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  camp waiver
+                </a>{" "}
+                and to photos of my athlete being used by {camp.coach.name}.
+              </>
             ) : (
-              "camp waiver"
-            )}{" "}
-            and to photos of my athlete being used by {camp.coach.name}.
+              <>I agree to photos of my athlete being used by {camp.coach.name}.</>
+            )}
           </span>
         </label>
         <FieldError id="waiver-error" text={err("waiver")} />
