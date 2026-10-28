@@ -10,7 +10,7 @@ import { useQuery } from "@tanstack/react-query";
 import { MessageCircle } from "@/components/icons";
 import { OrgLogo } from "@/components/organization/OrgPageEditor";
 import { OrgPackageCard, type PackageCoach } from "@/components/organization/OrgPackages";
-import { card, pageTitle, secondaryButton, smallButton } from "@/components/schedule/styles";
+import { card, pageTitle, secondaryButton, smallButton, textPanel } from "@/components/schedule/styles";
 import { orgPackagesAPI, type PublicOrganization } from "@/api/organizations";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
@@ -114,7 +114,7 @@ export const OrgFamilyPage = ({
           </button>
         ) : null}
       </header>
-      {org.about ? <p className="-mt-2 max-w-[64ch] text-paragraph text-dark-400">{org.about}</p> : null}
+      {org.about ? <p className={cn(textPanel, "max-w-[64ch] whitespace-pre-line text-paragraph text-dark-400")}>{org.about}</p> : null}
 
       <section className={cn(card, "gap-4")}>
         <div className="flex items-center justify-between gap-3">

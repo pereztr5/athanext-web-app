@@ -4,6 +4,8 @@ import { BrandPill } from "@/components/brand";
 import "@/styles/richText.css";
 import { CoachProfileCard } from "../CoachProfileCard";
 import { cardGap, lbl, sectionTitle } from "./styles";
+import { cn } from "@/lib/utils";
+import { textPanel } from "@/components/schedule/styles";
 
 const TagRow = ({ label, children }: { label: string; children: ReactNode }) => (
   <div className="grid grid-cols-[72px_minmax(0,1fr)] items-start gap-2.5">
@@ -58,7 +60,7 @@ export const AboutCard = ({
     </div>
     {bioHtml ? (
       <div
-        className="rich-text-content text-body-l text-dark"
+        className={cn(textPanel, "rich-text-content text-body-l text-dark")}
         dangerouslySetInnerHTML={{ __html: bioHtml }}
       />
     ) : null}

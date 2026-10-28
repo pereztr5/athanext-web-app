@@ -18,6 +18,9 @@ export const iconButton =
 export const card =
   "flex flex-col gap-5 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] md:px-[25px] md:pb-[25px] md:pt-[30px]";
 
+/** Text panel: long text someone wrote (bio, organization about, coach feedback). Outline only, no fill. */
+export const textPanel = "min-w-0 rounded-control border border-light-550 px-4 py-3.5 md:px-5 md:py-4";
+
 /** Page title: t-page-title, t-page-title-phone on phone. */
 export const pageTitle = "text-page-title-phone text-dark md:text-page-title";
 export const label = "text-label-xsm text-dark-300";

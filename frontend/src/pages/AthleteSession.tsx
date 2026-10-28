@@ -18,7 +18,7 @@ import { InfoBox } from "@/components/book/checkoutParts";
 import { RescheduleDialog } from "@/components/athlete-session/RescheduleDialog";
 import { SessionHeader } from "@/components/session/SessionHeader";
 import { ReportIssueButton, ReportIssueDialog } from "@/components/session/ReportIssueDialog";
-import { card, dangerButton, dangerTextButton, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
+import { card, dangerButton, dangerTextButton, dialogContent, input, label, meta, primaryButton, secondaryButton, textButton, textPanel } from "@/components/schedule/styles";
 import { buildIcs, downloadIcs } from "@/utils/ics";
 import { scoreWord } from "@/utils/feedback";
 import { useProfile } from "@/contexts/ProfileContext";
@@ -368,7 +368,7 @@ const AthleteSessionPage = () => {
                   <p className={meta}>{s.missedMessage ?? `${coachFirst} marked this session as missed.`}</p>
                 ) : s.summary || s.note ? (
                   <>
-                    {s.summary ? <p className="whitespace-pre-line text-paragraph text-dark">{s.summary}</p> : null}
+                    {s.summary ? <p className={cn(textPanel, "whitespace-pre-line text-paragraph text-dark")}>{s.summary}</p> : null}
                     {s.note ? (
                       <div className="flex flex-col gap-1 rounded-control bg-light px-3 py-2.5">
                         <span className={meta}>Just for you</span>
