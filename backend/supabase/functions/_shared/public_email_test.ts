@@ -71,7 +71,10 @@ Deno.test("contact goes to support with escaped fields, Reply-To the visitor, pl
   assertEquals(admin.replyTo, "pat@example.com");
   assertEquals(admin.subject, "Contact form: Billing Bcc: evil@x.com");
   assert(!admin.html.includes("<script>"));
-  assert(!admin.html.includes("<img"));
+  // The visitor's markup is escaped (the shell's own logo <img> is fine).
+  assert(!admin.html.includes("<img src=x"));
+  assert(!admin.html.includes('onerror="'));
+  assertStringIncludes(admin.html, "&lt;img src=x");
   assertStringIncludes(admin.html, "Pat &lt;script&gt;");
   assertStringIncludes(admin.html, "+1 555 123 4567");
   assert(!admin.html.includes("spam"));
