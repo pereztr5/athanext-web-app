@@ -43,9 +43,18 @@ type Step = "page" | "details" | "review";
 type PayMethod = "card" | "direct";
 
 // Same content width as the public coach profile (max-w-wrapper + px-4 / md:px-10).
-const shell = "mx-auto flex w-full max-w-wrapper flex-col gap-4 px-4 pb-6 pt-4 md:px-10 md:pt-8";
+// No bottom padding: every step ends with the sticky footer, which sits flush on the bottom edge
+// once the page is scrolled to the end.
+const shell = "mx-auto flex w-full max-w-wrapper flex-col gap-4 px-4 pt-4 md:px-10 md:pt-8";
+// The bar's fill and top rule run the full width of the main area (sidebar to edge, or edge to
+// edge signed out) while its content stays on the page column. Both are box-shadows (they never make
+// the page scroll sideways), pushed down so they start at the bar's top edge, with the rule 1px above
+// the fill, and clipped to a horizontal strip; the app shell clips them at its edges.
 const footer =
-  "sticky bottom-0 z-10 -mx-4 mt-2 flex flex-col gap-2.5 border-t border-light-525 bg-light-300 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3 md:-mx-10 md:px-10";
+  "sticky bottom-0 z-10 -mx-4 mt-2 flex flex-col gap-2.5 bg-light-300 px-4 pb-[calc(12px+env(safe-area-inset-bottom,0px))] pt-3 md:-mx-10 md:px-10 shadow-[0_100vmax_0_100vmax_#F7F7F0,0_calc(100vmax_-_1px)_0_100vmax_#EAEADF] [clip-path:inset(-1px_-100vmax_0_-100vmax)]";
+// Summary on the left, the action on the right (page and details steps).
+const footerRow = "flex items-center justify-between gap-4";
+const footerButton = "h-11 flex-none px-6 sm:min-w-[160px]";
 const fieldBox = "flex min-w-0 flex-col gap-1.5";
 
 /** Signed in on a phone, the app's tab bar sits at the bottom: keep the footer above it. */
@@ -201,7 +210,7 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
 
   if (page.isLoading) {
     return (
-      <div className={shell} aria-busy="true">
+      <div className={cn(shell, "pb-6")} aria-busy="true">
         <div className="h-[200px] animate-pulse rounded-card bg-light-400" />
         <div className="h-[240px] animate-pulse rounded-card bg-light-400" />
       </div>
@@ -219,7 +228,6 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
 
   const camp = page.data;
   const view = campViewFromPage(camp);
-  const coachFirst = firstName(camp.coach.name);
   const group = camp.groups.find((g) => g.id === groupId) ?? null;
   const allFull = camp.groups.length > 0 && camp.groups.every((g) => g.full);
 
@@ -324,23 +332,30 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
       {submitError ? <Notice>{submitError}</Notice> : null}
       <CampFamilyView view={view} groupId={groupId} onGroup={(id) => setGroupId(id)} />
       <div className={footerClass}>
-        {camp.published === false ? (
-          <p className="text-center text-caption text-dark-300">This is a draft. Publish it to let families sign up.</p>
-        ) : !camp.open ? (
-          <p className="text-center text-caption text-dark-300">Sign-ups for this camp are closed.</p>
-        ) : allFull ? (
-          <p className="text-center text-caption text-dark-300">Every group is fully booked.</p>
-        ) : !group ? (
-          <p className="text-center text-caption text-dark-300">Pick a group to continue.</p>
-        ) : (
-          <p className="text-center text-caption text-dark-300">
-            {group.name} · {formatCampMoney(camp.price_cents)} per athlete
-          </p>
-        )}
-        <button type="button" className={cn(primaryButton, "h-11 w-full")} disabled={camp.published === false || !camp.open || !group || group.full} onClick={startDetails}>
-          Sign up
-        </button>
-        <span className="text-center text-caption text-dark-300">No account needed. With {coachFirst}.</span>
+        <div className={footerRow}>
+          <div className="flex min-w-0 flex-col">
+            <b className="text-subtitle tabular-nums text-dark">{formatCampMoney(camp.price_cents)}</b>
+            <span className="truncate text-caption text-dark-300">
+              {camp.published === false
+                ? "Draft. Publish to open sign-ups"
+                : !camp.open
+                  ? "Sign-ups closed"
+                  : allFull
+                    ? "Fully booked"
+                    : group
+                      ? `${group.name || "All athletes"} · per athlete`
+                      : "Pick a group"}
+            </span>
+          </div>
+          <button
+            type="button"
+            className={cn(primaryButton, footerButton)}
+            disabled={camp.published === false || !camp.open || !group || group.full}
+            onClick={startDetails}
+          >
+            Sign up
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -606,13 +621,15 @@ const Details = ({
       </div>
 
       <div className={footerClass}>
-        <div className="flex items-center justify-between text-body-m">
-          <span className="text-dark-300">{plural(count, "athlete")}</span>
-          <b className="tabular-nums">{formatCampMoney(camp.price_cents * count)}</b>
+        <div className={footerRow}>
+          <div className="flex min-w-0 flex-col">
+            <b className="text-subtitle tabular-nums text-dark">{formatCampMoney(camp.price_cents * count)}</b>
+            <span className="truncate text-caption text-dark-300">{plural(count, "athlete")}</span>
+          </div>
+          <button type="button" className={cn(primaryButton, footerButton)} onClick={onNext}>
+            Continue to payment
+          </button>
         </div>
-        <button type="button" className={cn(primaryButton, "h-11 w-full")} onClick={onNext}>
-          Continue to payment
-        </button>
       </div>
     </div>
   );
