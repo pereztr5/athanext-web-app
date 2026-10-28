@@ -535,8 +535,20 @@ export interface GroupOfferSession {
   started: boolean;
 }
 
+/** week = weekly pick-and-pay post; offer = sessions a coach offered; suggestion = intro-call "book this". */
+export type GroupOfferKind = "week" | "offer" | "suggestion";
+
+/** Intro-call suggestion: what the coach suggests (no sessions attached). */
+export interface OfferSuggestion {
+  key: string;
+  label: string;
+  expiresAt: string | null;
+}
+
 export interface GroupOffer {
   id: string;
+  kind: GroupOfferKind;
+  suggestion: OfferSuggestion | null;
   title: string;
   closesAt: string;
   closed: boolean;
@@ -613,6 +625,14 @@ export const groupOffersAPI = {
     const raw = data as Row;
     return {
       id: raw.id,
+      kind: raw.kind === "offer" || raw.kind === "suggestion" ? raw.kind : "week",
+      suggestion: raw.suggestion
+        ? {
+            key: String(raw.suggestion.key ?? ""),
+            label: String(raw.suggestion.label ?? ""),
+            expiresAt: raw.suggestion.expires_at ?? null,
+          }
+        : null,
       title: raw.title,
       closesAt: raw.closes_at,
       closed: Boolean(raw.closed),

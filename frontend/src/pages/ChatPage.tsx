@@ -11,6 +11,7 @@ import { NewChannelDialog } from "@/components/chat/NewChannelDialog";
 import { NewMessageDialog } from "@/components/chat/NewMessageDialog";
 import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
 import MessageBubble from "@/components/chat/MessageBubble";
+import { offerBubbleText } from "@/utils/messageLinks";
 import { CommunityMembersDialog } from "@/components/chat/CommunityMembersDialog";
 import { SafeguardingStrip } from "@/components/chat/SafeguardingStrip";
 import { ComposerShortcuts, ConversationHeaderActions, conversationSubline, useConversationContext } from "@/components/chat/ConversationTools";
@@ -1195,10 +1196,12 @@ const ChatPage = () => {
                       const initials = getInitials(
                         isUser ? userName || senderName || "You" : senderName || getConversationName(selectedConversation)
                       );
-                      const bubble = (
+                      // Coach offers carry a card with the link; the bubble keeps only the words.
+                      const bubbleText = message.offer_id ? offerBubbleText(message.body) : message.body;
+                      const bubble = bubbleText ? (
                         <MessageBubble
                           key={message.id}
-                          text={message.body}
+                          text={bubbleText}
                           time={formatTime(message.created_at)}
                           isUser={isUser}
                           initials={initials}
@@ -1207,7 +1210,7 @@ const ChatPage = () => {
                           senderName={isGroup && !isUser ? formatDisplayName(senderName || "Member") : undefined}
                           variant="thread"
                         />
-                      );
+                      ) : null;
                       // A published week of group sessions (ATH-72) shows its pick-and-pay card.
                       if (!message.offer_id) return bubble;
                       return (

@@ -35,3 +35,9 @@ export const splitMessageLinks = (text: string, origin: string): MessagePart[] =
   if (last < text.length) parts.push({ kind: "text", text: text.slice(last) });
   return parts;
 };
+
+// "Book it here: <url>", "Book and pay here: <url>", "Pay here: <url>" or a bare URL.
+const OFFER_LINK_RE = /\s*(?:(?:book(?: it| and pay)? here|pay here)\s*:\s*)?https?:\/\/[^\s<>"']+/gi;
+
+/** A message with an offer card: the card has the link, so the bubble keeps only the words. */
+export const offerBubbleText = (text: string): string => text.replace(OFFER_LINK_RE, "").trim();

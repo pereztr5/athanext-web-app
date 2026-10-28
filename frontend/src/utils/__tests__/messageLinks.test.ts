@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { appPathFor, splitMessageLinks } from "../messageLinks";
+import { appPathFor, offerBubbleText, splitMessageLinks } from "../messageLinks";
 
 const ORIGIN = "https://athanext-staging.vercel.app";
 
@@ -33,5 +33,23 @@ describe("appPathFor", () => {
   it("rejects other hosts and bad URLs", () => {
     expect(appPathFor("https://evil.example/athanext.com", ORIGIN)).toBeNull();
     expect(appPathFor("not a url", ORIGIN)).toBeNull();
+  });
+});
+
+describe("offerBubbleText", () => {
+  it("drops the booking link the card already has", () => {
+    expect(offerBubbleText(`Riley offered a 1-on-1 session on Wed, Oct 28 at 6:00 pm. Book it here: ${ORIGIN}/coach/riley?session=abc`)).toBe(
+      "Riley offered a 1-on-1 session on Wed, Oct 28 at 6:00 pm.",
+    );
+    expect(offerBubbleText(`Casey, I have 2 sessions for you ($170). Book and pay here: ${ORIGIN}/coach/x?session=1`)).toBe(
+      "Casey, I have 2 sessions for you ($170).",
+    );
+    expect(offerBubbleText(`Next week's sessions are up. Tick the ones you're in for and pay once. ${ORIGIN}/offers/1`)).toBe(
+      "Next week's sessions are up. Tick the ones you're in for and pay once.",
+    );
+  });
+
+  it("leaves a message without links alone", () => {
+    expect(offerBubbleText("Thanks for the intro call!")).toBe("Thanks for the intro call!");
   });
 });

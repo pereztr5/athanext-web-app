@@ -3,6 +3,8 @@ import { Loader2, Send, X } from "@/components/icons";
 
 import type { Coach } from "@/types/coachProfile";
 import MessageBubble from "@/components/chat/MessageBubble";
+import { GroupOfferCard } from "@/components/schedule/GroupOfferCard";
+import { offerBubbleText } from "@/utils/messageLinks";
 import { chatAPI, type MessageWithSender } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -397,13 +399,17 @@ const CoachChatPanel = ({ coach, conversationId, onClose }: CoachChatPanelProps)
                     {formatDayLabel(message.created_at)}
                   </span>
                 ) : null}
-                <MessageBubble
-                  text={message.body}
-                  time={formatTime(message.created_at)}
-                  isUser={isUser}
-                  initials={isUser ? userInitials : coachInitials}
-                  status={isUser && message.status ? toSentenceCase(message.status) : undefined}
-                />
+                {!message.offer_id || offerBubbleText(message.body) ? (
+                  <MessageBubble
+                    text={message.offer_id ? offerBubbleText(message.body) : message.body}
+                    time={formatTime(message.created_at)}
+                    isUser={isUser}
+                    initials={isUser ? userInitials : coachInitials}
+                    status={isUser && message.status ? toSentenceCase(message.status) : undefined}
+                  />
+                ) : null}
+                {/* Coach offers show their card here too, the same as on Messages. */}
+                {message.offer_id ? <GroupOfferCard offerId={message.offer_id} className={isUser ? "self-end" : "self-start"} /> : null}
               </Fragment>
             );
           })

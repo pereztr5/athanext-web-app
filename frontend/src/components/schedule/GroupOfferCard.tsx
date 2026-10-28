@@ -13,6 +13,7 @@ import { BrandPill } from "@/components/brand";
 import { groupOffersAPI, type GroupOfferSession } from "@/api/schedule";
 import { OfferEditSheet } from "@/components/schedule/group-offer/OfferEditSheet";
 import { OfferPaySheet } from "@/components/schedule/group-offer/OfferPaySheet";
+import { SuggestionCard } from "@/components/schedule/group-offer/SuggestionCard";
 import {
   DateTile,
   FillMini,
@@ -99,18 +100,27 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
   }
 
   const isOwner = Boolean(userProfile?.coach_id && userProfile.coach_id === offer.coachId);
+  if (offer.kind === "suggestion") return <SuggestionCard offer={offer} isOwner={isOwner} className={className} />;
+  const isOfferCard = offer.kind === "offer";
   const canPick = Boolean(athleteId) && !offer.closed;
   const closes = new Date(offer.closesAt);
   const live = sessions.filter((s) => !s.cancelled);
   const booked = live.reduce((n, s) => n + s.bookedCount, 0);
   const capacity = live.reduce((n, s) => n + s.capacity, 0);
-  const selected = live.filter((s) => picked.includes(s.id));
+  // A coach's offer with one bookable session needs no ticking: Review and pay goes straight to it.
+  const openToPick = live.filter((s) => !inMine(s) && s.capacity - s.bookedCount > 0);
+  const single = isOfferCard && canPick && openToPick.length === 1;
+  const selected = single ? openToPick : live.filter((s) => picked.includes(s.id));
   const total = selected.reduce((n, s) => n + s.price, 0);
   const mineN = live.filter((s) => inMine(s)).length;
   const first = offer.coachName.split(" ")[0] || "Coach";
   const shareLink = `${window.location.origin}/offers/${offer.id}`;
 
   const title = (() => {
+    if (isOfferCard) {
+      const n = live.length || offer.sessions.length;
+      return isOwner ? `You offered ${plural(n, "session")}` : `${first} offered ${n === 1 ? "you a session" : plural(n, "session")}`;
+    }
     if (!/^Week of/i.test(offer.title || "")) return offer.title;
     const dates = live.map((s) => s.date).sort();
     if (!dates.length) return offer.title;
@@ -138,7 +148,9 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               {offer.closed ? <BrandPill tone="neutral">Closed</BrandPill> : <BrandPill tone="green">Live</BrandPill>}
             </div>
             <span className={meta}>
-              {offer.closed ? "No more picks" : `Closes ${formatDateInZone(closes, timeZone, { weekday: "short", hour: "numeric", minute: "2-digit" })}`}
+              {offer.closed
+                ? "No more picks"
+                : `${isOfferCard ? "Bookable until" : "Closes"} ${formatDateInZone(closes, timeZone, { weekday: "short", hour: "numeric", minute: "2-digit" })}`}
               {` · ${shareLink.replace(/^https?:\/\//, "")}`}
             </span>
           </div>
@@ -195,7 +207,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               <button type="button" className={cn(secondaryButton, smallButton)} onClick={() => navigate(ROUTES.SCHEDULE)}>
                 View in My schedule
               </button>
-              {sessions.length ? (
+              {sessions.length && !isOfferCard ? (
                 <button type="button" className={cn(primaryButton, smallButton)} onClick={() => setEditOpen(true)}>
                   <Pencil className="size-3.5" strokeWidth={1.5} aria-hidden="true" />
                   Edit
@@ -217,7 +229,9 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
           <span className={meta}>
             {mineN && !picked.length
               ? `${athleteName.split(" ")[0] || "You're"} in ${plural(mineN, "session")}. Change anything from My sessions.`
-              : "Tick the ones you want and pay once."}
+              : single
+                ? "Review the details and pay to book it."
+                : "Tick the ones you want and pay once."}
           </span>
         </div>
         <div className="flex flex-col divide-y divide-light-525">
@@ -231,7 +245,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               const on = picked.includes(s.id);
               const ask = !s.cancelled && mine && s.myChangeAsk === "pending";
               const ans = !s.cancelled && mine && s.myChangeAsk === "keep";
-              const selectable = canPick && !mine && !full;
+              const selectable = canPick && !mine && !full && !single;
               const lead = s.cancelled ? (
                 <span className="size-[18px] flex-none" aria-hidden="true" />
               ) : mine ? (
@@ -304,7 +318,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
               ) : null;
               const inner = (
                 <>
-                  {canPick || mine || full ? lead : null}
+                  {(canPick && !single) || mine || full ? lead : null}
                   <DateTile day={s.date} />
                   <span className="flex min-w-0 flex-1 flex-col gap-1" style={{ flexBasis: 140 }}>
                     <span className="flex flex-wrap items-center gap-1.5">
@@ -362,13 +376,17 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
 
         {canPick && !offer.closed ? (
           <div className={cardFoot}>
-            {picked.length ? (
+            {single ? (
+              <button type="button" className={cn(primaryButton, "h-10 w-full")} onClick={() => setPayOpen(true)}>
+                Review and pay · {money(total)}
+              </button>
+            ) : picked.length ? (
               <button type="button" className={cn(primaryButton, "h-10 w-full")} onClick={() => setPayOpen(true)}>
                 Continue with {plural(picked.length, "session")} · {money(total)}
               </button>
             ) : null}
             <span className={cn(meta, "text-center")}>
-              Booking for {athleteName.split(" ")[0] || "your athlete"} · Closes{" "}
+              Booking for {athleteName.split(" ")[0] || "your athlete"} · {isOfferCard ? "Book by" : "Closes"}{" "}
               {formatDateInZone(closes, timeZone, { weekday: "short", hour: "numeric", minute: "2-digit" })}
             </span>
           </div>
