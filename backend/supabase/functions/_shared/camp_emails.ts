@@ -124,29 +124,42 @@ export const campParentEmail = (input: {
   return { subject, html: wrap(kind === "paid" ? "You're in" : "Your spot is held", parts) };
 };
 
-/** To the coach for a new family sign-up. */
+/**
+ * To the coach for a new family sign-up, once per sign-up: "New sign-up" after a card payment
+ * (the spot is confirmed) or "Spot requested" after "Hold my spot" (the family pays offline and
+ * the coach confirms payment in Registrations).
+ */
 export const campCoachEmail = (input: {
   kind: "paid" | "held";
   camp: CampEmailCamp;
   parentName: string | null;
   parentEmail: string | null;
   athletes: CampEmailAthlete[];
+  /** Paid by card (paid) or owed to the coach (held). */
+  amountCents?: number | null;
+  /** When a held spot is released if the coach hasn't marked it paid. */
+  heldUntil?: string | null;
   registrationsUrl: string;
 }) => {
-  const n = input.athletes.length;
-  const who = n === 1 ? "1 athlete" : `${n} athletes`;
-  const subject =
-    input.kind === "paid"
-      ? `${who} signed up for ${input.camp.name}`
-      : `${who} waiting for payment: ${input.camp.name}`;
+  const { kind, camp } = input;
+  const family = `${e(input.parentName ?? "A family")}${input.parentEmail ? ` (${e(input.parentEmail)})` : ""}`;
+  const amount = input.amountCents ? money(input.amountCents) : "";
+  const until = holdDay(input.heldUntil);
+  const subject = kind === "paid" ? `New sign-up: ${camp.name}` : `Spot requested: ${camp.name}`;
+  const lead =
+    kind === "paid"
+      ? `<p>${family} signed up for <strong>${e(camp.name)}</strong> and paid by card. The spot is confirmed.</p>`
+      : `<p>${family} requested a spot at <strong>${e(camp.name)}</strong> and will pay you offline. They're waiting for you to confirm payment: mark it paid in Registrations once you have the money.${
+          until ? ` If it isn't marked paid by <strong>${e(until)}</strong>, the spot is released.` : ""
+        }</p>`;
   const parts = [
-    `<p>${e(input.parentName ?? "A family")}${input.parentEmail ? ` (${e(input.parentEmail)})` : ""} ${
-      input.kind === "paid" ? "signed up and paid in the app." : "signed up and will pay you directly. Mark it paid once they have."
-    }</p>`,
+    lead,
     athleteList(input.athletes),
-    button(input.registrationsUrl, "See registrations"),
-  ];
-  return { subject, html: wrap("New camp sign-up", parts) };
+    ...campLines(camp),
+    amount ? `<p><strong>${kind === "paid" ? "Paid by card" : "To be paid offline"}:</strong> ${e(amount)}</p>` : "",
+    button(input.registrationsUrl, "Open registrations"),
+  ].filter(Boolean);
+  return { subject, html: wrap(kind === "paid" ? "New sign-up" : "Spot requested", parts) };
 };
 
 /** "Finish your account" (Resend link from the coach's registrations). */

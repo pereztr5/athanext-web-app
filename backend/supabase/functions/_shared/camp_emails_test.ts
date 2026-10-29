@@ -80,19 +80,53 @@ Deno.test("marked-paid email confirms the spot", () => {
   assertStringIncludes(paid.html, "Hi Ana,");
 });
 
-Deno.test("coach email says how the family pays", () => {
+Deno.test("coach email: new sign-up paid by card", () => {
   const paid = campCoachEmail({
     kind: "paid",
     camp,
-    parentName: "Ana",
+    parentName: "Ana <b>",
     parentEmail: "ana@example.com",
-    athletes: [{ first_name: "Leo" }, { first_name: "Mia" }],
-    registrationsUrl: "https://athanext.com/profile?camp=1",
+    athletes: [
+      { first_name: "Leo", last_name: "Diaz", group_name: "U10 <A>", start_time: "09:00", end_time: "12:00" },
+      { first_name: "Mia" },
+    ],
+    amountCents: 26845,
+    registrationsUrl: "https://app.athanext.com/camps?camp=1&view=registrations",
   });
-  assertEquals(paid.subject, "2 athletes signed up for Thanksgiving <Camp>");
-  assertStringIncludes(paid.html, "signed up and paid in the app");
-  const held = campCoachEmail({ ...{ kind: "held" as const }, camp, parentName: null, parentEmail: null, athletes: [{ first_name: "Leo" }], registrationsUrl: "x" });
-  assertEquals(held.subject, "1 athlete waiting for payment: Thanksgiving <Camp>");
+  assertEquals(paid.subject, "New sign-up: Thanksgiving <Camp>");
+  assertStringIncludes(paid.html, "Ana &lt;b&gt; (ana@example.com) signed up for <strong>Thanksgiving &lt;Camp&gt;</strong> and paid by card");
+  assertStringIncludes(paid.html, "The spot is confirmed.");
+  assertStringIncludes(paid.html, "Leo Diaz (U10 &lt;A&gt;, 9am to 12pm ET)");
+  assertStringIncludes(paid.html, "Mia");
+  assertStringIncludes(paid.html, "Nov 24 to Nov 26");
+  assertStringIncludes(paid.html, "<strong>Paid by card:</strong> $268.45");
+  assertStringIncludes(paid.html, "Open registrations");
+  assertStringIncludes(paid.html, "https://app.athanext.com/camps?camp=1&amp;view=registrations");
+  assert(!paid.html.includes("<b>"));
+  assert(!paid.html.includes("confirm payment"));
+});
+
+Deno.test("coach email: spot requested, paid offline", () => {
+  const held = campCoachEmail({
+    kind: "held",
+    camp,
+    parentName: null,
+    parentEmail: null,
+    athletes: [{ first_name: "Leo", last_name: "Diaz" }],
+    amountCents: 25000,
+    heldUntil: "2026-11-04T15:00:00Z",
+    registrationsUrl: "x",
+  });
+  assertEquals(held.subject, "Spot requested: Thanksgiving <Camp>");
+  assertStringIncludes(held.html, "A family requested a spot at <strong>Thanksgiving &lt;Camp&gt;</strong> and will pay you offline.");
+  assertStringIncludes(held.html, "waiting for you to confirm payment");
+  assertStringIncludes(held.html, "<strong>To be paid offline:</strong> $250.00");
+  assertStringIncludes(held.html, "marked paid by <strong>Nov 4</strong>");
+  assertStringIncludes(held.html, "Open registrations");
+  // No amount or pay-by date: those lines are left out.
+  const bare = campCoachEmail({ kind: "held", camp, parentName: null, parentEmail: null, athletes: [{ first_name: "Leo" }], registrationsUrl: "x" });
+  assert(!bare.html.includes("To be paid offline"));
+  assert(!bare.html.includes("released"));
 });
 
 Deno.test("details email for a coach-added athlete", () => {

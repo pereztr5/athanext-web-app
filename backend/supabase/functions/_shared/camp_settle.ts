@@ -15,7 +15,11 @@ import { finishAccountUrl, parseCampMetadata } from "./camp_signup.ts";
 // deno-lint-ignore no-explicit-any
 type Loose = any;
 /** Any service-role Supabase client. */
-export type CampAdmin = { rpc: (fn: string, args?: Record<string, unknown>) => Loose; from: (table: string) => Loose };
+export type CampAdmin = {
+  rpc: (fn: string, args?: Record<string, unknown>) => Loose;
+  from: (table: string) => Loose;
+  auth?: { admin: { getUserById: (id: string) => Loose } };
+};
 
 /** The fields of a Stripe Checkout Session this module reads. */
 export interface CampSession {
@@ -46,11 +50,31 @@ export const postgrestError = (context: string, error: unknown): Error => {
   return new Error(`${context}: ${parts.join(" ")}`);
 };
 
-export const appOrigin = () => Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL") || "https://athanext.com";
+export const appOrigin = () => Deno.env.get("APP_ORIGIN") || Deno.env.get("SITE_URL") || "https://app.athanext.com";
 
-/** Where the coach sees a camp's registrations. */
+/** Where the coach sees a camp's registrations (ROUTES.CAMPS, opened by CampUrlDialogs). */
 export const coachRegistrationsUrl = (origin: string, campId: string) =>
-  `${origin}/profile?camp=${encodeURIComponent(campId)}&view=registrations`;
+  `${origin}/camps?camp=${encodeURIComponent(campId)}&view=registrations`;
+
+/**
+ * The email the coach signs in with (user_profiles.coach_id → auth user), else the profile's
+ * email, else coaches.email (coaches without a linked account).
+ */
+export const coachAccountEmail = async (admin: CampAdmin, coachId: string): Promise<string | null> => {
+  const { data: profile } = await admin
+    .from("user_profiles")
+    .select("id, email")
+    .eq("coach_id", coachId)
+    .limit(1)
+    .maybeSingle();
+  if (profile?.id && admin.auth) {
+    const { data: userRes } = await admin.auth.admin.getUserById(profile.id);
+    if (userRes?.user?.email) return userRes.user.email as string;
+  }
+  if (profile?.email) return profile.email as string;
+  const { data: coach } = await admin.from("coaches").select("email").eq("id", coachId).maybeSingle();
+  return (coach?.email as string | null) ?? null;
+};
 
 const intentId = (session: CampSession): string | null => {
   const intent = session.payment_intent;
@@ -133,13 +157,12 @@ export const sendCampSignupEmails = async (
   const athletes = asAthletes(status.athletes).filter((a) => a.status === wanted);
   if (!athletes.length) return true; // nothing confirmed (for example paid without a spot: refunded by hand)
   const camp = { ...status.camp, coach_name: status.camp?.coach_name ?? "Your coach" };
-  const { data: firstRow } = await admin
+  const { data: regRows } = await admin
     .from("camp_registrations")
-    .select("parent_name")
-    .eq("signup_id", signupId)
-    .limit(1)
-    .maybeSingle();
-  const parentName = (firstRow?.parent_name as string | null) ?? null;
+    .select("id, parent_name, athlete_last_name, price_cents")
+    .eq("signup_id", signupId);
+  const regs = new Map(asAthletes(regRows).map((r) => [r.id as string, r]));
+  const parentName = (asAthletes(regRows)[0]?.parent_name as string | null) ?? null;
   let ok = true;
 
   if (!signup.receipt_sent_at) {
@@ -160,19 +183,24 @@ export const sendCampSignupEmails = async (
   }
 
   if (!signup.coach_notified_at) {
-    const { data: coach } = await admin.from("coaches").select("email").eq("id", signup.coach_id).maybeSingle();
+    // "New sign-up" (card, confirmed) or "Spot requested" (offline, the coach confirms payment).
+    const coachEmail = await coachAccountEmail(admin, signup.coach_id);
+    const owedCents = athletes.reduce((sum, a) => sum + (Number(regs.get(a.id)?.price_cents) || 0), 0);
     const { subject, html } = campCoachEmail({
       kind,
       camp,
       parentName,
       parentEmail: signup.parent_email,
-      athletes,
+      athletes: athletes.map((a) => ({ ...a, last_name: regs.get(a.id)?.athlete_last_name ?? null })),
+      // The camp price, which is what the coach earns (card fees are the family's, not the coach's).
+      amountCents: owedCents,
+      heldUntil: kind === "held" ? (status.held_until as string | null) : null,
       registrationsUrl: coachRegistrationsUrl(origin, signup.camp_id),
     });
-    if (!coach?.email) {
+    if (!coachEmail) {
       console.warn("Coach has no email: camp sign-up email skipped", signup.coach_id);
       await admin.from("camp_signups").update({ coach_notified_at: new Date().toISOString() }).eq("id", signupId);
-    } else if (await sendCampEmail(admin, coach.email, subject, html)) {
+    } else if (await sendCampEmail(admin, coachEmail, subject, html)) {
       await admin.from("camp_signups").update({ coach_notified_at: new Date().toISOString() }).eq("id", signupId);
     } else {
       ok = false;
