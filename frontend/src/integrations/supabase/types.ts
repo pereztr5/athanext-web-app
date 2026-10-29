@@ -284,6 +284,7 @@ export type Database = {
           bio: string | null
           cover_image_urls: string[]
           created_at: string
+          created_from_camp_registration_id: string | null
           current_year: string | null
           date_of_birth: string
           dominant_hand: string | null
@@ -312,6 +313,7 @@ export type Database = {
           bio?: string | null
           cover_image_urls?: string[]
           created_at?: string
+          created_from_camp_registration_id?: string | null
           current_year?: string | null
           date_of_birth: string
           dominant_hand?: string | null
@@ -340,6 +342,7 @@ export type Database = {
           bio?: string | null
           cover_image_urls?: string[]
           created_at?: string
+          created_from_camp_registration_id?: string | null
           current_year?: string | null
           date_of_birth?: string
           dominant_hand?: string | null
@@ -364,7 +367,15 @@ export type Database = {
           user_id?: string | null
           weight?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "athlete_profiles_created_from_camp_registration_id_fkey"
+            columns: ["created_from_camp_registration_id"]
+            isOneToOne: false
+            referencedRelation: "camp_registrations"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       brands: {
         Row: {
@@ -1426,6 +1437,35 @@ export type Database = {
           },
         ]
       }
+      coach_gear_picks: {
+        Row: {
+          coach_id: string
+          created_at: string
+          position: number
+          product_handle: string
+        }
+        Insert: {
+          coach_id: string
+          created_at?: string
+          position: number
+          product_handle: string
+        }
+        Update: {
+          coach_id?: string
+          created_at?: string
+          position?: number
+          product_handle?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "coach_gear_picks_coach_id_fkey"
+            columns: ["coach_id"]
+            isOneToOne: false
+            referencedRelation: "coaches"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       coach_intro_calls: {
         Row: {
           answers: Json
@@ -1604,6 +1644,7 @@ export type Database = {
           camp_slug: string | null
           camp_starts_on: string | null
           camp_tags: string[]
+          camp_waiver_url: string | null
           co_coach_ids: string[]
           coach_id: string
           created_at: string
@@ -1637,6 +1678,7 @@ export type Database = {
           camp_slug?: string | null
           camp_starts_on?: string | null
           camp_tags?: string[]
+          camp_waiver_url?: string | null
           co_coach_ids?: string[]
           coach_id: string
           created_at?: string
@@ -1670,6 +1712,7 @@ export type Database = {
           camp_slug?: string | null
           camp_starts_on?: string | null
           camp_tags?: string[]
+          camp_waiver_url?: string | null
           co_coach_ids?: string[]
           coach_id?: string
           created_at?: string
@@ -1909,6 +1952,7 @@ export type Database = {
         Row: {
           athlete_id: string
           availability_id: string | null
+          camp_registration_id: string | null
           canceled_at: string | null
           cancellation_reason: string | null
           change_ask: string | null
@@ -1935,6 +1979,7 @@ export type Database = {
         Insert: {
           athlete_id: string
           availability_id?: string | null
+          camp_registration_id?: string | null
           canceled_at?: string | null
           cancellation_reason?: string | null
           change_ask?: string | null
@@ -1961,6 +2006,7 @@ export type Database = {
         Update: {
           athlete_id?: string
           availability_id?: string | null
+          camp_registration_id?: string | null
           canceled_at?: string | null
           cancellation_reason?: string | null
           change_ask?: string | null
@@ -1997,6 +2043,13 @@ export type Database = {
             columns: ["availability_id"]
             isOneToOne: false
             referencedRelation: "coach_availability"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "coach_slot_bookings_camp_registration_id_fkey"
+            columns: ["camp_registration_id"]
+            isOneToOne: false
+            referencedRelation: "camp_registrations"
             referencedColumns: ["id"]
           },
           {
@@ -2215,6 +2268,7 @@ export type Database = {
           stripe_customer_id: string | null
           stripe_subscription_id: string | null
           subscription_status: string | null
+          title: string | null
           total_reviews: number | null
           travel_miles: number | null
           travel_zip: string | null
@@ -2279,6 +2333,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          title?: string | null
           total_reviews?: number | null
           travel_miles?: number | null
           travel_zip?: string | null
@@ -2343,6 +2398,7 @@ export type Database = {
           stripe_customer_id?: string | null
           stripe_subscription_id?: string | null
           subscription_status?: string | null
+          title?: string | null
           total_reviews?: number | null
           travel_miles?: number | null
           travel_zip?: string | null
@@ -2533,6 +2589,30 @@ export type Database = {
           },
         ]
       }
+      email_send_attempts: {
+        Row: {
+          created_at: string
+          email_hash: string | null
+          id: number
+          ip_hash: string | null
+          kind: string
+        }
+        Insert: {
+          created_at?: string
+          email_hash?: string | null
+          id?: never
+          ip_hash?: string | null
+          kind: string
+        }
+        Update: {
+          created_at?: string
+          email_hash?: string | null
+          id?: never
+          ip_hash?: string | null
+          kind?: string
+        }
+        Relationships: []
+      }
       faq_items: {
         Row: {
           answer: Json
@@ -2691,8 +2771,10 @@ export type Database = {
           coach_id: string
           created_at: string
           id: string
+          kind: string
           occurrence_ids: string[]
           session_tags: Json | null
+          suggestion: Json | null
           title: string
         }
         Insert: {
@@ -2700,8 +2782,10 @@ export type Database = {
           coach_id: string
           created_at?: string
           id?: string
+          kind?: string
           occurrence_ids: string[]
           session_tags?: Json | null
+          suggestion?: Json | null
           title: string
         }
         Update: {
@@ -2709,8 +2793,10 @@ export type Database = {
           coach_id?: string
           created_at?: string
           id?: string
+          kind?: string
           occurrence_ids?: string[]
           session_tags?: Json | null
+          suggestion?: Json | null
           title?: string
         }
         Relationships: [
@@ -3604,6 +3690,35 @@ export type Database = {
         }
         Relationships: []
       }
+      receipt_resends: {
+        Row: {
+          booking_id: string
+          created_at: string
+          id: string
+          user_id: string
+        }
+        Insert: {
+          booking_id: string
+          created_at?: string
+          id?: string
+          user_id: string
+        }
+        Update: {
+          booking_id?: string
+          created_at?: string
+          id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "receipt_resends_booking_id_fkey"
+            columns: ["booking_id"]
+            isOneToOne: false
+            referencedRelation: "coach_slot_bookings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       security_audit_logs: {
         Row: {
           accessed_user_id: string | null
@@ -4101,6 +4216,7 @@ export type Database = {
       user_profiles: {
         Row: {
           athlete_id: string | null
+          camp_signups_seen_at: string | null
           coach_id: string | null
           created_at: string | null
           date_of_birth: string | null
@@ -4114,6 +4230,7 @@ export type Database = {
           is_active: boolean
           is_admin: boolean
           is_profile_completed: boolean
+          is_test_account: boolean
           name: string
           notification_prefs: Json
           notifications_seen_at: string | null
@@ -4132,6 +4249,7 @@ export type Database = {
         }
         Insert: {
           athlete_id?: string | null
+          camp_signups_seen_at?: string | null
           coach_id?: string | null
           created_at?: string | null
           date_of_birth?: string | null
@@ -4145,6 +4263,7 @@ export type Database = {
           is_active?: boolean
           is_admin?: boolean
           is_profile_completed?: boolean
+          is_test_account?: boolean
           name: string
           notification_prefs?: Json
           notifications_seen_at?: string | null
@@ -4163,6 +4282,7 @@ export type Database = {
         }
         Update: {
           athlete_id?: string | null
+          camp_signups_seen_at?: string | null
           coach_id?: string | null
           created_at?: string | null
           date_of_birth?: string | null
@@ -4176,6 +4296,7 @@ export type Database = {
           is_active?: boolean
           is_admin?: boolean
           is_profile_completed?: boolean
+          is_test_account?: boolean
           name?: string
           notification_prefs?: Json
           notifications_seen_at?: string | null
@@ -4285,6 +4406,16 @@ export type Database = {
         }
         Returns: string
       }
+      admin_list_camp_coaches: {
+        Args: never
+        Returns: {
+          camps: number
+          id: string
+          name: string
+          slug: string
+        }[]
+      }
+      admin_list_camps: { Args: { p_coach_id: string }; Returns: Json }
       admin_mark_coach_invoice_paid: {
         Args: { p_invoice_id: string }
         Returns: string
@@ -4309,6 +4440,19 @@ export type Database = {
       }
       admin_set_account_active: {
         Args: { p_active: boolean; p_user_id: string }
+        Returns: undefined
+      }
+      admin_set_coach_coordinates: {
+        Args: {
+          p_coach_id: string
+          p_latitude: number
+          p_longitude: number
+          p_zip: string
+        }
+        Returns: undefined
+      }
+      admin_set_coach_profile_services: {
+        Args: { p_coach_id: string; p_services: Json }
         Returns: undefined
       }
       admin_set_org_owner: {
@@ -4350,6 +4494,21 @@ export type Database = {
         Args: { p_athlete_id: string; p_coach_id: string }
         Returns: Json
       }
+      camp_adopt_athlete: {
+        Args: { p_registration_id: string; p_user: string }
+        Returns: string
+      }
+      camp_bell_events: {
+        Args: { p_coach: string }
+        Returns: {
+          at: string
+          body: string
+          camp_id: string
+          event: string
+          id: string
+          title: string
+        }[]
+      }
       camp_charge_reversed: {
         Args: {
           p_charge_id: string
@@ -4373,15 +4532,43 @@ export type Database = {
         Args: { p_occurrence_id: string }
         Returns: undefined
       }
+      camp_editor_coach_id: { Args: { p_camp_id: string }; Returns: string }
       camp_email_is_client: {
         Args: { p_coach_id: string; p_email: string }
         Returns: boolean
       }
       camp_group_taken: { Args: { p_group_id: string }; Returns: number }
       camp_json: { Args: { p_camp_id: string }; Returns: Json }
+      camp_link_client: {
+        Args: {
+          p_athlete: string
+          p_athlete_first: string
+          p_coach_id: string
+          p_email: string
+          p_name: string
+          p_user: string
+        }
+        Returns: string
+      }
       camp_occurrence_has_history: {
         Args: { p_occurrence_id: string }
         Returns: boolean
+      }
+      camp_overlapping_times: {
+        Args: {
+          p_coach_id: string
+          p_from: string
+          p_times: Json
+          p_to: string
+        }
+        Returns: {
+          booked: boolean
+          closed: boolean
+          end_time: string
+          occurrence_date: string
+          occurrence_id: string
+          start_time: string
+        }[]
       }
       camp_quote: {
         Args: { p_camp_id: string; p_source: string }
@@ -4395,10 +4582,19 @@ export type Database = {
         Args: { p_id: string; p_kind: string }
         Returns: Json
       }
+      camp_registration_ensure_athlete: {
+        Args: { p_registration_id: string }
+        Returns: string
+      }
       camp_release_checkout: { Args: { p_session_id: string }; Returns: number }
       camp_reserve: {
         Args: { p_camp_id: string; p_group_ids: string[] }
         Returns: undefined
+      }
+      camp_restore_open_times: { Args: { p_coach_id: string }; Returns: number }
+      camp_schedule_overlaps: {
+        Args: { p_ends_on: string; p_groups: Json; p_starts_on: string }
+        Returns: Json
       }
       camp_signup_attach_session: {
         Args: {
@@ -4450,6 +4646,10 @@ export type Database = {
       claim_coach_referral: {
         Args: { _answer: string; _token: string }
         Returns: string
+      }
+      claim_receipt_resend: {
+        Args: { p_booking_ids: string[]; p_user_id: string }
+        Returns: boolean
       }
       cleanup_old_partnership_inquiries: {
         Args: { retention_days?: number }
@@ -4530,6 +4730,15 @@ export type Database = {
         }
         Returns: string
       }
+      create_offer_card: {
+        Args: {
+          p_coach_id: string
+          p_kind: string
+          p_occurrence_ids: string[]
+          p_suggestion: Json
+        }
+        Returns: string
+      }
       current_athlete_id: { Args: never; Returns: string }
       current_coach_id: { Args: never; Returns: string }
       delete_old_pending_bookings: { Args: never; Returns: undefined }
@@ -4539,6 +4748,18 @@ export type Database = {
       }
       eastern_timestamp: {
         Args: { p_date: string; p_time: string }
+        Returns: string
+      }
+      email_send_attempt: {
+        Args: {
+          p_email_hash: string
+          p_email_window_minutes: number
+          p_ip_hash: string
+          p_ip_window_minutes: number
+          p_kind: string
+          p_per_email: number
+          p_per_ip: number
+        }
         Returns: string
       }
       ensure_coach_channel: { Args: { p_coach_id: string }; Returns: string }
@@ -4710,6 +4931,7 @@ export type Database = {
       get_coach_intro: { Args: { p_coach_id: string }; Returns: Json }
       get_coach_intro_calls: { Args: never; Returns: Json }
       get_coach_invites: { Args: never; Returns: Json }
+      get_coach_offline_payments: { Args: never; Returns: Json }
       get_coach_open_invites: { Args: never; Returns: Json }
       get_coach_org_packages: { Args: { p_coach_id: string }; Returns: Json }
       get_coach_payments: { Args: never; Returns: Json }
@@ -4820,6 +5042,7 @@ export type Database = {
           specialties: string[]
           sport_type: string
           status: string
+          title: string
           total_reviews: number
           updated_at: string
           years_experience: number
@@ -4850,6 +5073,8 @@ export type Database = {
       get_my_camps: { Args: never; Returns: Json }
       get_my_coaches: { Args: never; Returns: Json }
       get_my_intro_settings: { Args: never; Returns: Json }
+      get_my_invoices: { Args: never; Returns: Json }
+      get_my_new_camp_signups: { Args: never; Returns: Json }
       get_my_notifications: { Args: never; Returns: Json }
       get_my_org_coach_removals: {
         Args: never
@@ -4888,11 +5113,20 @@ export type Database = {
           athlete_name: string
           coach_name: string
           coach_offer_amount: number
+          gross_amount: number
+          is_test: boolean
           net_amount: number
+          pay_channel: string
           payment_id: number
+          payment_kind: string
+          payment_status: string
           platform_fee: number
+          record_id: string
+          reference: string
           slot_name: string
           stripe_fee: number
+          stripe_payment_intent: string
+          stripe_session_id: string
           transaction_time: string
         }[]
       }
@@ -4994,6 +5228,10 @@ export type Database = {
         Args: { p_email: string; p_rate: number }
         Returns: string
       }
+      involves_test_account: {
+        Args: { p_athlete_id: string; p_coach_id: string; p_user_id: string }
+        Returns: boolean
+      }
       is_admin: { Args: never; Returns: boolean }
       is_coach_client: {
         Args: { p_athlete_id: string; p_coach_id: string }
@@ -5062,6 +5300,7 @@ export type Database = {
         Returns: undefined
       }
       mark_camp_registration_paid: { Args: { p_id: string }; Returns: Json }
+      mark_camp_signups_seen: { Args: never; Returns: undefined }
       mark_checkout_paid: {
         Args: {
           p_booking_ids: string[]
@@ -5087,7 +5326,7 @@ export type Database = {
         Returns: number
       }
       message_session_families_to: {
-        Args: { p_athlete_id: string; p_body: string }
+        Args: { p_athlete_id: string; p_body: string; p_offer_id?: string }
         Returns: undefined
       }
       my_organization_id: { Args: never; Returns: string }
@@ -5412,6 +5651,10 @@ export type Database = {
         Args: { p_call_id: string; p_option_key: string }
         Returns: undefined
       }
+      set_camp_registration_parent_email: {
+        Args: { p_email: string; p_id: string; p_parent_name?: string }
+        Returns: Json
+      }
       set_coach_athlete_goal: {
         Args: { p_athlete_id: string; p_goal: string }
         Returns: undefined
@@ -5429,6 +5672,7 @@ export type Database = {
         Args: { p_latitude: number; p_longitude: number; p_zip: string }
         Returns: undefined
       }
+      set_my_gear_picks: { Args: { p_handles: string[] }; Returns: string[] }
       set_review_reply: {
         Args: { p_reply: string; p_review_id: string }
         Returns: undefined
@@ -5469,6 +5713,10 @@ export type Database = {
       sync_availability_occurrences: {
         Args: { p_availability_id: string }
         Returns: undefined
+      }
+      sync_camp_registration_bookings: {
+        Args: { p_registration_id: string }
+        Returns: number
       }
       undo_checkout_credits: {
         Args: { p_booking_ids: string[]; p_delete?: boolean; p_reason?: string }

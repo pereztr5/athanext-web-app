@@ -237,11 +237,8 @@ const Profile = () => {
 
             // Update coach profile
             // Note: Database column is 'position', not 'coach_position' (which is an alias in get_coaches_public)
-            // title: column added in 20261104100000_coach_title; generated types catch up after it's applied.
             const coachUpdates = {
-                title: (editedCoach as { title?: string | null }).title !== undefined
-                  ? (editedCoach as { title?: string | null }).title
-                  : (coach as { title?: string | null }).title ?? null,
+                title: editedCoach.title !== undefined ? editedCoach.title : coach.title ?? null,
                 name: editedCoach.name,
                 position: editedCoach.coach_position,
                 company: editedCoach.company,
