@@ -10,7 +10,6 @@ import { organizationsAPI, type PublicOrganization } from "@/api/organizations";
 import CoachChatPanel from "@/components/chat/CoachChatPanel";
 import { chatAPI } from "@/api";
 import { buildId } from "@/utils/chatHelpers";
-import { normalizePosition } from "@/utils/db";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
@@ -40,6 +39,7 @@ import { fetchZipPoint } from "@/utils/geolocation";
 import { coachLocationAPI } from "@/api/coachLocation";
 import { cn } from "@/lib/utils";
 import { BrowseCoachCard } from "@/components/browse/BrowseCoachCard";
+import { coachTitle } from "@/components/coach-profile/own/shared";
 import { FilterSelect } from "@/components/browse/FilterSelect";
 import { useIntroEnabledCoachIds } from "@/components/intro-calls";
 import {
@@ -664,7 +664,7 @@ const AllCoaches = () => {
                   name={coach.name}
                   photoUrl={coach.profile_image_url || coach.image_url}
                   verified={coach.is_verified}
-                  role={normalizePosition(sport, coach.coach_position || coach.positions?.[0] || "") || "Coach"}
+                  role={coachTitle({ ...coach, sport })}
                   rating={isPublicCoachRatingVisible(coach.total_reviews, coach.rating) ? publicCoachRatingLabel(coach.rating, coach.total_reviews) : null}
                   reviewCount={coach.total_reviews ?? 0}
                   area={[coach.locations?.[0], distanceLabel(distanceOf(coach.id) ?? { miles: null, rank: 3 })].filter(Boolean).join(" · ")}

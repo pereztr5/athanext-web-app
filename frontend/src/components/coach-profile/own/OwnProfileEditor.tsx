@@ -38,7 +38,7 @@ import { OwnReviews } from "./OwnReviews";
 import { ServiceEditorDialog } from "./ServiceEditorDialog";
 import { useSaveServices, type StepName } from "./hooks";
 import { Avatar } from "./parts";
-import { caption, chip, coachTitle, money, sessionTypesFromWhere } from "./shared";
+import { caption, chip, coachTitleOptions, derivedCoachTitle, money, sessionTypesFromWhere } from "./shared";
 import { packageKind } from "@/components/camps/format";
 
 const BIO_MAX = 1000;
@@ -130,6 +130,8 @@ export const OwnProfileEditor = ({
   const pillars = coach.specialties || [];
   const levels = sanitizePathwayTags(coach.pathway_tags);
   const photo = photoPreview || coach.profile_image_url || coach.image_url;
+  // The saved title stays pickable even if it's no longer in this sport's list.
+  const titleOptions = Array.from(new Set([...coachTitleOptions(coach.sport), ...(coach.title?.trim() ? [coach.title.trim()] : [])]));
   const bio = hasRichTextMarkup(coach.bio) ? stripRichTextToPlainText(coach.bio) : coach.bio ?? "";
   const individual = services.filter((s) => s.on && s.format === "individual" && s.price > 0);
   const from = individual.length ? Math.min(...individual.map((s) => s.price)) : 0;
@@ -292,11 +294,22 @@ export const OwnProfileEditor = ({
                   {coach.sport ? <BrandPill tone="teal">{coach.sport.charAt(0).toUpperCase() + coach.sport.slice(1)}</BrandPill> : null}
                 </div>
                 <div className="grid max-w-[420px] grid-cols-1 gap-4 sm:grid-cols-2">
-                  <div className={field}>
+                  <label className={field}>
                     <span className={label}>Title</span>
-                    <span className="text-label-sm text-dark">{coachTitle(coach)}</span>
-                    <span className={help}>Comes from the positions you coach.</span>
-                  </div>
+                    <select
+                      className={cn(input, "pr-8")}
+                      value={coach.title?.trim() ?? ""}
+                      onChange={(e) => onField("title", e.target.value || null)}
+                    >
+                      <option value="">{derivedCoachTitle(coach)} (from your positions)</option>
+                      {titleOptions.map((t) => (
+                        <option key={t} value={t}>
+                          {t}
+                        </option>
+                      ))}
+                    </select>
+                    <span className={help}>Shown under your name on your profile and in All coaches.</span>
+                  </label>
                   <label className={field}>
                     <span className={label}>ZIP code</span>
                     <input

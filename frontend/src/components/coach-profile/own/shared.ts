@@ -23,19 +23,38 @@ export const coachesLine = (coach: CoachProfileData) => {
   return [sport, who].filter(Boolean).join(" · ");
 };
 
-/**
- * The coach's title from the positions they coach ("Goalkeeper coach", "Goalkeeper and field
- * player coach"). Read only on Edit profile: it follows coaches.favourite_positions.
- */
-export const coachTitle = (coach: { favourite_positions?: string[] | null; positions?: string[] | null }) => {
+const SPORT_TITLES: Record<string, string[]> = {
+  soccer: ["Soccer coach", "Goalkeeper coach", "Field player coach", "Strength and conditioning coach", "Performance coach"],
+  rowing: ["Rowing coach", "Sculling coach", "Sweep coach", "Coxswain coach", "Strength and conditioning coach"],
+};
+
+/** The titles a coach can pick on Edit profile, for their sport. */
+export const coachTitleOptions = (sport?: string | null) =>
+  SPORT_TITLES[(sport ?? "").trim().toLowerCase()] ?? ["Coach", "Strength and conditioning coach", "Performance coach"];
+
+/** The title worked out from the positions the coach coaches ("Goalkeeper coach", "Goalkeeper and
+ *  field player coach"), else from their sport ("Soccer coach"). */
+export const derivedCoachTitle = (coach: { favourite_positions?: string[] | null; positions?: string[] | null; sport?: string | null }) => {
   const list = (coach.favourite_positions?.length ? coach.favourite_positions : coach.positions ?? [])
     .map((p) => p.trim())
     .filter(Boolean);
   const names = Array.from(new Set(list.map((p) => p.toLowerCase()))).map((p, i) => (i === 0 ? p.charAt(0).toUpperCase() + p.slice(1) : p));
-  if (!names.length) return "Coach";
+  const sport = coach.sport?.trim();
+  if (!names.length) return sport ? `${sport.charAt(0).toUpperCase()}${sport.slice(1).toLowerCase()} coach` : "Coach";
   const joined = names.length === 1 ? names[0] : `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
   return `${joined} coach`;
 };
+
+/**
+ * The coach's title: the one they picked on Edit profile (coaches.title), else derived from the
+ * positions they coach. Always reads as a coach, never as a playing position.
+ */
+export const coachTitle = (coach: {
+  title?: string | null;
+  favourite_positions?: string[] | null;
+  positions?: string[] | null;
+  sport?: string | null;
+}) => coach.title?.trim() || derivedCoachTitle(coach);
 
 /** "Ages 10 to 19" or "Ages 18 and up"; empty when not set. */
 export const agesLine = ({ age_min, age_max }: { age_min?: number | null; age_max?: number | null }) => {

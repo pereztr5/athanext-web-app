@@ -48,6 +48,8 @@ export type CoachProfileData = ProfileData & {
     bio?: string;
     coach_position?: string;
     position?: string;
+    /** Picked on Edit profile; coachTitle() falls back to the positions they coach. */
+    title?: string | null;
     specialties?: string[];
     pathway_tags?: string[];
     session_types?: string[];

@@ -6,6 +6,7 @@ export type Coach = {
   bio?: string;
   coach_position?: string;
   position?: string;
+  title?: string | null;
   is_verified?: boolean;
   company?: string;
   specialties?: string[];
