@@ -1,11 +1,13 @@
 /**
  * Coach Camps: create, edit, share links, and open Registrations. Same list and URL dialogs
- * that used to live on My profile (`?camp=` / `?view=`). Admins can pick another coach and edit
- * that coach's existing camps (create stays on the coach's own account).
+ * that used to live on My profile (`?camp=` / `?view=`). Admins can edit another coach's existing
+ * camps (create stays on the coach's own account): the coach picker shows only when the admin
+ * portal links here with `?coach=<id>`, or for an admin account with no coach profile, so a coach
+ * who is also an admin sees their own Camps page like any coach.
  */
 import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Navigate } from "react-router-dom";
+import { Navigate, useSearchParams } from "react-router-dom";
 import { campsAPI } from "@/api/camps";
 import { CampEditorList } from "@/components/camps/CampEditorList";
 import { CampUrlDialogs } from "@/components/camps/CampUrlDialogs";
@@ -23,7 +25,10 @@ const CampsPage = () => {
   const { userProfile } = useAuth();
   const isAdmin = userProfile?.is_admin === true;
   const ownCoachId = userProfile?.coach_id ?? null;
-  const [adminCoachId, setAdminCoachId] = useState<string>("");
+  const [searchParams] = useSearchParams();
+  const coachParam = searchParams.get("coach") ?? "";
+  const [adminCoachId, setAdminCoachId] = useState<string>(coachParam);
+  const showCoachPicker = isAdmin && (Boolean(coachParam) || !ownCoachId);
   const viewingCoachId = isAdmin && adminCoachId ? adminCoachId : ownCoachId;
   const viewingOther = Boolean(isAdmin && adminCoachId && adminCoachId !== ownCoachId);
   const { coach } = useCoachDetails(viewingCoachId ?? undefined);
@@ -32,7 +37,7 @@ const CampsPage = () => {
   const newSignups = useSeeNewCampSignups(ready && isCoach && Boolean(ownCoachId) && !viewingOther);
   const coaches = useQuery({
     queryKey: ["camps-admin-coach-picker"],
-    enabled: ready && isAdmin,
+    enabled: ready && showCoachPicker,
     staleTime: 60_000,
     queryFn: () => campsAPI.adminCoaches(),
   });
@@ -61,7 +66,7 @@ const CampsPage = () => {
               : "Create, share links, and see who signed up. Families need no account."
           }
         />
-        {isAdmin ? (
+        {showCoachPicker ? (
           <section className={card} aria-label="Coach to edit">
             <div className="flex flex-col gap-2">
               <span className={label}>Coach</span>
