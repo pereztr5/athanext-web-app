@@ -5,13 +5,15 @@
  * session types, locations, credentials and deals save as soon as their editor closes.
  */
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Award, BadgeCheck, Check, Layers, Pencil, Plus, ShieldCheck, Upload } from "@/components/icons";
 import { BASE_SERVICE_ID, type ProfileService } from "@/api/coachProfile";
 import { packagesAPI } from "@/api/packages";
 import { scheduleAPI } from "@/api/schedule";
 import { BrandPill } from "@/components/brand";
+import { CampEditorList } from "@/components/camps/CampEditorList";
+import { useSeeNewCampSignups } from "@/components/camps/useNewCampSignups";
 import ConfirmationDialog from "@/components/common/ConfirmationDialog";
 import { LocationsCard } from "@/components/schedule/settings/LocationsCard";
 import { Switch } from "@/components/ui/switch";
@@ -130,6 +132,8 @@ export const OwnProfileEditor = ({
   const pillars = coach.specialties || [];
   const levels = sanitizePathwayTags(coach.pathway_tags);
   const photo = photoPreview || coach.profile_image_url || coach.image_url;
+  const navigate = useNavigate();
+  const newCampSignups = useSeeNewCampSignups(true);
   // The saved title stays pickable even if it's no longer in this sport's list.
   const titleOptions = Array.from(new Set([...coachTitleOptions(coach.sport), ...(coach.title?.trim() ? [coach.title.trim()] : [])]));
   const bio = hasRichTextMarkup(coach.bio) ? stripRichTextToPlainText(coach.bio) : coach.bio ?? "";
@@ -418,12 +422,13 @@ export const OwnProfileEditor = ({
                 </button>
               ) : null}
             </div>
-            <div className="flex flex-wrap items-center justify-between gap-2 rounded-control bg-light-400 px-4 py-3">
-              <span className="text-body-m text-dark-300">Camps live on their own page now.</span>
-              <Link to={ROUTES.CAMPS} className={cn(textButton, "shrink-0")}>
-                Manage camps
-              </Link>
-            </div>
+            {/* Same camp cards as Camps, "new" sign-ups included; Edit and Registrations open there. */}
+            <CampEditorList
+              coverFallback={coach.profile_image_url || coach.image_url || null}
+              onEdit={(campId) => navigate(`${ROUTES.CAMPS}?camp=${encodeURIComponent(campId ?? "new")}&view=edit`)}
+              onRegistrations={(campId) => navigate(`${ROUTES.CAMPS}?camp=${encodeURIComponent(campId)}&view=registrations`)}
+              newSignups={newCampSignups.camps}
+            />
             <span className={label}>Packages</span>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(180px,1fr))] gap-3">
               {sortedPackages.map((p) => (
