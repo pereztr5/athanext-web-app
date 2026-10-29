@@ -1,6 +1,7 @@
 import { useRef, useState, useEffect, useCallback } from "react";
-import { Link, useParams, useNavigate, useLocation } from "react-router-dom";
+import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { useToast } from "@/hooks/use-toast";
+import { useBack } from "@/hooks/useBack";
 import { COACH_PROFILE_THEMES } from "@/config/colors";
 import { useCoachDetails } from "@/hooks/useCoachDetails";
 import { GearAndDealsCard } from "@/components/coach-profile/GearAndDealsCard";
@@ -43,6 +44,7 @@ const CoachProfile = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
+  const { back, canGoBack } = useBack(ROUTES.COACHES);
   const { toast } = useToast();
   const { user, userProfile } = useAuth();
   const isPricingPath = location.pathname.endsWith("/pricing");
@@ -340,13 +342,14 @@ const CoachProfile = () => {
   return (
     <div className="min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10">
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-6">
-        <Link
-          to={ROUTES.COACHES}
+        <button
+          type="button"
+          onClick={back}
           className="inline-flex w-fit items-center gap-1 text-label-sm text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <ArrowLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
-          All coaches
-        </Link>
+          {canGoBack ? "Back" : "All coaches"}
+        </button>
 
         <section className="flex w-full">
           <CoachHeader

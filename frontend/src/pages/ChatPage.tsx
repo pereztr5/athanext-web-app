@@ -25,6 +25,7 @@ import {
 } from "@/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
+import { useBack } from "@/hooks/useBack";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { formatDisplayName, getInitials, sendConversationNotificationEmail } from "@/utils/chatHelpers";
@@ -716,13 +717,7 @@ const ChatPage = () => {
     return name.toLowerCase().split(/\s+/).filter(Boolean).join(".");
   };
 
-  const handleBack = () => {
-    if (window.history.length > 2) {
-      navigate(-1);
-    } else {
-      navigate(ROUTES.HOME);
-    }
-  };
+  const { back: handleBack } = useBack(ROUTES.HOME);
 
   const handleMessageScroll = useCallback(() => {
     const container = messagesContainerRef.current;

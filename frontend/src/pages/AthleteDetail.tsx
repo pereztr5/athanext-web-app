@@ -21,6 +21,7 @@ import { BrandPill } from "@/components/brand";
 import { cap, h3, spCard } from "@/components/coach-session/styles";
 import { input, meta, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { useToast } from "@/hooks/use-toast";
+import { useBack } from "@/hooks/useBack";
 import { useRole } from "@/hooks/useRole";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
@@ -35,6 +36,7 @@ const initialsOf = (name: string) =>
 const AthleteDetailPage = () => {
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const { back, canGoBack } = useBack(ROUTES.ATHLETES);
   const { isCoach, ready } = useRole();
   const timeZone = useViewerTimeZone();
   const queryClient = useQueryClient();
@@ -147,10 +149,10 @@ const AthleteDetailPage = () => {
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
-        <Link to={ROUTES.ATHLETES} className={cn(textButton, "-mb-1.5 self-start text-dark-300 hover:text-dark")}>
+        <button type="button" className={cn(textButton, "-mb-1.5 self-start text-dark-300 hover:text-dark")} onClick={back}>
           <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
-          My athletes
-        </Link>
+          {canGoBack ? "Back" : "My athletes"}
+        </button>
         <header className="flex items-center gap-4">
           <div className="flex min-w-0 grow items-center gap-4">
             {athlete.imageUrl ? (

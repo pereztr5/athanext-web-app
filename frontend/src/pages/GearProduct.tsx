@@ -7,6 +7,7 @@ import { GearLoading, GearNotice, GearPageShell } from "@/components/gear/GearPa
 import { isShopifyConfigured } from "@/api/shopify";
 import { useGearCart, useGearProduct } from "@/hooks/useGear";
 import { useToast } from "@/hooks/use-toast";
+import { useBack } from "@/hooks/useBack";
 import { ROUTES } from "@/routes";
 import { cn } from "@/lib/utils";
 import {
@@ -27,6 +28,7 @@ const GearProduct = () => {
   const { data: product, isLoading, isError, refetch, isFetching } = useGearProduct(handle);
   const { addLines } = useGearCart();
   const { toast } = useToast();
+  const { back, canGoBack } = useBack(ROUTES.GEAR);
 
   const [selected, setSelected] = useState<Record<string, string>>({});
   const [imageIndex, setImageIndex] = useState(0);
@@ -45,13 +47,14 @@ const GearProduct = () => {
   );
 
   const backLink = (
-    <Link
-      to={ROUTES.GEAR}
+    <button
+      type="button"
+      onClick={back}
       className="inline-flex items-center gap-[5px] text-label-sm text-dark-300 hover:text-dark"
     >
       <ArrowLeft className="size-4" strokeWidth={1.5} />
-      All gear
-    </Link>
+      {canGoBack ? "Back" : "All gear"}
+    </button>
   );
 
   const renderContent = () => {

@@ -13,6 +13,7 @@ import { isPublicCoachRatingVisible } from "@/utils/publicRating";
 import { useCoachBrands } from "@/hooks/useBrands";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
+import { useBack } from "@/hooks/useBack";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
 import type { Brand } from "@/utils/brands";
 import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
@@ -112,6 +113,7 @@ export function CoachProfileView({
   const { toast } = useToast();
   const navigate = useNavigate();
   const location = useLocation();
+  const { back, canGoBack } = useBack(ROUTES.COACHES);
   const [city, setCity] = useState<string>("");
   const [buying, setBuying] = useState<string | null>(null);
   const { data: brands = NO_BRANDS } = useCoachBrands(coach.id);
@@ -177,11 +179,6 @@ export function CoachProfileView({
     .filter((name) => name && name.toLowerCase() !== "background check");
   const faqs = normalizeCoachFaqs(coach.profile_faqs).filter((faq) => faq.question?.trim() && faq.answer?.trim());
 
-  const back = () => {
-    if (location.key !== "default") navigate(-1);
-    else navigate(ROUTES.COACHES);
-  };
-
   const book = () => {
     if (!user) {
       navigate(`${ROUTES.AUTH}?mode=signin`, { state: { from: { pathname: ROUTES.BOOK, search: `?coach=${coach.id}` } } });
@@ -236,7 +233,7 @@ export function CoachProfileView({
           className="inline-flex w-fit items-center gap-1 text-label-sm text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
         >
           <ChevronLeft className="size-4" strokeWidth={1.5} aria-hidden="true" />
-          Back
+          {canGoBack ? "Back" : "All coaches"}
         </button>
 
         <WhoCard

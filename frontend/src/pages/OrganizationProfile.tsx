@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronLeft } from "@/components/icons";
 import { Banner } from "@/components/ui/banner";
 import { Skeleton } from "@/components/ui/skeleton";
 import { coachesAPI } from "@/api/coaches";
+import { useBack } from "@/hooks/useBack";
 import { useRole } from "@/hooks/useRole";
 import { ROUTES } from "@/routes";
 import { OrgFamilyPage } from "@/components/organization/OrgFamilyPage";
@@ -42,6 +43,7 @@ const OrganizationProfile = () => {
   const { slug = "" } = useParams();
   const { isAuthenticated } = useRole();
   const { data: myOrg } = useMyOrganization();
+  const { back, canGoBack } = useBack(`${ROUTES.COACHES}?view=organizations`);
 
   const { data: coaches = [], isLoading } = useQuery({
     queryKey: ["coaches-public"],
@@ -59,13 +61,14 @@ const OrganizationProfile = () => {
     ? "overflow-x-hidden px-4 pb-8 pt-1 md:px-5 md:pb-12"
     : "min-h-screen w-full overflow-x-hidden bg-app-background px-4 pb-20 pt-6 md:px-10";
   const backLink = (
-    <Link
-      to={`${ROUTES.COACHES}?view=organizations`}
+    <button
+      type="button"
+      onClick={back}
       className="inline-flex w-fit items-center gap-1 text-label-sm text-dark-300 hover:text-dark"
     >
       <ArrowLeft className="size-4" strokeWidth={1.5} />
-      Back to organizations
-    </Link>
+      {canGoBack ? "Back" : "Back to organizations"}
+    </button>
   );
 
   if (isLoading || orgsLoading) {

@@ -32,6 +32,7 @@ import {
 import { choice, card, dialogContent, iconButton, label, meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
+import { useBack } from "@/hooks/useBack";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -86,11 +87,7 @@ const SessionFeedback = ({ slotId, startOnNotes }: { slotId: string; startOnNote
     queryClient.invalidateQueries({ queryKey: ["feedback-due"] });
     queryClient.invalidateQueries({ queryKey: ["sessions"] });
   };
-  const leave = () => {
-    const idx = (window.history.state as { idx?: number } | null)?.idx ?? 0;
-    if (idx > 0) navigate(-1);
-    else navigate(ROUTES.MY_SESSIONS);
-  };
+  const { back: leave } = useBack(ROUTES.MY_SESSIONS);
 
   const group = screen?.sessionType === "group";
   const athletes = useMemo(() => screen?.athletes ?? [], [screen]);

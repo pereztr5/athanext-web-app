@@ -32,6 +32,7 @@ import { SessionHeader } from "@/components/session/SessionHeader";
 import { cap, h3, spCard } from "@/components/coach-session/styles";
 import { useRole } from "@/hooks/useRole";
 import { useToast } from "@/hooks/use-toast";
+import { useBack } from "@/hooks/useBack";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
@@ -78,6 +79,7 @@ const CoachSessionPage = () => {
   const { id } = useParams();
   const { isCoach, ready } = useRole();
   const navigate = useNavigate();
+  const { back } = useBack(ROUTES.MY_SESSIONS);
   const queryClient = useQueryClient();
   const { toast } = useToast();
   const timeZone = useViewerTimeZone();
@@ -308,7 +310,7 @@ const CoachSessionPage = () => {
     <div className="px-4 pb-8 pt-1 md:px-5 md:pb-12">
       <div className="mx-auto flex w-full max-w-wrapper flex-col gap-4 md:gap-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <button type="button" className={cn(buttonVariants({ variant: "back" }), "self-start")} onClick={() => navigate(-1)}>
+          <button type="button" className={cn(buttonVariants({ variant: "back" }), "self-start")} onClick={back}>
             <ChevronLeft strokeWidth={1.5} aria-hidden="true" />
             Back
           </button>
@@ -538,7 +540,7 @@ const CoachSessionPage = () => {
         onClose={() => setMode(null)}
         onDeclined={() => {
           done("Request declined", "The slot is open again.");
-          navigate(-1);
+          back();
         }}
         onError={fail}
       />
