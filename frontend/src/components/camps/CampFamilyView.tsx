@@ -6,11 +6,11 @@ import type { ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Calendar, Check, FileText, MapPin } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
-import { textPanel } from "@/components/schedule/styles";
+import { bioText } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { coachProfilePath } from "@/utils/coachSlug";
 import { campWaiverUrl, formatCampDates, formatCampMoney, formatCampTimes, perDayLine } from "@/utils/camps";
-import { stripRichTextToPlainText } from "@/utils/richText";
+import { formatRichTextForRender } from "@/utils/richText";
 import { firstName, groupSpotsText, type CampView, type CampViewGroup } from "./campView";
 
 const initials = (name: string) =>
@@ -100,8 +100,8 @@ export const CampFamilyView = ({
   children?: ReactNode;
 }) => {
   const coachFirst = firstName(view.coachName);
-  // Bios from the old editor are stored as HTML; show them as plain paragraphs like the profile does.
-  const coachBio = stripRichTextToPlainText(view.coachBio);
+  // Same rendering as the profile's About: paragraphs and the line breaks the coach typed.
+  const coachBio = formatRichTextForRender(view.coachBio);
   const dates = formatCampDates(view.startsOn, view.endsOn);
   const linked = view.linkedCoach;
   const coachLine = linked ? `${coachFirst} and ${linked.name}` : view.coachName;
@@ -211,7 +211,7 @@ export const CampFamilyView = ({
         {coachBio ? (
           <div className="flex flex-col gap-3">
             <span className="text-label-xsm text-dark-300">About {coachFirst}</span>
-            <p className={cn(textPanel, "whitespace-pre-line text-paragraph leading-relaxed text-dark", compact && "line-clamp-4")}>{coachBio}</p>
+            <div className={cn(bioText, compact && "line-clamp-4")} dangerouslySetInnerHTML={{ __html: coachBio }} />
             {!compact && view.coachSlug ? (
               <Link to={coachProfilePath(view.coachSlug)} className="self-start text-label-sm text-primary hover:text-primary-600">
                 View profile

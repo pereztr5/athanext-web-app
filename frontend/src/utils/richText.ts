@@ -3,7 +3,6 @@ import { sanitizeHTML } from "@/utils/sanitize";
 
 const HTML_TAG_PATTERN = /<\/?[a-z][\s\S]*>/i;
 const BLOCK_TAG_CLOSE_PATTERN = /<\/(p|div|h[1-6]|li|blockquote|section|article|pre)>/gi;
-const PARAGRAPH_BREAK_TOKEN = "__ATHANEXT_PARAGRAPH_BREAK__";
 // eslint-disable-next-line no-misleading-character-class
 const INVISIBLE_BREAK_CHAR_PATTERN = /[\u00ad\u200b\u200c\u200d\u2060\ufeff]/gi;
 const INVISIBLE_BREAK_ENTITY_PATTERN =
@@ -17,22 +16,18 @@ const stripInvisibleBreaks = (value: string): string => {
     .replace(INVISIBLE_BREAK_CHAR_PATTERN, "");
 };
 
+// Line breaks the writer typed are kept: a single break stays a line break, two or more make a new
+// paragraph.
 const normalizePlainTextSpacing = (value: string): string => {
   return stripInvisibleBreaks(value)
     .replace(/\r\n/g, "\n")
-    .replace(/\n{2,}/g, PARAGRAPH_BREAK_TOKEN)
-    .replace(/([A-Za-z0-9])\n(?=[A-Za-z0-9])/g, "$1")
-    .replace(/\n+/g, " ")
-    .replace(new RegExp(PARAGRAPH_BREAK_TOKEN, "g"), "\n\n")
+    .replace(/[ \t]+\n/g, "\n")
+    .replace(/\n{3,}/g, "\n\n")
     .replace(/[ \t]{2,}/g, " ")
     .trim();
 };
 
-const normalizeRichTextMarkup = (value: string): string => {
-  return stripInvisibleBreaks(value)
-    .replace(/([A-Za-z0-9])<br\s*\/?>\s*(?=[A-Za-z0-9])/gi, "$1")
-    .replace(/<br\s*\/?>/gi, " ");
-};
+const normalizeRichTextMarkup = (value: string): string => stripInvisibleBreaks(value);
 
 const decodeHtmlEntities = (value: string): string => {
   if (typeof document === "undefined") {
@@ -64,7 +59,7 @@ const plainTextToHtml = (value: string): string => {
     .split(/\n{2,}/)
     .map((paragraph) => paragraph.trim())
     .filter(Boolean)
-    .map((paragraph) => `<p>${sanitizeHtml(paragraph)}</p>`)
+    .map((paragraph) => `<p>${paragraph.split("\n").map((line) => sanitizeHtml(line)).join("<br />")}</p>`)
     .join("");
 };
 

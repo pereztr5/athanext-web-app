@@ -8,7 +8,7 @@ import type { CoachProfileExtras, ProfileService } from "@/api/coachProfile";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { BrandPill } from "@/components/brand";
 import { CoachIntroCallCard } from "@/components/intro-calls";
-import { card, primaryButton, secondaryButton, textButton, textPanel } from "@/components/schedule/styles";
+import { bioText, card, primaryButton, secondaryButton, textButton } from "@/components/schedule/styles";
 import { sanitizePathwayTags } from "@/constants/pathwayTags";
 import { cn } from "@/lib/utils";
 import { instagramUrl } from "@/utils/instagram";
@@ -217,7 +217,7 @@ export const OwnProfilePreview = ({
         </div>
         {bioHtml ? (
           <div
-            className={cn(textPanel, "rich-text-content text-body-l text-dark")}
+            className={bioText}
             dangerouslySetInnerHTML={{ __html: bioHtml }}
           />
         ) : (

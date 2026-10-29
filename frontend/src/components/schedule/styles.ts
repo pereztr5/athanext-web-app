@@ -24,6 +24,10 @@ export const card =
  */
 export const textPanel = "min-w-0 rounded-control bg-light-400 px-4 py-3.5 md:px-5 md:py-4";
 
+/** A coach's bio (profile and camp page): plain paragraphs on the card, no box, readable line
+ *  length, the line breaks the coach typed kept. Pair with formatRichTextForRender. */
+export const bioText = "rich-text-content min-w-0 max-w-[68ch] text-paragraph text-dark";
+
 /** Page title: t-page-title, t-page-title-phone on phone. */
 export const pageTitle = "text-page-title-phone text-dark md:text-page-title";
 export const label = "text-label-xsm text-dark-300";

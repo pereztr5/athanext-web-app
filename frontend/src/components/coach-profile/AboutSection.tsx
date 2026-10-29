@@ -3,7 +3,7 @@ import { formatRichTextForRender } from "@/utils/richText";
 import "@/styles/richText.css";
 import { CoachProfileCard, CoachProfileCardHeader } from "./CoachProfileCard";
 import { cn } from "@/lib/utils";
-import { textPanel } from "@/components/schedule/styles";
+import { bioText } from "@/components/schedule/styles";
 
 interface AboutSectionProps {
   coachName: string;
@@ -29,7 +29,7 @@ export function AboutSection({ coachName, bio, isEditMode = false, onBioChange }
         />
       ) : formattedBio ? (
         <div
-          className={cn(textPanel, "rich-text-content text-body-m text-dark-400")}
+          className={bioText}
           dangerouslySetInnerHTML={{ __html: formattedBio }}
         />
       ) : (

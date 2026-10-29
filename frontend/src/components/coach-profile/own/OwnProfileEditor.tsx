@@ -41,7 +41,7 @@ import { Avatar } from "./parts";
 import { caption, chip, coachTitle, money, sessionTypesFromWhere } from "./shared";
 import { packageKind } from "@/components/camps/format";
 
-const BIO_MAX = 600;
+const BIO_MAX = 1000;
 const h2 = "flex items-center gap-2 text-card-title text-dark [&>svg]:size-5 [&>svg]:text-dark-300";
 const field = "flex flex-col gap-1.5";
 const help = "text-caption text-dark-300";
