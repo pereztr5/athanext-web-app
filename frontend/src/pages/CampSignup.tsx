@@ -63,6 +63,36 @@ const useFooterClass = () => {
   return cn(footer, user && "max-md:bottom-[calc(4rem+env(safe-area-inset-bottom,0px))]");
 };
 
+/**
+ * Phone and tablet: one column with the bar pinned full width to the bottom. Desktop: the content
+ * beside a summary card that stays in view while the page scrolls, like a checkout, and no bar.
+ */
+const StepFrame = ({ top, children, bar, panel }: { top?: ReactNode; children: ReactNode; bar: ReactNode; panel: ReactNode }) => {
+  const footerClass = useFooterClass();
+  return (
+    <div className={cn(shell, "lg:pb-12")}>
+      {top}
+      <div className="flex min-w-0 flex-col gap-4 lg:grid lg:grid-cols-[minmax(0,1fr)_320px] lg:items-start lg:gap-8">
+        <div className="flex min-w-0 flex-col gap-4">{children}</div>
+        <aside className={panelCard}>{panel}</aside>
+      </div>
+      <div className={cn(footerClass, "lg:hidden")}>{bar}</div>
+    </div>
+  );
+};
+
+const panelCard =
+  "sticky top-[84px] hidden min-w-0 flex-col gap-4 rounded-card border border-light-525 bg-light-300 px-5 pb-5 pt-[22px] lg:flex";
+const panelRule = "h-px bg-light-525";
+
+/** Desktop summary card line: label on the left, value on the right. */
+const PanelRow = ({ label, children }: { label: string; children: ReactNode }) => (
+  <div className="flex items-start justify-between gap-3 text-body-m">
+    <span className="text-dark-300">{label}</span>
+    <span className="min-w-0 text-right text-dark">{children}</span>
+  </div>
+);
+
 const CampSignup = () => {
   const params = useParams();
   const location = useLocation();
@@ -158,7 +188,6 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
   const key = draftKey(coachSlug, campSlug);
   const saved = useMemo(() => readDraft(key), [key]);
   const prefill = useFamilyPrefill();
-  const footerClass = useFooterClass();
 
   const { user, userProfile } = useAuth();
   const page = useQuery({
@@ -326,38 +355,59 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
     );
   }
 
+  const status =
+    camp.published === false
+      ? "Draft. Publish to open sign-ups"
+      : !camp.open
+        ? "Sign-ups closed"
+        : allFull
+          ? "Fully booked"
+          : group
+            ? `${group.name || "All athletes"} · per athlete`
+            : "Pick a group";
+  const canSignUp = camp.published !== false && camp.open && Boolean(group) && !group?.full;
+  const signUp = (className: string) => (
+    <button type="button" className={cn(primaryButton, className)} disabled={!canSignUp} onClick={startDetails}>
+      Sign up
+    </button>
+  );
+  const dates = formatCampDates(camp.starts_on, camp.ends_on);
+
   return (
-    <div className={shell}>
-      {camp.can_edit ? <OwnerBar camp={camp} own={Boolean(userProfile?.coach_id && userProfile.coach_id === camp.coach.id)} /> : null}
-      {submitError ? <Notice>{submitError}</Notice> : null}
-      <CampFamilyView view={view} groupId={groupId} onGroup={(id) => setGroupId(id)} />
-      <div className={footerClass}>
+    <StepFrame
+      top={
+        <>
+          {camp.can_edit ? <OwnerBar camp={camp} own={Boolean(userProfile?.coach_id && userProfile.coach_id === camp.coach.id)} /> : null}
+          {submitError ? <Notice>{submitError}</Notice> : null}
+        </>
+      }
+      bar={
         <div className={footerRow}>
           <div className="flex min-w-0 flex-col">
             <b className="text-subtitle tabular-nums text-dark">{formatCampMoney(camp.price_cents)}</b>
-            <span className="truncate text-caption text-dark-300">
-              {camp.published === false
-                ? "Draft. Publish to open sign-ups"
-                : !camp.open
-                  ? "Sign-ups closed"
-                  : allFull
-                    ? "Fully booked"
-                    : group
-                      ? `${group.name || "All athletes"} · per athlete`
-                      : "Pick a group"}
-            </span>
+            <span className="truncate text-caption text-dark-300">{status}</span>
           </div>
-          <button
-            type="button"
-            className={cn(primaryButton, footerButton)}
-            disabled={camp.published === false || !camp.open || !group || group.full}
-            onClick={startDetails}
-          >
-            Sign up
-          </button>
+          {signUp(footerButton)}
         </div>
-      </div>
-    </div>
+      }
+      panel={
+        <>
+          <div className="flex flex-col gap-1">
+            <b className="text-highlight tabular-nums text-dark">{formatCampMoney(camp.price_cents)}</b>
+            <span className="text-caption text-dark-300">Per athlete, for the whole camp</span>
+          </div>
+          <div className={panelRule} />
+          {dates ? <PanelRow label="Dates">{dates}</PanelRow> : null}
+          <PanelRow label="Group">{group ? group.name || "All athletes" : <span className="text-dark-300">Pick one</span>}</PanelRow>
+          {signUp("h-11 w-full")}
+          <span className="text-center text-caption text-dark-300">
+            {canSignUp || !group ? `No account needed. With ${firstName(camp.coach.name)}.` : status}
+          </span>
+        </>
+      }
+    >
+      <CampFamilyView view={view} groupId={groupId} onGroup={(id) => setGroupId(id)} />
+    </StepFrame>
   );
 };
 
@@ -463,7 +513,6 @@ const Details = ({
 }) => {
   const coachFirst = firstName(camp.coach.name);
   const waiverHref = campWaiverUrl(camp.waiver_url);
-  const footerClass = useFooterClass();
   const clear = (key: string) =>
     setErrors((cur) => {
       if (!cur[key]) return cur;
@@ -487,9 +536,27 @@ const Details = ({
   const err = (key: string) => errors[key];
   const aria = (key: string) => ({ "aria-invalid": err(key) ? ("true" as const) : undefined, "aria-describedby": err(key) ? `${key}-error` : undefined });
 
+  const total = formatCampMoney(camp.price_cents * count);
+  const next = (className: string) => (
+    <button type="button" className={cn(primaryButton, className)} onClick={onNext}>
+      Continue to payment
+    </button>
+  );
+
   return (
-    <div className={shell}>
-      <StepHead back="Camp" onBack={onBack} step={1} line={`${group.name} · ${formatCampMoney(camp.price_cents)}`} />
+    <StepFrame
+      top={<StepHead back="Camp" onBack={onBack} step={1} line={`${group.name} · ${formatCampMoney(camp.price_cents)}`} />}
+      bar={
+        <div className={footerRow}>
+          <div className="flex min-w-0 flex-col">
+            <b className="text-subtitle tabular-nums text-dark">{total}</b>
+            <span className="truncate text-caption text-dark-300">{plural(count, "athlete")}</span>
+          </div>
+          {next(footerButton)}
+        </div>
+      }
+      panel={<CampSummary camp={camp} groupName={group.name} count={count} total={total} action={next("h-11 w-full")} />}
+    >
       <div className="flex flex-col gap-1.5">
         <h1 className="text-page-title-phone text-dark">About your athlete</h1>
         <p className="text-body-m text-dark-300">Only what {coachFirst} needs for the first morning. No account needed to sign up.</p>
@@ -620,18 +687,31 @@ const Details = ({
         <FieldError id="waiver-error" text={err("waiver")} />
       </div>
 
-      <div className={footerClass}>
-        <div className={footerRow}>
-          <div className="flex min-w-0 flex-col">
-            <b className="text-subtitle tabular-nums text-dark">{formatCampMoney(camp.price_cents * count)}</b>
-            <span className="truncate text-caption text-dark-300">{plural(count, "athlete")}</span>
-          </div>
-          <button type="button" className={cn(primaryButton, footerButton)} onClick={onNext}>
-            Continue to payment
-          </button>
-        </div>
+    </StepFrame>
+  );
+};
+
+/** Desktop card beside Details: the camp, the group, the athletes and the total, then the action. */
+const CampSummary = ({ camp, groupName, count, total, action }: { camp: CampPage; groupName: string; count: number; total: string; action: ReactNode }) => {
+  const when = [formatCampDates(camp.starts_on, camp.ends_on), camp.location].filter(Boolean).join(" · ");
+  return (
+    <>
+      <div className="flex flex-col gap-0.5">
+        <b className="text-label-sm text-dark">{camp.name}</b>
+        {when ? <span className="text-caption text-dark-300">{when}</span> : null}
       </div>
-    </div>
+      <div className={panelRule} />
+      <PanelRow label="Group">{groupName || "All athletes"}</PanelRow>
+      <PanelRow label="Athletes">
+        {count} × {formatCampMoney(camp.price_cents)}
+      </PanelRow>
+      <div className={panelRule} />
+      <div className="flex items-center justify-between gap-3">
+        <b className="text-label-sm text-dark">Total</b>
+        <b className="text-subtitle tabular-nums text-dark">{total}</b>
+      </div>
+      {action}
+    </>
   );
 };
 
@@ -658,7 +738,6 @@ const Review = ({
 }) => {
   const coachFirst = firstName(camp.coach.name);
   const [policyOpen, setPolicyOpen] = useState(false);
-  const footerClass = useFooterClass();
   const count = form.athletes.length;
   const quote = useQuery({
     queryKey: ["camp-quote", camp.id, src, count],
@@ -674,42 +753,78 @@ const Review = ({
   };
   const when = [formatCampDates(camp.starts_on, camp.ends_on), camp.location].filter(Boolean).join(" · ");
 
+  // The order summary sits in the page on a phone and in the side card on desktop.
+  const summary = (
+    <>
+      <div className="flex flex-col gap-0.5">
+        <b className="text-label-sm">{camp.name}</b>
+        {when ? <span className="text-caption text-dark-300">{when}</span> : null}
+      </div>
+      <div className="h-px bg-light-525" />
+      {form.athletes.map((a, i) => (
+        <div key={i} className="flex items-start justify-between gap-3 text-body-m">
+          <span className="flex min-w-0 flex-col">
+            <b className="truncate text-label-sm">
+              {a.first} {a.last}
+            </b>
+            <span className="text-caption text-dark-300">{groupLine(a.groupId)}</span>
+          </span>
+          <span className="tabular-nums">{formatCampMoney(camp.price_cents)}</span>
+        </div>
+      ))}
+      {!direct && card
+        ? feeRows(card).map((row) => (
+            <div key={row.label} className="flex items-center justify-between gap-3 text-body-m text-dark-300">
+              <span>{row.label === "Card processing" ? "Card processing fee" : row.label}</span>
+              <span className="tabular-nums">{formatCampMoney(row.cents)}</span>
+            </div>
+          ))
+        : null}
+      <div className="h-px bg-light-525" />
+      <div className="flex items-center justify-between gap-3">
+        <b className="text-label-sm">Total</b>
+        <b className="text-subtitle tabular-nums">{total != null ? formatCampMoney(total) : "…"}</b>
+      </div>
+    </>
+  );
+  const action = (
+    <>
+      <button
+        type="button"
+        className={cn(primaryButton, "h-11 w-full")}
+        disabled={busy || (!direct && !card)}
+        onClick={() => onSubmit(quote.data)}
+      >
+        {busy ? (direct ? "Holding your spot…" : "Opening Stripe…") : direct ? "Hold my spot" : total != null ? `Pay ${formatCampMoney(total)}` : "Pay"}
+      </button>
+      {!direct ? (
+        <span className="flex items-center justify-center gap-1.5 text-caption text-dark-300">
+          <Lock className="size-3 flex-none" strokeWidth={2} aria-hidden="true" />
+          Payments by Stripe. AthaNext never sees your card.
+        </span>
+      ) : null}
+      <span className="text-center text-caption text-dark-300">
+        By signing up you agree to the <LegalAnchor kind="terms">Terms of Service</LegalAnchor> and{" "}
+        {camp.coach.cancellation_policy ? (
+          <button type="button" className="underline underline-offset-2 hover:text-primary" aria-expanded={policyOpen} onClick={() => setPolicyOpen((v) => !v)}>
+            {coachFirst}&apos;s cancellation policy
+          </button>
+        ) : (
+          `${coachFirst}'s cancellation policy`
+        )}
+        .
+      </span>
+      {policyOpen && camp.coach.cancellation_policy ? (
+        <p className={cn(textPanel, "whitespace-pre-line text-caption text-dark-400")}>{camp.coach.cancellation_policy}</p>
+      ) : null}
+    </>
+  );
+
   return (
-    <div className={shell}>
-      <StepHead back="Details" onBack={onBack} step={2} line={camp.name} />
+    <StepFrame top={<StepHead back="Details" onBack={onBack} step={2} line={camp.name} />} bar={action} panel={<>{summary}{action}</>}>
       <h1 className="text-page-title-phone text-dark">Review and pay</h1>
 
-      <section className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px]">
-        <div className="flex flex-col gap-0.5">
-          <b className="text-label-sm">{camp.name}</b>
-          {when ? <span className="text-caption text-dark-300">{when}</span> : null}
-        </div>
-        <div className="h-px bg-light-525" />
-        {form.athletes.map((a, i) => (
-          <div key={i} className="flex items-start justify-between gap-3 text-body-m">
-            <span className="flex min-w-0 flex-col">
-              <b className="truncate text-label-sm">
-                {a.first} {a.last}
-              </b>
-              <span className="text-caption text-dark-300">{groupLine(a.groupId)}</span>
-            </span>
-            <span className="tabular-nums">{formatCampMoney(camp.price_cents)}</span>
-          </div>
-        ))}
-        {!direct && card
-          ? feeRows(card).map((row) => (
-              <div key={row.label} className="flex items-center justify-between gap-3 text-body-m text-dark-300">
-                <span>{row.label === "Card processing" ? "Card processing fee" : row.label}</span>
-                <span className="tabular-nums">{formatCampMoney(row.cents)}</span>
-              </div>
-            ))
-          : null}
-        <div className="h-px bg-light-525" />
-        <div className="flex items-center justify-between gap-3">
-          <b className="text-label-sm">Total</b>
-          <b className="text-subtitle tabular-nums">{total != null ? formatCampMoney(total) : "…"}</b>
-        </div>
-      </section>
+      <section className="flex flex-col gap-3 rounded-card border border-light-525 bg-light-300 px-[18px] pb-5 pt-[22px] lg:hidden">{summary}</section>
 
       <section className="flex flex-col gap-2.5">
         <span className={labelClass}>Pay with</span>
@@ -750,37 +865,7 @@ const Review = ({
 
       {error ? <Notice>{error}</Notice> : null}
 
-      <div className={footerClass}>
-        <button
-          type="button"
-          className={cn(primaryButton, "h-11 w-full")}
-          disabled={busy || (!direct && !card)}
-          onClick={() => onSubmit(quote.data)}
-        >
-          {busy ? (direct ? "Holding your spot…" : "Opening Stripe…") : direct ? "Hold my spot" : total != null ? `Pay ${formatCampMoney(total)}` : "Pay"}
-        </button>
-        {!direct ? (
-          <span className="flex items-center justify-center gap-1.5 text-caption text-dark-300">
-            <Lock className="size-3 flex-none" strokeWidth={2} aria-hidden="true" />
-            Payments by Stripe. AthaNext never sees your card.
-          </span>
-        ) : null}
-        <span className="text-center text-caption text-dark-300">
-          By signing up you agree to the <LegalAnchor kind="terms">Terms of Service</LegalAnchor> and{" "}
-          {camp.coach.cancellation_policy ? (
-            <button type="button" className="underline underline-offset-2 hover:text-primary" aria-expanded={policyOpen} onClick={() => setPolicyOpen((v) => !v)}>
-              {coachFirst}&apos;s cancellation policy
-            </button>
-          ) : (
-            `${coachFirst}'s cancellation policy`
-          )}
-          .
-        </span>
-        {policyOpen && camp.coach.cancellation_policy ? (
-          <p className={cn(textPanel, "whitespace-pre-line text-caption text-dark-400")}>{camp.coach.cancellation_policy}</p>
-        ) : null}
-      </div>
-    </div>
+    </StepFrame>
   );
 };
 
