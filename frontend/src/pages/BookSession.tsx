@@ -38,7 +38,7 @@ import { useRole } from "@/hooks/useRole";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { cn } from "@/lib/utils";
 import { ROUTES } from "@/routes";
-import { NO_POSITION_PILLARS, money, pillarCopy, type BookFormat } from "@/utils/booking";
+import { POSITION_PILLARS, money, pillarCopy, type BookFormat } from "@/utils/booking";
 import { planBooking } from "@/utils/bookPlan";
 import { coachProfilePath } from "@/utils/coachSlug";
 import { PROFILE_TYPE } from "@/utils/db";
@@ -151,7 +151,7 @@ const BookSessionPage = () => {
     };
   }, [linkedSessionId, sharedSessionDone, selectedCoach]);
 
-  const usesPosition = Boolean(pillar) && !NO_POSITION_PILLARS.includes(pillar!);
+  const usesPosition = Boolean(pillar) && POSITION_PILLARS.includes(pillar!);
   const pillarQuery = useQuery({
     queryKey: ["pillar-coaches", pillar, usesPosition ? position : null, athleteId],
     enabled: currentMode === "pillar" && Boolean(pillar),

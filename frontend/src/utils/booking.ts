@@ -5,8 +5,8 @@
 import type { BookableSession } from "@/api/book";
 import { getZonedISODate, zonedWallTimeToUtc } from "@/utils/dateHelpers";
 
-/** Book by pillar skips the Goalkeeper / Field player choice for these. */
-export const NO_POSITION_PILLARS = ["Academic tutoring"];
+/** Book by pillar asks Goalkeeper or Field player only for these; the rest don't depend on position. */
+export const POSITION_PILLARS = ["On-field training", "Video analysis"];
 
 export const PILLAR_COPY: Record<string, { blurb: string; session: string; bring: string }> = {
   "On-field training": {
