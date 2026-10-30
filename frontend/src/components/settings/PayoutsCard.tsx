@@ -1,25 +1,17 @@
 /**
- * Payouts (Stripe Connect Express): set up, finish setup, weekly payout day and the Stripe
- * dashboard. Session shares are held until the session sticks, then sent to the coach.
+ * Payouts (Stripe Connect Express): set up, finish setup and the Stripe dashboard. Session
+ * shares are held until the session sticks, then sent to the coach; Stripe pays out daily.
  */
 import { useEffect } from "react";
 import { useSearchParams } from "react-router-dom";
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ExternalLink, Landmark } from "@/components/icons";
-import { payoutsAPI, type PayoutDay } from "@/api/payouts";
+import { payoutsAPI } from "@/api/payouts";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
 import { meta, primaryButton, secondaryButton } from "@/components/schedule/styles";
 import { useOpenStripePayout } from "@/hooks/useOpenStripePayout";
 import { useToast } from "@/hooks/use-toast";
 import { Card, sub } from "@/components/settings/CoachSettings";
-
-const DAYS: [PayoutDay, string][] = [
-  ["monday", "Monday"],
-  ["tuesday", "Tuesday"],
-  ["wednesday", "Wednesday"],
-  ["thursday", "Thursday"],
-  ["friday", "Friday"],
-];
 
 export const PayoutsCard = () => {
   const { toast } = useToast();
@@ -27,14 +19,6 @@ export const PayoutsCard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const { opening, openOnboard, openDashboard } = useOpenStripePayout();
   const status = useQuery({ queryKey: ["payout-account"], queryFn: () => payoutsAPI.status(), retry: false });
-  const day = useMutation({
-    mutationFn: (d: PayoutDay) => payoutsAPI.setDay(d),
-    onSuccess: (account) => {
-      qc.setQueryData(["payout-account"], account);
-      toast({ title: "Payout day updated" });
-    },
-    onError: (e: Error) => toast({ title: "Couldn't change the payout day", description: e.message, variant: "destructive" }),
-  });
 
   // Return / refresh from Stripe Connect onboarding.
   useEffect(() => {
@@ -90,19 +74,8 @@ export const PayoutsCard = () => {
         <>
           <p className={sub}>
             Payouts are on{a.bankLast4 ? ` to the account ending ${a.bankLast4}` : ""}. Your share for each paid session is sent after the
-            session (or a late cancel), and Stripe pays out every week.
+            session (or a late cancel), and Stripe deposits it to your bank about 2 business days later.
           </p>
-          <label className="flex flex-wrap items-center gap-3">
-            <span className="text-label-sm">Payout day</span>
-            <select
-              className="h-control rounded-control border border-dark-250 bg-light px-3 text-body-m text-dark focus:border-primary focus:outline focus:outline-2 focus:-outline-offset-1 focus:outline-primary disabled:border-light-525 disabled:bg-light-400 disabled:text-dark-200"
-              value={a.payoutDay}
-              disabled={day.isPending}
-              onChange={(e) => day.mutate(e.target.value as PayoutDay)}
-            >
-              {DAYS.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
-            </select>
-          </label>
           <button type="button" className={`${secondaryButton} self-start`} disabled={opening} onClick={() => void openDashboard()}>
             <ExternalLink strokeWidth={1.5} aria-hidden="true" />
             Open Stripe dashboard

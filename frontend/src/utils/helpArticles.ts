@@ -11,7 +11,7 @@ export const HELP_ARTICLES = {
       articles: [
         {
           title: "How do payouts and marketplace fees work?",
-          body: "Families pay when they book. Your share is held until the session is done (or a late cancel), then Stripe pays it to your bank on your weekly payout day. Families you invited join your roster and book with no platform fee. Marketplace families pay the standard platform fee on top of your price.",
+          body: "Families pay when they book. Your share is held until the session is done (or a late cancel), then Stripe deposits it to your bank about 2 business days later. Families you invited join your roster and book with no platform fee. Marketplace families pay the standard platform fee on top of your price.",
         },
         {
           title: "When does a family get charged?",

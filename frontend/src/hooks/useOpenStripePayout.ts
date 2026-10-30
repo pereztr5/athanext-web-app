@@ -27,10 +27,10 @@ export const useOpenStripePayout = () => {
     try {
       const url = await payoutsAPI.dashboardUrl();
       if (!url) throw new Error("Stripe did not return a dashboard link");
-      window.open(url, "_blank", "noopener,noreferrer");
+      // Same tab: phones block a new tab opened after waiting for the link.
+      window.location.assign(url);
     } catch (e) {
       toast({ title: "Couldn't open Stripe", description: (e as Error).message, variant: "destructive" });
-    } finally {
       setOpening(false);
     }
   }, [toast]);

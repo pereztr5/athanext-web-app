@@ -2,9 +2,9 @@
 // Booking shares are planned as held until the session sticks; invoices/packages still send on pay.
 // Coach (signed in):
 //   { action: "onboard", origin }   -> { url }     create the Express account if needed, open Stripe's setup
-//   { action: "status" }            -> { account } refresh setup status, then send any waiting transfers
+//   { action: "status" }            -> { account } refresh setup status (and move the account to daily
+//                                                 payouts if needed), then send any waiting transfers
 //   { action: "dashboard" }         -> { url }     Stripe Express dashboard login link
-//   { action: "payout_day", day }   -> { account } weekly payout day
 //   { action: "payouts" }           -> { balance, payouts } for the Payments page (sends waiting shares first)
 // Service role (from checkout) or family/coach on cancel:
 //   { action: "transfer_bookings", booking_ids } -> { sent, waiting, failed, held }
@@ -26,8 +26,8 @@ const corsHeaders = {
 const json = (body: unknown, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { ...corsHeaders, "Content-Type": "application/json" } });
 
-const DAYS = ["monday", "tuesday", "wednesday", "thursday", "friday"] as const;
-type Day = (typeof DAYS)[number];
+// Stripe pays a coach's balance out every day, as soon as Stripe allows (about 2 business days in the US).
+const PAYOUT_SCHEDULE = { interval: "daily", delay_days: "minimum" } as const;
 
 // Links back to the app only for local dev and athanext hosts (same rule as invite emails).
 const DEFAULT_SITE_URL = Deno.env.get("SITE_URL") ?? "https://athanext.com";
@@ -70,7 +70,6 @@ const publicAccount = (row: Record<string, unknown> | null) =>
         details_submitted: row.details_submitted,
         payouts_enabled: row.payouts_enabled,
         transfers_active: row.transfers_active,
-        payout_day: row.payout_day,
         bank_last4: row.bank_last4,
       }
     : { connected: false };
@@ -338,7 +337,7 @@ serve(async (req) => {
             email: (coach?.email as string | undefined) ?? user.email ?? undefined,
             capabilities: { transfers: { requested: true } },
             business_profile: { product_description: "Sports coaching sessions booked through AthaNext" },
-            settings: { payouts: { schedule: { interval: "weekly", weekly_anchor: "monday" } } },
+            settings: { payouts: { schedule: PAYOUT_SCHEDULE } },
             metadata: { coach_id: coachId },
           },
           // Bump past Stripe's 24h idempotent replay of failed creates
@@ -366,7 +365,11 @@ serve(async (req) => {
     const accountId = existing.stripe_account_id as string;
 
     if (body.action === "status") {
-      const account = await stripe().accounts.retrieve(accountId);
+      let account = await stripe().accounts.retrieve(accountId);
+      // Accounts set up before daily payouts were on a weekly schedule.
+      if (account.settings?.payouts?.schedule?.interval !== "daily") {
+        account = await stripe().accounts.update(accountId, { settings: { payouts: { schedule: PAYOUT_SCHEDULE } } });
+      }
       const { data: row } = await admin
         .from("coach_payout_accounts")
         .update(accountRow(account))
@@ -397,14 +400,6 @@ serve(async (req) => {
     if (body.action === "dashboard") {
       const link = await stripe().accounts.createLoginLink(accountId);
       return json({ url: link.url });
-    }
-
-    if (body.action === "payout_day") {
-      const day = String(body.day ?? "") as Day;
-      if (!DAYS.includes(day)) return json({ error: "Pick a weekday" }, 400);
-      await stripe().accounts.update(accountId, { settings: { payouts: { schedule: { interval: "weekly", weekly_anchor: day } } } });
-      const { data: row } = await admin.from("coach_payout_accounts").update({ payout_day: day, updated_at: new Date().toISOString() }).eq("coach_id", coachId).select("*").single();
-      return json({ account: publicAccount(row) });
     }
 
     if (body.action === "payouts") {

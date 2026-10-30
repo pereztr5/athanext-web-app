@@ -4,14 +4,11 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 
-export type PayoutDay = "monday" | "tuesday" | "wednesday" | "thursday" | "friday";
-
 export interface PayoutAccount {
   connected: boolean;
   detailsSubmitted: boolean;
   payoutsEnabled: boolean;
   transfersActive: boolean;
-  payoutDay: PayoutDay;
   bankLast4: string | null;
 }
 
@@ -28,7 +25,6 @@ const toAccount = (raw: Row | undefined): PayoutAccount => ({
   detailsSubmitted: Boolean(raw?.details_submitted),
   payoutsEnabled: Boolean(raw?.payouts_enabled),
   transfersActive: Boolean(raw?.transfers_active),
-  payoutDay: (raw?.payout_day as PayoutDay) ?? "monday",
   bankLast4: raw?.bank_last4 ?? null,
 });
 
@@ -45,7 +41,6 @@ export const payoutsAPI = {
   status: async () => toAccount((await call({ action: "status" })).account),
   onboardUrl: async () => (await call({ action: "onboard", origin: window.location.origin })).url as string,
   dashboardUrl: async () => (await call({ action: "dashboard" })).url as string,
-  setDay: async (day: PayoutDay) => toAccount((await call({ action: "payout_day", day })).account),
   summary: async (): Promise<PayoutSummary> => {
     const raw = await call({ action: "payouts" });
     return {
