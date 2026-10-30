@@ -280,7 +280,8 @@ export function CoachProfileView({
           onBuy={buy}
           onAsk={onMessage}
           onRegister={registerCamp}
-          openCamp={isOwn ? (camp) => ownCampPath(coach.slug, camp.slug) : undefined}
+          openCamp={(camp) => (isOwn ? ownCampPath(coach.slug, camp.slug) : campPagePathFor(coach.slug, camp))}
+          coverFallback={coach.profile_image_url || coach.image_url || null}
           mostBookedId={extras?.mostBookedPackageId}
         />
 

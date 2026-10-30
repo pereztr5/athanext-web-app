@@ -57,6 +57,8 @@ export interface Camp {
   included: string[];
   direct: boolean;
   slug: string | null;
+  /** The camp's cover photo; null until the coach uploads one (or before the RPC returns it). */
+  coverUrl: string | null;
   published: boolean;
   sessionCount: number;
   durationMinutes: number;
@@ -180,6 +182,7 @@ export const parseCamp = (raw: unknown): Camp | null => {
     included: Array.isArray(row.features) ? row.features.filter((item): item is string => typeof item === "string" && item.trim().length > 0) : [],
     direct: row.camp_pay_direct === true,
     slug: asString(row.camp_slug),
+    coverUrl: asString(row.camp_cover_url),
     published: typeof row.camp_published_at === "string" && row.camp_published_at.length > 0,
     sessionCount: asInt(row.session_count) ?? 1,
     durationMinutes: asInt(row.duration_minutes) ?? 60,

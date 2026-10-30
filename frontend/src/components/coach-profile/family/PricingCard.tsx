@@ -39,6 +39,7 @@ export const PricingCard = ({
   onAsk,
   onRegister,
   openCamp,
+  coverFallback,
   mostBookedId,
 }: {
   coachId: string;
@@ -53,8 +54,10 @@ export const PricingCard = ({
   onBuy: (pkg: CoachPackage) => void;
   onAsk?: () => void;
   onRegister: (camp: Camp) => Promise<CampRegisterResult>;
-  /** The coach looking at his own public profile: a camp card opens its page, as on Camps. */
+  /** The camp page a card opens (the coach's own profile gets the Edit bar there). */
   openCamp?: (camp: Camp) => string | null;
+  /** The coach's photo, for a camp without a cover. */
+  coverFallback?: string | null;
 }) => {
   const [allSessions, setAllSessions] = useState(false);
   const camps = useCamps(coachId);
@@ -107,15 +110,7 @@ export const PricingCard = ({
         </div>
       ) : null}
 
-      <CampCards
-        coachId={coachId}
-        interactive
-        first={first}
-        paysDirect={paysDirect}
-        onAsk={onAsk}
-        onRegister={onRegister}
-        openTo={openCamp}
-      />
+      <CampCards coachId={coachId} interactive coverFallback={coverFallback ?? null} onRegister={onRegister} openTo={openCamp} />
 
       <CoachAcademyPackages coachId={coachId} canBuy={!paysDirect} />
 

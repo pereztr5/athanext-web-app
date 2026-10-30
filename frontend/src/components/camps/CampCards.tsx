@@ -1,10 +1,8 @@
 import { useState } from "react";
 import type { Camp } from "@/api/packages";
 import { BrandPill } from "@/components/brand";
-import { Calendar, Clock, MapPin, Users } from "@/components/icons";
-import { secondaryButton, smallButton } from "@/components/schedule/styles";
+import { primaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
-import { CampBubbles } from "./CampBubbles";
 import { CampCardLink, campCardActions, campCardHover } from "./CampCardLink";
 import { formatCampDates } from "@/utils/camps";
 import { campEnded, campMoney, formatAges, formatDailyTime, spotsLabel, todayUtc } from "./format";
@@ -12,32 +10,23 @@ import { useCamps } from "./useCamps";
 
 export type CampRegisterResult = { redirect: boolean; message: string | null };
 
-const caption = "text-caption text-dark-300";
-const medium = "text-label-sm text-dark";
-
-const Fact = ({ icon: Icon, text }: { icon: typeof Calendar; text: string }) => (
-  <span className="flex items-center gap-2 text-caption text-dark-300">
-    <Icon className="size-4 shrink-0" strokeWidth={1.5} aria-hidden="true" />
-    <span>{text}</span>
-  </span>
-);
-
+/**
+ * One camp, laid out like the coach's own list on Camps (cover, name, dates and price, details),
+ * with a single Register for event that opens the camp page (ATH-107).
+ */
 const CampCard = ({
   camp,
   interactive,
-  first,
-  paysDirect,
-  onAsk,
+  coverFallback,
   onRegister,
   openTo,
 }: {
   camp: Camp;
   interactive: boolean;
-  first: string;
-  paysDirect: boolean;
-  onAsk?: () => void;
+  /** The coach's photo, for a camp without a cover (as the camp page does). */
+  coverFallback: string | null;
   onRegister?: (camp: Camp) => Promise<CampRegisterResult>;
-  /** The camp page: the whole card opens it (the coach's own profile). */
+  /** The camp page: the whole card opens it. */
   openTo?: string | null;
 }) => {
   const [busy, setBusy] = useState(false);
@@ -45,11 +34,9 @@ const CampCard = ({
   const ended = campEnded(camp.endsOn, todayUtc());
   const full = camp.spotsLeft != null && camp.spotsLeft <= 0;
   const spots = spotsLabel(camp.spotsLeft);
-  const dates = formatCampDates(camp.startsOn, camp.endsOn);
-  const time = formatDailyTime(camp.dailyStart, camp.dailyEnd);
-  const ages = formatAges(camp.ageMin, camp.ageMax);
-  const namedIds = new Set(camp.coCoaches.map((coach) => coach.id));
-  const extra = camp.coCoachIds.filter((id) => !namedIds.has(id)).length;
+  const dates = formatCampDates(camp.startsOn, camp.endsOn) ?? "Dates to be announced";
+  const details = [formatDailyTime(camp.dailyStart, camp.dailyEnd), camp.location, formatAges(camp.ageMin, camp.ageMax)].filter(Boolean).join(" · ");
+  const cover = camp.coverUrl ?? coverFallback;
 
   const register = async () => {
     if (!onRegister) return;
@@ -61,62 +48,52 @@ const CampCard = ({
   };
 
   const closed = ended || full;
-  const label = ended ? "Ended" : full ? "Full" : paysDirect ? `Ask ${first}` : busy ? "Opening…" : "Register";
 
   return (
     <article
       className={cn(
-        "flex min-w-0 flex-col gap-3 rounded-card border border-light-525 bg-light px-[14px] pb-[14px] pt-4",
-        openTo && cn("relative", campCardHover),
+        "relative flex items-start gap-3 rounded-control border border-transparent bg-light-400 p-3 sm:items-stretch",
+        openTo && campCardHover,
       )}
     >
-      <BrandPill tone="teal" className="self-start">
-        Camp
-      </BrandPill>
-      <div className="flex items-start justify-between gap-3">
-        {openTo ? (
-          <CampCardLink to={openTo} label={`Open ${camp.name}`} radius="after:rounded-card" className={medium}>
-            {camp.name}
-          </CampCardLink>
-        ) : (
-          <span className={medium}>{camp.name}</span>
-        )}
-        <span className="text-highlight tabular-nums text-dark">{campMoney(camp.totalPriceCents / 100)}</span>
+      <div className="h-[72px] w-[88px] flex-none overflow-hidden rounded-control bg-dark sm:h-[96px] sm:w-[120px]">
+        {cover ? (
+          <img
+            src={cover}
+            alt=""
+            className="size-full object-cover"
+            style={camp.coverUrl ? undefined : { objectPosition: "50% 20%" }}
+          />
+        ) : null}
       </div>
-      {dates || time || camp.location || ages ? (
-        <div className="flex flex-col gap-1.5">
-          {dates ? <Fact icon={Calendar} text={dates} /> : null}
-          {time ? <Fact icon={Clock} text={time} /> : null}
-          {camp.location ? <Fact icon={MapPin} text={camp.location} /> : null}
-          {ages ? <Fact icon={Users} text={ages} /> : null}
+      <div className="flex min-w-0 flex-1 flex-col gap-1.5">
+        <div className="flex items-start justify-between gap-2">
+          {openTo ? (
+            <CampCardLink to={openTo} label={`Open ${camp.name}`} className="min-w-0 break-words text-label-sm text-dark">
+              {camp.name}
+            </CampCardLink>
+          ) : (
+            <span className="min-w-0 break-words text-label-sm text-dark">{camp.name}</span>
+          )}
+          {closed ? <BrandPill tone="muted">{ended ? "Ended" : "Full"}</BrandPill> : null}
         </div>
-      ) : null}
-      {camp.description ? <p className="line-clamp-3 text-paragraph-sm text-dark-300">{camp.description}</p> : null}
-      <CampBubbles coaches={camp.coCoaches} extra={extra} />
-      {interactive ? (
-        <div className={cn("mt-auto flex flex-wrap items-center justify-between gap-3", openTo && campCardActions)}>
-          <span className={caption}>{spots ?? ""}</span>
-          <button
-            type="button"
-            className={cn(secondaryButton, smallButton)}
-            disabled={closed || busy || (paysDirect ? !onAsk : !onRegister)}
-            onClick={() => {
-              if (closed) return;
-              if (paysDirect) onAsk?.();
-              else void register();
-            }}
-          >
-            {label}
-          </button>
-        </div>
-      ) : spots ? (
-        <span className={caption}>{spots}</span>
-      ) : null}
-      {error ? (
-        <p role="alert" className="text-caption text-error-700">
-          {error}
-        </p>
-      ) : null}
+        <span className="text-caption text-dark-300">{[dates, campMoney(camp.totalPriceCents / 100)].join(" · ")}</span>
+        {details || (spots && !closed) ? (
+          <span className="text-caption font-medium text-dark">{[details, closed ? null : spots].filter(Boolean).join(" · ")}</span>
+        ) : null}
+        {interactive && !closed ? (
+          <div className={cn("mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 self-start pt-1", campCardActions)}>
+            <button type="button" className={cn(primaryButton, smallButton)} disabled={busy || !onRegister} onClick={() => void register()}>
+              {busy ? "Opening…" : "Register for event"}
+            </button>
+          </div>
+        ) : null}
+        {error ? (
+          <p role="alert" className={cn("text-caption text-error-700", campCardActions)}>
+            {error}
+          </p>
+        ) : null}
+      </div>
     </article>
   );
 };
@@ -125,19 +102,15 @@ const CampCard = ({
 export const CampCards = ({
   coachId,
   interactive = false,
-  first = "the coach",
-  paysDirect = false,
-  onAsk,
+  coverFallback = null,
   onRegister,
   openTo,
 }: {
   coachId: string;
   interactive?: boolean;
-  first?: string;
-  paysDirect?: boolean;
-  onAsk?: () => void;
+  coverFallback?: string | null;
   onRegister?: (camp: Camp) => Promise<CampRegisterResult>;
-  /** The coach's own views: each card opens its camp page, as on Camps. */
+  /** Each card opens its camp page (the coach's own views get the Edit bar there). */
   openTo?: (camp: Camp) => string | null;
 }) => {
   const camps = useCamps(coachId);
@@ -155,15 +128,13 @@ export const CampCards = ({
   return (
     <div className="flex flex-col gap-2.5">
       <span className="text-label-xsm text-dark-300">Camps</span>
-      <div className="grid grid-cols-1 gap-2.5 md:grid-cols-2">
+      <div className="flex flex-col gap-2.5">
         {list.map((camp) => (
           <CampCard
             key={camp.id}
             camp={camp}
             interactive={interactive}
-            first={first}
-            paysDirect={paysDirect}
-            onAsk={onAsk}
+            coverFallback={coverFallback}
             onRegister={onRegister}
             openTo={openTo?.(camp) ?? null}
           />

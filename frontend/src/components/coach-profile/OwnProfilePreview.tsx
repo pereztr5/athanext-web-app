@@ -248,6 +248,7 @@ export const OwnProfilePreview = ({
         cancellation={cancellation}
         onEdit={onStartEdit}
         coachSlug={coach.slug}
+        coverFallback={coach.profile_image_url || coach.image_url || null}
       />
 
       <OwnReviews coachId={coach.id} averageRating={averageRating} totalReviews={totalReviews} showRating={showRating} fallback={reviews} />

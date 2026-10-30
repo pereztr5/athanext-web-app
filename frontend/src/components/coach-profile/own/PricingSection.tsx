@@ -23,6 +23,7 @@ export const PricingSection = ({
   cancellation,
   onEdit,
   coachSlug,
+  coverFallback,
 }: {
   coachId: string;
   packages: CoachPackage[];
@@ -33,6 +34,8 @@ export const PricingSection = ({
   onEdit: () => void;
   /** Each camp opens its page, the same one a camp opens on Camps. */
   coachSlug?: string | null;
+  /** The coach's photo, for a camp without a cover. */
+  coverFallback?: string | null;
 }) => {
   const [all, setAll] = useState(false);
   const sorted = packages.filter((p) => p.is_active && packageKind(p) !== "camp").sort((a, b) => a.total_price - b.total_price);
@@ -77,7 +80,7 @@ export const PricingSection = ({
         </div>
       ) : null}
 
-      <CampCards coachId={coachId} openTo={(camp) => ownCampPath(coachSlug, camp.slug)} />
+      <CampCards coachId={coachId} coverFallback={coverFallback ?? null} openTo={(camp) => ownCampPath(coachSlug, camp.slug)} />
 
       <CoachAcademyPackages coachId={coachId} canBuy={false} />
 
