@@ -4,6 +4,7 @@
  * On phones each package becomes a name and price row.
  */
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import type { ProfileService } from "@/api/coachProfile";
 import { BrandPill } from "@/components/brand";
@@ -38,6 +39,7 @@ export const PricingSection = ({
   coverFallback?: string | null;
 }) => {
   const [all, setAll] = useState(false);
+  const navigate = useNavigate();
   const sorted = packages.filter((p) => p.is_active && packageKind(p) !== "camp").sort((a, b) => a.total_price - b.total_price);
   const shown = all ? services : services.slice(0, 3);
 
@@ -80,7 +82,19 @@ export const PricingSection = ({
         </div>
       ) : null}
 
-      <CampCards coachId={coachId} coverFallback={coverFallback ?? null} openTo={(camp) => ownCampPath(coachSlug, camp.slug)} />
+      <CampCards
+        coachId={coachId}
+        interactive
+        coverFallback={coverFallback ?? null}
+        openTo={(camp) => ownCampPath(coachSlug, camp.slug)}
+        // Same Register for event families see; for the coach it opens the camp page with the Edit bar.
+        onRegister={async (camp) => {
+          const to = ownCampPath(coachSlug, camp.slug);
+          if (!to) return { redirect: false, message: "Publish this camp on Camps to get its page." };
+          navigate(to);
+          return { redirect: true, message: null };
+        }}
+      />
 
       <CoachAcademyPackages coachId={coachId} canBuy={false} />
 

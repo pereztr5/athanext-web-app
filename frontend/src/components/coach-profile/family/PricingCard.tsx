@@ -2,7 +2,7 @@ import { useState } from "react";
 import type { Camp } from "@/api/packages";
 import { BrandPill } from "@/components/brand";
 import { CampCards, type CampRegisterResult } from "@/components/camps/CampCards";
-import { packageKind } from "@/components/camps/format";
+import { campEnded, packageKind, todayUtc } from "@/components/camps/format";
 import { useCamps } from "@/components/camps/useCamps";
 import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
 import { secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
@@ -62,7 +62,8 @@ export const PricingCard = ({
   const [allSessions, setAllSessions] = useState(false);
   const camps = useCamps(coachId);
   const sorted = packages.filter((pkg) => packageKind(pkg) !== "camp").sort((a, b) => a.total_price - b.total_price);
-  const campList = camps.data ?? [];
+  // Ended camps aren't shown (CampCards), so they don't keep the card up on their own.
+  const campList = (camps.data ?? []).filter((camp) => !campEnded(camp.endsOn, todayUtc()));
   if (camps.isLoading && !sorted.length && !sessions.length) return null;
   if (!camps.isLoading && !camps.isError && !sorted.length && !sessions.length && !campList.length) return null;
   const shownSessions = allSessions ? sessions : sessions.slice(0, SHOWN_SESSIONS);

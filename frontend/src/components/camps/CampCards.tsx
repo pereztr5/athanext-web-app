@@ -122,7 +122,9 @@ export const CampCards = ({
       </p>
     );
   }
-  const list = camps.data ?? [];
+  // Ended camps stay on Camps for the coach; families can't sign up, so the profile leaves them out.
+  const today = todayUtc();
+  const list = (camps.data ?? []).filter((camp) => !campEnded(camp.endsOn, today));
   if (!list.length) return null;
 
   return (
