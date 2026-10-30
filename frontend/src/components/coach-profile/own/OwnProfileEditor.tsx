@@ -42,6 +42,7 @@ import { useSaveServices, type StepName } from "./hooks";
 import { Avatar } from "./parts";
 import { caption, chip, coachTitleOptions, derivedCoachTitle, money, sessionTypesFromWhere } from "./shared";
 import { packageKind } from "@/components/camps/format";
+import { PhotoCropDialog } from "@/components/common/PhotoCropDialog";
 
 const BIO_MAX = 1000;
 const h2 = "flex items-center gap-2 text-card-title text-dark [&>svg]:size-5 [&>svg]:text-dark-300";
@@ -121,6 +122,8 @@ export const OwnProfileEditor = ({
   const organizations = useCoachOrganizations(coach.id);
   const saveServices = useSaveServices(coach.id);
   const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  // A picked photo is cropped first; the cropped one is what saves (ATH-109).
+  const [pickedPhoto, setPickedPhoto] = useState<File | null>(null);
   const [instagramDraft, setInstagramDraft] = useState(coach.instagram_handle ?? "");
   const [instagramError, setInstagramError] = useState<string | null>(null);
   const [editingService, setEditingService] = useState<ProfileService | null>(null);
@@ -271,6 +274,15 @@ export const OwnProfileEditor = ({
       </div>
 
       <PageHeader title="My profile" subtitle="Update anything families see. Turn off what you don't want shown." />
+      <PhotoCropDialog
+        file={pickedPhoto}
+        onCancel={() => setPickedPhoto(null)}
+        onSave={(cropped) => {
+          onPhotoSelect(cropped);
+          setPhotoPreview(URL.createObjectURL(cropped));
+          setPickedPhoto(null);
+        }}
+      />
 
       <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,1fr)_317px]">
         <div className="flex min-w-0 flex-col gap-6">
@@ -287,9 +299,7 @@ export const OwnProfileEditor = ({
                     onChange={(e) => {
                       const file = e.target.files?.[0];
                       e.target.value = "";
-                      if (!file) return;
-                      onPhotoSelect(file);
-                      setPhotoPreview(URL.createObjectURL(file));
+                      if (file) setPickedPhoto(file);
                     }}
                   />
                 </label>
