@@ -10,12 +10,10 @@ import { normalizeCoachFaqs } from "./FAQSection";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { ROUTES } from "@/routes";
 import { isPublicCoachRatingVisible } from "@/utils/publicRating";
-import { useCoachBrands } from "@/hooks/useBrands";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBack } from "@/hooks/useBack";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
-import type { Brand } from "@/utils/brands";
 import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
 import { campPagePathFor, ownCampPath } from "@/utils/camps";
 import { detectCoachSport } from "@/utils/coachSport";
@@ -28,9 +26,9 @@ import { PricingCard, type SessionRow } from "./family/PricingCard";
 import { REVIEWS_ANCHOR, ReviewsCard } from "./family/ReviewsCard";
 import { MoreList } from "./family/MoreList";
 import { useCoachExtras, useFamilyReviews, useIsMyCoach } from "./family/hooks";
+import { ShopCard } from "./family/ShopCard";
 import { money } from "./family/styles";
 
-const NO_BRANDS: Brand[] = [];
 
 export interface ProfileReview {
   id: string;
@@ -118,7 +116,6 @@ export function CoachProfileView({
   const { back, canGoBack } = useBack(ROUTES.COACHES);
   const [city, setCity] = useState<string>("");
   const [buying, setBuying] = useState<string | null>(null);
-  const { data: brands = NO_BRANDS } = useCoachBrands(coach.id);
   const organizations = useCoachOrganizations(coach.id);
   const { data: fullReviews } = useFamilyReviews(coach.id);
   const extras = useCoachExtras(coach.id);
@@ -285,6 +282,14 @@ export function CoachProfileView({
           mostBookedId={extras?.mostBookedPackageId}
         />
 
+        <ShopCard
+          coachId={coach.id}
+          first={first}
+          affiliateLinks={coach.affiliate_links}
+          dealsEnabled={coach.deals_enabled}
+          coachSport={detectCoachSport(coach)}
+        />
+
         {totalReviews > 0 || reviews.length ? (
           <ReviewsCard first={first} reviews={reviews} rating={averageRating} totalReviews={totalReviews} showRating={showRating} />
         ) : null}
@@ -293,10 +298,6 @@ export function CoachProfileView({
           coachId={coach.id}
           first={first}
           faqs={faqs}
-          affiliateLinks={coach.affiliate_links}
-          dealsEnabled={coach.deals_enabled}
-          brandNames={brands.map((brand) => brand.name)}
-          coachSport={detectCoachSport(coach)}
         />
       </div>
       <BuyPackagesDialog

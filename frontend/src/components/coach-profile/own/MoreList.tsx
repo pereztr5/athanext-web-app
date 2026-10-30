@@ -1,22 +1,16 @@
 /**
  * "More" under the profile (Working Copy `sp2-more`): 66px rows that open in place for the
- * FAQ, group chats and gear and deals. Rows with nothing in them don't show.
+ * FAQ and group chats (gear and deals are in Shop). Rows with nothing in them don't show.
  */
 import { useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
-import { ChevronDown, CircleHelp, Hash, Tag, type LucideIcon } from "@/components/icons";
-import { isShopifyConfigured } from "@/api/shopify";
-import { useGearProducts } from "@/hooks/useGear";
-import { useCoachGearPicks } from "@/hooks/useCoachGearPicks";
-import { useToast } from "@/hooks/use-toast";
+import { ChevronDown, CircleHelp, Hash, type LucideIcon } from "@/components/icons";
 import { cn } from "@/lib/utils";
-import { visibleDeals } from "@/utils/affiliateLinks";
-import { COACH_GEAR_STORE_LABEL, formatPriceRange, pickCoachGear } from "@/utils/gear";
 import type { CoachFaqItem } from "../FAQSection";
 import { useOwnChannels } from "./hooks";
 import { caption, plural } from "./shared";
 
-type Key = "faq" | "chat" | "gear";
+type Key = "faq" | "chat";
 
 const Item = ({ icon: Icon, title, sub, open, onToggle, children }: { icon: LucideIcon; title: string; sub: string; open: boolean; onToggle: () => void; children: ReactNode }) => (
   <div className="[&+&]:border-t [&+&]:border-light-525">
@@ -36,40 +30,14 @@ export const MoreList = ({
   coachId,
   firstName,
   faqs,
-  links,
-  dealsEnabled,
-  brandNames,
-  coachSport,
 }: {
   coachId: string;
   firstName: string;
   faqs: CoachFaqItem[];
-  links: unknown;
-  dealsEnabled: boolean | null | undefined;
-  brandNames: string[];
-  /** Coach sport; store gear for it shows when the coach's brands have none. */
-  coachSport?: string | null;
 }) => {
-  const { toast } = useToast();
   const [open, setOpen] = useState<Key | null>(null);
   const { data: channels = [] } = useOwnChannels(coachId);
-  const { data: products = [] } = useGearProducts();
-  const { data: picks = [] } = useCoachGearPicks(isShopifyConfigured ? coachId : undefined);
-  const deals = visibleDeals(links, dealsEnabled);
-  const { products: gear, source: gearSource } = isShopifyConfigured
-    ? pickCoachGear(products, brandNames, coachSport, { picks, seed: coachId })
-    : { products: [], source: null };
-  const storeGear = gearSource === "store";
   const toggle = (key: Key) => setOpen((cur) => (cur === key ? null : key));
-
-  const copy = async (code: string) => {
-    try {
-      await navigator.clipboard.writeText(code);
-      toast({ title: `Code ${code} copied` });
-    } catch {
-      toast({ title: `Code ${code}` });
-    }
-  };
 
   const items: ReactNode[] = [];
   if (faqs.length)
@@ -92,48 +60,6 @@ export const MoreList = ({
             <span className={cn(caption, "truncate")}>
               {[plural(ch.memberCount, "family", "families"), ch.description ?? ""].filter(Boolean).join(" · ")}
             </span>
-          </Link>
-        ))}
-      </Item>
-    );
-  if (deals.length || gear.length)
-    items.push(
-      <Item
-        key="gear"
-        icon={Tag}
-        title="Gear and deals"
-        sub={[deals.length ? plural(deals.length, "brand deal") : "", gear.length ? (storeGear ? `${plural(gear.length, "product")} from the AthaNext store` : gearSource === "picks" ? `${plural(gear.length, "product")} ${firstName} picked` : `${plural(gear.length, "product")} in ${firstName}'s store`) : ""].filter(Boolean).join(" · ")}
-        open={open === "gear"}
-        onToggle={() => toggle("gear")}
-      >
-        {deals.length || !storeGear ? (
-          <span className={caption}>You may earn a commission when families buy through these links.</span>
-        ) : null}
-        {deals.map((deal) => (
-          <div key={deal.url} className="flex items-center justify-between gap-3">
-            <a href={deal.url} target="_blank" rel="sponsored noopener noreferrer" className="flex min-w-0 flex-col gap-1 hover:underline">
-              <span className="truncate text-label-sm text-dark">{deal.brand}</span>
-              <span className={cn(caption, "truncate")}>{deal.url.replace(/^https?:\/\/(www\.)?/, "")}</span>
-            </a>
-            {deal.code ? (
-              <button
-                type="button"
-                className="inline-flex h-[26px] shrink-0 items-center rounded-pill border border-dashed border-light-600 px-2 font-mono text-caption text-dark-400 hover:border-dark-250 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
-                aria-label={`Copy code ${deal.code}`}
-                onClick={() => void copy(deal.code!)}
-              >
-                {deal.code}
-              </button>
-            ) : null}
-          </div>
-        ))}
-        {storeGear || gearSource === "picks" ? (
-          <span className="text-label-xsm text-dark-300">{storeGear ? COACH_GEAR_STORE_LABEL : `${firstName}'s picks`}</span>
-        ) : null}
-        {gear.map((product) => (
-          <Link key={product.id} to={`/gear/${product.handle}`} className="flex items-center justify-between gap-3 py-2 hover:underline">
-            <span className="truncate text-label-sm text-dark">{product.title}</span>
-            <span className={cn(caption, "shrink-0")}>{formatPriceRange(product)}</span>
           </Link>
         ))}
       </Item>

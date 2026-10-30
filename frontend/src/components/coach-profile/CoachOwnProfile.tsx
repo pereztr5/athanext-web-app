@@ -189,7 +189,6 @@ export function CoachOwnProfile({
             locationLabel={locationLabel}
             organization={organization}
             faqs={shownFaqs}
-            brandNames={brands.map((brand) => brand.name)}
             cancellation={cancellation}
             completeness={completeness}
             previewHref={coachProfilePath(slug || coach.id)}

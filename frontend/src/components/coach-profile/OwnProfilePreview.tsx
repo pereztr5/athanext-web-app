@@ -18,6 +18,7 @@ import "@/styles/richText.css";
 import type { CoachProfileData, ProfileReview } from "./CoachProfileView";
 import type { CoachFaqItem } from "./FAQSection";
 import { OrganizationsCard } from "./OrganizationsCard";
+import { ShopCard } from "./family/ShopCard";
 import { useCoachOrganizations } from "./useCoachOrganizations";
 import { CompletenessNudge } from "./own/Completeness";
 import { MoreList } from "./own/MoreList";
@@ -42,7 +43,6 @@ export const OwnProfilePreview = ({
   locationLabel,
   organization,
   faqs,
-  brandNames,
   cancellation,
   completeness,
   previewHref,
@@ -62,7 +62,6 @@ export const OwnProfilePreview = ({
   locationLabel: string;
   organization: { name: string; to: string } | null;
   faqs: CoachFaqItem[];
-  brandNames: string[];
   cancellation: string;
   completeness: { steps: [StepName, boolean][]; done: number; next: StepName | null };
   previewHref: string;
@@ -251,9 +250,18 @@ export const OwnProfilePreview = ({
         coverFallback={coach.profile_image_url || coach.image_url || null}
       />
 
+      <ShopCard
+        coachId={coach.id}
+        first={first}
+        affiliateLinks={coach.affiliate_links}
+        dealsEnabled={coach.deals_enabled}
+        coachSport={detectCoachSport(coach)}
+        isOwn
+      />
+
       <OwnReviews coachId={coach.id} averageRating={averageRating} totalReviews={totalReviews} showRating={showRating} fallback={reviews} />
 
-      <MoreList coachId={coach.id} firstName={first} faqs={faqs} links={coach.affiliate_links} dealsEnabled={coach.deals_enabled} brandNames={brandNames} coachSport={detectCoachSport(coach)} />
+      <MoreList coachId={coach.id} firstName={first} faqs={faqs} />
     </div>
   );
 };

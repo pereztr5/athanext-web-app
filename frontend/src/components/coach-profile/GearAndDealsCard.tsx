@@ -91,7 +91,8 @@ export function GearAndDealsCard({
   const deals = editing ? allDeals : visibleDeals(links, dealsEnabled);
   const dealsOn = dealsEnabled !== false;
 
-  if (!editing && deals.length === 0 && gear.length === 0) return null;
+  // Shop off hides gear too, not only the deals (ATH-105).
+  if (!editing && (!dealsOn || (deals.length === 0 && gear.length === 0))) return null;
 
   const first = coachName.trim().split(/\s+/)[0] || "Your coach";
 
@@ -128,13 +129,13 @@ export function GearAndDealsCard({
       {editing ? (
         <div className="flex items-center justify-between gap-3">
           <div className="flex flex-col gap-1">
-            <span className="text-label-sm text-dark">Brand deals</span>
-            <span className={caption}>Affiliate links and discount codes</span>
+            <span className="text-label-sm text-dark">Shop on my profile</span>
+            <span className={caption}>Gear and brand deals families can buy. Off hides both.</span>
           </div>
           <Switch
             checked={dealsOn}
             onCheckedChange={(checked) => onDealsEnabledChange?.(checked)}
-            aria-label="Show brand deals"
+            aria-label="Show Shop on my profile"
           />
         </div>
       ) : null}
