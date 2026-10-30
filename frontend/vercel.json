@@ -23,6 +23,17 @@
   ],
   "rewrites": [
     {
+      "source": "/:coach([^/.]+)/:camp([^/.]+)",
+      "has": [
+        {
+          "type": "header",
+          "key": "user-agent",
+          "value": ".*(facebookexternalhit|Facebot|Twitterbot|Slackbot|Discordbot|WhatsApp|TelegramBot|LinkedInBot|SkypeUriPreview|Pinterestbot|redditbot|Embedly|iMessageLinkPreview|Applebot).*"
+        }
+      ],
+      "destination": "/api/camp-preview?coach=:coach&camp=:camp"
+    },
+    {
       "source": "/(.*)",
       "destination": "/index.html"
     }
