@@ -1,5 +1,5 @@
 import { assert, assertEquals, assertStringIncludes } from "jsr:@std/assert@1";
-import { campCoachEmail, campDates, campDetailsEmail, campMarkedPaidEmail, campParentEmail, campTime, campTimes, holdDay, money } from "./camp_emails.ts";
+import { campCoachEmail, campCoachMarkedPaidEmail, campDates, campDetailsEmail, campMarkedPaidEmail, campParentEmail, campTime, campTimes, holdDay, money } from "./camp_emails.ts";
 import { EMAIL_CARD, EMAIL_CREAM } from "./email_shell.ts";
 
 const camp = {
@@ -78,6 +78,22 @@ Deno.test("marked-paid email confirms the spot", () => {
   assertEquals(paid.subject, "You're in: Thanksgiving <Camp>");
   assertStringIncludes(paid.html, "marked your payment as received");
   assertStringIncludes(paid.html, "Hi Ana,");
+});
+
+Deno.test("coach marked-paid email confirms the spot to the coach", () => {
+  const mail = campCoachMarkedPaidEmail({
+    camp,
+    parentName: "Ana <b>",
+    parentEmail: "ana@example.com",
+    athlete: { first_name: "Leo", group_name: "U10" },
+    amountCents: 25000,
+    registrationsUrl: "https://app.athanext.com/camps?camp=1&view=registrations",
+  });
+  assertEquals(mail.subject, "Spot confirmed: Thanksgiving <Camp>");
+  assertStringIncludes(mail.html, "You marked the payment from Ana &lt;b&gt; (ana@example.com) as received");
+  assertStringIncludes(mail.html, "Leo's spot at <strong>Thanksgiving &lt;Camp&gt;</strong> is confirmed");
+  assertStringIncludes(mail.html, "Paid to you directly:</strong> $250.00");
+  assertStringIncludes(mail.html, "view=registrations");
 });
 
 Deno.test("coach email: new sign-up paid by card", () => {

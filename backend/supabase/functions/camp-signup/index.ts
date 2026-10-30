@@ -47,8 +47,17 @@ import {
   resolveAppOrigin,
   validateCampSignup,
 } from "../_shared/camp_signup.ts";
-import { campDetailsEmail, campFinishAccountEmail, campMarkedPaidEmail, campTimes } from "../_shared/camp_emails.ts";
-import { appOrigin, isCampSessionPaid, runCampFollowups, sendCampEmail, sendCampSignupEmails, settleCampSession } from "../_shared/camp_settle.ts";
+import { campCoachMarkedPaidEmail, campDetailsEmail, campFinishAccountEmail, campMarkedPaidEmail, campTimes } from "../_shared/camp_emails.ts";
+import {
+  appOrigin,
+  coachAccountEmail,
+  coachRegistrationsUrl,
+  isCampSessionPaid,
+  runCampFollowups,
+  sendCampEmail,
+  sendCampSignupEmails,
+  settleCampSession,
+} from "../_shared/camp_settle.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -324,7 +333,10 @@ serve(async (req) => {
       if (error || !marked) return rpcFail(error, "That didn't save.");
       if (before?.status !== "paid") {
         await inBackground(
-          sendMarkedPaid(caller, admin, body.registration_id, origin).catch((e) => console.error("Camp paid email failed", e)),
+          Promise.all([
+            sendMarkedPaid(caller, admin, body.registration_id, origin).catch((e) => console.error("Camp paid email failed", e)),
+            sendCoachMarkedPaid(caller, admin, body.registration_id, origin).catch((e) => console.error("Camp coach paid email failed", e)),
+          ]),
         );
       }
       return json(marked);
@@ -391,6 +403,34 @@ const sendMarkedPaid = async (caller: any, admin: any, registrationId: string, o
     finishUrl: contact.has_account ? null : finishAccountUrl(origin, contact.parent_email, contact.signup_id),
   });
   return await sendCampEmail(admin, contact.parent_email, subject, html);
+};
+
+// deno-lint-ignore no-explicit-any
+const sendCoachMarkedPaid = async (caller: any, admin: any, registrationId: string, origin: string) => {
+  const [{ data: contact, error }, { data: reg }] = await Promise.all([
+    caller.rpc("camp_registration_contact", { p_id: registrationId, p_kind: "details" }),
+    admin.from("camp_registrations").select("camp_id, coach_id, price_cents").eq("id", registrationId).maybeSingle(),
+  ]);
+  if (error || !contact || !reg?.coach_id) {
+    console.error("Camp coach paid email skipped", registrationId, error?.message);
+    return false;
+  }
+  const to = await coachAccountEmail(admin, reg.coach_id);
+  if (!to) return false;
+  const { subject, html } = campCoachMarkedPaidEmail({
+    camp: contact.camp,
+    parentName: contact.parent_name,
+    parentEmail: contact.parent_email,
+    athlete: {
+      first_name: contact.athlete_first_name,
+      group_name: contact.group_name,
+      start_time: contact.start_time,
+      end_time: contact.end_time,
+    },
+    amountCents: reg.price_cents,
+    registrationsUrl: coachRegistrationsUrl(origin, reg.camp_id),
+  });
+  return await sendCampEmail(admin, to, subject, html);
 };
 
 // deno-lint-ignore no-explicit-any

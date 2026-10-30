@@ -212,6 +212,30 @@ export const campMarkedPaidEmail = (input: {
   ].filter(Boolean)),
 });
 
+/** To the coach after they mark a direct (offline) payment as received: the spot is confirmed (ATH-108). */
+export const campCoachMarkedPaidEmail = (input: {
+  camp: CampEmailCamp;
+  parentName: string | null;
+  parentEmail: string | null;
+  athlete: CampEmailAthlete;
+  amountCents?: number | null;
+  registrationsUrl: string;
+}) => {
+  const family = `${e(input.parentName ?? "the family")}${input.parentEmail ? ` (${e(input.parentEmail)})` : ""}`;
+  return {
+    subject: `Spot confirmed: ${input.camp.name}`,
+    html: wrap("Spot confirmed", [
+      `<p>You marked the payment from ${family} as received, so ${e(input.athlete.first_name)}'s spot at <strong>${e(
+        input.camp.name,
+      )}</strong> is confirmed. We've let the family know.</p>`,
+      athleteList([input.athlete]),
+      ...campLines(input.camp),
+      input.amountCents ? `<p><strong>Paid to you directly:</strong> ${e(money(input.amountCents))}</p>` : "",
+      button(input.registrationsUrl, "Open registrations"),
+    ].filter(Boolean)),
+  };
+};
+
 /** To the coach when a camp card payment was fully refunded or disputed: the spots are free again. */
 export const campReversedEmail = (input: {
   status: "refunded" | "disputed";
