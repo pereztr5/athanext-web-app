@@ -136,6 +136,9 @@ export const OwnProfileEditor = ({
   const newCampSignups = useSeeNewCampSignups(true);
   // The saved title stays pickable even if it's no longer in this sport's list.
   const titleOptions = Array.from(new Set([...coachTitleOptions(coach.sport), ...(coach.title?.trim() ? [coach.title.trim()] : [])]));
+  // Not picked yet: preselect the option their positions point to, if there is one.
+  const derivedTitle = derivedCoachTitle(coach);
+  const titleValue = coach.title?.trim() || (titleOptions.includes(derivedTitle) ? derivedTitle : "");
   const bio = hasRichTextMarkup(coach.bio) ? stripRichTextToPlainText(coach.bio) : coach.bio ?? "";
   const individual = services.filter((s) => s.on && s.format === "individual" && s.price > 0);
   const from = individual.length ? Math.min(...individual.map((s) => s.price)) : 0;
@@ -302,10 +305,14 @@ export const OwnProfileEditor = ({
                     <span className={label}>Title</span>
                     <select
                       className={cn(input, "pr-8")}
-                      value={coach.title?.trim() ?? ""}
+                      value={titleValue}
                       onChange={(e) => onField("title", e.target.value || null)}
                     >
-                      <option value="">{derivedCoachTitle(coach)} (from your positions)</option>
+                      {titleValue ? null : (
+                        <option value="" disabled>
+                          Pick one
+                        </option>
+                      )}
                       {titleOptions.map((t) => (
                         <option key={t} value={t}>
                           {t}

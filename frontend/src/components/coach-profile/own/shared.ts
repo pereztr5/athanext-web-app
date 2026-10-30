@@ -24,7 +24,8 @@ export const coachesLine = (coach: CoachProfileData) => {
 };
 
 const SPORT_TITLES: Record<string, string[]> = {
-  soccer: ["Soccer coach", "Goalkeeper coach", "Field player coach", "Strength and conditioning coach", "Performance coach"],
+  // Soccer coaches are one or the other (ATH-111).
+  soccer: ["Goalkeeper coach", "Field player coach"],
   rowing: ["Rowing coach", "Sculling coach", "Sweep coach", "Coxswain coach", "Strength and conditioning coach"],
 };
 
