@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
+import { Link, matchRoutes, useLocation, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { Bell, CalendarPlus, MessageCircle, Plus } from "@/components/icons";
 import { cn } from "@/lib/utils";
@@ -14,7 +14,7 @@ import { useRole } from "@/hooks/useRole";
 import { primaryButton, smallButton } from "@/components/schedule/styles";
 import { CreateSessionSheet } from "@/components/schedule/CreateSessionSheet";
 import { AthaNextLogo } from "@/assets";
-import { ROUTES } from "@/routes";
+import { APP_ROUTES, AUTH_FLOW_ROUTES, DUAL_CHROME_ROUTES, PUBLIC_ROUTES, ROUTES } from "@/routes";
 import { chatAPI } from "@/api/chat";
 import { notificationsAPI, type AppNotification } from "@/api/notifications";
 import { NEW_CAMP_SIGNUPS_KEY } from "@/components/camps/useNewCampSignups";
@@ -39,13 +39,21 @@ const notificationWhen = (iso: string) => {
 const COACH_ACTION_HIDDEN = [ROUTES.DASHBOARD, ROUTES.SCHEDULE, ROUTES.MY_SESSIONS, ROUTES.ATHLETES, ROUTES.MY_ORGANIZATION, "/organizations/", "/sessions/", "/coach-session-feedback"];
 const ATHLETE_ACTION_HIDDEN = [ROUTES.BOOK, ROUTES.MY_SESSIONS, ROUTES.BOOKING_CONFIRMATION];
 
+// The camp page is /<coach>/<camp>, so match it the way the router does: only when no static route wins.
+const isCampPage = (pathname: string) =>
+  matchRoutes(
+    [...PUBLIC_ROUTES, ...AUTH_FLOW_ROUTES, ...DUAL_CHROME_ROUTES, ...APP_ROUTES].map(({ path }) => ({ path })),
+    pathname,
+  )?.[0]?.route.path === ROUTES.CAMP_PAGE;
+
 export const AppTopBar = () => {
   const navigate = useNavigate();
   const { pathname } = useLocation();
   const { isCoach, isAthleteLike } = useRole();
   const hides = (list: string[]) => list.some((p) => (p.endsWith("/") ? pathname.startsWith(p) : pathname === p || pathname.startsWith(`${p}/`)));
   const showCreate = isCoach && !hides(COACH_ACTION_HIDDEN);
-  const action = !isCoach && isAthleteLike && !hides(ATHLETE_ACTION_HIDDEN) ? { label: "Book", to: ROUTES.BOOK, Icon: CalendarPlus } : null;
+  // A camp page has its own Sign up; Book there reads like a second, different action (ATH-118).
+  const action = !isCoach && isAthleteLike && !hides(ATHLETE_ACTION_HIDDEN) && !isCampPage(pathname) ? { label: "Book", to: ROUTES.BOOK, Icon: CalendarPlus } : null;
   const [createOpen, setCreateOpen] = useState(false);
   const { hasNewMessage, user, profileReady, setHasNewMessage } = useAuth();
   const queryClient = useQueryClient();
