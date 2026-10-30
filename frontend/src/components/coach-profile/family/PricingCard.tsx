@@ -5,7 +5,7 @@ import { CampCards, type CampRegisterResult } from "@/components/camps/CampCards
 import { campEnded, packageKind, todayUtc } from "@/components/camps/format";
 import { useCamps } from "@/components/camps/useCamps";
 import { CoachAcademyPackages } from "@/components/organization/CoachAcademyPackages";
-import { secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
+import { primaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import type { CoachPackage } from "@/hooks/useCoachPackages";
 import { cn } from "@/lib/utils";
 import { CoachProfileCard } from "../CoachProfileCard";
@@ -101,7 +101,7 @@ export const PricingCard = ({
                   type="button"
                   onClick={() => (paysDirect ? onAsk?.() : onBuy(pkg))}
                   disabled={paysDirect ? !onAsk : buying !== null}
-                  className={cn(secondaryButton, smallButton, "col-span-2 self-start justify-self-start md:self-start")}
+                  className={cn(primaryButton, smallButton, "col-span-2 self-start justify-self-start md:self-start")}
                 >
                   {paysDirect ? `Ask ${first}` : buying === pkg.id ? "Opening…" : "Buy"}
                 </button>

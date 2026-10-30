@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Camp } from "@/api/packages";
 import { BrandPill } from "@/components/brand";
-import { secondaryButton, smallButton } from "@/components/schedule/styles";
+import { primaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { CampCardLink, campCardActions, campCardHover } from "./CampCardLink";
 import { formatCampDates } from "@/utils/camps";
@@ -83,9 +83,9 @@ const CampCard = ({
           <span className="text-caption font-medium text-dark">{[details, closed ? null : spots].filter(Boolean).join(" · ")}</span>
         ) : null}
         {interactive && !closed ? (
-          // Bottom right, like Buy on a package card.
+          // Bottom right and blue, like Buy on a package card.
           <div className={cn("mt-auto flex justify-end pt-1", campCardActions)}>
-            <button type="button" className={cn(secondaryButton, smallButton)} disabled={busy || !onRegister} onClick={() => void register()}>
+            <button type="button" className={cn(primaryButton, smallButton)} disabled={busy || !onRegister} onClick={() => void register()}>
               {busy ? "Opening…" : "Register for event"}
             </button>
           </div>

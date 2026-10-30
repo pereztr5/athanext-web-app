@@ -5,7 +5,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { orgPackagesAPI, type OrgPackage } from "@/api/organizations";
-import { smallButton, secondaryButton } from "@/components/schedule/styles";
+import { primaryButton, smallButton } from "@/components/schedule/styles";
 import { useAuth } from "@/contexts/AuthContext";
 import { useFeeConfig } from "@/hooks/useFeeConfig";
 import { useToast } from "@/hooks/use-toast";
@@ -81,7 +81,7 @@ export const CoachAcademyPackages = ({ coachId, canBuy }: { coachId: string; can
                         ) : null}
                       </span>
                       {canBuy ? (
-                        <button type="button" className={cn(secondaryButton, smallButton)} disabled={buying !== null} onClick={() => void buy(p.id)}>
+                        <button type="button" className={cn(primaryButton, smallButton)} disabled={buying !== null} onClick={() => void buy(p.id)}>
                           {buying === p.id ? "Opening…" : "Buy"}
                         </button>
                       ) : null}
