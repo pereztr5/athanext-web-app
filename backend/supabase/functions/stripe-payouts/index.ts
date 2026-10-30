@@ -341,7 +341,9 @@ serve(async (req) => {
             settings: { payouts: { schedule: { interval: "weekly", weekly_anchor: "monday" } } },
             metadata: { coach_id: coachId },
           },
-          { idempotencyKey: `connect-account-${coachId}` },
+          // Bump past Stripe's 24h idempotent replay of failed creates
+          // (platform-profile errors were cached on -v2 for Michael).
+          { idempotencyKey: `connect-account-${coachId}-v3` },
         );
         accountId = account.id;
         const { error } = await admin.from("coach_payout_accounts").insert({ coach_id: coachId, stripe_account_id: accountId, ...accountRow(account) });
