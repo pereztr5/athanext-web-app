@@ -118,6 +118,18 @@ export const athleteHomeAPI = {
       })
       .eq("id", athleteId);
     if (error) throw error;
+    // The account carries the sport too (the sidebar label, the sport the coach list starts on).
+    // Keep it in step when this is the account's own athlete.
+    const { data: auth } = await supabase.auth.getUser();
+    if (auth.user) {
+      const sport = edit.sport ? edit.sport.charAt(0).toUpperCase() + edit.sport.slice(1) : null;
+      const { error: accountError } = await supabase
+        .from("user_profiles")
+        .update({ sport, updated_at: new Date().toISOString() })
+        .eq("id", auth.user.id)
+        .eq("athlete_id", athleteId);
+      if (accountError) throw accountError;
+    }
   },
   /**
    * Uploads a new athlete photo to athalink-images/athlete-profiles/<user id>-<time>.<ext>

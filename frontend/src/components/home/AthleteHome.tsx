@@ -18,6 +18,7 @@ import { MyCampsCard } from "@/components/camps/MyCampsCard";
 import { MyInvoicesCard } from "@/components/home/MyInvoicesCard";
 import { card, dangerButton, dialogContent, iconButton, input, label, meta, pageTitle, primaryButton, secondaryButton, smallButton, textButton } from "@/components/schedule/styles";
 import { PATHWAY_TAGS } from "@/constants/pathwayTags";
+import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useToast } from "@/hooks/use-toast";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -374,6 +375,7 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
 }) => {
   const { toast } = useToast();
   const queryClient = useQueryClient();
+  const { refreshUserProfile } = useAuth();
   const open = focus !== null;
   const [form, setForm] = useState<AthleteProfileEdit>(() => fromAthlete(athlete));
   const [errors, setErrors] = useState<Partial<Record<keyof AthleteProfileEdit, string>>>({});
@@ -399,6 +401,7 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
     mutationFn: () => athleteHomeAPI.save(athlete.id, form),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["athlete-home"] });
+      void refreshUserProfile();
       toast({ title: "Profile saved" });
       onClose();
     },
