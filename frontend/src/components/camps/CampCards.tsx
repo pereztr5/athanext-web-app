@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { Camp } from "@/api/packages";
 import { BrandPill } from "@/components/brand";
-import { primaryButton, smallButton } from "@/components/schedule/styles";
+import { secondaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { CampCardLink, campCardActions, campCardHover } from "./CampCardLink";
 import { formatCampDates } from "@/utils/camps";
@@ -52,7 +52,8 @@ const CampCard = ({
   return (
     <article
       className={cn(
-        "relative flex items-start gap-3 rounded-control border border-transparent bg-light-400 p-3 sm:items-stretch",
+        // 588px wide, the same as a camp on the coach's Camps page.
+        "relative flex w-full items-start gap-3 rounded-control border border-transparent bg-light-400 p-3 sm:items-stretch md:w-[588px] md:max-w-full",
         openTo && campCardHover,
       )}
     >
@@ -82,8 +83,9 @@ const CampCard = ({
           <span className="text-caption font-medium text-dark">{[details, closed ? null : spots].filter(Boolean).join(" · ")}</span>
         ) : null}
         {interactive && !closed ? (
-          <div className={cn("mt-auto flex flex-wrap items-center gap-x-3 gap-y-2 self-start pt-1", campCardActions)}>
-            <button type="button" className={cn(primaryButton, smallButton)} disabled={busy || !onRegister} onClick={() => void register()}>
+          // Bottom right, like Buy on a package card.
+          <div className={cn("mt-auto flex justify-end pt-1", campCardActions)}>
+            <button type="button" className={cn(secondaryButton, smallButton)} disabled={busy || !onRegister} onClick={() => void register()}>
               {busy ? "Opening…" : "Register for event"}
             </button>
           </div>
@@ -130,7 +132,7 @@ export const CampCards = ({
   return (
     <div className="flex flex-col gap-2.5">
       <span className="text-label-xsm text-dark-300">Camps</span>
-      <div className="flex flex-col gap-2.5">
+      <div className="flex flex-wrap gap-2.5">
         {list.map((camp) => (
           <CampCard
             key={camp.id}
