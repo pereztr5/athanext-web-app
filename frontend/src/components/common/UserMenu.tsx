@@ -23,6 +23,7 @@ import { AvatarFallback } from "@radix-ui/react-avatar";
 import { useEffect, useState, useRef, useCallback, useMemo } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { chatAPI } from "@/api";
+import { openCookieSettings } from "@/utils/cookieConsent";
 import { useIsMobile } from "@/hooks/use-mobile";
 
 type UserMenuProps = {
@@ -470,6 +471,10 @@ export const UserMenu: React.FC<UserMenuProps> = ({
             {" · "}
             <button type="button" className="hover:text-dark hover:underline" onClick={() => openLegalDoc("privacy")}>
               Privacy policy
+            </button>
+            {" · "}
+            <button type="button" className="hover:text-dark hover:underline" onClick={openCookieSettings}>
+              Cookie settings
             </button>
           </p>
         </div>

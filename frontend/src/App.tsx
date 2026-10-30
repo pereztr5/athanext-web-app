@@ -12,6 +12,7 @@ import { MarketingLayout } from "@/layouts/MarketingLayout";
 import { AppLayout } from "@/layouts/AppLayout";
 import { ChromeSwitch } from "@/layouts/ChromeSwitch";
 import { LegalProvider } from "@/components/legal/LegalOverlay";
+import { CookieBanner } from "@/components/common/CookieBanner";
 import { AuthProvider } from "@/contexts/AuthContext";
 import { ProfileProvider } from "@/contexts/ProfileContext";
 
@@ -90,6 +91,7 @@ const AppContent = () => {
           ))}
         </Route>
       </Routes>
+      <CookieBanner />
     </ErrorBoundary>
   );
 };

@@ -25,6 +25,11 @@ export default defineConfig({
     timezoneId: "UTC",
     trace: "retain-on-failure",
     screenshot: "only-on-failure",
+    // The cookie banner is answered up front, so it never covers a button a test clicks.
+    storageState: {
+      cookies: [],
+      origins: [{ origin: new URL(baseURL).origin, localStorage: [{ name: "athanext-cookie-consent", value: "essential" }] }],
+    },
   },
   projects: [
     {
