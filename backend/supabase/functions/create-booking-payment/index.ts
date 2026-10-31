@@ -1705,9 +1705,9 @@ serve(async (req) => {
           payment_method_types: ["card"],
           mode: "payment",
           line_items: checkoutTotal(paidOccs, ". Charged only if the coach accepts."),
+          // No Stripe receipt: our "You're booked" email is the receipt, as for camps.
           payment_intent_data: {
             capture_method: "manual",
-            ...(user.email ? { receipt_email: user.email } : {}),
             metadata: { request: "1" },
           },
           expires_at: expiry.unix,
@@ -1856,8 +1856,8 @@ serve(async (req) => {
           mode: "payment",
           // Unpaid Checkouts lapse (and their spots are released) instead of holding them for 24h.
           expires_at: expiry.unix,
-          // Stripe emails the receipt (ATH-91). The card is never saved for later.
-          payment_intent_data: user.email ? { receipt_email: user.email } : undefined,
+          // No Stripe receipt (receipt_email): our "You're booked" email is the receipt, as for camps,
+          // so families get one, not two. The card is never saved for later.
           success_url: `${origin}/booking-confirmation?session_id={CHECKOUT_SESSION_ID}`,
           cancel_url: plans.length > 1 ? `${origin}/book` : `${origin}/coach/${firstCoachId}`,
           metadata: {
