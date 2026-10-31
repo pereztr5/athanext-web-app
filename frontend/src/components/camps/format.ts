@@ -17,6 +17,12 @@ export const todayUtc = () => new Date().toISOString().slice(0, 10);
 
 export const campEnded = (endsOn: string | null, today = todayUtc()) => Boolean(endsOn && endsOn.slice(0, 10) < today);
 
+/** Online sign-up closes on the first camp day (the camp page and sign-up use the same rule). */
+export const campStarted = (startsOn: string | null, endsOn: string | null, today = todayUtc()) => {
+  const first = startsOn ?? endsOn;
+  return Boolean(first && first.slice(0, 10) <= today);
+};
+
 export const spotsLabel = (spotsLeft: number | null): string | null => {
   if (spotsLeft == null) return null;
   if (spotsLeft <= 0) return "Full";

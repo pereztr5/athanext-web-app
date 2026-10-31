@@ -53,8 +53,10 @@ export type CampPage = {
   pay_direct: boolean;
   /** The coach's camp waiver (https PDF or page), or null. */
   waiver_url?: string | null;
-  /** False once the camp has ended. */
+  /** False from the first camp day (sign-up closes when the camp starts). */
   open: boolean;
+  /** The first camp day has come: online sign-up is closed and the coach adds late joiners. */
+  started?: boolean;
   /** False for a draft, which only its coach (or an admin) can open. */
   published?: boolean;
   /** The viewer is the camp's coach or an admin: show Edit on top. */

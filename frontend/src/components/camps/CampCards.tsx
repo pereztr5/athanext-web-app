@@ -5,7 +5,7 @@ import { primaryButton, smallButton } from "@/components/schedule/styles";
 import { cn } from "@/lib/utils";
 import { CampCardLink, campCardActions, campCardHover } from "./CampCardLink";
 import { formatCampDates } from "@/utils/camps";
-import { campEnded, campMoney, formatAges, formatDailyTime, spotsLabel, todayUtc } from "./format";
+import { campEnded, campMoney, campStarted, formatAges, formatDailyTime, spotsLabel, todayUtc } from "./format";
 import { useCamps } from "./useCamps";
 
 export type CampRegisterResult = { redirect: boolean; message: string | null };
@@ -124,9 +124,10 @@ export const CampCards = ({
       </p>
     );
   }
-  // Ended camps stay on Camps for the coach; families can't sign up, so the profile leaves them out.
+  // Camps that have started stay on Camps for the coach; families can't sign up online any more,
+  // so the profile leaves them out.
   const today = todayUtc();
-  const list = (camps.data ?? []).filter((camp) => !campEnded(camp.endsOn, today));
+  const list = (camps.data ?? []).filter((camp) => !campStarted(camp.startsOn, camp.endsOn, today));
   if (!list.length) return null;
 
   return (

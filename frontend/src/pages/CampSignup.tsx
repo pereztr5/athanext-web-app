@@ -359,7 +359,9 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
     camp.published === false
       ? "Draft. Publish to open sign-ups"
       : !camp.open
-        ? "Sign-ups closed"
+        ? camp.started
+          ? "Sign-ups closed. The camp has started"
+          : "Sign-ups closed"
         : allFull
           ? "Fully booked"
           : group
@@ -401,7 +403,11 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
           <PanelRow label="Group">{group ? group.name || "All athletes" : <span className="text-dark-300">Pick one</span>}</PanelRow>
           {signUp("h-11 w-full")}
           <span className="text-center text-caption text-dark-300">
-            {canSignUp || !group ? `No account needed. With ${firstName(camp.coach.name)}.` : status}
+            {!camp.open && camp.started
+              ? `The camp has started. Ask ${firstName(camp.coach.name)} to add your athlete.`
+              : canSignUp || !group
+                ? `No account needed. With ${firstName(camp.coach.name)}.`
+                : status}
           </span>
         </>
       }
