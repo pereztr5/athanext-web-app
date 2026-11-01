@@ -27,6 +27,8 @@ import {
   pickCampDay,
   runAgainDraft,
   validateCampForm,
+  campFormAthletes,
+  parentLastName,
   CAMP_WAIVER_MAX_BYTES,
   campReviewPayment,
   campWaiverFileError,
@@ -91,13 +93,21 @@ describe("sign-up form", () => {
     expect(validateCampForm(filledForm(), groups, NOW)).toEqual({});
   });
 
+  it("gives athletes the parent's last name (there's no last name field)", () => {
+    const form = filledForm();
+    form.parent.name = "Maria de la Cruz";
+    form.athletes = [{ first: "Diego", last: "", year: "2013", groupId: "g-elite", note: "" }];
+    expect(validateCampForm(form, groups, NOW)).toEqual({});
+    expect(campFormAthletes(form)[0]?.last_name).toBe("de la Cruz");
+    expect(parentLastName("Cher")).toBe("Cher");
+  });
+
   it("uses the mockup's copy for every missing field", () => {
     const errors = validateCampForm({ ...emptyCampForm(), athletes: [{ first: "", last: "", year: "", groupId: "g-elite", note: "" }] }, groups, NOW);
     expect(errors).toEqual({
       "parent.name": "Add your name",
       "parent.email": "Add an email we can send the receipt to",
       "athletes.0.first_name": "Add a first name",
-      "athletes.0.last_name": "Add a last name",
       "athletes.0.birth_year": "Add a birth year, like 2013",
       waiver: "Tick the box to continue",
     });

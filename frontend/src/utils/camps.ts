@@ -231,6 +231,15 @@ const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 /** Birth years the form takes: 2 to 80 years old this year (same as the server). */
 export const birthYearRange = (now = new Date()) => ({ min: now.getUTCFullYear() - 80, max: now.getUTCFullYear() - 2 });
 
+/** The parent's last name ("Maria de la Cruz" -> "de la Cruz"); one word is used as it is. */
+export const parentLastName = (parentName: string) => {
+  const words = parentName.trim().split(/\s+/).filter(Boolean);
+  return words.length > 1 ? words.slice(1).join(" ") : words[0] ?? "";
+};
+
+/** Athletes take the parent's last name unless one was already known (a returning family). */
+const athleteLast = (a: { last: string }, parentName: string) => a.last.trim() || parentLastName(parentName);
+
 /**
  * Field errors with the mockup's copy, keyed like the server's (parent.name, athletes.0.birth_year, waiver).
  * Empty when the form can go to payment.
@@ -251,9 +260,9 @@ export const validateCampForm = (
   const seen = new Set<string>();
   form.athletes.slice(0, CAMP_MAX_ATHLETES).forEach((a, i) => {
     const first = a.first.trim();
-    const last = a.last.trim();
+    // No last name field: athletes take the parent's, so a missing parent name is the error to fix.
+    const last = athleteLast(a, name);
     if (!first || first.length > 60) errors[`athletes.${i}.first_name`] = "Add a first name";
-    if (!last || last.length > 60) errors[`athletes.${i}.last_name`] = "Add a last name";
     const year = /^\d{4}$/.test(a.year.trim()) ? Number(a.year.trim()) : NaN;
     if (!Number.isInteger(year) || year < min || year > max) errors[`athletes.${i}.birth_year`] = "Add a birth year, like 2013";
     const group = groups.find((g) => g.id === a.groupId);
@@ -272,7 +281,7 @@ export const validateCampForm = (
 export const campFormAthletes = (form: CampForm) =>
   form.athletes.map((a) => ({
     first_name: a.first.trim(),
-    last_name: a.last.trim(),
+    last_name: athleteLast(a, form.parent.name),
     birth_year: Number(a.year.trim()),
     group_id: a.groupId,
     ...(a.note.trim() ? { note: a.note.trim() } : {}),

@@ -10,7 +10,15 @@ export type CampFinishDetails = {
   athleteFirst: string;
   athleteLast: string;
   birthYear: number | null;
+  /** For the profile questions that follow ("Besides [camp] with [coach], ..."). */
+  campName?: string;
+  coachName?: string;
+  /** The camp's pillars, already marked in the pillars question. */
+  campPillars?: string[];
 };
+
+/** Camps without pillars set are on-field training camps. */
+export const campPillarsOf = (tags: string[] | null | undefined) => (tags?.length ? tags : ["On-field training"]);
 
 const KEY = "athanext:camp-finish";
 

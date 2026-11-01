@@ -1,8 +1,11 @@
 /**
- * Sign up (WC4): one question per screen with big tiles and a clickable progress bar.
- * Coach / athlete 18+ / parent → questions → account (Google or email, country code, terms) →
- * 6-digit email code → families see match cards, coaches see a draft profile.
- * Athletes under 18 email a parent instead. No background-check / admin-review step.
+ * Sign up (WC4, then the Oct 31 "signup flows: today vs proposed" board): one question per
+ * screen with big tiles and a clickable progress bar.
+ * Direct: coach / athlete 18+ / parent → questions → account (Google, or email and password) →
+ * 6-digit email code last → families add an optional profile and see matches, coaches see a
+ * draft profile. Athletes under 18 email a parent instead.
+ * Camp families (after the camp form): password and code only, then a few questions built
+ * around the camp, then the optional profile. Nothing the camp form asked is asked again.
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -55,14 +58,23 @@ import { isValidE164, normalizeStoredPhone } from "@/utils/phone";
 import { parentInviteEmailRequest } from "@/utils/publicEmail";
 import { clearJoinCoach } from "@/utils/referralHelpers";
 import { clearCampFinish, readCampFinish } from "@/components/camps/campFinish";
+import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { buildOAuthRedirectPath } from "@/utils/authRedirect";
 import {
   COACH_POS_TO_DB,
   LEVEL_TO_PATHWAY,
-  ageYearsFromTile,
+  SESSION_FORMATS,
+  SESSION_LOCATIONS,
+  ageFromDob,
   clearSignupSession,
+  dobBounds,
   dobFromAgeTile,
   emptySignupAnswers,
+  formatToDb,
+  gradYearOptions,
+  locationToCoachSessionType,
+  locationToDb,
+  validDob,
   initialSignupStep,
   prefillFromUser,
   readSignupAnswers,
@@ -134,7 +146,7 @@ type StepId =
   | "pillars"
   | "level"
   | "clevels"
-  | "age"
+  | "dob"
   | "where"
   | "cwhere"
   | "account"
@@ -143,11 +155,14 @@ type StepId =
   | "matches"
   | "cprofile"
   | "invite"
-  | "sent";
+  | "sent"
+  | "extras";
 
-const FAMILY_FLOW: StepId[] = ["who", "sport", "pillars", "level", "age", "where", "account"];
+const FAMILY_FLOW: StepId[] = ["who", "sport", "pillars", "level", "dob", "where", "account"];
 const COACH_FLOW: StepId[] = ["who", "sport", "pillars", "clevels", "cwhere", "account"];
-const OFF_FLOW: StepId[] = ["verify", "password", "matches", "cprofile", "invite", "sent"];
+/** Camp families: the account comes first (the camp form had their details), then these. */
+const CAMP_FLOW: StepId[] = ["sport", "pillars", "level", "where"];
+const OFF_FLOW: StepId[] = ["verify", "password", "matches", "cprofile", "invite", "sent", "extras"];
 
 const LEVELS: { id: string; title: string; detail: string; Icon: typeof User }[] = [
   { id: "Recreational", title: "Recreational", detail: "Any age, playing for fun and fitness", Icon: User },
@@ -169,12 +184,6 @@ const PILLAR_ICONS: Record<string, typeof User> = {
 
 const pillarIcon = (title: string) =>
   PILLAR_ICONS[Object.keys(PILLAR_ICONS).find((k) => k.toLowerCase() === title.toLowerCase()) ?? ""] ?? Zap;
-
-const AGE_TILES = [
-  ["u9", "Under 9"],
-  ...Array.from({ length: 9 }, (_, k) => [String(k + 9), String(k + 9)] as const),
-  ["18", "18+"],
-] as const;
 
 const tileClass = (on: boolean) =>
   cn(
@@ -245,6 +254,141 @@ const Tile = ({
   </button>
 );
 
+/** Session type, the same for families and coaches: format (1-on-1, group) and where (in person, online). */
+const SessionChoices = ({
+  answers,
+  patch,
+  coach,
+}: {
+  answers: SignupAnswers;
+  patch: (partial: Partial<SignupAnswers>) => void;
+  coach: boolean;
+}) => {
+  const toggle = (key: "formats" | "locations", value: string) =>
+    patch({ [key]: answers[key].includes(value) ? answers[key].filter((x) => x !== value) : [...answers[key], value] });
+  const formatCopy: Record<string, { title: string; detail: string; Icon: typeof User }> = {
+    Individual: { title: "1-on-1", detail: coach ? "One athlete at a time" : "Just the athlete and the coach", Icon: User },
+    Group: { title: "Group", detail: coach ? "Small groups and clinics" : "Train with other athletes", Icon: Users },
+  };
+  const locationCopy: Record<string, { title: string; detail: string; Icon: typeof User }> = {
+    "In person": { title: "In person", detail: coach ? "At your field or facility" : "At a field near you", Icon: MapPin },
+    Online: { title: "Online", detail: coach ? "Coach over video, from anywhere" : "Over video, with coaches from anywhere", Icon: Video },
+  };
+  return (
+    <>
+      <div className="flex flex-col gap-2">
+        <span className={label}>{coach ? "Sessions you offer. Pick all that apply." : "What kind of sessions? Pick all that apply."}</span>
+        {SESSION_FORMATS.map((f) => {
+          const { title, detail, Icon } = formatCopy[f]!;
+          return (
+            <Tile key={f} multi on={answers.formats.includes(f)} title={title} detail={detail} icon={<Icon className="size-5" strokeWidth={1.5} />} onClick={() => toggle("formats", f)} />
+          );
+        })}
+      </div>
+      <div className="flex flex-col gap-2">
+        <span className={label}>{coach ? "Where you coach" : "Where"}</span>
+        {SESSION_LOCATIONS.map((l) => {
+          const { title, detail, Icon } = locationCopy[l]!;
+          return (
+            <Tile key={l} multi on={answers.locations.includes(l)} title={title} detail={detail} icon={<Icon className="size-5" strokeWidth={1.5} />} onClick={() => toggle("locations", l)} />
+          );
+        })}
+      </div>
+    </>
+  );
+};
+
+/**
+ * The last step for families, skippable: photo, club team, grad year, season goal and highlight
+ * video. All of it can be added later from Home.
+ */
+const OptionalProfile = ({
+  athleteId,
+  isParent,
+  athleteWord,
+  onDone,
+}: {
+  athleteId: string | null;
+  isParent: boolean;
+  athleteWord: string;
+  onDone: () => Promise<void> | void;
+}) => {
+  const { toast } = useToast();
+  const [team, setTeam] = useState("");
+  const [grad, setGrad] = useState("");
+  const [goal, setGoal] = useState("");
+  const [video, setVideo] = useState("");
+  const [busy, setBusy] = useState(false);
+  const videoOk = !video.trim() || /^https?:\/\/\S+\.\S+/i.test(video.trim());
+  const anything = Boolean(team.trim() || grad || goal.trim() || video.trim());
+
+  const save = async () => {
+    if (!athleteId || !anything) return onDone();
+    setBusy(true);
+    const { error } = await supabase
+      .from("athlete_profiles")
+      .update({
+        ...(team.trim() ? { high_school: team.trim() } : {}),
+        ...(grad ? { graduation_year: grad } : {}),
+        ...(goal.trim() ? { season_goal: goal.trim() } : {}),
+        ...(video.trim() ? { highlight_video_url: video.trim() } : {}),
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", athleteId);
+    setBusy(false);
+    if (error) {
+      toast({ title: "Couldn't save these", description: "You can add them later from Home.", variant: "destructive" });
+      return;
+    }
+    await onDone();
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="flex flex-col gap-1">
+        <h2 className="text-card-title text-dark">{isParent ? `A bit more about ${athleteWord}` : "A bit more about you"}</h2>
+        <p className={meta}>Optional. Coaches see this when you book. You can add it anytime from Home.</p>
+      </div>
+      {athleteId ? (
+        <div className="flex items-center justify-between gap-3 rounded-control border border-light-525 bg-light-200 px-3 py-2.5">
+          <span className="text-label-sm">Profile photo</span>
+          <EditPhotoButton athleteId={athleteId} photo={null} isParent={isParent}>
+            Add a photo
+          </EditPhotoButton>
+        </div>
+      ) : null}
+      <Field text="Club or team">
+        <input className={input} value={team} onChange={(e) => setTeam(e.target.value)} placeholder="Austin FC Academy" />
+      </Field>
+      <Field text="Graduation year">
+        <select className={input} value={grad} onChange={(e) => setGrad(e.target.value)}>
+          <option value="">Pick a year</option>
+          {gradYearOptions().map((y) => (
+            <option key={y} value={y}>
+              {y}
+            </option>
+          ))}
+        </select>
+      </Field>
+      <Field text="Season goal">
+        <input className={input} value={goal} onChange={(e) => setGoal(e.target.value)} maxLength={200} placeholder="Start for the varsity team" />
+      </Field>
+      <Field text="Highlight video" error={videoOk ? undefined : "Paste the full link"}>
+        <input className={input} value={video} onChange={(e) => setVideo(e.target.value)} placeholder="https://youtube.com/…" inputMode="url" />
+      </Field>
+      <button type="button" className={signupCta} disabled={busy || !videoOk} onClick={() => void save()}>
+        {busy ? "Saving…" : anything ? "Save and continue" : "Continue"}
+        <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
+      </button>
+      {anything ? (
+        <button type="button" className={cn(textButton, "self-center")} disabled={busy} onClick={() => void onDone()}>
+          Skip for now
+        </button>
+      ) : null}
+    </div>
+  );
+};
+
 /**
  * A camp family finishing their account (/auth?mode=signup&email=…&camp_signup=…): they signed up
  * as a parent with their details already, so the flow opens on the account step with them filled in.
@@ -254,6 +398,7 @@ export type CampFinishParams = { signupId: string; email: string | null };
 const campAnswers = (base: SignupAnswers, camp: CampFinishParams): SignupAnswers => {
   const known = readCampFinish(camp.signupId);
   const [first = "", ...rest] = (known?.parentName ?? "").split(/\s+/).filter(Boolean);
+  const campPillars = known?.campPillars ?? [];
   return {
     ...base,
     who: "parent",
@@ -263,6 +408,9 @@ const campAnswers = (base: SignupAnswers, camp: CampFinishParams): SignupAnswers
     last: base.last || rest.join(" "),
     phone: base.phone || normalizeStoredPhone(known?.phone),
     ath: base.ath || known?.athleteFirst || "",
+    // The camp's pillars start ticked; the camp form already took the terms.
+    pillars: Array.from(new Set([...campPillars, ...base.pillars])),
+    terms: true,
   };
 };
 
@@ -317,12 +465,12 @@ export const SignUpFlow = ({
   const they = (parentCopy: string, selfCopy: string, coachCopy?: string) =>
     isCoach && coachCopy !== undefined ? coachCopy : isParent ? parentCopy : selfCopy;
 
-  const flow = isCoach ? COACH_FLOW : FAMILY_FLOW;
+  const flow = camp ? CAMP_FLOW : isCoach ? COACH_FLOW : FAMILY_FLOW;
   const flowIndex = flow.indexOf(step);
   const offFlow = OFF_FLOW.includes(step);
   const questionCount = flow.length - 1;
   const questionIndex = flowIndex >= 0 ? flowIndex : 0;
-  const ageYears = ageYearsFromTile(answers.age);
+  const ageYears = ageFromDob(answers.dob);
   const isMinorSelf = answers.who === "self" && ageYears !== null && ageYears < 18;
 
   useEffect(() => {
@@ -354,21 +502,33 @@ export const SignUpFlow = ({
     campSignup: camp?.signupId ?? null,
     email: camp?.email ?? null,
   });
-  const campBirthYear = camp ? readCampFinish(camp.signupId)?.birthYear ?? null : null;
+  const campDetails = camp ? readCampFinish(camp.signupId) : null;
+  const campBirthYear = campDetails?.birthYear ?? null;
+  const campPillars = campDetails?.campPillars ?? [];
+  const athleteWord = answers.ath.trim() || "your athlete";
+  const coachFirst = (campDetails?.coachName ?? "").split(/\s+/)[0] || "the coach";
+  // The athlete row the account owns, for the optional profile step.
+  const [athleteId, setAthleteId] = useState<string | null>(null);
 
   const go = (id: StepId) => setStep(id);
 
   const nextFrom = (id: StepId) => {
     if (id === "who") return go("sport");
-    if (id === "age" && isMinorSelf) return go("invite");
-    if (id === "verify") return go("password");
-    if (id === "password") return go(isCoach ? "cprofile" : "matches");
+    if (id === "dob" && isMinorSelf) return go("invite");
+    // Camp families answer their questions after the account exists; then the profile is saved.
+    if (id === "where" && camp) return void finishProfile();
     const i = flow.indexOf(id);
     if (i >= 0 && i < flow.length - 1) go(flow[i + 1]!);
   };
 
+  /** Once the email is confirmed (and a password set): camp families answer their questions next. */
+  const afterVerified = async () => {
+    if (camp) return go("sport");
+    await finishProfile();
+  };
+
   const back = () => {
-    if (step === "invite") return go("age");
+    if (step === "invite") return go("dob");
     if (step === "verify") return go("account");
     if (step === "password") return go("verify");
     if (step === "matches" || step === "cprofile") return go("account");
@@ -389,6 +549,7 @@ export const SignUpFlow = ({
         level: null,
         clevels: [],
         ctypes: [],
+        formats: [],
       };
     });
     window.setTimeout(() => go("sport"), 180);
@@ -402,14 +563,18 @@ export const SignUpFlow = ({
     );
   };
 
+  const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email.trim());
   const accountValid = () => {
     if (user || answers.google) {
-      return isValidE164(answers.phone) && (!isParent || answers.ath.trim());
+      return camp ? true : isValidE164(answers.phone) && (!isParent || answers.ath.trim());
     }
+    // Camp families gave everything but a password on the camp form.
+    if (camp) return emailOk && passwordOk;
     return (
       answers.first.trim() &&
       answers.last.trim() &&
-      /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(answers.email.trim()) &&
+      emailOk &&
+      passwordOk &&
       isValidE164(answers.phone) &&
       (!isParent || answers.ath.trim())
     );
@@ -422,7 +587,11 @@ export const SignUpFlow = ({
     }
     if (!accountValid()) {
       toast({
-        title: user || answers.google ? "Add your mobile number to finish" : "Fill in every field to finish",
+        title: user || answers.google
+          ? "Add your mobile number to finish"
+          : !passwordOk
+            ? "Choose a stronger password"
+            : "Fill in every field to finish",
         variant: "destructive",
       });
       return;
@@ -437,20 +606,19 @@ export const SignUpFlow = ({
         go("password");
         return;
       }
-      await finishProfile();
+      await afterVerified();
       return;
     }
 
     setBusy(true);
-    const name = `${answers.first.trim()} ${answers.last.trim()}`;
+    const name = `${answers.first.trim()} ${answers.last.trim()}`.trim() || campDetails?.parentName || "";
     const persona = isCoach ? "coach" : isParent ? "parent" : "athlete";
-    // Temporary password until the email is confirmed; the real password is set on the next step.
-    const tempPassword = `${crypto.randomUUID()}Aa1!`;
+    // The password is chosen here; the 6-digit code comes last and confirms the email.
     const { error } = await authAPI.signUp({
       email: answers.email.trim().toLowerCase(),
-      password: tempPassword,
+      password: answers.pw,
       name,
-      metadata: { name, persona_type: persona, phone_number: answers.phone, password_pending: true },
+      metadata: { name, persona_type: persona, phone_number: answers.phone, password_pending: false },
       emailRedirectTo: `${window.location.origin}${returnPath}`,
     });
     setBusy(false);
@@ -496,7 +664,7 @@ export const SignUpFlow = ({
       });
       return;
     }
-    go("password");
+    await afterVerified();
   };
 
   const setPassword = async () => {
@@ -511,7 +679,7 @@ export const SignUpFlow = ({
       setErrors({ password: error.message });
       return;
     }
-    await finishProfile();
+    await afterVerified();
   };
 
   const resend = async () => {
@@ -564,7 +732,7 @@ export const SignUpFlow = ({
       if (isCoach) {
         const coachPositions = answers.cpos.map((p) => COACH_POS_TO_DB[p] ?? p);
         const pathway = answers.clevels.map((l) => LEVEL_TO_PATHWAY[l] ?? l).filter(Boolean);
-        const sessionTypes = answers.video ? ["in-person", "virtual"] : ["in-person"];
+        const sessionTypes = answers.locations.map(locationToCoachSessionType);
         const coachFields = {
           specialties: answers.pillars,
           locations: answers.zip ? [answers.zip] : [],
@@ -573,6 +741,7 @@ export const SignUpFlow = ({
           favourite_positions: coachPositions,
           pathway_tags: pathway,
           session_types: sessionTypes,
+          session_formats: answers.formats.map(formatToDb),
         };
 
         let coachId = await findExistingCoachId(existing?.coach_id, accountEmail, me.id);
@@ -634,8 +803,13 @@ export const SignUpFlow = ({
       } else {
         const athFirst = isParent ? answers.ath.trim() : answers.first.trim();
         const athLast = isParent ? answers.last.trim() : answers.last.trim();
-        // A camp family gave the birth year; the day is unknown.
-        const dob = campBirthYear && !answers.age ? `${campBirthYear}-01-01` : dobFromAgeTile(answers.age);
+        // A camp family gave the birth year (the day is unknown); answers saved before the birth
+        // date question carry an age instead.
+        const dob = validDob(answers.dob)
+          ? answers.dob
+          : campBirthYear
+            ? `${campBirthYear}-01-01`
+            : dobFromAgeTile(answers.age);
         const pathway = answers.level ? [LEVEL_TO_PATHWAY[answers.level] ?? answers.level] : [];
         const athleteFields = {
           full_name: `${athFirst} ${athLast}`.trim(),
@@ -645,6 +819,8 @@ export const SignUpFlow = ({
           tags: answers.pillars,
           pathway_tags: pathway,
           phone_number: answers.phone,
+          session_formats: answers.formats.map(formatToDb),
+          session_locations: answers.locations.map(locationToDb),
         };
 
         let athleteId = await findExistingAthleteId(existing?.athlete_id, me.id);
@@ -691,19 +867,15 @@ export const SignUpFlow = ({
           await createAthleteInitiatedReferral(joinCoachId);
           clearJoinCoach();
         }
-        if (camp) {
-          // The camp is on their Home; AuthContext links the sign-up to the account.
-          clearCampFinish();
-          clearSignupSession();
-          await refreshUserProfile();
-          toast({ title: "Your account is ready", description: "The camp is on your schedule." });
-          navigate(ROUTES.DASHBOARD, { replace: true });
-          return;
-        }
-        await loadMatches();
+        // The camp is on their Home (AuthContext links the sign-up to the account). Families add
+        // the optional profile next, then see matches (direct) or Home (camp).
+        if (camp) clearCampFinish();
         clearSignupSession();
         await refreshUserProfile();
-        go("matches");
+        setAthleteId(athleteId);
+        go("extras");
+        toast({ title: "Your account is ready", description: camp ? "The camp is on your schedule." : undefined });
+        return;
       }
       toast({ title: "Your account is ready" });
     } catch (err) {
@@ -728,7 +900,7 @@ export const SignUpFlow = ({
           pos: answers.pos,
           level: answers.level,
           pillars: answers.pillars,
-          age: answers.age,
+          age: ageYears !== null ? String(ageYears) : answers.age,
           zip: answers.zip,
         })
       );
@@ -806,7 +978,13 @@ export const SignUpFlow = ({
           </span>
         </div>
         <p className={cn(meta, "text-center font-medium text-primary")}>
-          {step === "who" ? "Welcome to AthaNext" : isCoach ? "Set up your coaching profile" : "Find the right coach"}
+          {step === "who"
+            ? "Welcome to AthaNext"
+            : camp
+              ? `A few questions about ${athleteWord}`
+              : isCoach
+                ? "Set up your coaching profile"
+                : "Find the right coach"}
         </p>
       </div>
     );
@@ -853,10 +1031,10 @@ export const SignUpFlow = ({
       answers.level,
       ...answers.pillars.slice(0, 2),
       answers.pillars.length > 2 ? `+${answers.pillars.length - 2} more` : "",
-      answers.age && isParent ? (answers.age === "u9" ? "Under 9" : `Age ${answers.age}`) : "",
+      ageYears !== null && isParent ? `Age ${ageYears}` : "",
     ].filter(Boolean) as string[];
     return bits;
-  }, [answers, isCoach, isParent]);
+  }, [answers, isCoach, isParent, ageYears]);
 
   // Screens
   let body: ReactNode = null;
@@ -908,12 +1086,15 @@ export const SignUpFlow = ({
     const posTitle = isCoach
       ? "Which players do you coach?"
       : answers.sport === "Rowing"
-        ? they("Where does your athlete sit in the boat?", "Where do you sit in the boat?")
-        : they("What position does your athlete play?", "What position do you play?");
+        ? they(`Where does ${athleteWord} sit in the boat?`, "Where do you sit in the boat?")
+        : they(`What position does ${athleteWord} play?`, "What position do you play?");
 
     body = (
       <div className="flex flex-col gap-3">
-        <Head title={isCoach ? "Which sport do you coach?" : "Which sport?"} sub="Soccer and rowing are live now." />
+        <Head
+          title={isCoach ? "Which sport do you coach?" : "Which sport?"}
+          sub={camp ? `From ${campDetails?.campName ?? "the camp"}. Change it if it's not right.` : "Soccer and rowing are live now."}
+        />
         <div className="flex flex-col gap-2" role="radiogroup">
           <Tile on={answers.sport === "Soccer"} title="Soccer" onClick={() => pickSport("Soccer")} />
           <Tile on={answers.sport === "Rowing"} title="Rowing" onClick={() => pickSport("Rowing")} />
@@ -966,37 +1147,45 @@ export const SignUpFlow = ({
     );
   } else if (step === "pillars") {
     const list = pillarTitles.map((title) => ({ title, Icon: pillarIcon(title) }));
+    // The camp's own pillars stay ticked: families only add what else they work on.
+    const fromCamp = (title: string) => camp !== null && campPillars.some((p) => p.toLowerCase() === title.toLowerCase());
     body = (
       <div className="flex flex-col gap-3">
         <Head
-          title={they("What do you want your athlete to work on?", "What do you want to work on?", "Which pillars do you coach?")}
-          sub={isCoach ? "Pick every pillar you offer sessions in." : "Pick as many as you like."}
+          title={
+            camp
+              ? `Besides ${campDetails?.campName ?? "the camp"} with ${coachFirst}, what else does ${athleteWord} work on?`
+              : they("What do you want your athlete to work on?", "What do you want to work on?", "Which pillars do you coach?")
+          }
+          sub={camp ? "The camp's focus is already ticked. Add anything else, or continue." : isCoach ? "Pick every pillar you offer sessions in." : "Pick as many as you like."}
         />
         <div className="flex flex-col gap-2">
           {list.map(({ title, Icon }) => (
             <Tile
               key={title}
               multi
-              on={answers.pillars.includes(title)}
+              on={answers.pillars.includes(title) || fromCamp(title)}
               title={title}
+              detail={fromCamp(title) ? "From the camp" : undefined}
               icon={<Icon className="size-5" strokeWidth={1.5} />}
-              onClick={() =>
+              onClick={() => {
+                if (fromCamp(title)) return;
                 patch({
                   pillars: answers.pillars.includes(title)
                     ? answers.pillars.filter((x) => x !== title)
                     : [...answers.pillars, title],
-                })
-              }
+                });
+              }}
             />
           ))}
         </div>
-        <Continue ok={answers.pillars.length > 0} onClick={() => nextFrom("pillars")} />
+        <Continue ok={camp !== null || answers.pillars.length > 0} onClick={() => nextFrom("pillars")} />
       </div>
     );
   } else if (step === "level") {
     body = (
       <div className="flex flex-col gap-3">
-        <Head title={they("Which best describes your athlete?", "Which best describes you?")} />
+        <Head title={they(`Which best describes ${athleteWord}?`, "Which best describes you?")} />
         <div className="flex flex-col gap-2" role="radiogroup">
           {LEVELS.map(({ id, title, detail, Icon }) => (
             <Tile
@@ -1040,39 +1229,33 @@ export const SignUpFlow = ({
         <Continue ok={answers.clevels.length > 0} onClick={() => nextFrom("clevels")} />
       </div>
     );
-  } else if (step === "age") {
+  } else if (step === "dob") {
+    const { min, max } = dobBounds();
+    const dobError = answers.dob && !validDob(answers.dob) ? "Enter a real birth date" : undefined;
     body = (
       <div className="flex flex-col gap-3">
-        <Head title={they("How old is your athlete?", "How old are you?")} sub="We use it to match age groups." />
-        <div className="grid grid-cols-3 gap-2">
-          {AGE_TILES.map(([v, t]) => (
-            <button
-              key={v}
-              type="button"
-              className={cn(
-                "rounded-control border px-2 py-3 text-center text-label-sm transition-colors focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary",
-                answers.age === v ? "border-primary bg-primary-50 text-primary" : "border-light-525 bg-light-300 text-dark hover:bg-light-200"
-              )}
-              onClick={() => {
-                const who = answers.who;
-                patch({ age: v });
-                const years = ageYearsFromTile(v);
-                window.setTimeout(() => {
-                  if (who === "self" && years !== null && years < 18) go("invite");
-                  else go("where");
-                }, 180);
-              }}
-            >
-              {t}
-            </button>
-          ))}
-        </div>
+        <Head title={they("When was your athlete born?", "When were you born?")} sub="We use it to match age groups." />
+        <Field text="Birth date" error={dobError}>
+          <input
+            className={input}
+            type="date"
+            min={min}
+            max={max}
+            value={answers.dob}
+            onChange={(e) => patch({ dob: e.target.value })}
+            autoFocus
+          />
+        </Field>
+        <Continue ok={validDob(answers.dob)} onClick={() => nextFrom("dob")} />
       </div>
     );
   } else if (step === "where") {
     body = (
       <div className="flex flex-col gap-3">
-        <Head title={they("Where does your athlete train?", "Where do you train?")} sub="We'll show coaches near you first." />
+        <Head
+          title={they(`Where and how does ${athleteWord} want to train?`, "Where and how do you want to train?")}
+          sub="We'll show coaches near you first."
+        />
         <Field text="ZIP code" error={errors.zip}>
           <input
             className={input}
@@ -1084,22 +1267,12 @@ export const SignUpFlow = ({
             autoFocus
           />
         </Field>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={answers.video}
-          className={tileClass(answers.video)}
-          onClick={() => patch({ video: !answers.video })}
-        >
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-label-sm">Remote sessions work too</span>
-            <span className={meta}>Sessions over video, with coaches from anywhere</span>
-          </span>
-          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", answers.video ? "bg-primary" : "bg-light-600")}>
-            <span className={cn("absolute top-0.5 size-5 rounded-full bg-light-50 transition-transform", answers.video ? "left-4" : "left-0.5")} />
-          </span>
-        </button>
-        <Continue ok={/^\d{5}$/.test(answers.zip)} onClick={() => nextFrom("where")} />
+        <SessionChoices answers={answers} patch={patch} coach={false} />
+        <Continue
+          ok={/^\d{5}$/.test(answers.zip) && answers.formats.length > 0 && answers.locations.length > 0}
+          onClick={() => nextFrom("where")}
+          label={camp && busy ? "Saving…" : "Continue"}
+        />
       </div>
     );
   } else if (step === "cwhere") {
@@ -1117,53 +1290,11 @@ export const SignUpFlow = ({
             autoFocus
           />
         </Field>
-        <div className="flex flex-col gap-2">
-          <span className={label}>Sessions you offer. Pick all that apply.</span>
-          <Tile
-            multi
-            on={answers.ctypes.includes("1-on-1")}
-            title="1-on-1"
-            detail="One athlete at a time"
-            icon={<User className="size-5" strokeWidth={1.5} />}
-            onClick={() =>
-              patch({
-                ctypes: answers.ctypes.includes("1-on-1")
-                  ? answers.ctypes.filter((x) => x !== "1-on-1")
-                  : [...answers.ctypes, "1-on-1"],
-              })
-            }
-          />
-          <Tile
-            multi
-            on={answers.ctypes.includes("Group")}
-            title="Group"
-            detail="Small groups and clinics"
-            icon={<Users className="size-5" strokeWidth={1.5} />}
-            onClick={() =>
-              patch({
-                ctypes: answers.ctypes.includes("Group")
-                  ? answers.ctypes.filter((x) => x !== "Group")
-                  : [...answers.ctypes, "Group"],
-              })
-            }
-          />
-        </div>
-        <button
-          type="button"
-          role="switch"
-          aria-checked={answers.video}
-          className={tileClass(answers.video)}
-          onClick={() => patch({ video: !answers.video })}
-        >
-          <span className="flex min-w-0 flex-1 flex-col gap-0.5">
-            <span className="text-label-sm">Remote sessions</span>
-            <span className={meta}>Coach over video, from anywhere</span>
-          </span>
-          <span className={cn("relative h-6 w-10 shrink-0 rounded-full transition-colors", answers.video ? "bg-primary" : "bg-light-600")}>
-            <span className={cn("absolute top-0.5 size-5 rounded-full bg-light-50 transition-transform", answers.video ? "left-4" : "left-0.5")} />
-          </span>
-        </button>
-        <Continue ok={/^\d{5}$/.test(answers.zip) && answers.ctypes.length > 0} onClick={() => nextFrom("cwhere")} />
+        <SessionChoices answers={answers} patch={patch} coach />
+        <Continue
+          ok={/^\d{5}$/.test(answers.zip) && answers.formats.length > 0 && answers.locations.length > 0}
+          onClick={() => nextFrom("cwhere")}
+        />
       </div>
     );
   } else if (step === "account") {
@@ -1171,12 +1302,12 @@ export const SignUpFlow = ({
     body = (
       <div className="flex flex-col gap-3">
         <Head
-          title={camp ? "Finish your account" : googleMode ? "Almost done" : isCoach ? "Create your coach account" : "Save your matches"}
+          title={camp ? "Secure your account" : googleMode ? "Almost done" : isCoach ? "Create your coach account" : "Save your matches"}
           sub={
             camp
               ? googleMode
-                ? "One more detail and the camp is on your schedule."
-                : "We already have your details, so it's one step."
+                ? "You're signed in. A few quick questions about your athlete next."
+                : "We have your details from the camp sign-up. Choose a password, then enter the code we email you."
               : googleMode
               ? "A couple of details Google doesn't share with us."
               : isCoach
@@ -1216,12 +1347,17 @@ export const SignUpFlow = ({
             </div>
           </>
         ) : null}
-        {isParent ? (
+        {camp && !googleMode ? (
+          <Field text="Email">
+            <input className={cn(input, "bg-light-400 text-dark-300")} type="email" value={answers.email} readOnly aria-readonly="true" />
+          </Field>
+        ) : null}
+        {isParent && !camp ? (
           <Field text="Your athlete's first name" error={errors.ath}>
             <input className={input} value={answers.ath} onChange={(e) => patch({ ath: e.target.value })} placeholder="Ava" />
           </Field>
         ) : null}
-        {!googleMode ? (
+        {!googleMode && !camp ? (
           <>
             <div className="grid grid-cols-2 gap-3">
               <Field text={isParent ? "Your first name" : "First name"} error={errors.first}>
@@ -1236,10 +1372,35 @@ export const SignUpFlow = ({
             </Field>
           </>
         ) : null}
-        <Field text="Mobile number" error={errors.phone}>
-          <PhoneInput value={answers.phone} onChange={(v) => patch({ phone: v })} />
-          <span className={meta}>{isCoach ? "For booking alerts." : "Coaches use it to reach you about sessions."} Never shown publicly.</span>
-        </Field>
+        {!camp ? (
+          <Field text="Mobile number" error={errors.phone}>
+            <PhoneInput value={answers.phone} onChange={(v) => patch({ phone: v })} />
+            <span className={meta}>{isCoach ? "For booking alerts." : "Coaches use it to reach you about sessions."} Never shown publicly.</span>
+          </Field>
+        ) : null}
+        {!googleMode ? (
+          <Field text="Password" error={errors.password}>
+            <div className="relative">
+              <input
+                className={cn(input, "pr-10")}
+                type={showPassword ? "text" : "password"}
+                value={answers.pw}
+                onChange={(e) => patch({ pw: e.target.value })}
+                autoComplete="new-password"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((v) => !v)}
+                className="absolute inset-y-0 right-2 flex items-center rounded-control text-dark-300 hover:text-dark focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary"
+                aria-label={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="size-4" strokeWidth={1.5} /> : <Eye className="size-4" strokeWidth={1.5} />}
+              </button>
+            </div>
+            {answers.pw ? <PasswordRequirements items={passwordItems} /> : <span className={meta}>8 or more characters with a number and a symbol</span>}
+          </Field>
+        ) : null}
+        {!camp ? (
         <label className="flex items-start gap-2 text-body-m text-dark-300">
           <input
             type="checkbox"
@@ -1253,6 +1414,7 @@ export const SignUpFlow = ({
             {isParent ? ", on behalf of my athlete too" : ""}
           </span>
         </label>
+        ) : null}
         {errors.terms ? <span className="text-caption text-error-700">{errors.terms}</span> : null}
         <button
           type="button"
@@ -1260,7 +1422,7 @@ export const SignUpFlow = ({
           disabled={!answers.terms || busy}
           onClick={createAccount}
         >
-          {busy ? "Working…" : "Complete signup"}
+          {busy ? "Working…" : camp ? (googleMode ? "Continue" : "Create account") : "Complete signup"}
           <ArrowRight className="size-4" strokeWidth={1.5} aria-hidden="true" />
         </button>
         {!googleMode && !camp ? (
@@ -1285,7 +1447,11 @@ export const SignUpFlow = ({
             autoFocus
           />
         </Field>
-        <Continue ok={/^\d{6}$/.test(answers.code.trim())} onClick={submitCode} label={busy ? "Checking…" : "Verify email"} />
+        <Continue
+          ok={/^\d{6}$/.test(answers.code.trim())}
+          onClick={submitCode}
+          label={busy ? "Checking…" : camp ? "Verify email" : "Verify and finish"}
+        />
         <button type="button" className={cn(textButton, "self-center")} onClick={resend}>
           Resend code
         </button>
@@ -1403,8 +1569,8 @@ export const SignUpFlow = ({
           : cp[0]
         : `${cp.map((x) => x.replace(/s$/, "").toLowerCase()).join(" and ").replace(/^./, (c) => c.toUpperCase())} coach`;
     const types = [
-      ...answers.ctypes.map((x) => (x === "Group" ? "Group sessions" : "1-on-1 sessions")),
-      ...(answers.video ? ["Remote sessions"] : []),
+      ...answers.formats.map((x) => (x === "Group" ? "Group sessions" : "1-on-1 sessions")),
+      ...(answers.locations.includes("Online") ? ["Online sessions"] : []),
     ];
     // No background-check or admin-review rows — is_verified stays plumbing-only.
     const setup = [
@@ -1522,12 +1688,28 @@ export const SignUpFlow = ({
           className={cn(textButton, "self-center")}
           onClick={() => {
             patch({ who: "parent", age: null });
-            go("age");
+            go("dob");
           }}
         >
           I'm actually the parent
         </button>
       </div>
+    );
+  } else if (step === "extras") {
+    body = (
+      <OptionalProfile
+        athleteId={athleteId}
+        isParent={isParent}
+        athleteWord={athleteWord}
+        onDone={async () => {
+          if (camp) {
+            navigate(ROUTES.DASHBOARD, { replace: true });
+            return;
+          }
+          await loadMatches();
+          go("matches");
+        }}
+      />
     );
   } else if (step === "sent") {
     body = (

@@ -12,7 +12,7 @@ import { campSignupAPI, CampSignupError, type CampPage, type CampQuote } from "@
 import { CampFamilyView } from "@/components/camps/CampFamilyView";
 import { campViewFromPage, firstName } from "@/components/camps/campView";
 import { CampYoureIn } from "@/components/camps/CampYoureIn";
-import { writeCampFinish } from "@/components/camps/campFinish";
+import { campPillarsOf, writeCampFinish } from "@/components/camps/campFinish";
 import { PhoneInput } from "@/components/common/PhoneInput";
 import { LegalAnchor } from "@/components/legal/LegalLinks";
 import { input, label as labelClass, primaryButton, secondaryButton, smallButton, textButton, textPanel } from "@/components/schedule/styles";
@@ -36,6 +36,7 @@ import {
   plural,
   validateCampForm,
   type CampForm,
+  parentLastName,
 } from "@/utils/camps";
 import { feeRows } from "@/utils/fees";
 
@@ -298,8 +299,11 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
         parentName: form.parent.name.trim(),
         phone: form.parent.phone.trim(),
         athleteFirst: first.first.trim(),
-        athleteLast: first.last.trim(),
+        athleteLast: first.last.trim() || parentLastName(form.parent.name),
         birthYear: Number(first.year) || null,
+        campName: camp.name,
+        coachName: camp.coach.name,
+        campPillars: campPillarsOf(camp.tags),
       });
       if (result.status === "held") {
         sessionStorage.removeItem(key);
@@ -593,14 +597,10 @@ const Details = ({
                 </button>
               ) : null}
             </div>
-            <div className="grid grid-cols-2 gap-3">
-              <Field id={k("first_name")} label="First name" error={err(k("first_name"))}>
-                <input id={k("first_name")} className={fieldInput(err(k("first_name")))} autoComplete="off" value={athlete.first} onChange={(e) => setAthlete(i, "first", e.target.value, "first_name")} {...aria(k("first_name"))} />
-              </Field>
-              <Field id={k("last_name")} label="Last name" error={err(k("last_name"))}>
-                <input id={k("last_name")} className={fieldInput(err(k("last_name")))} autoComplete="off" value={athlete.last} onChange={(e) => setAthlete(i, "last", e.target.value, "last_name")} {...aria(k("last_name"))} />
-              </Field>
-            </div>
+            {/* Athletes take the parent's last name (parentLastName), so only the first name is asked. */}
+            <Field id={k("first_name")} label="First name" error={err(k("first_name"))}>
+              <input id={k("first_name")} className={fieldInput(err(k("first_name")))} autoComplete="off" value={athlete.first} onChange={(e) => setAthlete(i, "first", e.target.value, "first_name")} {...aria(k("first_name"))} />
+            </Field>
             <Field id={k("birth_year")} label="Birth year" error={err(k("birth_year"))} help="Used for age groups. No full birthday needed.">
               <input
                 id={k("birth_year")}
@@ -771,7 +771,7 @@ const Review = ({
         <div key={i} className="flex items-start justify-between gap-3 text-body-m">
           <span className="flex min-w-0 flex-col">
             <b className="truncate text-label-sm">
-              {a.first} {a.last}
+              {a.first} {a.last || parentLastName(form.parent.name)}
             </b>
             <span className="text-caption text-dark-300">{groupLine(a.groupId)}</span>
           </span>

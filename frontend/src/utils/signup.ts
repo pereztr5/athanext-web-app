@@ -21,9 +21,17 @@ export type SignupAnswers = {
   level: string | null;
   clevels: string[];
   ctypes: string[];
+  /** Kept for answers saved before the birth date question; new answers use dob. */
   age: string | null;
+  /** Birth date, YYYY-MM-DD. */
+  dob: string;
   zip: string;
+  /** Kept for saved answers; new answers use locations. */
   video: boolean;
+  /** Session formats wanted or offered: "Individual", "Group". */
+  formats: string[];
+  /** Where: "In person", "Online". */
+  locations: string[];
   first: string;
   last: string;
   email: string;
@@ -47,8 +55,11 @@ export const emptySignupAnswers = (): SignupAnswers => ({
   clevels: [],
   ctypes: [],
   age: null,
+  dob: "",
   zip: "",
   video: true,
+  formats: [],
+  locations: ["In person"],
   first: "",
   last: "",
   email: "",
@@ -176,3 +187,43 @@ export const dobFromAgeTile = (age: string | null, today = new Date()): string =
   d.setFullYear(d.getFullYear() - years);
   return d.toISOString().slice(0, 10);
 };
+
+/** Session options, the same for families and coaches (signup field options). */
+export const SESSION_FORMATS = ["Individual", "Group"] as const;
+export const SESSION_LOCATIONS = ["In person", "Online"] as const;
+
+/** "Individual" -> individual, "In person" -> in_person: how the choices are stored. */
+export const formatToDb = (format: string) => format.toLowerCase();
+export const locationToDb = (location: string) => (location === "Online" ? "online" : "in_person");
+/** coaches.session_types keeps its older values. */
+export const locationToCoachSessionType = (location: string) => (location === "Online" ? "virtual" : "in-person");
+
+/** Whole years between a YYYY-MM-DD birth date and today; null when the date isn't valid. */
+export const ageFromDob = (dob: string, today = new Date()): number | null => {
+  const m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(dob);
+  if (!m) return null;
+  const [y, mo, d] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const born = new Date(Date.UTC(y, mo - 1, d));
+  if (Number.isNaN(born.getTime()) || born.getUTCMonth() !== mo - 1) return null;
+  let age = today.getUTCFullYear() - y;
+  if (today.getUTCMonth() < mo - 1 || (today.getUTCMonth() === mo - 1 && today.getUTCDate() < d)) age -= 1;
+  return age;
+};
+
+/** Birth dates the form accepts: ages 4 to 99. */
+export const dobBounds = (today = new Date()) => {
+  const iso = (years: number) => {
+    const d = new Date(Date.UTC(today.getUTCFullYear() - years, today.getUTCMonth(), today.getUTCDate()));
+    return d.toISOString().slice(0, 10);
+  };
+  return { min: iso(99), max: iso(4) };
+};
+
+export const validDob = (dob: string, today = new Date()) => {
+  const age = ageFromDob(dob, today);
+  return age !== null && age >= 4 && age <= 99;
+};
+
+/** Grad years the optional profile offers: this year to 8 years ahead. */
+export const gradYearOptions = (today = new Date()) =>
+  Array.from({ length: 9 }, (_, i) => String(today.getFullYear() + i));
