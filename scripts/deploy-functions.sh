@@ -29,6 +29,7 @@ create-package-payment        create-package-payment        on
 create-partnership-payment    create-partnership-payment    on
 google-calendar               google-calendar               off
 guardian-invite               guardian-invite               on
+invite-signup                 invite-signup                 off
 org-coach-removal             org-coach-removal             on
 organization-email            organization-email            on
 reconcile-package-payment     reconcile-package-payment     on

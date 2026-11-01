@@ -33,6 +33,7 @@ import {
   Zap,
 } from "@/components/icons";
 import { authAPI } from "@/api/auth";
+import { inviteSignupAPI, type InviteSignupInfo } from "@/api/inviteSignup";
 import { coachesAPI, userProfilesAPI, type PublicCoach } from "@/api";
 import { createAthleteInitiatedReferral } from "@/api/referrals";
 import { sendPublicEmail } from "@/api/publicEmail";
@@ -162,6 +163,8 @@ const FAMILY_FLOW: StepId[] = ["who", "sport", "pillars", "level", "dob", "where
 const COACH_FLOW: StepId[] = ["who", "sport", "pillars", "clevels", "cwhere", "account"];
 /** Camp families: the account comes first (the camp form had their details), then these. */
 const CAMP_FLOW: StepId[] = ["sport", "pillars", "level", "where"];
+/** Families a coach invited: account first (the invite proves the email), then these. */
+const INVITE_FLOW: StepId[] = ["sport", "pillars", "level", "dob", "where"];
 const OFF_FLOW: StepId[] = ["verify", "password", "matches", "cprofile", "invite", "sent", "extras"];
 
 const LEVELS: { id: string; title: string; detail: string; Icon: typeof User }[] = [
@@ -443,8 +446,12 @@ export const SignUpFlow = ({
     const base = camp ? campAnswers(withPersona, camp) : withPersona;
     return user ? prefillFromUser(base, user) : base;
   });
+  // Opened from a coach's invite while signed out: the account comes first, prefilled from the invite.
+  const [inviteFlow] = useState(() => Boolean(inviteToken) && !user && !camp);
+  const [inviteInfo, setInviteInfo] = useState<InviteSignupInfo | null>(null);
   const [step, setStep] = useState<StepId>(() => {
     if (camp) return "account";
+    if (Boolean(inviteToken) && !user) return "account";
     const saved = readSignupAnswers();
     const who = saved?.who ?? personaWho;
     if (who && !saved?.who && personaWho) return "sport";
@@ -465,7 +472,7 @@ export const SignUpFlow = ({
   const they = (parentCopy: string, selfCopy: string, coachCopy?: string) =>
     isCoach && coachCopy !== undefined ? coachCopy : isParent ? parentCopy : selfCopy;
 
-  const flow = camp ? CAMP_FLOW : isCoach ? COACH_FLOW : FAMILY_FLOW;
+  const flow = camp ? CAMP_FLOW : inviteFlow ? INVITE_FLOW : isCoach ? COACH_FLOW : FAMILY_FLOW;
   const flowIndex = flow.indexOf(step);
   const offFlow = OFF_FLOW.includes(step);
   const questionCount = flow.length - 1;
@@ -506,7 +513,36 @@ export const SignUpFlow = ({
   const campBirthYear = campDetails?.birthYear ?? null;
   const campPillars = campDetails?.campPillars ?? [];
   const athleteWord = answers.ath.trim() || "your athlete";
-  const coachFirst = (campDetails?.coachName ?? "").split(/\s+/)[0] || "the coach";
+  const coachFirst = (campDetails?.coachName ?? inviteInfo?.coach_name ?? "").split(/\s+/)[0] || "the coach";
+  // The invited email is already proven by the link; a different one gets the usual code.
+  const invitedEmail = inviteFlow && inviteInfo !== null && answers.email.trim().toLowerCase() === inviteInfo.email;
+
+  useEffect(() => {
+    if (!inviteFlow || !inviteToken) return;
+    let active = true;
+    inviteSignupAPI
+      .lookup(inviteToken)
+      .then((info) => {
+        if (!active) return;
+        setInviteInfo(info);
+        const [first = "", ...rest] = info.parent_name.split(/\s+/).filter(Boolean);
+        setAnswers((cur) => ({
+          ...cur,
+          who: info.athlete_first ? "parent" : "self",
+          sport: cur.sport ?? info.sport ?? "Soccer",
+          email: cur.email || info.email,
+          first: cur.first || first,
+          last: cur.last || rest.join(" "),
+          ath: cur.ath || info.athlete_first,
+        }));
+      })
+      .catch(() => {
+        // An expired or used invite: the normal sign-up still works, with the email code.
+      });
+    return () => {
+      active = false;
+    };
+  }, [inviteFlow, inviteToken]);
   // The athlete row the account owns, for the optional profile step.
   const [athleteId, setAthleteId] = useState<string | null>(null);
 
@@ -515,15 +551,15 @@ export const SignUpFlow = ({
   const nextFrom = (id: StepId) => {
     if (id === "who") return go("sport");
     if (id === "dob" && isMinorSelf) return go("invite");
-    // Camp families answer their questions after the account exists; then the profile is saved.
-    if (id === "where" && camp) return void finishProfile();
+    // Camp and invited families answer their questions after the account exists; then it's saved.
+    if (id === "where" && (camp || inviteFlow)) return void finishProfile();
     const i = flow.indexOf(id);
     if (i >= 0 && i < flow.length - 1) go(flow[i + 1]!);
   };
 
   /** Once the email is confirmed (and a password set): camp families answer their questions next. */
   const afterVerified = async () => {
-    if (camp) return go("sport");
+    if (camp || inviteFlow) return go("sport");
     await finishProfile();
   };
 
@@ -607,6 +643,26 @@ export const SignUpFlow = ({
         return;
       }
       await afterVerified();
+      return;
+    }
+
+    // A coach's invite went to this email: create the account confirmed and sign straight in.
+    if (invitedEmail && inviteToken) {
+      setBusy(true);
+      onSaving?.();
+      try {
+        await inviteSignupAPI.create(inviteToken, answers.pw, answers.phone);
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: answers.email.trim().toLowerCase(),
+          password: answers.pw,
+        });
+        if (signInError) throw signInError;
+        go("sport");
+      } catch (err) {
+        setErrors({ email: errorText(err, "Couldn't create the account. Try again.") });
+      } finally {
+        setBusy(false);
+      }
       return;
     }
 
@@ -1155,7 +1211,9 @@ export const SignUpFlow = ({
           title={
             camp
               ? `Besides ${campDetails?.campName ?? "the camp"} with ${coachFirst}, what else does ${athleteWord} work on?`
-              : they("What do you want your athlete to work on?", "What do you want to work on?", "Which pillars do you coach?")
+              : inviteFlow
+                ? they(`Besides training with ${coachFirst}, what else does ${athleteWord} work on?`, `Besides training with ${coachFirst}, what else do you work on?`)
+                : they("What do you want your athlete to work on?", "What do you want to work on?", "Which pillars do you coach?")
           }
           sub={camp ? "The camp's focus is already ticked. Add anything else, or continue." : isCoach ? "Pick every pillar you offer sessions in." : "Pick as many as you like."}
         />
@@ -1179,7 +1237,7 @@ export const SignUpFlow = ({
             />
           ))}
         </div>
-        <Continue ok={camp !== null || answers.pillars.length > 0} onClick={() => nextFrom("pillars")} />
+        <Continue ok={camp !== null || inviteFlow || answers.pillars.length > 0} onClick={() => nextFrom("pillars")} />
       </div>
     );
   } else if (step === "level") {
@@ -1302,12 +1360,14 @@ export const SignUpFlow = ({
     body = (
       <div className="flex flex-col gap-3">
         <Head
-          title={camp ? "Secure your account" : googleMode ? "Almost done" : isCoach ? "Create your coach account" : "Save your matches"}
+          title={camp ? "Secure your account" : inviteFlow && !googleMode ? "Create your account" : googleMode ? "Almost done" : isCoach ? "Create your coach account" : "Save your matches"}
           sub={
             camp
               ? googleMode
                 ? "You're signed in. A few quick questions about your athlete next."
                 : "We have your details from the camp sign-up. Choose a password, then enter the code we email you."
+              : inviteFlow && !googleMode
+                ? `${coachFirst === "the coach" ? "Your coach" : coachFirst} invited you. We filled in what they told us.`
               : googleMode
               ? "A couple of details Google doesn't share with us."
               : isCoach
@@ -1369,6 +1429,12 @@ export const SignUpFlow = ({
             </div>
             <Field text="Email" error={errors.email}>
               <input className={input} type="email" value={answers.email} onChange={(e) => patch({ email: e.target.value })} autoComplete="email" />
+              {invitedEmail ? (
+                <span className={cn(meta, "inline-flex items-center gap-1 text-primary")}>
+                  <Check className="size-3" strokeWidth={2} aria-hidden="true" />
+                  Verified by your invite, no code needed
+                </span>
+              ) : null}
             </Field>
           </>
         ) : null}
@@ -1704,6 +1770,11 @@ export const SignUpFlow = ({
         onDone={async () => {
           if (camp) {
             navigate(ROUTES.DASHBOARD, { replace: true });
+            return;
+          }
+          // Invited families confirm the coach on the invite page.
+          if (inviteToken) {
+            navigate(`/invite/${inviteToken}`, { replace: true });
             return;
           }
           await loadMatches();

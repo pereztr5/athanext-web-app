@@ -98,3 +98,7 @@ verify_jwt = true
 # checks the caller's login for coach actions. Paid Checkouts settle in create-booking-payment.
 [functions.camp-signup]
 verify_jwt = false
+
+# Families opening a coach's invite aren't signed in yet; the invite token is the check.
+[functions.invite-signup]
+verify_jwt = false
