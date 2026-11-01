@@ -79,7 +79,9 @@ import {
   initialSignupStep,
   prefillFromUser,
   readSignupAnswers,
+  readSignupInvite,
   roleFromWho,
+  writeSignupInvite,
   writeSignupAnswers,
   writeSignupRole,
   type SignupAnswers,
@@ -446,12 +448,15 @@ export const SignUpFlow = ({
     const base = camp ? campAnswers(withPersona, camp) : withPersona;
     return user ? prefillFromUser(base, user) : base;
   });
-  // Opened from a coach's invite while signed out: the account comes first, prefilled from the invite.
-  const [inviteFlow] = useState(() => Boolean(inviteToken) && !user && !camp);
+  // Opened from a coach's invite: the account comes first, prefilled from the invite. Back from
+  // Google the account exists, so the flag in this tab keeps the invite's questions coming.
+  const startsInInviteFlow =
+    Boolean(inviteToken) && !camp && (!user || readSignupInvite() === inviteToken);
+  const [inviteFlow, setInviteFlow] = useState(startsInInviteFlow);
   const [inviteInfo, setInviteInfo] = useState<InviteSignupInfo | null>(null);
   const [step, setStep] = useState<StepId>(() => {
     if (camp) return "account";
-    if (Boolean(inviteToken) && !user) return "account";
+    if (startsInInviteFlow) return "account";
     const saved = readSignupAnswers();
     const who = saved?.who ?? personaWho;
     if (who && !saved?.who && personaWho) return "sport";
@@ -525,6 +530,7 @@ export const SignUpFlow = ({
       .then((info) => {
         if (!active) return;
         setInviteInfo(info);
+        writeSignupInvite(inviteToken);
         const [first = "", ...rest] = info.parent_name.split(/\s+/).filter(Boolean);
         setAnswers((cur) => ({
           ...cur,
@@ -537,11 +543,17 @@ export const SignUpFlow = ({
         }));
       })
       .catch(() => {
-        // An expired or used invite: the normal sign-up still works, with the email code.
+        // An expired, used or leftover invite: the normal sign-up (questions first) instead.
+        if (!active) return;
+        writeSignupInvite(null);
+        setInviteFlow(false);
+        if (!user) setStep((cur) => (cur === "account" ? "who" : cur));
       });
     return () => {
       active = false;
     };
+    // user is only read when the lookup fails; re-running on sign-in isn't needed.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [inviteFlow, inviteToken]);
   // The athlete row the account owns, for the optional profile step.
   const [athleteId, setAthleteId] = useState<string | null>(null);

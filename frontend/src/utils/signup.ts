@@ -11,6 +11,25 @@ export type SignupRole = "athlete" | "coach" | "parent";
 export const SIGNUP_ROLE_KEY = "athanext:signup-role";
 export const SIGNUP_ANSWERS_KEY = "athanext:signup-answers";
 export const SIGNUP_STEP_KEY = "athanext:signup-step";
+/** The coach invite this tab is signing up through (kept across the Google round trip). */
+export const SIGNUP_INVITE_KEY = "athanext:signup-invite";
+
+export const readSignupInvite = (): string | null => {
+  try {
+    return sessionStorage.getItem(SIGNUP_INVITE_KEY);
+  } catch {
+    return null;
+  }
+};
+
+export const writeSignupInvite = (token: string | null) => {
+  try {
+    if (token) sessionStorage.setItem(SIGNUP_INVITE_KEY, token);
+    else sessionStorage.removeItem(SIGNUP_INVITE_KEY);
+  } catch {
+    // ignore
+  }
+};
 
 export type SignupAnswers = {
   who: SignupWho | null;
@@ -124,6 +143,7 @@ export const clearSignupSession = () => {
     sessionStorage.removeItem(SIGNUP_ROLE_KEY);
     sessionStorage.removeItem(SIGNUP_ANSWERS_KEY);
     sessionStorage.removeItem(SIGNUP_STEP_KEY);
+    sessionStorage.removeItem(SIGNUP_INVITE_KEY);
   } catch {
     // ignore
   }
