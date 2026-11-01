@@ -9,6 +9,7 @@ import { Banner } from "@/components/ui/banner";
 import { useAuth } from "@/contexts/AuthContext";
 import { authAPI, userProfilesAPI } from "@/api";
 import { useToast } from "@/hooks/use-toast";
+import { supabase } from "@/integrations/supabase/client";
 import { z } from "zod";
 import { cn } from "@/lib/utils";
 import { strings } from "@/config/strings";
@@ -51,6 +52,32 @@ const Auth = () => {
   const modeParam = searchParams.get("mode");
   const passwordUpdated = searchParams.get("message") === "password-updated";
   const inviteParam = searchParams.get('invite');
+
+  // The sign-up email's button links here (token_hash) instead of to Supabase directly, so mail
+  // scanners that open links can't use up the confirmation: only opening the page confirms.
+  const confirmTokenHash = searchParams.get("token_hash");
+  const confirmType = searchParams.get("type");
+  useEffect(() => {
+    if (!confirmTokenHash || (confirmType !== "signup" && confirmType !== "email")) return;
+    let active = true;
+    void supabase.auth.verifyOtp({ token_hash: confirmTokenHash, type: "email" }).then(({ error }) => {
+      if (!active) return;
+      const next = new URLSearchParams(searchParams);
+      next.delete("token_hash");
+      next.delete("type");
+      navigate(`${location.pathname}?${next.toString()}`, { replace: true, state: location.state });
+      toast(
+        error
+          ? { title: "This link has expired", description: "Sign in, or sign up again for a new code.", variant: "destructive" }
+          : { title: "Email confirmed", description: "A few more details and your account is ready." }
+      );
+    });
+    return () => {
+      active = false;
+    };
+    // Runs once per link.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [confirmTokenHash, confirmType]);
   useEffect(() => {
     if (inviteParam) sessionStorage.setItem(INVITE_TOKEN_STORAGE_KEY, inviteParam);
   }, [inviteParam]);

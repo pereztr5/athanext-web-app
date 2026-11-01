@@ -1638,13 +1638,13 @@ export const SignUpFlow = ({
       ...answers.formats.map((x) => (x === "Group" ? "Group sessions" : "1-on-1 sessions")),
       ...(answers.locations.includes("Online") ? ["Online sessions"] : []),
     ];
-    // No background-check or admin-review rows — is_verified stays plumbing-only.
+    // The required setup steps (CoachSetup has all 7); going live needs these four.
     const setup = [
       ["Account created", true],
-      ["Add a photo and a short bio", false],
-      ["Set your session prices", false],
+      ["Add a profile photo", false],
+      ["Set your prices", false],
       ["Set your weekly availability", false],
-      ["Go live", false],
+      ["Add payout details", false],
     ] as const;
 
     body = (
@@ -1710,7 +1710,7 @@ export const SignUpFlow = ({
             </div>
           ))}
         </div>
-        <Continue ok onClick={leaveToApp} label="Finish my profile" />
+        <Continue ok onClick={() => { clearSignupSession(); navigate(ROUTES.COACH_SETUP, { replace: true }); }} label="Set up my profile" />
         <p className={cn(meta, "text-center")}>No charge until you go live.</p>
       </div>
     );
