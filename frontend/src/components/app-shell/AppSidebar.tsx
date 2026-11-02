@@ -32,7 +32,7 @@ const navBadgeFailed = "border-error-300 bg-error-100 text-error-700";
 
 export const AppSidebar = () => {
   const location = useLocation();
-  const { isCoach } = useRole();
+  const { isCoach, role } = useRole();
   const { userName, userProfile, profileReady } = useAuth();
   const { setOpenMobile } = useSidebar();
   const { data: myOrg } = useMyOrganization();
@@ -57,13 +57,12 @@ export const AppSidebar = () => {
 
   const displayName = userName || userProfile?.name || "Account";
   const firstName = displayName.split(" ")[0] || displayName;
+  // Signed-in persona only — parents must not read as athletes.
+  const roleWord = role === "coach" ? "coach" : role === "parent" ? "parent" : "athlete";
+  const roleWordCap = role === "coach" ? "Coach" : role === "parent" ? "Parent" : "Athlete";
   const sportLabel = userProfile?.sport
-    ? `${String(userProfile.sport).charAt(0).toUpperCase()}${String(userProfile.sport).slice(1).toLowerCase()} ${
-        isCoach ? "coach" : "athlete"
-      }`
-    : isCoach
-      ? "Coach"
-      : "Athlete";
+    ? `${String(userProfile.sport).charAt(0).toUpperCase()}${String(userProfile.sport).slice(1).toLowerCase()} ${roleWord}`
+    : roleWordCap;
 
   return (
     <Sidebar className="border-0">

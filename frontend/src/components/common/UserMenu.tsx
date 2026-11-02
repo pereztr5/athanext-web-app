@@ -64,7 +64,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   } = useAuth();
   const { profile } = useProfile();
   const navigate = useNavigate();
-  const { isCoach } = useRole();
+  const { isCoach, role } = useRole();
   const { data: myOrg } = useMyOrganization();
   const location = useLocation();
   const { toast, dismiss } = useToast();
@@ -74,6 +74,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const subscribedConversationIds = useRef<Set<string>>(new Set());
   const isMobile = useIsMobile();
   const loadedAvatarCacheRef = useRef<Set<string>>(new Set());
+  const isParent = role === "parent";
 
   const resolveSenderName = async (senderId: string) => {
     if (!senderId) return "Someone";
@@ -240,8 +241,10 @@ export const UserMenu: React.FC<UserMenuProps> = ({
     };
   }, [user, conversations, subscribeToConversation, queryClient]);
 
-  const profileName =
-    profile?.type === "coach"
+  // Parents load the linked athlete into ProfileContext — keep chrome on the signed-in parent.
+  const profileName = isParent
+    ? null
+    : profile?.type === "coach"
       ? (profile.data as any)?.name
       : profile?.type === "athlete"
         ? (profile.data as any)?.full_name || (profile.data as any)?.fullName
