@@ -2,7 +2,7 @@
  * Booking confirmation / receipt (Working Copy a-receipt): one or several sessions, credits,
  * pay-direct and requests. After Stripe: ?session_id=. After credits/direct: ?bookings=.
  */
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { AlertCircle } from "@/components/icons";
@@ -23,6 +23,7 @@ import { FALLBACK_CONTACT_METHODS } from "@/utils/db";
 import { downloadText } from "@/utils/download";
 import { buildIcs } from "@/utils/ics";
 import { plural } from "@/utils/schedule";
+import { trackBookingCompleted } from "@/analytics/events";
 
 const SUPPORT = FALLBACK_CONTACT_METHODS.find((method) => method.icon === "email")?.value;
 
@@ -50,6 +51,16 @@ const BookingConfirmation = () => {
     () => (receipt.data ? buildReceiptModel(receipt.data, timeZone, fees) : null),
     [receipt.data, timeZone, fees]
   );
+  const trackedBooking = useRef(false);
+
+  useEffect(() => {
+    if (!model || trackedBooking.current) return;
+    const confirmedCount = model.confirmed ?? 0;
+    const requestCount = model.requests ?? 0;
+    if (!confirmedCount && !requestCount) return;
+    trackedBooking.current = true;
+    trackBookingCompleted({ sessions: confirmedCount, requests: requestCount });
+  }, [model]);
 
   const addToCalendar = () => {
     if (!model) return;

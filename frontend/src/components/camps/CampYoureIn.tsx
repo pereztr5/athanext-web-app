@@ -17,6 +17,7 @@ import { ROUTES } from "@/routes";
 import { campHeldNextStep, campPath, formatCampDates, formatCampTimes } from "@/utils/camps";
 import { formatDateInZone } from "@/utils/viewerTime";
 import { finishAccountPath } from "./campFinish";
+import { trackCampSignupCompleted } from "@/analytics/events";
 
 const POLLS = 8;
 // Match CampSignup / public coach profile width so post-pay doesn't feel like a different layout.
@@ -29,6 +30,7 @@ export const CampYoureIn = ({ signupId, sessionId }: { signupId: string; session
   const { user } = useAuth();
   const queryClient = useQueryClient();
   const polls = useRef(0);
+  const trackedCamp = useRef(false);
   const [skipped, setSkipped] = useState(false);
   const [googleBusy, setGoogleBusy] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -63,6 +65,17 @@ export const CampYoureIn = ({ signupId, sessionId }: { signupId: string; session
       .then(() => queryClient.invalidateQueries({ queryKey: ["my-camps"] }))
       .catch(() => undefined);
   }, [user, status.data, queryClient]);
+
+  useEffect(() => {
+    if (!status.data || status.data.any_pending || trackedCamp.current) return;
+    const confirmed = status.data.athletes.filter((a) => a.status === "paid" || a.status === "held");
+    if (!confirmed.length) return;
+    trackedCamp.current = true;
+    trackCampSignupCompleted({
+      pay_method: status.data.pay_method,
+      athletes: confirmed.length,
+    });
+  }, [status.data]);
 
   if (status.isLoading) {
     return (

@@ -61,6 +61,7 @@ import { clearJoinCoach } from "@/utils/referralHelpers";
 import { clearCampFinish, readCampFinish } from "@/components/camps/campFinish";
 import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { buildOAuthRedirectPath } from "@/utils/authRedirect";
+import { trackAccountCreated, trackSignupStarted } from "@/analytics/events";
 import {
   COACH_POS_TO_DB,
   LEVEL_TO_PATHWAY,
@@ -463,6 +464,7 @@ export const SignUpFlow = ({
     return initialSignupStep(Boolean(user), saved ?? (personaWho ? { who: personaWho } : null));
   });
   const prefilledFor = useRef<string | null>(user?.id ?? null);
+  const trackedStart = useRef(false);
   // Titles from sport_pillars (built-in list offline), so a coach's picks link to those rows.
   const pillarTitles = usePillarTitles(answers.sport ?? "Soccer");
   const [showPassword, setShowPassword] = useState(false);
@@ -488,6 +490,14 @@ export const SignUpFlow = ({
   useEffect(() => {
     writeSignupAnswers(answers);
   }, [answers]);
+
+  useEffect(() => {
+    if (trackedStart.current) return;
+    trackedStart.current = true;
+    trackSignupStarted({
+      source: camp ? "camp" : inviteToken ? "invite" : joinCoachId ? "share_link" : "direct",
+    });
+  }, [camp, inviteToken, joinCoachId]);
 
   useEffect(() => {
     setErrors({});
@@ -867,6 +877,10 @@ export const SignUpFlow = ({
         await supabase.auth.updateUser({ data: { persona_type: "coach", coach_id: coachId } });
         clearSignupSession();
         await refreshUserProfile();
+        trackAccountCreated({
+          persona: "coach",
+          source: camp ? "camp" : inviteToken ? "invite" : joinCoachId ? "share_link" : "direct",
+        });
         go("cprofile");
       } else {
         const athFirst = isParent ? answers.ath.trim() : answers.first.trim();
@@ -940,6 +954,10 @@ export const SignUpFlow = ({
         if (camp) clearCampFinish();
         clearSignupSession();
         await refreshUserProfile();
+        trackAccountCreated({
+          persona,
+          source: camp ? "camp" : inviteToken ? "invite" : joinCoachId ? "share_link" : "direct",
+        });
         setAthleteId(athleteId);
         go("extras");
         toast({ title: "Your account is ready", description: camp ? "The camp is on your schedule." : undefined });
