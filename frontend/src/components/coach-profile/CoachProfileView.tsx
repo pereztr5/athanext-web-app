@@ -13,7 +13,9 @@ import { isPublicCoachRatingVisible } from "@/utils/publicRating";
 import { useAuth } from "@/contexts/AuthContext";
 import { useToast } from "@/hooks/use-toast";
 import { useBack } from "@/hooks/useBack";
+import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
 import { BuyPackagesDialog } from "@/components/book/BuyPackagesDialog";
+import { RequestTimeDialog } from "@/components/book/BookDialogs";
 import { agesLine, cancellationLine, coachesLine, coachTitle, withBaseService } from "./own/shared";
 import { campPagePathFor, ownCampPath } from "@/utils/camps";
 import { detectCoachSport } from "@/utils/coachSport";
@@ -28,6 +30,7 @@ import { MoreList } from "./family/MoreList";
 import { useCoachExtras, useFamilyReviews, useIsMyCoach } from "./family/hooks";
 import { ShopCard } from "./family/ShopCard";
 import { money } from "./family/styles";
+import { isoDateInZone } from "@/utils/viewerTime";
 
 
 export interface ProfileReview {
@@ -114,8 +117,11 @@ export function CoachProfileView({
   const navigate = useNavigate();
   const location = useLocation();
   const { back, canGoBack } = useBack(ROUTES.COACHES);
+  const timeZone = useViewerTimeZone();
+  const todayISO = isoDateInZone(new Date(), timeZone);
   const [city, setCity] = useState<string>("");
   const [buying, setBuying] = useState<string | null>(null);
+  const [requestOpen, setRequestOpen] = useState(false);
   const organizations = useCoachOrganizations(coach.id);
   const { data: fullReviews } = useFamilyReviews(coach.id);
   const extras = useCoachExtras(coach.id);
@@ -181,6 +187,11 @@ export function CoachProfileView({
   const book = () => {
     if (!user) {
       navigate(`${ROUTES.AUTH}?mode=signin`, { state: { from: { pathname: ROUTES.BOOK, search: `?coach=${coach.id}` } } });
+      return;
+    }
+    // New families that need approval request a time here; existing families still go to Book.
+    if (needsRequest) {
+      setRequestOpen(true);
       return;
     }
     navigate(`${ROUTES.BOOK}?coach=${coach.id}`, { state: { from: location } });
@@ -304,6 +315,23 @@ export function CoachProfileView({
         coach={buying ? { id: coach.id, name: coach.name, slug: coach.slug ?? null, paysDirect, credits: 0 } : null}
         initialPackageId={buying}
         onClose={() => setBuying(null)}
+      />
+      <RequestTimeDialog
+        coach={
+          requestOpen
+            ? {
+                id: coach.id,
+                name: coach.name,
+                specialties: coach.specialties ?? [],
+                oneOnOneFrom: from || null,
+                hourlyRate: hourly || null,
+              }
+            : null
+        }
+        pillar={null}
+        todayISO={todayISO}
+        timeZone={timeZone}
+        onClose={() => setRequestOpen(false)}
       />
     </div>
   );

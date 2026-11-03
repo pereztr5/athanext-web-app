@@ -389,6 +389,9 @@ export const ReviewDialog = ({
   );
 };
 
+/** Fields the request-time sheet reads. Book page passes a BookingCoach; the coach profile passes a slim object. */
+export type RequestTimeCoach = Pick<BookingCoach, "id" | "name" | "specialties" | "oneOnOneFrom" | "hourlyRate">;
+
 export const RequestTimeDialog = ({
   coach,
   pillar,
@@ -396,7 +399,7 @@ export const RequestTimeDialog = ({
   timeZone,
   onClose,
 }: {
-  coach: BookingCoach | null;
+  coach: RequestTimeCoach | null;
   pillar: string | null;
   todayISO: string;
   timeZone: string;
