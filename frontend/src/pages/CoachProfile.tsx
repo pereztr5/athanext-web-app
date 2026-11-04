@@ -37,6 +37,7 @@ import { detectCoachSport } from "@/utils/coachSport";
 import { coachPricingPath, coachProfilePath } from "@/utils/coachSlug";
 import { recordCoachShareEvent } from "@/api/coachShare";
 import { ROUTES } from "@/routes";
+import { rememberReturnPath } from "@/utils/returnPath";
 import { supabase } from "@/integrations/supabase/client";
 import type { SlotOccurrence } from "@/types/availabilityWithOccurrences";
 
@@ -104,6 +105,8 @@ const CoachProfile = () => {
     if (!sharedSessionId || loading || !coach?.id || handledSharedSession.current === sharedSessionId) return;
     handledSharedSession.current = sharedSessionId;
     if (!user) {
+      // Back to this session after signing in, with Google or a new account too.
+      rememberReturnPath(`${location.pathname}${location.search}`);
       navigate(`${ROUTES.AUTH}?mode=signin`, {
         state: { from: { pathname: location.pathname, search: location.search } },
       });

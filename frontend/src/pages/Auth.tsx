@@ -22,6 +22,7 @@ import { useReferralInvite } from "@/hooks/useReferrals";
 import { INVITE_TOKEN_STORAGE_KEY, readJoinCoach } from "@/utils/referralHelpers";
 import { clearSignupSession } from "@/utils/signup";
 import { buildOAuthRedirectPath, whoFromPersona } from "@/utils/authRedirect";
+import { takeReturnPath } from "@/utils/returnPath";
 import { SignUpFlow } from "@/components/auth/SignUpFlow";
 import { ROUTES } from "@/routes";
 import logo from "@/assets/AthaNext-Logo.svg";
@@ -157,7 +158,8 @@ const Auth = () => {
       clearSignupSession();
       setCheckedUserId(userId);
       const from = (location.state as { from?: { pathname: string; search?: string } } | null)?.from;
-      navigate(from ? `${from.pathname}${from.search ?? ""}` : invitePath ?? ROUTES.DASHBOARD, { replace: true });
+      const saved = takeReturnPath();
+      navigate(from ? `${from.pathname}${from.search ?? ""}` : saved ?? invitePath ?? ROUTES.DASHBOARD, { replace: true });
     };
 
     checkUserProfile();

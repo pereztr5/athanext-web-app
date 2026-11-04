@@ -61,6 +61,7 @@ import { clearJoinCoach } from "@/utils/referralHelpers";
 import { clearCampFinish, readCampFinish } from "@/components/camps/campFinish";
 import { EditPhotoButton } from "@/components/home/EditPhotoButton";
 import { buildOAuthRedirectPath } from "@/utils/authRedirect";
+import { takeReturnPath } from "@/utils/returnPath";
 import { trackAccountCreated, trackSignupStarted } from "@/analytics/events";
 import {
   COACH_POS_TO_DB,
@@ -1805,6 +1806,12 @@ export const SignUpFlow = ({
           // Invited families confirm the coach on the invite page.
           if (inviteToken) {
             navigate(`/invite/${inviteToken}`, { replace: true });
+            return;
+          }
+          // Signed up from a shared session link (or a page that needed an account): back there.
+          const saved = takeReturnPath();
+          if (saved) {
+            navigate(saved, { replace: true });
             return;
           }
           await loadMatches();

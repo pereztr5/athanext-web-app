@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useRole } from "@/hooks/useRole";
+import { rememberReturnPath } from "@/utils/returnPath";
 
 interface ProtectedRouteProps {
   children: ReactNode;
@@ -21,6 +22,8 @@ export const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   }
 
   if (!isAuthenticated) {
+    // Kept in the tab too: Google sign-in and new accounts come back without the router state.
+    rememberReturnPath(`${location.pathname}${location.search}`);
     return <Navigate to="/auth?mode=signin" replace state={{ from: location }} />;
   }
 
