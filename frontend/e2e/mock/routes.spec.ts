@@ -2,6 +2,8 @@ import fs from "node:fs";
 import path from "node:path";
 import { test, expect } from "./test";
 import { IDS, type Persona } from "./personas";
+import type { MockBackend } from "./backend";
+import { seedOwnCoachProfile } from "./data/profile";
 import { expectNoSidewaysScroll, settle } from "./helpers";
 
 // Every route in src/routes.tsx, opened as every kind of visitor: where it lands, that it
@@ -11,7 +13,8 @@ import { expectNoSidewaysScroll, settle } from "./helpers";
 
 type Who = Persona | "signedOut";
 type Expect = { url: RegExp; text: RegExp };
-type RouteCase = { pattern: string; open?: string; expect?: Partial<Record<Who, Expect>>; coveredBy?: string };
+// `seed` adds the data a page needs to render past its loading state.
+type RouteCase = { pattern: string; open?: string; expect?: Partial<Record<Who, Expect>>; coveredBy?: string; seed?: (backend: MockBackend) => void };
 
 const at = (url: RegExp, text: RegExp): Expect => ({ url, text });
 const SIGN_IN = at(/\/auth\?mode=signin$/, /welcome back/i);
@@ -71,7 +74,7 @@ const ROUTE_CASES: RouteCase[] = [
   { pattern: "/settings", expect: protectedPage({ coach: at(/\/settings$/, /account settings/i), parent: at(/\/settings$/, /parent or guardian/i), athlete: at(/\/settings$/, /account settings/i) }) },
   { pattern: "/settings/password", expect: protectedPage({ coach: at(/\/settings\?tab=security$/, /password/i), parent: at(/\/settings\?tab=security$/, /password/i) }) },
   { pattern: "/help", expect: protectedPage({ coach: at(/\/help$/, /common questions/i), parent: at(/\/help$/, /common questions/i), athlete: at(/\/help$/, /common questions/i) }) },
-  { pattern: "/profile", expect: protectedPage({ coach: at(/\/profile$/, /casey/i), parent: at(/\/profile$/, /no athlete profile yet/i), athlete: at(/\/profile$/, /alex athlete/i) }) },
+  { pattern: "/profile", seed: seedOwnCoachProfile, expect: protectedPage({ coach: at(/\/profile$/, /this is what families see/i), parent: at(/\/profile$/, /no athlete profile yet/i), athlete: at(/\/profile$/, /alex athlete/i) }) },
   { pattern: "/athlete-profile/create", expect: protectedPage({ parent: at(/\/athlete-profile\/create$/, /create your profile/i), athlete: at(/\/athlete-profile\/create$/, /create your profile/i) }) },
   { pattern: "/booking-confirmation", expect: protectedPage({ parent: at(/\/booking-confirmation$/, /receipt not found/i) }) },
   { pattern: "/package-confirmation", expect: protectedPage({ parent: at(/\/package-confirmation$/, /couldn.t confirm your package/i) }) },
@@ -111,7 +114,8 @@ for (const who of WHO) {
       const expected = route.expect?.[who];
       if (!expected) continue;
       const open = route.open ?? route.pattern;
-      test(`${open}`, async ({ page, as }) => {
+      test(`${open}`, async ({ page, as, backend }) => {
+        route.seed?.(backend);
         if (who !== "signedOut") await as(page, who);
         await page.goto(open);
         await expect(page).toHaveURL(expected.url);
