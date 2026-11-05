@@ -1353,6 +1353,26 @@ serve(async (req) => {
     }
     const athleteId = athlete_id.trim();
 
+    // The caller must own this athlete: their own profile, or an athlete profile on their account
+    // (same rule as family_athlete_ids()). Everything below runs with the service role, so without
+    // this anyone signed in could book, hold or release another family's sessions and Checkouts.
+    // A lookup error refuses the booking (fails closed).
+    const [{ data: ownProfile, error: ownProfileErr }, { data: ownAthleteRows, error: ownAthleteErr }] =
+      await Promise.all([
+        supabaseClient.from("user_profiles" as any).select("athlete_id").eq("id", user.id).maybeSingle(),
+        supabaseClient.from("athlete_profiles" as any).select("id").eq("id", athleteId).eq("user_id", user.id).limit(1),
+      ]);
+    if (ownProfileErr || ownAthleteErr) {
+      console.error("Athlete ownership check failed:", ownProfileErr ?? ownAthleteErr);
+      return jsonResponse({ error: "Couldn't confirm this athlete is on your account. Please try again." }, 500);
+    }
+    const callerOwnsAthlete =
+      (ownProfile as { athlete_id?: string | null } | null)?.athlete_id === athleteId ||
+      Boolean(ownAthleteRows?.length);
+    if (!callerOwnsAthlete) {
+      return jsonResponse({ error: "You can only book sessions for athletes on your account." }, 403);
+    }
+
     const { data: occurrences, error: occErr } = await supabaseClient
       .from("coach_availability_slot_occurrences" as any)
       .select(
@@ -1463,23 +1483,7 @@ serve(async (req) => {
     const feeConfig = await loadFeeConfig(supabaseClient);
 
     // Platform fee waiver: confirmed offline coach-client relationship for this exact
-    // (coach, athlete) pair, and only when it is the caller's own athlete profile; otherwise
-    // anyone could borrow a confirmed pair's waiver by sending that athlete's id. A query
-    // error falls through to the full fee (fails safe toward charging).
-    const { data: ownProfile } = await supabaseClient
-      .from("user_profiles" as any)
-      .select("athlete_id")
-      .eq("id", user.id)
-      .maybeSingle();
-    const { data: ownAthleteRows } = await supabaseClient
-      .from("athlete_profiles" as any)
-      .select("id")
-      .eq("id", athleteId)
-      .eq("user_id", user.id)
-      .limit(1);
-    const callerOwnsAthlete =
-      (ownProfile as { athlete_id?: string | null } | null)?.athlete_id === athleteId ||
-      Boolean(ownAthleteRows?.length);
+    // (coach, athlete) pair. The caller's ownership of the athlete was checked above.
     const useCredits = parsedBody.use_credits !== false;
     const wantOffline = parsedBody.pay_offline === true;
 
