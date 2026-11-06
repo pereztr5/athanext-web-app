@@ -9,6 +9,7 @@
  */
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
+import { useQueryClient } from "@tanstack/react-query";
 import {
   ArrowRight,
   BookOpen,
@@ -36,6 +37,7 @@ import { authAPI } from "@/api/auth";
 import { inviteSignupAPI, type InviteSignupInfo } from "@/api/inviteSignup";
 import { coachesAPI, userProfilesAPI, type PublicCoach } from "@/api";
 import { createAthleteInitiatedReferral } from "@/api/referrals";
+import { REFERRAL_KEYS } from "@/hooks/useReferrals";
 import { sendPublicEmail } from "@/api/publicEmail";
 import { getSportPillars, setSportPillars } from "@/api/sport-pillars";
 import { pickedPillarIds } from "@/utils/sessionPillars";
@@ -438,6 +440,7 @@ export const SignUpFlow = ({
 }) => {
   const { user, refreshUserProfile, signOut } = useAuth();
   const { toast } = useToast();
+  const queryClient = useQueryClient();
   const navigate = useNavigate();
 
   // A signed-in account that isn't finished (Google from either tab, an imported user) lands
@@ -878,6 +881,8 @@ export const SignUpFlow = ({
         await supabase.auth.updateUser({ data: { persona_type: "coach", coach_id: coachId } });
         clearSignupSession();
         await refreshUserProfile();
+        // The invite was read before this profile existed (is_athlete false); ask again.
+        void queryClient.invalidateQueries({ queryKey: REFERRAL_KEYS.invite });
         trackAccountCreated({
           persona: "coach",
           source: camp ? "camp" : inviteToken ? "invite" : joinCoachId ? "share_link" : "direct",
@@ -955,6 +960,8 @@ export const SignUpFlow = ({
         if (camp) clearCampFinish();
         clearSignupSession();
         await refreshUserProfile();
+        // The invite was read before this profile existed (is_athlete false); ask again.
+        void queryClient.invalidateQueries({ queryKey: REFERRAL_KEYS.invite });
         trackAccountCreated({
           persona,
           source: camp ? "camp" : inviteToken ? "invite" : joinCoachId ? "share_link" : "direct",

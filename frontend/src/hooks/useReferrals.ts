@@ -19,13 +19,15 @@ export const REFERRAL_KEYS = {
   all: ["referrals"] as const,
   coach: (coachId: string) => ["referrals", "coach", coachId] as const,
   athlete: (athleteId: string) => ["referrals", "athlete", athleteId] as const,
+  /** Every cached invite lookup; prefix of the key below. */
+  invite: ["referral-invite"] as const,
 };
 
 /** Public view of an invite link; `email_matches` depends on who is signed in. */
 export const useReferralInvite = (token: string | null | undefined) => {
   const { user } = useAuth();
   const { data, isLoading } = useQuery({
-    queryKey: ["referral-invite", token, user?.id ?? null],
+    queryKey: [...REFERRAL_KEYS.invite, token, user?.id ?? null],
     queryFn: async () => {
       const { data, error } = await getReferralInvite(token!);
       if (error) throw new Error(error.message);
@@ -119,7 +121,7 @@ export const useClaimReferral = () => {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: REFERRAL_KEYS.all });
-      queryClient.invalidateQueries({ queryKey: ["referral-invite"] });
+      queryClient.invalidateQueries({ queryKey: REFERRAL_KEYS.invite });
     },
   });
 };
