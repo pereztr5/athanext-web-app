@@ -265,6 +265,7 @@ export const availabilityPeriod = (): Row => {
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
   });
+  const first = new Date(`${isoDay(2)}T12:00:00Z`).getUTCDay() === 0 ? 3 : 2;
   return {
     id: "00000000-0000-4000-8000-0000000a0100",
     coach_id: IDS.coach,
@@ -273,7 +274,9 @@ export const availabilityPeriod = (): Row => {
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
     weekly_slots: [],
-    occurrences: [occ("00000000-0000-4000-8000-0000000a0201", 2, "10:00:00", "11:00:00"), occ("00000000-0000-4000-8000-0000000a0202", 3, "10:00:00", "11:00:00")],
+    // Both in the same Monday-to-Sunday week, so the first week shows "2 slots open" on any
+    // day: on a Friday, two and three days out would be a Sunday and the next Monday.
+    occurrences: [occ("00000000-0000-4000-8000-0000000a0201", first, "10:00:00", "11:00:00"), occ("00000000-0000-4000-8000-0000000a0202", first + 1, "10:00:00", "11:00:00")],
   };
 };
 
