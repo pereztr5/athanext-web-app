@@ -3,6 +3,7 @@
  * athletes as a message, post it in any of the coach's group chats, share its booking link
  * anywhere, or (1-on-1) book it straight for an athlete.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, CircleCheck, Copy, Search, UserCheck, Users } from "@/components/icons";
@@ -107,7 +108,7 @@ export const ShareSession = ({
     onError: (error: unknown) =>
       toast({
         title: "Couldn't send it",
-        description: error instanceof Error ? error.message : "Try again.",
+        description: errorMessage(error, "Try again."),
         variant: "destructive",
       }),
   });

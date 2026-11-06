@@ -3,6 +3,7 @@
  * a short new-session form, New pill on drafts, then optional Go live sharing.
  * 1-on-1s created here are real individual open slots (not one-spot groups).
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useMemo, useState } from "react";
 import { Navigate, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -161,14 +162,14 @@ const PlanGroupsPage = () => {
       queryClient.invalidateQueries({ queryKey: ["coach-schedule"] });
     },
     onError: (error: unknown) =>
-      toast({ title: "Couldn't copy", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Couldn't copy", description: errorMessage(error, "Try again."), variant: "destructive" }),
   });
 
   const removeDraft = useMutation({
     mutationFn: (id: string) => scheduleAPI.removeSession(id),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["coach-schedule"] }),
     onError: (error: unknown) =>
-      toast({ title: "Couldn't remove", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Couldn't remove", description: errorMessage(error, "Try again."), variant: "destructive" }),
   });
 
   const publish = useMutation({
@@ -250,7 +251,7 @@ const PlanGroupsPage = () => {
       navigate(ROUTES.SCHEDULE);
     },
     onError: (error: unknown) =>
-      toast({ title: "Couldn't send", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Couldn't send", description: errorMessage(error, "Try again."), variant: "destructive" }),
   });
 
   if (!ready) return null;

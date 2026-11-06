@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -27,7 +28,7 @@ export const RosterInvites = ({ invites }: { invites: OpenInvite[] }) => {
     queryClient.invalidateQueries({ queryKey: REFERRAL_KEYS.all });
   };
   const fail = (title: string) => (e: unknown) =>
-    toast({ title, description: e instanceof Error ? e.message : undefined, variant: "destructive" });
+    toast({ title, description: errorMessage(e), variant: "destructive" });
 
   const act = (invite: OpenInvite) => {
     if (invite.status === "approval") {
@@ -108,7 +109,7 @@ const FixEmailDialog = ({ invite, onClose, onSaved }: { invite: OpenInvite | nul
       toast({ title: "New invite sent" });
       onClose();
     },
-    onError: (e) => toast({ title: "Couldn't save the email", description: e instanceof Error ? e.message : undefined, variant: "destructive" }),
+    onError: (e) => toast({ title: "Couldn't save the email", description: errorMessage(e), variant: "destructive" }),
   });
 
   return (

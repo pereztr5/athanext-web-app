@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState, type ReactNode } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
@@ -64,7 +65,7 @@ const InviteClaim = () => {
       forgetToken();
       setResult(outcome === "declined" ? "declined" : "confirmed");
     } catch (e) {
-      setError(claimErrorMessage(e instanceof Error ? e.message : undefined));
+      setError(claimErrorMessage(errorMessage(e)));
     }
   };
 

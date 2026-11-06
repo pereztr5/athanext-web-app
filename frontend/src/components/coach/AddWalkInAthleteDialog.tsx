@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { Search, UserPlus } from "@/components/icons";
 import { Button } from "@/components/ui/button";
@@ -52,7 +53,7 @@ export const AddWalkInAthleteDialog = ({
       setSearched(true);
     } catch (err) {
       setResults([]);
-      setError(err instanceof Error ? err.message : "Search failed.");
+      setError(errorMessage(err, "Search failed."));
     }
   };
 
@@ -67,7 +68,7 @@ export const AddWalkInAthleteDialog = ({
       setResults([]);
       setSearched(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Could not add this athlete.");
+      setError(errorMessage(err, "Could not add this athlete."));
     } finally {
       setPendingId(null);
     }

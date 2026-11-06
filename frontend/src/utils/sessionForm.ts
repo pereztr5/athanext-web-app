@@ -1,3 +1,5 @@
+import { errorMessage } from "./errorMessage";
+
 /**
  * Shared pieces of the create and plan session forms: one list of lengths, the "still missing"
  * line above a disabled button, and server errors in plain words.
@@ -43,14 +45,7 @@ const PLAIN: [RegExp, string][] = [
 
 /** Server and network errors in plain words. Messages the server already writes for people pass through. */
 export const plainError = (err: unknown, fallback = "That didn't go through. Try again.") => {
-  const message =
-    err instanceof Error
-      ? err.message
-      : err && typeof err === "object" && "message" in err
-        ? String((err as { message?: unknown }).message ?? "")
-        : typeof err === "string"
-          ? err
-          : "";
+  const message = errorMessage(err, "");
   if (!message.trim()) return fallback;
   const match = PLAIN.find(([pattern]) => pattern.test(message));
   if (match) return match[1];

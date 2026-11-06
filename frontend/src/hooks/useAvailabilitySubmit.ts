@@ -5,6 +5,7 @@
  * (+ create-mode rollback on failure).
  */
 
+import { errorMessage } from '@/utils/errorMessage';
 import { useState, useCallback, useMemo } from 'react';
 import {
   validateAvailabilityForm,
@@ -343,7 +344,7 @@ export const useAvailabilitySubmit = ({
       toast({
         title: 'Error',
         description:
-          error instanceof Error ? error.message : 'Failed to save availability',
+          errorMessage(error, 'Failed to save availability'),
         variant: 'destructive',
       });
     } finally {

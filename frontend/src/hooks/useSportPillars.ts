@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useCallback } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { getSportPillars, setSportPillars, type SPORTPILLARS, type CoachSportPillarLink } from '@/api/sport-pillars';
@@ -72,8 +73,7 @@ export function useSportPillars(options: UseSportPillarsOptions = {}): UseSportP
       const data = await linkMutation.mutateAsync({ coachId, sportType, pillarIds });
       return { success: true, data };
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to link sport pillars';
-      return { success: false, error: errorMessage };
+      return { success: false, error: errorMessage(err, 'Failed to link sport pillars') };
     }
   }, [linkMutation]);
 

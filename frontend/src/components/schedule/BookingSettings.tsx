@@ -2,6 +2,7 @@
  * Booking rules and Google Calendar sync for the coach's Account Settings (ATH-87). The
  * Schedule settings page has its own cards (components/schedule/settings).
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CalendarCheck2, RefreshCw } from "@/components/icons";
@@ -15,7 +16,7 @@ import { input, label, meta, primaryButton, secondaryButton, segButton, segGroup
 const useFail = () => {
   const { toast } = useToast();
   return (err: unknown) =>
-    toast({ title: "That didn't save", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
+    toast({ title: "That didn't save", description: errorMessage(err, "Try again."), variant: "destructive" });
 };
 
 export const BookingRulesSection = ({

@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import type { ReactNode } from "react";
 import { Children, memo, useEffect, useMemo, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
@@ -776,7 +777,7 @@ const MySessions = () => {
     } catch (error) {
       toast({
         title: "Payment didn't start",
-        description: error instanceof Error ? error.message : "Try again.",
+        description: errorMessage(error, "Try again."),
         variant: "destructive",
       });
       setPayingBookingId(null);

@@ -2,6 +2,7 @@
  * Booking confirmation / receipt (Working Copy a-receipt): one or several sessions, credits,
  * pay-direct and requests. After Stripe: ?session_id=. After credits/direct: ?bookings=.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery } from "@tanstack/react-query";
@@ -79,7 +80,7 @@ const BookingConfirmation = () => {
       toast({ title: to ? `${kind} sent to ${to}` : `${kind} sent` });
     },
     onError: (err) =>
-      toast({ title: "Couldn't send the receipt", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Couldn't send the receipt", description: errorMessage(err, "Try again."), variant: "destructive" }),
   });
 
   if (!sessionId && !bookingIds.length) {
@@ -102,7 +103,7 @@ const BookingConfirmation = () => {
           <PageHeader title="Couldn't load this receipt" />
           <p className="flex items-center gap-2 text-body-m text-error-700">
             <AlertCircle className="size-4 flex-none" strokeWidth={1.5} />
-            {receipt.error instanceof Error ? receipt.error.message : "Try again in a moment."}
+            {errorMessage(receipt.error, "Try again in a moment.")}
           </p>
           <Link to={ROUTES.MY_SESSIONS} className={cn(secondaryButton, "self-start")}>
             View in My sessions
@@ -206,7 +207,7 @@ const PendingRequestsStep = () => {
       if (result.url) window.location.href = result.url;
       else setPending(null);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Couldn't send the requests.");
+      setError(errorMessage(e, "Couldn't send the requests."));
       setOpening(false);
     }
   };

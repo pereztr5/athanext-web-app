@@ -3,6 +3,7 @@
  * React Query hook for managing user sessions with caching and refetching
  */
 
+import { errorMessage } from "@/utils/errorMessage";
 import { useQuery, useQueryClient, useMutation } from '@tanstack/react-query';
 import { useAuth } from '@/contexts/AuthContext';
 import { getMySessions, cancelSession } from '@/api/sessions';
@@ -169,7 +170,7 @@ export const useMySessions = (userRole?: 'coach' | 'athlete') => {
     sessions,
     grouped,
     isLoading,
-    error: error instanceof Error ? error.message : null,
+    error: errorMessage(error) ?? null,
     refetch,
     filterSessions,
     cancelSession: cancelSessionMutation,

@@ -3,6 +3,7 @@
  * Uses the app's fee lines and existing checkout / pay-direct path. Refunds stay on the
  * cancellation-credit path — this sheet never opens a card refund.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -118,7 +119,7 @@ export const OfferPaySheet = ({
       }
       toast({ title: `Booked ${plural(sessions.length, "session")}` });
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't book these sessions."),
+    onError: (err: unknown) => setError(errorMessage(err, "Couldn't book these sessions.")),
   });
 
   return (

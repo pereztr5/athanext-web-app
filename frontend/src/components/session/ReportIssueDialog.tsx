@@ -3,6 +3,7 @@
  * red. Sending saves the report and emails AthaNext support right away; the family gets an email
  * confirmation too.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { CircleCheck, Flag } from "@/components/icons";
@@ -59,7 +60,7 @@ export const ReportIssueDialog = ({
   const send = useMutation({
     mutationFn: () => sessionIssuesAPI.report(bookingId!, reason!, details),
     onSuccess: () => setSent(true),
-    onError: (err: unknown) => setErrors({ send: err instanceof Error ? err.message : "That didn't send. Try again" }),
+    onError: (err: unknown) => setErrors({ send: errorMessage(err, "That didn't send. Try again") }),
   });
 
   const submit = () => {

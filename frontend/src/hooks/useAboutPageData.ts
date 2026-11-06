@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useQuery } from '@tanstack/react-query';
 import { type AboutData } from "@/api/about";
 import { getAboutPageData } from '@/api/about';
@@ -41,7 +42,7 @@ export function useAboutPageData(): UseAboutPageDataReturn {
         // Even on error, provide fallback data
         return {
           aboutData: FALLBACK_DATA,
-          errorMsg: err instanceof Error ? err.message : 'Failed to load about data',
+          errorMsg: errorMessage(err, 'Failed to load about data'),
         };
       }
     },

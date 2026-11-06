@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { createContext, useContext, useState, useEffect, useMemo, ReactNode, useCallback } from "react";
 import { useAuth } from "./AuthContext";
 import { supabase } from "@/integrations/supabase/client";
@@ -169,7 +170,7 @@ export const ProfileProvider = ({ children }: { children: ReactNode }) => {
       setProfile(newProfile);
     } catch (err) {
       console.error("Error fetching profile:", err);
-      setError(err instanceof Error ? err.message : "Failed to fetch profile");
+      setError(errorMessage(err, "Failed to fetch profile"));
     } finally {
       setLoading(false);
     }

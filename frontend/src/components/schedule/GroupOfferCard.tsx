@@ -5,6 +5,7 @@
  * Time/place changes ask booked families Still coming or Cancel (session credit, not card refund).
  * Price changes apply to new picks only.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -80,7 +81,7 @@ export const GroupOfferCard = ({ offerId, className }: { offerId: string; classN
     onError: (err: unknown) =>
       toast({
         title: "Couldn't update",
-        description: err instanceof Error ? err.message : "Try again.",
+        description: errorMessage(err, "Try again."),
         variant: "destructive",
       }),
   });

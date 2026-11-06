@@ -1,3 +1,5 @@
+import { errorMessage } from "./errorMessage";
+
 /**
  * Turns errors from the payment functions (create-booking-payment and friends) into plain copy
  * families can act on. Messages the function wrote for people are kept; technical ones
@@ -15,7 +17,7 @@ const TECHNICAL =
 
 /** Plain message for a payment failure. `fallback` is used when the raw text isn't meant for people. */
 export const paymentErrorMessage = (raw: unknown, fallback = PAYMENT_FALLBACK): string => {
-  const text = (typeof raw === "string" ? raw : raw instanceof Error ? raw.message : "").trim();
+  const text = errorMessage(raw, "").trim();
   if (!text) return fallback;
   if (NETWORK.test(text)) return "We couldn't reach AthaNext. Check your connection and try again.";
   if (SIGNED_OUT.test(text)) return "Your sign-in has expired. Sign in again, then try once more.";

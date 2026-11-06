@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { Button } from "@/components/ui/button";
 import { useToast } from "@/hooks/use-toast";
 import { useResendReferral } from "@/hooks/useReferrals";
@@ -32,7 +33,7 @@ export const ReferralRowActions = ({ referral: r }: { referral: CoachClientRefer
           } catch (e) {
             toast({
               title: "Could not resend invite",
-              description: e instanceof Error ? e.message : undefined,
+              description: errorMessage(e),
               variant: "destructive",
             });
           }

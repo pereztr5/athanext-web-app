@@ -62,13 +62,9 @@ test.describe("my business", () => {
     expect(backend.writesTo("confirm_offline_payment")[0].body).toEqual({ p_booking_id: MONEY.waitingBooking });
   });
 
-  // App bug: offlinePayAPI.confirm throws the supabase-js error, which is a plain
-  // { code, message, details, hint } object, not an Error. markPaidError() only reads the message
-  // of an Error (`err instanceof Error ? err.message : ...`), so the "Your free plan has ended"
-  // copy and the "Open Plan settings" link never show: the coach sees "Couldn't mark as paid /
-  // Try again." instead. (The same `instanceof Error` check hides RPC messages in other toasts,
-  // e.g. the athlete page's "That didn't save".)
-  test.fixme("a plan-ended error on Mark as paid links to Plan settings", async ({ page, backend }) => {
+  // offlinePayAPI.confirm throws the supabase-js error, a plain { code, message, details, hint }
+  // object, not an Error; markPaidError() still reads its message.
+  test("a plan-ended error on Mark as paid links to Plan settings", async ({ page, backend }) => {
     backend.rpc.confirm_offline_payment = new MockError("Your free plan has ended", 400);
     await page.goto("/business");
     await page.getByRole("region", { name: "Offline payments" }).getByRole("button", { name: "Mark as paid" }).click();

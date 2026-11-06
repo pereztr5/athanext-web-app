@@ -2,6 +2,7 @@
  * Packages pop-up (Working Copy `AN.modals.packages`): pick a package, then pay on Stripe's
  * page. Booking-only coaches take payment themselves, so their packages open a message instead.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useQuery } from "@tanstack/react-query";
@@ -116,7 +117,7 @@ export const BuyPackagesDialog = ({
       if (!payment.data?.url) throw new Error("This package is not available for purchase right now.");
       window.location.href = payment.data.url;
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't start checkout.");
+      setError(errorMessage(err, "Couldn't start checkout."));
       setPaying(false);
     }
   };

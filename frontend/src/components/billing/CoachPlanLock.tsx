@@ -1,6 +1,7 @@
 /**
  * ATH-103: hard lock after unpaid trial. Subscribe CTA; settings/billing stay reachable.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { Link } from "react-router-dom";
 import { Lock } from "@/components/icons";
 import { useState } from "react";
@@ -23,7 +24,7 @@ export const CoachPlanLock = () => {
     } catch (e) {
       toast({
         title: "Couldn't open checkout",
-        description: e instanceof Error ? e.message : undefined,
+        description: errorMessage(e),
         variant: "destructive",
       });
       setOpening(false);

@@ -3,6 +3,7 @@
  * Handles coach packages and session purchases
  */
 
+import { errorMessage } from '@/utils/errorMessage';
 import { apiClient, type ApiError, type ApiResponse } from '@/api/client';
 import { supabase } from '@/integrations/supabase/client';
 import type { Database } from '@/integrations/supabase/types';
@@ -191,7 +192,7 @@ export const parseCamp = (raw: unknown): Camp | null => {
 };
 
 const functionErrorMessage = async (error: unknown): Promise<string> => {
-  const fallback = error instanceof Error ? error.message : "Could not start checkout.";
+  const fallback = errorMessage(error, "Could not start checkout.");
   const context = (error as { context?: Response }).context;
   if (!context || typeof context.clone !== "function") return fallback;
   try {

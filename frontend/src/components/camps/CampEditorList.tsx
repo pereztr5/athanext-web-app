@@ -3,6 +3,7 @@
  * share link, then Add camp. Clicking anywhere on a camp opens its page (with the coach's Edit
  * bar); a camp with no link yet opens the editor. Camps never touch credits.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "react-router-dom";
 import { Eye, Link as LinkIcon, Plus } from "@/components/icons";
@@ -75,7 +76,7 @@ export const CampEditorList = ({
       {camps.isLoading ? <span className={meta}>Loading camps…</span> : null}
       {camps.isError ? (
         <p role="alert" className="text-caption text-error-700">
-          {camps.error instanceof Error ? camps.error.message : "Camps could not be loaded."}
+          {errorMessage(camps.error, "Camps could not be loaded.")}
         </p>
       ) : null}
       {list.map((camp) => {

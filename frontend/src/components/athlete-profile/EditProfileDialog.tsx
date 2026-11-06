@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import {
@@ -971,10 +972,9 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
       onOpenChange(false);
     } catch (error) {
       console.error("Failed to save profile", error);
-      const errorMessage = error instanceof Error ? error.message : "Something went wrong while saving. Please try again.";
       setErrors((prev) => ({
         ...prev,
-        form: errorMessage,
+        form: errorMessage(error, "Something went wrong while saving. Please try again."),
       }));
     } finally {
       setIsSaving(false);

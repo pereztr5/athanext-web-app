@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Check } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
@@ -59,10 +60,9 @@ export const PackagesModal = ({ isOpen, onClose, packages, coachName }: Packages
       }
     } catch (error: unknown) {
       console.error('Error purchasing package:', error);
-      const errorMessage = error instanceof Error ? error.message : "That didn't go through. Try again.";
       toast({
         title: strings.packages.purchaseFailed,
-        description: errorMessage,
+        description: errorMessage(error, "That didn't go through. Try again."),
         variant: "destructive",
       });
     } finally {

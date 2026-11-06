@@ -1,4 +1,5 @@
 /** Shared helpers for free intro calls. */
+import { errorMessage } from "@/utils/errorMessage";
 import { formatClock } from "@/utils/schedule";
 import { formatDateInZone } from "@/utils/viewerTime";
 
@@ -20,4 +21,4 @@ export const introWhen = (iso: string, timeZone: string) => {
   return `${formatDateInZone(at, timeZone, { weekday: "short", month: "short", day: "numeric" })} at ${formatClock(at, timeZone)}`;
 };
 
-export const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+export const errorText = (err: unknown, fallback: string) => errorMessage(err, fallback);

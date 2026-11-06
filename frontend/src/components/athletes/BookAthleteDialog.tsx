@@ -5,6 +5,7 @@
  * Credit and paid-outside bookings can be undone from the toast; a payment link goes out as an
  * offer the family books and pays from.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Calendar, ChevronLeft, Plus, Ticket, User, Users, X } from "@/components/icons";
@@ -155,7 +156,7 @@ export const BookAthleteDialog = ({
       }
       onClose();
     },
-    onError: (err: unknown) => toast({ title: err instanceof Error ? err.message : "Couldn't book that time", variant: "destructive" }),
+    onError: (err: unknown) => toast({ title: errorMessage(err, "Couldn't book that time"), variant: "destructive" }),
   });
 
   const loading = options.isLoading || send.isPending;

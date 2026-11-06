@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import {
   Dialog,
@@ -209,7 +210,7 @@ export function PackageEditorDialog({
     } catch (err) {
       toast({
         title: "Something went wrong",
-        description: err instanceof Error ? err.message : "Try again.",
+        description: errorMessage(err, "Try again."),
         variant: "destructive",
       });
     } finally {

@@ -2,6 +2,7 @@
  * Smaller My schedule sheets (ATH-71): Clear day. Schedule settings and booking requests
  * are pages now (pages/ScheduleSettings.tsx, components/schedule/RequestsPage.tsx).
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { useMutation } from "@tanstack/react-query";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -50,7 +51,7 @@ export const ClearDayDialog = ({
   const clear = useMutation({
     mutationFn: () => scheduleAPI.clearDay(date!, note.trim() || null),
     onSuccess: (closed) => onCleared(date!, closed),
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't clear the day."),
+    onError: (err: unknown) => setError(errorMessage(err, "Couldn't clear the day.")),
   });
 
   return (

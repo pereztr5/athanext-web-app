@@ -3,6 +3,7 @@
  * Notifications, Privacy and safety, Password and account. The Athlete and Payment methods
  * tabs are gone: athlete details live on Home, and nothing about cards is saved here.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -126,7 +127,7 @@ const AccountTab = ({ isParent, athleteId, athleteFirst, parentName, onDirtyChan
       await refreshUserProfile();
       toast({ title: "Changes saved" });
     },
-    onError: (err) => toast({ title: "Couldn't save", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    onError: (err) => toast({ title: "Couldn't save", description: errorMessage(err), variant: "destructive" }),
   });
 
   const submit = () => {
@@ -544,7 +545,7 @@ const DeleteCard = ({ isParent, athleteFirst }: { isParent: boolean; athleteFirs
       void sendAccountEmail("deletion_requested");
       toast({ title: "Account deletion scheduled", description: "We emailed you the date. Choose Keep my account before then to undo it." });
     },
-    onError: (err) => toast({ title: "Couldn't schedule deletion", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    onError: (err) => toast({ title: "Couldn't schedule deletion", description: errorMessage(err), variant: "destructive" }),
   });
   return (
     <ConfirmWordCard

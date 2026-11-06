@@ -3,6 +3,7 @@
  * calendar of sessions, open slots, requests and Google Calendar busy times. Always opens on
  * this Monday. Phone week is one scrolling list. Planner drafts stay hidden until publish.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { Navigate, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -204,7 +205,7 @@ const MySchedulePage = () => {
     onError: (error: unknown) =>
       toast({
         title: "Couldn't update the request",
-        description: error instanceof Error ? error.message : "Try again.",
+        description: errorMessage(error, "Try again."),
         variant: "destructive",
       }),
   });
@@ -229,7 +230,7 @@ const MySchedulePage = () => {
       refresh();
     },
     onError: (error: unknown) =>
-      toast({ title: "Couldn't undo", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" }),
+      toast({ title: "Couldn't undo", description: errorMessage(error, "Try again."), variant: "destructive" }),
   });
 
   if (!ready) {

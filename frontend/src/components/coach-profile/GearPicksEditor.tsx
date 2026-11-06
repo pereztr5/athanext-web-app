@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { Check, ChevronDown, ChevronUp, Search, X } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
@@ -107,7 +108,7 @@ export function GearPicksEditor({
     } catch (error) {
       toast({
         title: "Couldn't save gear picks",
-        description: error instanceof Error ? error.message : "Please try again.",
+        description: errorMessage(error, "Please try again."),
         variant: "destructive",
       });
     }

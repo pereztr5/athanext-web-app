@@ -2,6 +2,7 @@
  * Crop a profile photo before it uploads (ATH-109): drag to centre it, zoom in, then Save.
  * Same look as the camp cover cropper. Square by default, shown as a circle guide.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import Cropper, { type Area } from "react-easy-crop";
@@ -53,7 +54,7 @@ export const PhotoCropDialog = ({
     try {
       await onSave(await getCroppedFile(file, area, "-cropped"));
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Couldn't crop this photo. Try another one.");
+      setError(errorMessage(err, "Couldn't crop this photo. Try another one."));
     } finally {
       setCropping(false);
     }

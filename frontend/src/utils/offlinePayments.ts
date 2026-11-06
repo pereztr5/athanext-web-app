@@ -1,3 +1,5 @@
+import { errorMessage } from "./errorMessage";
+
 /**
  * My Business "Offline payments": money paid to the coach directly (cash, Zelle, Venmo, or
  * outside the app), kept apart from in-app earnings. Data from get_coach_offline_payments()
@@ -73,7 +75,7 @@ export const payerLine = (row: Pick<OfflineWaiting, "payerName" | "athleteName">
 
 /** Toast copy when Mark as paid fails; the free plan lock gets its own words. */
 export const markPaidError = (err: unknown): { title: string; description: string; planEnded: boolean } => {
-  const message = err instanceof Error ? err.message : typeof err === "string" ? err : "";
+  const message = errorMessage(err, "");
   if (/free plan has ended/i.test(message)) {
     return { title: "Your free plan has ended", description: "Subscribe in Plan settings to mark payments as paid.", planEnded: true };
   }

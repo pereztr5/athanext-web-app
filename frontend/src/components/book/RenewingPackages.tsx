@@ -1,4 +1,5 @@
 /** Monthly group passes the family can cancel (stops the next renewal). */
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { packagesAPI } from "@/api/packages";
@@ -39,7 +40,7 @@ export const RenewingPackages = () => {
     onError: (err) => {
       toast({
         title: "Couldn't cancel renewal",
-        description: err instanceof Error ? err.message : "Try again in a moment.",
+        description: errorMessage(err, "Try again in a moment."),
         variant: "destructive",
       });
       setCanceling(null);
