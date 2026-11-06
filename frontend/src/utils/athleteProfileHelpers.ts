@@ -2,6 +2,7 @@ import type { AthleteProfileFormData } from "@/types/athleteProfile";
 import type { AthleteProfileUpsertPayload, AthleteProfile as DbAthleteProfile } from "@/hooks/useProfile";
 import { deriveInitials } from "@/utils/helperFunctions";
 import { sanitizePathwayTags } from "@/constants/pathwayTags";
+import { toSportKey } from "@/utils/db";
 
 export { deriveInitials };
 
@@ -47,7 +48,7 @@ export const mapDbProfileToForm = (
   return {
     fullName: profile.full_name ?? "",
     initials: deriveInitials(profile.full_name),
-    sport: profile.sport ?? "",
+    sport: toSportKey(profile.sport),
     position: profile.position ?? "",
     dateOfBirth: profile.date_of_birth ?? "",
     phoneNumber: profile.phone_number ?? "",
@@ -75,7 +76,7 @@ export const mapDbProfileToForm = (
  */
 export const mapFormToDbPayload = (profile: AthleteProfileFormData): AthleteProfileUpsertPayload => ({
   full_name: profile.fullName.trim(),
-  sport: profile.sport.trim(),
+  sport: toSportKey(profile.sport),
   position: profile.position.trim() || null,
   date_of_birth: profile.dateOfBirth,
   phone_number: profile.phoneNumber.trim() || null,

@@ -4,7 +4,7 @@
  */
 import { supabase } from "@/integrations/supabase/client";
 import type { HomeAthlete } from "@/utils/athleteHome";
-import { ATHLETE_IMAGE_LIMITS } from "@/utils/db";
+import { ATHLETE_IMAGE_LIMITS, toSportKey } from "@/utils/db";
 import { getStoragePathFromPublicUrl } from "@/utils/storage";
 import { sessionInstantISO } from "@/utils/viewerTime";
 
@@ -107,7 +107,7 @@ export const athleteHomeAPI = {
       .update({
         full_name: edit.fullName.trim(),
         date_of_birth: edit.dateOfBirth,
-        sport: edit.sport,
+        sport: toSportKey(edit.sport),
         position: clean(edit.position),
         high_school: clean(edit.team),
         pathway_tags: edit.pathway ? [edit.pathway] : [],
@@ -122,7 +122,7 @@ export const athleteHomeAPI = {
     // Keep it in step when this is the account's own athlete.
     const { data: auth } = await supabase.auth.getUser();
     if (auth.user) {
-      const sport = edit.sport ? edit.sport.charAt(0).toUpperCase() + edit.sport.slice(1) : null;
+      const sport = toSportKey(edit.sport) || null;
       const { error: accountError } = await supabase
         .from("user_profiles")
         .update({ sport, updated_at: new Date().toISOString() })

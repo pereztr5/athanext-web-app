@@ -146,7 +146,7 @@ test.describe("athlete profile", () => {
     await page.getByRole("button", { name: "Edit profile" }).first().click();
     const dialog = page.getByRole("dialog", { name: "Edit profile" });
     await dialog.getByLabel("Full name").fill("Alex Morgan");
-    // Required here, though Create your profile calls it optional (see the fixme below).
+    // Optional, but saved in E.164 when given.
     await dialog.getByRole("textbox", { name: "Phone number" }).fill("2125550100");
     await dialog.getByRole("button", { name: "Save changes" }).click();
     await expect(toast(page, "Profile updated")).toBeVisible();
@@ -172,10 +172,8 @@ test.describe("athlete profile", () => {
     expect(backend.writesTo("athlete_profiles")).toHaveLength(0);
   });
 
-  // Bug: Edit profile requires a phone number (src/utils/validations.ts profileSchema, phoneNumber
-  // min(1)), but Create your profile labels it optional and saves without one. An athlete who
-  // skipped it can't save any change until they add a phone, and the field isn't marked required.
-  test.fixme("Edit profile saves without a phone number, as Create your profile allows", async ({ page, as, backend }) => {
+  // Guards #4 bug 11: phone is optional on Create your profile, so Edit profile must save without one.
+  test("Edit profile saves without a phone number, as Create your profile allows", async ({ page, as, backend }) => {
     await as(page, "athlete");
     await page.goto("/profile");
     await page.getByRole("button", { name: "Edit profile" }).first().click();
@@ -186,10 +184,9 @@ test.describe("athlete profile", () => {
     expect(backend.writesTo("athlete_profiles", "POST")).toHaveLength(1);
   });
 
-  // Bug: Home's Edit profile saves the sport lowercase ("soccer", AthleteHome.tsx sport select),
-  // but My profile's Edit profile only offers "Soccer" / "Rowing" (ATHLETE_SPORTS_OPTIONS in
-  // src/utils/db.ts), so after an edit on Home the Sport box on My profile shows empty.
-  test.fixme("My profile shows the sport saved from Home", async ({ page, as }) => {
+  // Guards #4 bug 12: sport is stored lowercase ("soccer", as Home and sign-up save it); My
+  // profile's Sport box must still show it.
+  test("My profile shows the sport saved from Home", async ({ page, as }) => {
     await as(page, "athlete");
     await page.goto("/profile");
     await page.getByRole("button", { name: "Edit profile" }).first().click();
@@ -236,9 +233,9 @@ test.describe("create your profile", () => {
     const saved = backend.writesTo("athlete_profiles", "POST");
     expect(saved).toHaveLength(1);
     expect(saved[0].url).toContain("on_conflict=user_id");
-    expect(saved[0].body).toMatchObject({ user_id: IDS.athleteUser, full_name: "Alex Athlete", sport: "Soccer", position: "Midfielder", date_of_birth: "2011-03-14", tags: ["passing", "vision"] });
+    expect(saved[0].body).toMatchObject({ user_id: IDS.athleteUser, full_name: "Alex Athlete", sport: "soccer", position: "Midfielder", date_of_birth: "2011-03-14", tags: ["passing", "vision"] });
     const athleteId = (backend.table("athlete_profiles").find((r) => r.user_id === IDS.athleteUser) as Row).id;
-    expect(bodies(backend, "user_profiles").at(-1)).toMatchObject({ id: IDS.athleteUser, persona_type: "athlete", athlete_id: athleteId, sport: "Soccer", position: "Midfielder", date_of_birth: "2011-03-14" });
+    expect(bodies(backend, "user_profiles").at(-1)).toMatchObject({ id: IDS.athleteUser, persona_type: "athlete", athlete_id: athleteId, sport: "soccer", position: "Midfielder", date_of_birth: "2011-03-14" });
     await expect(page.getByRole("heading", { level: 1, name: "Alex Athlete" })).toBeVisible();
   });
 
@@ -272,15 +269,12 @@ test.describe("create your profile", () => {
     await expect(toast(page, "Profile created")).toBeVisible();
     await expect(page).toHaveURL(/\/profile$/);
     const saved = backend.writesTo("athlete_profiles", "POST");
-    expect(saved[0].body).toMatchObject({ user_id: IDS.parentUser, full_name: "Ava Parent", sport: "Soccer", date_of_birth: "2013-09-02" });
+    expect(saved[0].body).toMatchObject({ user_id: IDS.parentUser, full_name: "Ava Parent", sport: "soccer", date_of_birth: "2013-09-02" });
   });
 
-  // Bug: Create your profile always writes the account as the athlete (CreateAthleteProfile.tsx,
-  // handleSubmit: updateProfile({ persona_type: "athlete", name: form.fullName, ... })). A parent
-  // who creates their child's profile from Home becomes an athlete account named after the child,
-  // and loses the parent views (guardian settings, "Parent of ..." in coach chats).
-  // AthleteProfile.tsx handleProfileSave does the same when a parent edits from My profile.
-  test.fixme("a parent stays a parent, with their own name, after creating their athlete", async ({ page, as, backend }) => {
+  // Guards #4 bug 3: a parent who creates their child's profile keeps a parent account with their
+  // own name (and so keeps guardian settings and "Parent of ..." in coach chats).
+  test("a parent stays a parent, with their own name, after creating their athlete", async ({ page, as, backend }) => {
     await as(page, "parent");
     await page.goto("/athlete-profile/create");
     await page.getByLabel("Full name").fill("Ava Parent");

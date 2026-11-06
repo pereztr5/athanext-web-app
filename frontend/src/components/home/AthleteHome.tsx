@@ -9,6 +9,7 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { CalendarPlus, ChevronRight, Lock, MoreHorizontal, Pencil, Plus, Video } from "@/components/icons";
 import { BrandPill } from "@/components/brand";
 import { athleteHomeAPI, type AthleteProfileEdit, type HomeData } from "@/api/athleteHome";
+import { ATHLETE_SPORTS_OPTIONS, toSportKey } from "@/utils/db";
 import { QuickBookDialog } from "@/components/home/QuickBookDialog";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { ToastAction } from "@/components/ui/toast";
@@ -377,8 +378,8 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
   const queryClient = useQueryClient();
   const { refreshUserProfile } = useAuth();
   const open = focus !== null;
-  const [form, setForm] = useState<AthleteProfileEdit>(() => fromAthlete(athlete));
-  const [errors, setErrors] = useState<Partial<Record<keyof AthleteProfileEdit, string>>>({});
+  const [form, setForm] = useState<EditForm>(() => fromAthlete(athlete));
+  const [errors, setErrors] = useState<Partial<Record<keyof EditForm, string>>>({});
   const thisYear = new Date().getFullYear();
   const years = Array.from({ length: 10 }, (_, i) => String(thisYear + i));
 
@@ -392,13 +393,13 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
-  const set = (key: keyof AthleteProfileEdit) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
+  const set = (key: keyof EditForm) => (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
     setForm((f) => ({ ...f, [key]: e.target.value }));
     setErrors((x) => ({ ...x, [key]: undefined }));
   };
 
   const save = useMutation({
-    mutationFn: () => athleteHomeAPI.save(athlete.id, form),
+    mutationFn: () => athleteHomeAPI.save(athlete.id, toEdit(form)),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["athlete-home"] });
       void refreshUserProfile();
@@ -415,14 +416,14 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
 
   const submit = () => {
     const next: typeof errors = {};
-    if (!form.fullName.trim()) next.fullName = "Required";
+    if (!form.firstName.trim()) next.firstName = "Required";
     if (!form.dateOfBirth || form.dateOfBirth >= new Date().toISOString().slice(0, 10)) next.dateOfBirth = "Enter a date of birth";
     if (form.highlightVideoUrl.trim() && !isUrlish(form.highlightVideoUrl)) next.highlightVideoUrl = "Paste the full link";
     setErrors(next);
     if (!Object.keys(next).length) save.mutate();
   };
 
-  const field = (key: keyof AthleteProfileEdit, text: string, control: React.ReactNode) => (
+  const field = (key: keyof EditForm, text: string, control: React.ReactNode) => (
     <label className="flex flex-col gap-1.5">
       <span className={label}>{text}</span>
       {control}
@@ -452,28 +453,14 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
             </EditPhotoButton>
           </div>
           <div className="grid grid-cols-2 gap-3">
-            {field("fullName", "First name", (
-              <input
-                id="ep-name"
-                className={input}
-                value={splitName(form.fullName).first}
-                onChange={(e) => setForm((f) => ({ ...f, fullName: [e.target.value, splitName(f.fullName).last].filter(Boolean).join(" ") }))}
-              />
-            ))}
-            {field("fullName", "Last name", (
-              <input
-                className={input}
-                value={splitName(form.fullName).last}
-                onChange={(e) => setForm((f) => ({ ...f, fullName: [splitName(f.fullName).first, e.target.value].filter(Boolean).join(" ") }))}
-              />
-            ))}
+            {field("firstName", "First name", <input id="ep-name" className={input} value={form.firstName} onChange={set("firstName")} />)}
+            {field("lastName", "Last name", <input className={input} value={form.lastName} onChange={set("lastName")} />)}
           </div>
           <div className="grid grid-cols-2 gap-3">
             {field("dateOfBirth", "Date of birth", <input className={input} type="date" value={form.dateOfBirth} onChange={set("dateOfBirth")} />)}
             {field("sport", "Sport", (
               <select className={input} value={form.sport} onChange={set("sport")}>
-                <option value="soccer">Soccer</option>
-                <option value="rowing">Rowing</option>
+                {ATHLETE_SPORTS_OPTIONS.map((o) => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             ))}
           </div>
@@ -525,10 +512,19 @@ const EditProfileDialog = ({ athlete, focus, onClose, isParent }: {
   );
 };
 
-const fromAthlete = (a: HomeAthlete): AthleteProfileEdit => ({
-  fullName: a.fullName,
+/** The dialog keeps first and last name apart while editing; they join into full_name on save. */
+type EditForm = Omit<AthleteProfileEdit, "fullName"> & { firstName: string; lastName: string };
+
+const toEdit = ({ firstName, lastName, ...rest }: EditForm): AthleteProfileEdit => ({
+  ...rest,
+  fullName: [firstName.trim(), lastName.trim()].filter(Boolean).join(" "),
+});
+
+const fromAthlete = (a: HomeAthlete): EditForm => ({
+  firstName: splitName(a.fullName).first,
+  lastName: splitName(a.fullName).last,
   dateOfBirth: a.dateOfBirth ?? "",
-  sport: (a.sport ?? "soccer").toLowerCase(),
+  sport: toSportKey(a.sport) || "soccer",
   position: a.position ?? "",
   team: a.team ?? "",
   pathway: a.pathway ?? "",

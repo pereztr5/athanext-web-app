@@ -115,10 +115,17 @@ export const SPORTS_OPTIONS: SportOption[] = [
   },
 ];
 
-// Athlete/parent positions are different from coach positions.
+/**
+ * The stored form of a sport: lowercase ("soccer", "rowing"), as sign-up writes it for coaches
+ * and families and as sport_pillars and the server compare it. Reads any case, so older rows
+ * saved as "Soccer" still match.
+ */
+export const toSportKey = (sport: string | null | undefined): string => (sport ?? "").trim().toLowerCase();
+
+// Athlete/parent positions are different from coach positions. Values are the stored form (toSportKey).
 export const ATHLETE_SPORTS_OPTIONS: SportOption[] = [
   {
-    value: "Soccer",
+    value: "soccer",
     label: "Soccer",
     positions: [
       { value: "Goalkeeper", label: "Goalkeeper" },
@@ -129,7 +136,7 @@ export const ATHLETE_SPORTS_OPTIONS: SportOption[] = [
     ],
   },
   {
-    value: "Rowing",
+    value: "rowing",
     label: "Rowing",
     positions: [
       { value: "Stroke", label: "Stroke" },
