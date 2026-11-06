@@ -161,29 +161,28 @@ test.describe("messages as a parent", () => {
   });
 
   test("a community channel's member count opens the member list", async ({ page, backend }) => {
-    // App bug (phone): in a channel the header holds Leave and View profile next to the name, and
-    // the name block (title and "Community · N members") is squeezed to 0px wide at 375px, so the
-    // channel name and the members button can't be seen or tapped. src/pages/ChatPage.tsx, the
-    // conversation header (~lines 1078-1150).
-    test.fixme(isPhone(page), "channel title and member count are 0px wide on phones");
     backend.rpc.get_community_members = [
       { display_name: "Casey Coach", role: "owner", is_you: false, avatar_url: null },
       { display_name: "Pat P.", role: "member", is_you: true, avatar_url: null },
     ];
     await page.goto(`/chat?conversationId=${CHAT.channel}`);
-    await expect(page.getByText("Casey's Keepers").last()).toBeVisible();
-    await page.getByRole("button", { name: "Community · 1 member" }).click();
+    const title = page.getByText("Casey's Keepers").last();
+    const memberCount = page.getByRole("button", { name: "Community · 1 member" });
+    await expect(title).toBeVisible();
+    await expect(page.getByRole("button", { name: "Leave" })).toBeVisible();
+    // Leave and View profile don't squeeze the name block, on phones too (#4, bug 9).
+    for (const el of [title, memberCount]) {
+      expect((await el.boundingBox())?.width ?? 0).toBeGreaterThan(80);
+    }
+    await memberCount.click();
     const members = page.getByRole("dialog", { name: "Community members" });
     await expect(members.getByText("Pat P.")).toBeVisible();
     await expect(members.getByText("Casey Coach")).toBeVisible();
     expect(backend.writesTo("get_community_members")[0].body).toEqual({ p_conversation_id: CHAT.channel });
   });
 
-  // App bug: when Messages already shows a conversation, New message (or any in-app link to
-  // /chat?conversationId=X) changes the URL but leaves the old thread open. fetchConversations in
-  // src/pages/ChatPage.tsx (~line 170) keeps selectedConversationId whenever it's still in the
-  // list, so the requested conversationId is ignored.
-  test.fixme("New message picks a coach and opens the existing chat", async ({ page, backend }) => {
+  // With another thread open, New message (a new ?conversationId= link) opens the picked chat.
+  test("New message picks a coach and opens the existing chat", async ({ page, backend }) => {
     backend.rpc.get_athlete_home = { athlete: null, next: null, focus: null, coaches: [{ id: IDS.coach, name: "Casey Coach", slug: IDS.coachSlug, photo: null, next_date: null, credits_left: 0 }] };
     await page.goto(`/chat?conversationId=${CHAT.other}`);
     await expect(page.getByText("Can we book another keeper session?")).toBeVisible();
@@ -195,6 +194,20 @@ test.describe("messages as a parent", () => {
     // An existing chat is reused, not duplicated.
     expect(backend.writesTo("conversations", "POST")).toHaveLength(0);
     await expect(page.getByText("Great work on first touch today.")).toBeVisible();
+    await expect(page.getByText("Can we book another keeper session?")).toHaveCount(0);
+    await expect(threadInput(page)).toHaveAttribute("placeholder", "Write to Casey");
+  });
+
+  test("after a ?conversationId= link, picking another chat from the list keeps it open", async ({ page }) => {
+    await page.goto(`/chat?conversationId=${CHAT.other}`);
+    await expect(page.getByText("Can we book another keeper session?")).toBeVisible();
+    await openList(page);
+    await listRow(page, "Casey Coach").click();
+    await expect(threadInput(page)).toHaveAttribute("placeholder", "Write to Casey");
+    await expect(page.getByText("Great work on first touch today.")).toBeVisible();
+    // A later refresh of the list doesn't snap back to the linked conversation.
+    await page.waitForTimeout(500);
+    await expect(threadInput(page)).toHaveAttribute("placeholder", "Write to Casey");
   });
 });
 
@@ -205,10 +218,6 @@ test.describe("messages as a parent with no chats yet", () => {
   });
 
   test("New message starts a chat with a coach", async ({ page, backend }) => {
-    // App bug (phone): with no conversations there is no "Open conversations" button (it lives in
-    // the thread header, which only renders when a chat exists), and the list drawer starts closed,
-    // so New message can't be reached on phones. src/pages/ChatPage.tsx (~line 1080).
-    test.fixme(isPhone(page), "New message is unreachable on phones with no conversations");
     backend.rpc.get_athlete_home = { athlete: null, next: null, focus: null, coaches: [{ id: IDS.coach, name: "Casey Coach", slug: IDS.coachSlug, photo: null, next_date: null, credits_left: 2 }] };
     await page.goto("/chat");
     await expect(page.getByRole("heading", { name: "No conversations yet" })).toBeVisible();
@@ -233,11 +242,7 @@ test.describe("messages as a parent with no chats yet", () => {
     await expect(page.getByText("No messages yet. Send the first one below.")).toHaveCount(0);
   });
 
-  // App bug: the first message in a new chat never sends the "first message" email. handleSend in
-  // src/pages/ChatPage.tsx (~line 826) sets last_message_at and appends the message, then awaits
-  // updateConversationMetadata; meanwhile the effect at ~line 363 sees last_message_at and adds the
-  // conversation to firstMessageNotifiedRef, so the check after the await is already false.
-  test.fixme("the first message in a new chat emails the coach", async ({ page, backend }) => {
+  test("the first message in a new chat emails the coach", async ({ page, backend }) => {
     backend.rpc.get_athlete_home = { athlete: null, next: null, focus: null, coaches: [{ id: IDS.coach, name: "Casey Coach", slug: IDS.coachSlug, photo: null, next_date: null, credits_left: 2 }] };
     await page.goto("/chat");
     await openList(page);
@@ -248,14 +253,22 @@ test.describe("messages as a parent with no chats yet", () => {
     await threadInput(page).fill("Hi Casey, is Saturday open?");
     await page.getByRole("button", { name: "Send", exact: true }).click();
     await expect.poll(() => backend.writesTo("send-conversation-email").length).toBe(1);
-    expect(backend.writesTo("send-conversation-email")[0].body).toMatchObject({ conversationId: id, first_message: true, first_reply: false });
+    expect(backend.writesTo("send-conversation-email")[0].body).toMatchObject({
+      conversationId: id,
+      actorId: IDS.parentUser,
+      messageBody: "Hi Casey, is Saturday open?",
+      first_message: true,
+      first_reply: false,
+    });
+    // Only the first message emails: a second one doesn't.
+    await threadInput(page).fill("Or Sunday?");
+    await page.getByRole("button", { name: "Send", exact: true }).click();
+    await expect.poll(() => backend.writesTo("messages", "POST").length).toBe(2);
+    await page.waitForTimeout(300);
+    expect(backend.writesTo("send-conversation-email")).toHaveLength(1);
   });
 
   test("New message with no coaches points to the directory", async ({ page }) => {
-    // App bug (phone): with no conversations there is no "Open conversations" button (it lives in
-    // the thread header, which only renders when a chat exists), and the list drawer starts closed,
-    // so New message can't be reached on phones. src/pages/ChatPage.tsx (~line 1080).
-    test.fixme(isPhone(page), "New message is unreachable on phones with no conversations");
     await page.goto("/chat");
     await openList(page);
     await page.getByRole("button", { name: "New message" }).click();
