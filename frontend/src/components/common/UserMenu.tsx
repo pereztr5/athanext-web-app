@@ -257,6 +257,7 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const fallbackSrc = fallbackImg && fallbackImg.trim() !== '' ? fallbackImg : null;
   const initials = getInitials(displayName, displayEmail);
   const avatarReady = avatarReadyProp ?? profileReady;
+  const [menuOpen, setMenuOpen] = useState(false);
   const [allowFallback, setAllowFallback] = useState(!useFallbackDelay);
   const effectiveSrc = platformSrc || (allowFallback ? fallbackSrc : null);
   const expectedAvatar = Boolean(platformSrc || fallbackSrc || userProfile?.image_url || user?.user_metadata?.avatar_url);
@@ -379,9 +380,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({
   const itemClass =
     "flex h-control cursor-pointer items-center gap-2 rounded-control px-2.5 text-body-m text-dark outline-none focus:bg-light-400 data-[highlighted]:bg-light-400 [&>svg]:size-4 [&>svg]:text-dark-300"
   const divider = "my-1 h-px bg-light-525";
+  // The footer links are plain buttons, not menu items, so close the menu ourselves: left open,
+  // the modal menu blocks clicks on the cookie banner or legal overlay they bring up.
+  const closeMenuThen = (open: () => void) => {
+    setMenuOpen(false);
+    open();
+  };
 
   return (
-    <DropdownMenu>
+    <DropdownMenu open={menuOpen} onOpenChange={setMenuOpen}>
       <DropdownMenuTrigger asChild>
         {sidebarVariant ? (
           <button
@@ -468,15 +475,15 @@ export const UserMenu: React.FC<UserMenuProps> = ({
         </DropdownMenuItem>
         <div className="px-2 pb-2 pt-1">
           <p className="px-2 text-caption text-dark-300">
-            <button type="button" className="hover:text-dark hover:underline" onClick={() => openLegalDoc("terms")}>
+            <button type="button" className="hover:text-dark hover:underline" onClick={() => closeMenuThen(() => openLegalDoc("terms"))}>
               Terms of service
             </button>
             {" · "}
-            <button type="button" className="hover:text-dark hover:underline" onClick={() => openLegalDoc("privacy")}>
+            <button type="button" className="hover:text-dark hover:underline" onClick={() => closeMenuThen(() => openLegalDoc("privacy"))}>
               Privacy policy
             </button>
             {" · "}
-            <button type="button" className="hover:text-dark hover:underline" onClick={openCookieSettings}>
+            <button type="button" className="hover:text-dark hover:underline" onClick={() => closeMenuThen(openCookieSettings)}>
               Cookie settings
             </button>
           </p>

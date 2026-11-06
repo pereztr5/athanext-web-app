@@ -120,10 +120,9 @@ test.describe("contact us", () => {
     expect(backend.writesTo("contact_submissions")).toHaveLength(0);
   });
 
-  // App bug: ContactForm.handleChange only clears its own localErrors, but the field errors
-  // come from useContactSubmission's `errors` prop, which stays until the next submit. So after
-  // fixing a field its red error keeps showing while the visitor types.
-  test.fixme("a field's error clears once the visitor edits it", async ({ page }) => {
+  // The field errors come from useContactSubmission and stay until the next submit, so
+  // ContactForm hides a field's error once that field is edited (issue #4, bug 14).
+  test("a field's error clears once the visitor edits it", async ({ page }) => {
     await page.goto("/contact");
     await page.getByLabel("Full name").fill("J");
     await page.getByLabel("Email address").fill("jo@e2e.test");
@@ -358,11 +357,10 @@ test.describe("cookie banner", () => {
     expect(await consentCookie(page)).toBe("all");
   });
 
-  // App bug: "Cookie settings" in UserMenu (src/components/common/UserMenu.tsx:479) is a plain
-  // button inside the Radix DropdownMenuContent, not a DropdownMenuItem, so the menu stays open.
-  // The open modal menu blocks pointer events on the rest of the page, so the banner it just
-  // brought back can't be clicked until the menu is dismissed (two clicks to answer).
-  test.fixme("Cookie settings closes the account menu so the banner can be answered at once", async ({ page, as }) => {
+  // "Cookie settings" is a plain button in the account menu's footer, not a menu item, so
+  // UserMenu closes the menu itself. Left open, the modal menu blocks pointer events on the
+  // banner it just brought back (issue #4, bug 15).
+  test("Cookie settings closes the account menu so the banner can be answered at once", async ({ page, as }) => {
     await as(page, "coach");
     await page.goto("/help");
     await banner(page).getByRole("button", { name: "Only essential" }).click();

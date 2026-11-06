@@ -18,10 +18,12 @@ interface ContactFormProps {
   initialData?: Partial<ContactFormData>;
 }
 
+const NO_ERRORS: Record<string, string> = {};
+
 export const ContactForm = ({
   onSubmit,
   isSubmitting = false,
-  errors = {},
+  errors = NO_ERRORS,
   initialData = {}
 }: ContactFormProps) => {
   const [formData, setFormData] = useState<ContactFormData>({
@@ -31,7 +33,13 @@ export const ContactForm = ({
     message: initialData.message || "",
   });
 
-  const [localErrors, setLocalErrors] = useState<Record<string, string>>({});
+  // Fields edited since the current `errors` arrived: their error is stale, so hide it.
+  const [editedFields, setEditedFields] = useState<ReadonlySet<string>>(() => new Set());
+  const [errorsShown, setErrorsShown] = useState(errors);
+  if (errorsShown !== errors) {
+    setErrorsShown(errors);
+    setEditedFields(new Set());
+  }
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -46,12 +54,8 @@ export const ContactForm = ({
     }));
 
     // Clear error for this field
-    if (localErrors[name] || errors[name]) {
-      setLocalErrors(prev => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+    if (errors[name] && !editedFields.has(name)) {
+      setEditedFields(prev => new Set(prev).add(name));
     }
   };
 
@@ -59,8 +63,6 @@ export const ContactForm = ({
     if (e && typeof e.preventDefault === 'function') {
       e.preventDefault();
     }
-
-    setLocalErrors({});
 
     try {
       const success = await onSubmit(formData);
@@ -81,7 +83,9 @@ export const ContactForm = ({
     }
   };
 
-  const allErrors = { ...localErrors, ...errors };
+  const allErrors = Object.fromEntries(
+    Object.entries(errors).filter(([field]) => !editedFields.has(field))
+  );
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col justify-center gap-5">
