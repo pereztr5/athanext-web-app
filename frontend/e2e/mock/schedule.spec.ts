@@ -451,11 +451,7 @@ test.describe("Plan next week", () => {
     expect(Date.parse(String(publish.p_closes_at))).not.toBeNaN();
   });
 
-  // BUG: scheduleAPI.setOfferSessionTags (src/api/schedule.ts) calls `supabase.rpc` after copying
-  // it into a local (`const rpc = supabase.rpc as ...; rpc(...)`), so the call runs without
-  // `this` and throws "Cannot read properties of undefined (reading 'rest')" before any request.
-  // The tags never reach the week card and the coach is told "The tag didn't save on the week card."
-  test.fixme("sending the week writes each session's tag onto the week card", async ({ page, as, backend }) => {
+  test("sending the week writes each session's tag onto the week card", async ({ page, as, backend }) => {
     seedPlan(backend);
     await as(page, "coach");
     await page.goto("/schedule/plan");

@@ -9,7 +9,7 @@ import { buildId } from "@/utils/chatHelpers";
 type Row = Record<string, any>;
 
 /** until types are regenerated after the migration is applied */
-const rpc = supabase.rpc as unknown as (
+const rpc = supabase.rpc.bind(supabase) as unknown as (
   fn: string,
   args?: Record<string, unknown>
 ) => Promise<{ data: unknown; error: { code?: string; message?: string } | null }>;
