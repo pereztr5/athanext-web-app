@@ -55,7 +55,7 @@ const CoachProfile = () => {
     (typeof (userProfile as any)?.coach_id === "string" ? (userProfile as any).coach_id : "") ||
     (typeof (user?.user_metadata as any)?.coach_id === "string" ? (user?.user_metadata as any).coach_id : "");
 
-  const { coach, loading, error } = useCoachDetails(resolvedCoachKey);
+  const { coach, loading } = useCoachDetails(resolvedCoachKey);
   const { data: packages = [], isLoading: packagesLoading } = useCoachPackages(coach?.id);
   const { data: coachBrands = [] } = useCoachBrands(coach?.id);
   const [showReviewModal, setShowReviewModal] = useState(false);
@@ -172,16 +172,6 @@ const CoachProfile = () => {
       state: { from: { pathname: ROUTES.BOOK, search: `?coach=${coach.id}` } },
     });
   }, [coach?.id, navigate]);
-
-  // Handle errors
-  if (error) {
-    toast({
-      title: "Coach not found",
-      description: "The coach profile you're looking for doesn't exist.",
-      variant: "destructive",
-    });
-    navigate('/');
-  }
 
   const handleSendMessage = async () => {
     if (!coach?.id) return;

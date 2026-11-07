@@ -41,14 +41,22 @@ export type CoachDetails = Omit<PublicCoach, "profile_faqs" | "is_verified" | "c
   profile_faqs?: { id: string; question: string; answer: string }[] | null;
 };
 
+/** A hidden coach seen by someone other than its owner; retrying won't change it. */
+export class CoachNotFoundError extends Error {
+  constructor() {
+    super("Coach not found");
+    this.name = "CoachNotFoundError";
+  }
+}
+
 export const useCoachDetails = (coachKey: string | undefined) => {
-  const query = useQuery<CoachDetails>({
+  // null = no coach has this slug or id. That's an answer, not an error: it isn't retried, and a
+  // remount (e.g. the app shell taking over once auth settles) doesn't drop back to loading.
+  const query = useQuery<CoachDetails | null>({
     queryKey: ["coach-details", coachKey],
     queryFn: async () => {
       const resolvedId = await resolveCoachId(coachKey as string);
-      if (!resolvedId) {
-        throw new Error("Coach not found");
-      }
+      if (!resolvedId) return null;
 
       // Fetch coach basic info with user_profiles join to get sport, gender, and zip_code
       const { data: coachData, error: coachError } = await supabase
@@ -67,16 +75,16 @@ export const useCoachDetails = (coachKey: string | undefined) => {
         .eq("id", resolvedId)
         .single();
 
-      if (coachError || !coachData) {
-        throw new Error(coachError?.message || "Coach not found");
-      }
+      // PGRST116: .single() matched no row.
+      if (coachError?.code === "PGRST116" || (!coachError && !coachData)) return null;
+      if (coachError) throw new Error(coachError.message);
 
       if (coachData.status === "hidden") {
         const { data: authData } = await supabase.auth.getUser();
         const profiles = Array.isArray(coachData.user_profiles) ? coachData.user_profiles : [];
         const isOwner = profiles.some((profile) => profile.id === authData.user?.id);
         if (!isOwner) {
-          throw new Error("Coach not found");
+          throw new CoachNotFoundError();
         }
       }
 
@@ -106,9 +114,7 @@ export const useCoachDetails = (coachKey: string | undefined) => {
           : null;
 
       const slug = (coachData as { slug?: string | null }).slug;
-      if (!slug) {
-        throw new Error("Coach not found");
-      }
+      if (!slug) return null;
 
       return {
         ...coachData,
@@ -124,6 +130,8 @@ export const useCoachDetails = (coachKey: string | undefined) => {
       } as unknown as CoachDetails;
     },
     enabled: !!coachKey,
+    // A hidden coach stays hidden for this viewer: show "Coach not found" at once, not after 3 retries.
+    retry: (failureCount, err) => !(err instanceof CoachNotFoundError) && failureCount < 3,
   });
 
   return {

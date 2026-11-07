@@ -150,18 +150,27 @@ test.describe("coach profile", () => {
     await expect(page.getByText("About Casey")).toBeVisible();
   });
 
-  // App bug: an unknown slug (resolve_coach_by_slug_or_id returns null, as the SQL does) makes
-  // useCoachDetails throw "Coach not found", which react-query retries 3 times: the page sits on
-  // an empty skeleton for ~7s. Then CoachProfile calls toast() and navigate('/') during render,
-  // which throws "Too many re-renders" and dumps the visitor on the sign-in page. The page
-  // already has a "Coach not found" state with Browse coaches; it should show that.
-  test.fixme("an unknown coach shows Coach not found", async ({ page, backend }) => {
-    seedDirectory(backend);
-    seedCoachProfile(backend);
-    await page.goto("/coach/no-such-coach");
-    await expect(page.getByRole("heading", { name: "Coach not found" })).toBeVisible();
-    await expect(page.getByRole("button", { name: "Browse coaches" })).toBeVisible();
-  });
+  // An unknown slug (resolve_coach_by_slug_or_id returns null, as the SQL does) shows the page's
+  // "Coach not found" state, on the profile and on its pricing link: no react-query retries on a
+  // skeleton, no toast + navigate during render that ends on sign-in.
+  for (const signedIn of [false, true]) {
+    test(`an unknown coach shows Coach not found${signedIn ? " when signed in" : ""}`, async ({ page, backend, as }) => {
+      seedDirectory(backend);
+      seedCoachProfile(backend);
+      if (signedIn) await as(page, "parent");
+      const lookups = () =>
+        backend.writes.filter((w) => w.kind === "rpc" && w.name === "resolve_coach_by_slug_or_id" && (w.body as { p_key?: string })?.p_key === "no-such-coach").length;
+      for (const path of ["/coach/no-such-coach", "/coach/no-such-coach/pricing"]) {
+        const before = lookups();
+        await page.goto(path);
+        await expect(page.getByRole("heading", { name: "Coach not found" })).toBeVisible();
+        await expect(page.getByRole("button", { name: "Browse coaches" })).toBeVisible();
+        await expect(page).toHaveURL(new RegExp(`${path}$`));
+        // One lookup: not retried, and not repeated when the app shell remounts the page.
+        expect(lookups() - before).toBe(1);
+      }
+    });
+  }
 
   test("as a parent: who card, pricing, reviews with replies and FAQ; Book opens Book a Session", async ({ page, backend, as }) => {
     seedDirectory(backend);
