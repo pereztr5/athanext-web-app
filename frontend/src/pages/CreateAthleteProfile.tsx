@@ -19,9 +19,10 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useProfile } from "@/contexts/ProfileContext";
 import { useUserProfile } from "@/hooks/useUserProfile";
+import { useRole } from "@/hooks/useRole";
 import { emptyProfileData, deriveInitials, mapFormToDbPayload } from "@/utils/athleteProfileHelpers";
 import type { AthleteProfileFormData } from "@/types/athleteProfile";
-import { ATHLETE_SPORTS_OPTIONS } from "@/utils/db";
+import { ATHLETE_SPORTS_OPTIONS, toSportKey } from "@/utils/db";
 import { ROUTES } from "@/routes";
 import { PathwayTagChips } from "@/components/common/PathwayTagChips";
 import { suggestPathwayTags } from "@/constants/pathwayTags";
@@ -38,11 +39,13 @@ const CreateAthleteProfile = () => {
   const { user, refreshUserProfile } = useAuth();
   const { saveAthleteProfile, refetchProfile } = useProfile();
   const { profile: userProfile, updateProfile } = useUserProfile();
+  // A parent creates their child's profile: the account stays a parent account with its own name.
+  const isParent = useRole().role === "parent";
 
   const [form, setForm] = useState<AthleteProfileFormData>({
     ...emptyProfileData,
     fullName: user?.user_metadata?.name ?? "",
-    sport: (user?.user_metadata as any)?.sport ?? "",
+    sport: toSportKey((user?.user_metadata as any)?.sport),
     position: (user?.user_metadata as any)?.position ?? "",
     dateOfBirth: (user?.user_metadata as any)?.date_of_birth ?? "",
   });
@@ -59,7 +62,7 @@ const CreateAthleteProfile = () => {
       setForm((prev) => ({
         ...prev,
         fullName: prev.fullName || userProfile.name || "",
-        sport: prev.sport || userProfile.sport || "",
+        sport: prev.sport || toSportKey(userProfile.sport),
         position: prev.position || userProfile.position || "",
         dateOfBirth: prev.dateOfBirth || (userProfile.date_of_birth as string) || "",
         zipCode: prev.zipCode || (userProfile.zip_code as string | null) || null,
@@ -121,10 +124,9 @@ const CreateAthleteProfile = () => {
       const savedProfile = await saveAthleteProfile(payload);
 
       await updateProfile({
-        persona_type: "athlete",
+        ...(isParent ? {} : { persona_type: "athlete" as const, name: form.fullName.trim() }),
         athlete_id: savedProfile?.id ?? userProfile?.athlete_id ?? null,
-        name: form.fullName.trim(),
-        sport: form.sport.trim(),
+        sport: toSportKey(form.sport),
         position: form.position?.trim() || null,
         date_of_birth: form.dateOfBirth,
         zip_code: form.zipCode,

@@ -68,11 +68,11 @@ export const profileSchema = z.object({
     .trim()
     .min(1, "Date of birth is required")
     .refine(isValidAge, "Please enter a valid date of birth (age must be between 5-120 years)"),
+  // Optional, as on Create your profile; checked only when given.
   phoneNumber: z
     .string()
     .trim()
-    .min(1, "Phone number is required")
-    .refine(isValidE164, "Enter a valid phone number for the selected country"),
+    .refine((value) => value === "" || isValidE164(value), "Enter a valid phone number for the selected country"),
   tags: z
     .array(z.string().trim().min(1, "Tag cannot be empty").max(INPUT_LIMITS?.MAX_TAG_LENGTH ?? 50, "Tag too long"))
     .max(MAX_TAGS, `You can only add up to ${MAX_TAGS} tags`)

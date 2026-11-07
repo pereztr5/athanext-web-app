@@ -213,7 +213,7 @@ test.describe("family home", () => {
       highlight_video_url: "youtube.com/watch?v=e2e",
     });
     const account = backend.writesTo("user_profiles", "PATCH").find((w) => (w.body as Record<string, unknown>).sport !== undefined);
-    expect(account?.body).toMatchObject({ sport: "Soccer" });
+    expect(account?.body).toMatchObject({ sport: "soccer" });
     expect(account?.url).toContain(`athlete_id=eq.${IDS.athlete}`);
   });
 
@@ -223,10 +223,7 @@ test.describe("family home", () => {
     await page.goto("/dashboard");
     await page.getByRole("button", { name: "Edit profile" }).click();
     const dialog = page.getByRole("dialog", { name: "Edit profile" });
-    // Clearing the first name moves the last name up (see the fixme below), so clear it twice.
     await dialog.getByLabel("First name").fill("");
-    await dialog.getByLabel("First name").fill("");
-    await expect(dialog.getByLabel("Last name")).toHaveValue("");
     await dialog.getByLabel("Date of birth").fill(addDays(etDate(), 1));
     await dialog.getByLabel("Highlight video link (optional)").fill("not a link");
     await dialog.getByRole("button", { name: "Save" }).click();
@@ -239,10 +236,9 @@ test.describe("family home", () => {
     await expect(dialog).toBeHidden();
   });
 
-  // Bug: the first and last name boxes are one full_name string split on the first space
-  // (AthleteHome.tsx EditProfileDialog, splitName). Clearing the first name to retype it leaves
-  // "Athlete", which then shows as the first name with an empty last name.
-  test.fixme("clearing the first name keeps the last name where it is", async ({ page, as, backend }) => {
+  // Guards #4 bug 13: first and last name are separate boxes while editing, so clearing the first
+  // name to retype it leaves the last name alone.
+  test("clearing the first name keeps the last name where it is", async ({ page, as, backend }) => {
     seedAthleteHome(backend);
     await as(page, "parent");
     await page.goto("/dashboard");

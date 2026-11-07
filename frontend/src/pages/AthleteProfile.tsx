@@ -62,7 +62,7 @@ import { type AthleteProfile as DbAthleteProfile } from "@/hooks/useProfile";
 import { athletesAPI, chatAPI } from "@/api";
 import { getAthleteSessions } from "@/api/sessions";
 import { supabase } from "@/integrations/supabase/client";
-import { ATHLETE_PROFILE_BASE_STATS, ATHLETE_PROFILE_CONSTANTS, ATHLETE_IMAGE_LIMITS } from "@/utils/db";
+import { ATHLETE_PROFILE_BASE_STATS, ATHLETE_PROFILE_CONSTANTS, ATHLETE_IMAGE_LIMITS, toSportKey } from "@/utils/db";
 import { getAcademicYearLabel } from "@/utils/academicYear";
 import { getStoragePathFromPublicUrl } from "@/utils/storage";
 import { useViewerTimeZone } from "@/hooks/useViewerTimeZone";
@@ -189,6 +189,7 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
   const { setUserImg, setUserName, refreshUserProfile, userProfile: authUserProfile } = useAuth();
   const viewerTimeZone = useViewerTimeZone();
   const { role } = useRole();
+  const isParentPersona = role === "parent";
   const navigate = useNavigate();
 
   const [isEditOpen, setIsEditOpen] = useState(false);
@@ -786,19 +787,21 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
           position?: string | null;
           date_of_birth?: string | null;
         } = {
-          persona_type: 'athlete',
+          // A parent edits their child's profile: the account stays a parent account, and keeps
+          // its own name and photo.
+          ...(isParentPersona ? {} : { persona_type: 'athlete' as const }),
           athlete_id: savedProfile?.id ?? profileState.userProfile?.athlete_id ?? null,
-          sport: updatedProfile.sport || null,
+          sport: toSportKey(updatedProfile.sport) || null,
           position: updatedProfile.position || null,
           date_of_birth: updatedProfile.dateOfBirth || null,
         };
 
-        if (updatedProfile.fullName !== activeProfile.fullName) {
+        if (!isParentPersona && updatedProfile.fullName !== activeProfile.fullName) {
           updates.name = updatedProfile.fullName;
           setUserName(updatedProfile.fullName);
         }
 
-        if (uploadedImageUrl || updatedProfile.profileImageUrl !== activeProfile.profileImageUrl) {
+        if (!isParentPersona && (uploadedImageUrl || updatedProfile.profileImageUrl !== activeProfile.profileImageUrl)) {
           const finalImageUrl = uploadedImageUrl || updatedProfile.profileImageUrl;
           updates.image_url = finalImageUrl;
           setUserImg(finalImageUrl);
@@ -873,7 +876,6 @@ const AthleteProfile = ({ profile: profileState, loading: profileLoading, error:
     return 0;
   }, [profileState]);
 
-  const isParentPersona = role === "parent";
 
   const isProfileIncomplete = profileCompletion < 100;
 

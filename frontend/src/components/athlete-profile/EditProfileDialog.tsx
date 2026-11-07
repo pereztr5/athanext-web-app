@@ -31,6 +31,7 @@ import {
   ATHLETE_SPORTS_OPTIONS,
   ATHLETE_IMAGE_LIMITS,
   normalizeAthletePosition,
+  toSportKey,
 } from "@/utils/db";
 import { GenderSelect } from "@/components/form/GenderSelect";
 import type { GenderValue } from "@/components/form/GenderSelect";
@@ -102,6 +103,7 @@ const FieldError = ({ message }: { message?: string }) =>
 
 const labelClass = "text-label-sm text-dark";
 const hintClass = "text-caption text-dark-300";
+const optionalClass = "font-normal text-dark-200";
 const fieldClass = "grid gap-2";
 const overlayPanelClass =
   "w-full space-y-5 rounded-card border border-light-525 bg-light-300 p-[25px] text-dark shadow-overlay";
@@ -117,7 +119,7 @@ const hydrateProfile = (profile: AthleteProfileFormData | null): AthleteProfileF
     ...profile,
     fullName: typeof profile.fullName === 'string' ? profile.fullName : '',
     initials: profile.initials || deriveInitials(profile.fullName || ""),
-    sport: typeof profile.sport === 'string' ? profile.sport : '',
+    sport: typeof profile.sport === 'string' ? toSportKey(profile.sport) : '',
     position: typeof profile.position === 'string'
       ? normalizeAthletePosition(profile.sport, profile.position)
       : '',
@@ -1284,7 +1286,9 @@ export const EditProfileDialog = ({ open, onOpenChange, profile, onSave, onImage
           </div>
 
           <div className={fieldClass}>
-            <Label htmlFor="phoneNumber" className={labelClass}>Phone number</Label>
+            <Label htmlFor="phoneNumber" className={labelClass}>
+              Phone number <span className={optionalClass}>(optional)</span>
+            </Label>
             <PhoneInput
               id="phoneNumber"
               value={formData?.phoneNumber}
