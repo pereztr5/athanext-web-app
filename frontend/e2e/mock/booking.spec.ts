@@ -353,7 +353,8 @@ test.describe("book a session", () => {
     await expect(page).toHaveURL(new RegExp(`/booking-confirmation\\?bookings=${BOOK_IDS.booking1}$`));
     await expect(page.getByRole("heading", { name: "You're booked" })).toBeVisible();
     expect(onlyCall(backend, "create-booking-payment-v0")).toEqual({ occurrence_ids: [BOOK_IDS.session1], athlete_id: IDS.athleteProfile, use_credits: true });
-    expect(backend.writesTo("get_booking_receipt")[0].body).toEqual({ p_stripe_session_id: null, p_booking_ids: [BOOK_IDS.booking1] });
+    // The heading shows before the receipt is fetched, so wait for the call.
+    await expect.poll(() => backend.writesTo("get_booking_receipt")[0]?.body).toEqual({ p_stripe_session_id: null, p_booking_ids: [BOOK_IDS.booking1] });
   });
 
   test("paying the coach directly: offline pay sends pay_offline and books without Stripe", async ({ page, backend, as }) => {
