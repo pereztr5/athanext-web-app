@@ -26,7 +26,7 @@ import {
 import { useAuth } from "@/contexts/AuthContext";
 import { useRole } from "@/hooks/useRole";
 import { useBack } from "@/hooks/useBack";
-import { useNavigate, useSearchParams } from "react-router-dom";
+import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { ROUTES } from "@/routes";
 import { formatDisplayName, getInitials, sendConversationNotificationEmail } from "@/utils/chatHelpers";
 import { formatDate } from "@/utils/dateHelpers";
@@ -48,6 +48,7 @@ const CONVERSATION_PAGE_SIZE = 6;
 const ChatPage = () => {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
+  const locationKey = useLocation().key;
   const { user, userProfile, userImg, userName, setHasNewMessage } = useAuth();
   const isMobile = useIsMobile();
 
@@ -73,6 +74,9 @@ const ChatPage = () => {
   const messagesContainerRef = useRef<HTMLDivElement | null>(null);
   const firstMessageNotifiedRef = useRef<Set<string>>(new Set());
   const firstReplyNotifiedRef = useRef<Set<string>>(new Set());
+  // The navigation (location.key) whose ?conversationId= was last opened. Each new link or
+  // New message opens its conversation once; after that a pick from the list is kept.
+  const openedLinkKeyRef = useRef<string | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const [newMessageOpen, setNewMessageOpen] = useState(false);
   const { role: personaType } = useRole();
@@ -85,6 +89,13 @@ const ChatPage = () => {
       setIsSidebarOpen(true);
     }
   }, [isMobile]);
+
+  // On phones a link to a conversation (e.g. New message, picked from the list drawer) shows
+  // that thread, so close the drawer over it.
+  const linkedConversationId = searchParams.get("conversationId");
+  useEffect(() => {
+    if (isMobile && linkedConversationId) setIsSidebarOpen(false);
+  }, [isMobile, linkedConversationId, locationKey]);
 
   const mapConversationRows = useCallback(
     (rows: ConversationWithParticipants[]): ChatConversation[] =>
@@ -167,13 +178,20 @@ const ChatPage = () => {
     setConversationLimit(requestedLimit);
     setHasMoreConversations(hasMore);
     setConversations(mapped);
+    const requestedIsListed = Boolean(
+      requestedConversationId && mapped.some((c) => c.id === requestedConversationId)
+    );
     const hasSelectedConversation = Boolean(
       selectedConversationId && mapped.some((c) => c.id === selectedConversationId)
     );
-    if (!hasSelectedConversation) {
-      if (requestedConversationId && mapped?.some((c) => c.id === requestedConversationId)) {
+    if (requestedIsListed && openedLinkKeyRef.current !== locationKey) {
+      // A new link to /chat?conversationId=X wins over whatever thread is open.
+      openedLinkKeyRef.current = locationKey;
+      setSelectedConversationId(requestedConversationId);
+    } else if (!hasSelectedConversation) {
+      if (requestedIsListed) {
         setSelectedConversationId(requestedConversationId);
-      } else if (mapped && mapped.length > 0) {
+      } else if (mapped.length > 0) {
         setSelectedConversationId(mapped[0].id);
       } else {
         setSelectedConversationId(null);
@@ -182,7 +200,7 @@ const ChatPage = () => {
     if (!silent) {
       setIsConversationsLoading(false);
     }
-  }, [user, conversationLimit, searchParams, selectedConversationId, mapConversationRows]);
+  }, [user, conversationLimit, searchParams, locationKey, selectedConversationId, mapConversationRows]);
 
   useEffect(() => {
     if (!user?.id) return;
@@ -769,6 +787,22 @@ const ChatPage = () => {
     const isFirstMessageInConversation = messagesBeforeSend.length === 0;
     const isReplyToCoach =
       Boolean(lastMessageBeforeSend) && lastMessageBeforeSend.sender_id !== user.id;
+    const conversationId = selectedConversation.id;
+
+    // Decide which email this send triggers before any state changes: the effect that marks
+    // conversations as already notified reacts to the optimistic last_message_at and appended
+    // message below, and would otherwise win the race. Claim the email now; release it if the
+    // send fails.
+    let email: "firstMessage" | "firstReply" | null = null;
+    if (selectedConversation.is_group) {
+      // Community channels send no notifications (ATH-21).
+    } else if (isFirstMessageInConversation && !firstMessageNotifiedRef.current.has(conversationId)) {
+      email = "firstMessage";
+    } else if (isReplyToCoach && !firstReplyNotifiedRef.current.has(conversationId)) {
+      email = "firstReply";
+    }
+    const notifiedRef = email === "firstMessage" ? firstMessageNotifiedRef : email === "firstReply" ? firstReplyNotifiedRef : null;
+    notifiedRef?.current.add(conversationId);
 
     setIsSending(true);
     const nowIso = new Date().toISOString();
@@ -781,6 +815,7 @@ const ChatPage = () => {
 
     if (error) {
       console.error("Failed to send message", error);
+      notifiedRef?.current.delete(conversationId);
     } else {
       setMessageInput("");
       // Optimistically update preview
@@ -820,37 +855,50 @@ const ChatPage = () => {
         })
       );
 
-      if (selectedConversation.is_group) {
-        // Community channels send no notifications (ATH-21).
-      } else if (
-        isFirstMessageInConversation &&
-        !firstMessageNotifiedRef.current.has(selectedConversation.id)
-      ) {
-        firstMessageNotifiedRef.current.add(selectedConversation.id);
+      if (email) {
         void sendConversationNotificationEmail({
-          conversationId: selectedConversation.id,
+          conversationId,
           actorId: user.id,
           messageBody: trimmed,
           messageTimestamp: nowIso,
-          firstMessage: true,
-        });
-      } else if (
-        isReplyToCoach &&
-        !firstReplyNotifiedRef.current.has(selectedConversation.id)
-      ) {
-        firstReplyNotifiedRef.current.add(selectedConversation.id);
-        void sendConversationNotificationEmail({
-          conversationId: selectedConversation.id,
-          actorId: user.id,
-          messageBody: trimmed,
-          messageTimestamp: nowIso,
-          firstReply: true,
+          [email]: true,
         });
       }
     }
 
     setIsSending(false);
   };
+
+  // Phone only: open the list drawer, or leave Messages. Shown even with no conversations, so
+  // New message (in the list) stays reachable.
+  const mobileNav = isMobile ? (
+    <>
+      <button
+        type="button"
+        onClick={() => setIsSidebarOpen(true)}
+        className={cn(iconButton, "shrink-0")}
+        aria-label="Open conversations"
+      >
+        <Menu className="size-4" strokeWidth={1.5} />
+      </button>
+      <button
+        type="button"
+        onClick={handleBack}
+        className={cn(iconButton, "shrink-0")}
+        aria-label="Go back"
+      >
+        <ArrowLeft className="size-4" strokeWidth={1.5} />
+      </button>
+    </>
+  ) : null;
+
+  const canLeaveChannel = Boolean(
+    selectedConversation?.is_group &&
+      selectedConversation.conversation_participants?.some(
+        (p) => p.user_id === user?.id && p.role !== "owner"
+      )
+  );
+  const otherCoachId = selectedConversation?.otherCoachId ?? null;
 
   return (
     <div className="overflow-x-hidden px-4 pb-8 pt-1 md:px-5">
@@ -1045,6 +1093,10 @@ const ChatPage = () => {
                 </div>
               </div>
             ) : !hasConversations ? (
+              <>
+              {mobileNav ? (
+                <div className="flex items-center gap-[10px] px-[30px] pt-[30px]">{mobileNav}</div>
+              ) : null}
               <div className="flex-1 flex items-center justify-center px-10 py-12">
                 <div className="w-full max-w-xl rounded-card border border-light-525 bg-light-300 px-[25px] pb-[25px] pt-[30px] text-center sm:px-10 sm:pb-10">
                   <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-control border border-primary-300 bg-primary-50 text-primary">
@@ -1072,32 +1124,15 @@ const ChatPage = () => {
                   </div>
                 </div>
               </div>
+              </>
             ) : (
               <>
                 <div className="flex h-full flex-col gap-[10px] p-[30px]">
-                <div className="flex items-center justify-between gap-3">
-                  <div className="flex min-w-0 items-center gap-[10px]">
-                    {isMobile && (
-                      <>
-                        <button
-                          type="button"
-                          onClick={() => setIsSidebarOpen(true)}
-                          className={iconButton}
-                          aria-label="Open conversations"
-                        >
-                          <Menu className="size-4" strokeWidth={1.5} />
-                        </button>
-                        <button
-                          type="button"
-                          onClick={handleBack}
-                          className={iconButton}
-                          aria-label="Go back"
-                        >
-                          <ArrowLeft className="size-4" strokeWidth={1.5} />
-                        </button>
-                      </>
-                    )}
-                    <div className="size-[50px] shrink-0 overflow-hidden rounded-full border border-light-550 bg-light">
+                {/* On phones the actions get their own row so the name and member count keep their width. */}
+                <div className="flex flex-wrap items-center justify-between gap-3">
+                  <div className="flex min-w-0 flex-1 items-center gap-[10px]">
+                    {mobileNav}
+                    <div className={cn("shrink-0 overflow-hidden rounded-full border border-light-550 bg-light", isMobile ? "size-10" : "size-[50px]")}>
                       {selectedConversation?.otherUserImage ? (
                         <img src={selectedConversation.otherUserImage} alt="" className="size-full object-cover" />
                       ) : (
@@ -1106,7 +1141,7 @@ const ChatPage = () => {
                         </span>
                       )}
                     </div>
-                    <div className="min-w-0">
+                    <div className="min-w-0 flex-1">
                       <p className="truncate text-body-l text-dark">
                         {getConversationName(selectedConversation)}
                       </p>
@@ -1125,27 +1160,28 @@ const ChatPage = () => {
                       )}
                     </div>
                   </div>
-                  {selectedConversation?.is_group &&
-                  selectedConversation.conversation_participants?.some(
-                    (p) => p.user_id === user?.id && p.role !== "owner"
-                  ) ? (
-                    <button
-                      type="button"
-                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
-                      onClick={() => void handleLeaveChannel(selectedConversation.id)}
-                    >
-                      Leave
-                    </button>
-                  ) : null}
                   {!selectedConversation?.is_group ? <ConversationHeaderActions ctx={conversationContext} /> : null}
-                  {selectedConversation?.otherCoachId ? (
-                    <button
-                      type="button"
-                      className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
-                      onClick={() => navigate(`/coach/${selectedConversation.otherCoachId}`)}
-                    >
-                      View profile
-                    </button>
+                  {selectedConversation && (canLeaveChannel || otherCoachId) ? (
+                    <div className={cn("flex shrink-0 items-center gap-3", isMobile && "basis-full")}>
+                      {canLeaveChannel ? (
+                        <button
+                          type="button"
+                          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
+                          onClick={() => void handleLeaveChannel(selectedConversation.id)}
+                        >
+                          Leave
+                        </button>
+                      ) : null}
+                      {otherCoachId ? (
+                        <button
+                          type="button"
+                          className={cn(buttonVariants({ variant: "secondary", size: "sm" }), "shrink-0")}
+                          onClick={() => navigate(`/coach/${otherCoachId}`)}
+                        >
+                          View profile
+                        </button>
+                      ) : null}
+                    </div>
                   ) : null}
                 </div>
 
