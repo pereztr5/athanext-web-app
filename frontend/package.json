@@ -16,7 +16,9 @@
     "type-check": "tsc --noEmit -p tsconfig.app.json",
     "test": "TZ=UTC vitest run",
     "e2e": "playwright test",
-    "e2e:report": "playwright show-report"
+    "e2e:live": "playwright test -c playwright.live.config.ts",
+    "e2e:report": "playwright show-report",
+    "type-check:e2e": "tsc --noEmit -p tsconfig.e2e.json"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.10.0",

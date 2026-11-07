@@ -60,5 +60,16 @@ export default tseslint.config(
       ],
       "no-restricted-syntax": ["error", ...DS_CLASS_RULES],
     },
+  },
+  // Playwright tests run in Node. Fixtures call `use()` and take `{}` when they need no fixture,
+  // which the React hooks rule and no-empty-pattern would flag.
+  {
+    files: ["e2e/**/*.ts", "playwright*.config.ts"],
+    languageOptions: { globals: globals.node },
+    rules: {
+      "react-hooks/rules-of-hooks": "off",
+      "no-empty-pattern": "off",
+      "no-console": "off",
+    },
   }
 );
