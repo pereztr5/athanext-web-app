@@ -273,7 +273,8 @@ export const availabilityPeriod = (): Row => {
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
     weekly_slots: [],
-    occurrences: [occ("00000000-0000-4000-8000-0000000a0201", 2, "10:00:00", "11:00:00"), occ("00000000-0000-4000-8000-0000000a0202", 3, "10:00:00", "11:00:00")],
+    // Both on one day, so they always share a week: the table shows one week at a time.
+    occurrences: [occ("00000000-0000-4000-8000-0000000a0201", 2, "10:00:00", "11:00:00"), occ("00000000-0000-4000-8000-0000000a0202", 2, "11:00:00", "12:00:00")],
   };
 };
 
