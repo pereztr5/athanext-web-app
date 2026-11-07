@@ -4,6 +4,7 @@
  * gets the session as an offer with the payment link, since booking without payment needs
  * credits or a family paying outside AthaNext.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, ChevronRight, Search } from "@/components/icons";
@@ -99,7 +100,7 @@ export const AssignStep = ({
       onDone();
     },
     onError: (err: unknown) =>
-      toast({ title: err instanceof Error ? err.message : "Couldn't book that time", variant: "destructive" }),
+      toast({ title: errorMessage(err, "Couldn't book that time"), variant: "destructive" }),
   });
 
   return (

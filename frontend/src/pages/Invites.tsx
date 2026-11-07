@@ -4,6 +4,7 @@
  * Marketplace families stay on the roster only; they do not appear here.
  * Mounted as the invites view of My athletes (`?tab=invites`); `/invites` redirects there.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useMemo, useState } from "react";
 import { FileUp, Info, ShieldCheck } from "@/components/icons";
 import { Progress } from "@/components/ui/progress";
@@ -141,7 +142,7 @@ export const InvitesWorkList = ({ coachId }: { coachId: string | undefined }) =>
   const shown = rows.filter((r) => matchesFilter(r.status, filter));
 
   const fail = (title: string) => (e: unknown) =>
-    toast({ title, description: e instanceof Error ? e.message : undefined, variant: "destructive" });
+    toast({ title, description: errorMessage(e), variant: "destructive" });
   const track = async (id: string, run: () => Promise<unknown>) => {
     setBusyId(id);
     try {

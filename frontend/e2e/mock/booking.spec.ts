@@ -541,8 +541,8 @@ test.describe("booking confirmation", () => {
     await page.goto(`/booking-confirmation?bookings=${BOOK_IDS.booking1}`);
     // react-query retries three times before showing the error.
     await expect(page.getByRole("heading", { name: "Couldn't load this receipt" })).toBeVisible({ timeout: 20_000 });
-    // PostgREST errors aren't Error instances, so the page shows its own fallback.
-    await expect(page.getByText("Try again in a moment.")).toBeVisible();
+    // The server's message shows, not the page's own fallback.
+    await expect(page.getByText("These bookings aren't on your account")).toBeVisible();
     await expect(page.getByRole("link", { name: "View in My sessions" })).toBeVisible();
   });
 

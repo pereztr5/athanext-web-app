@@ -3,6 +3,7 @@
  * Centralized API calls for all authentication operations
  */
 
+import { errorMessage } from "@/utils/errorMessage";
 import { apiClient, type ApiResponse } from "@/api/client";
 import type { User, Session } from "@supabase/supabase-js";
 import { AUTHENTIC_EMAIL_MESSAGE } from "@/config/security";
@@ -61,9 +62,7 @@ export const authAPI = {
         error: {
           code: "UNKNOWN_ERROR",
           message:
-            error instanceof Error
-              ? error.message
-              : "Failed to get current user",
+            errorMessage(error, "Failed to get current user"),
           status: 500,
           originalError: error,
         },
@@ -103,7 +102,7 @@ export const authAPI = {
         error: {
           code: "UNKNOWN_ERROR",
           message:
-            error instanceof Error ? error.message : "Failed to get session",
+            errorMessage(error, "Failed to get session"),
           status: 500,
           originalError: error,
         },
@@ -210,7 +209,7 @@ export const authAPI = {
         data: null,
         error: {
           code: "UNKNOWN_ERROR",
-          message: error instanceof Error ? error.message : "Sign up failed",
+          message: errorMessage(error, "Sign up failed"),
           status: 500,
           originalError: error,
         },
@@ -257,7 +256,7 @@ export const authAPI = {
         data: null,
         error: {
           code: "UNKNOWN_ERROR",
-          message: error instanceof Error ? error.message : "Failed to resend confirmation email",
+          message: errorMessage(error, "Failed to resend confirmation email"),
           status: 500,
           originalError: error,
         },
@@ -301,7 +300,7 @@ export const authAPI = {
         data: null,
         error: {
           code: "UNKNOWN_ERROR",
-          message: error instanceof Error ? error.message : "Sign in failed",
+          message: errorMessage(error, "Sign in failed"),
           status: 500,
           originalError: error,
         },
@@ -355,9 +354,7 @@ export const authAPI = {
         error: {
           code: "UNKNOWN_ERROR",
           message:
-            error instanceof Error
-              ? error.message
-              : `OAuth sign in with ${provider} failed`,
+            errorMessage(error, `OAuth sign in with ${provider} failed`),
           status: 500,
           originalError: error,
         },
@@ -458,9 +455,7 @@ export const authAPI = {
         error: {
           code: "UNKNOWN_ERROR",
           message:
-            error instanceof Error
-              ? error.message
-              : "Failed to send password reset email",
+            errorMessage(error, "Failed to send password reset email"),
           status: 500,
           originalError: error,
         },
@@ -499,7 +494,7 @@ export const authAPI = {
         error: {
           code: "UNKNOWN_ERROR",
           message:
-            error instanceof Error ? error.message : "Failed to reset password",
+            errorMessage(error, "Failed to reset password"),
           status: 500,
           originalError: error,
         },
@@ -540,9 +535,7 @@ export const authAPI = {
         error: {
           code: "UNKNOWN_ERROR",
           message:
-            error instanceof Error
-              ? error.message
-              : "Failed to update user metadata",
+            errorMessage(error, "Failed to update user metadata"),
           status: 500,
           originalError: error,
         },

@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useQuery } from "@tanstack/react-query";
 import { partnershipsAPI, type Partnership } from "@/api";
 
@@ -22,7 +23,7 @@ export const usePartnerships = () => {
     partnerships: query.data ?? [],
     isLoading: query.isLoading,
     error: query.error
-      ? (query.error instanceof Error ? query.error.message : "Failed to load partnerships")
+      ? (errorMessage(query.error, "Failed to load partnerships"))
       : null,
   };
 };

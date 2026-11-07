@@ -3,6 +3,7 @@
  * Import a list takes pasted rows or a CSV, and Share link is a sign-up link the coach
  * approves in Invites.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Check, Copy, FileUp, Info, Link as LinkIcon, Mail, Plus, X } from "@/components/icons";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -94,7 +95,7 @@ export const AddAthleteModal = ({ open, onClose, coachId, initialTab = "email" }
     } catch (e) {
       toast({
         title: "Couldn't send invites",
-        description: e instanceof Error ? e.message : undefined,
+        description: errorMessage(e),
         variant: "destructive",
       });
     }

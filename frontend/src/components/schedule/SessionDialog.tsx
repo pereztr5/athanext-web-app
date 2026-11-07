@@ -4,6 +4,7 @@
  * Groups open the group sheet, camp days the camp day sheet. Booked 1-on-1s and requests go
  * straight to the session page.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { CircleCheck, MapPin, Repeat, Video, X } from "@/components/icons";
@@ -92,7 +93,7 @@ export const SessionDialog = ({
   const fail = (error: unknown) =>
     toast({
       title: "That didn't save",
-      description: error instanceof Error ? error.message : "Try again.",
+      description: errorMessage(error, "Try again."),
       variant: "destructive",
     });
 

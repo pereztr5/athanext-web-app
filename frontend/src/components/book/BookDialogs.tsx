@@ -3,6 +3,7 @@
  * pay (or send requests), and request a time that isn't listed. Working Copy `AN.modals.review`
  * and `AN.modals['req-time']`.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -145,7 +146,7 @@ export const ReviewDialog = ({
       if (result.bookingIds.length) navigate(`${ROUTES.BOOKING_CONFIRMATION}?bookings=${result.bookingIds.join(",")}`);
       else toast({ title: "Booked" });
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't book these sessions."),
+    onError: (err: unknown) => setError(errorMessage(err, "Couldn't book these sessions.")),
   });
 
   const row = (s: BookableSession, request: boolean) => {
@@ -452,7 +453,7 @@ export const RequestTimeDialog = ({
       queryClient.invalidateQueries({ queryKey: ["sessions"] });
       onClose();
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't send the request."),
+    onError: (err: unknown) => setError(errorMessage(err, "Couldn't send the request.")),
   });
 
   return (

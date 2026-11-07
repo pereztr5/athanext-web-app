@@ -3,6 +3,7 @@
  * session and Edit profile (photo included), a "Finish profile" checklist until it's complete, the next
  * session with what they're working on, their coaches, and About.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -343,7 +344,7 @@ const useRemoveCoach = (onDone: () => void) => {
       });
     },
     onError: (err: unknown) =>
-      toast({ title: "Couldn't remove the coach", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+      toast({ title: "Couldn't remove the coach", description: errorMessage(err), variant: "destructive" }),
   });
 };
 

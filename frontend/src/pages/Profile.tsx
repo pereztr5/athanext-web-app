@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { coachesAPI } from "@/api";
 import { coachLocationAPI } from "@/api/coachLocation";
 import { normalizeCoachFaqs } from "@/components/coach-profile/FAQSection";
@@ -326,7 +327,7 @@ const Profile = () => {
             console.error('Error updating profile:', error);
             toast({
                 title: 'Update failed',
-                description: error instanceof Error ? error.message : "That didn't save. Try again",
+                description: errorMessage(error, "That didn't save. Try again"),
                 variant: 'destructive',
             });
         } finally {

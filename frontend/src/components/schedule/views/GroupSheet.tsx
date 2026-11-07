@@ -2,6 +2,7 @@
  * Tapping a group in My schedule (Working Copy group sheet): who's booked and how they paid,
  * money collected, requests to join, then Message group, Add athlete and Session details.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
@@ -170,7 +171,7 @@ export const GroupSheet = ({
             onClose();
           }}
           onError={(error) =>
-            toast({ title: "That didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" })
+            toast({ title: "That didn't save", description: errorMessage(error, "Try again."), variant: "destructive" })
           }
         />
       ) : null}

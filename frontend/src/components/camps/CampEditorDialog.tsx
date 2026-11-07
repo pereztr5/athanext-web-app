@@ -4,6 +4,7 @@
  * (name, dates, where, groups, price, optional details, review) under a five-part progress bar.
  * Opened from My profile (Add camp / Edit), My schedule → Create session → Camp, and Home.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { ChevronLeft, Pencil } from "@/components/icons";
@@ -243,7 +244,7 @@ export const CampEditorDialog = ({
       await editing.refetch();
       return;
     }
-    setError(err instanceof Error ? err.message : "That didn't save. Try again.");
+    setError(errorMessage(err, "That didn't save. Try again."));
   };
 
   const save = async (publish: boolean) => {
@@ -307,7 +308,7 @@ export const CampEditorDialog = ({
   };
 
   const title = savedId ? (published ? "Edit camp" : "Edit draft camp") : "Add camp";
-  const loadError = editing.isError ? (editing.error instanceof Error ? editing.error.message : "Could not open this camp.") : null;
+  const loadError = editing.isError ? (errorMessage(editing.error, "Could not open this camp.")) : null;
 
   const banners = (
     <>

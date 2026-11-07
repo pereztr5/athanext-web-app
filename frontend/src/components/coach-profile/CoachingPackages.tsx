@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useState, useMemo } from 'react';
 import { cn } from '@/lib/utils';
 import { buttonVariants } from '@/components/ui/button';
@@ -108,7 +109,7 @@ export const CoachingPackages = ({
       }
     } catch (error: unknown) {
       console.error('Error purchasing package:', error);
-      const message = error instanceof Error ? error.message : 'Failed to initiate package purchase. Please try again.';
+      const message = errorMessage(error, 'Failed to initiate package purchase. Please try again.');
       toast({
         title: strings.packages.purchaseFailed,
         description: message,

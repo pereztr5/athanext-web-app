@@ -2,6 +2,7 @@
  * Coach Edit sheet for a published week post (WC4 `pk-edit`): when, where, spots, price,
  * add, cancel, close picks. Update posts lines into the same chat card, not a second card.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronRight, Minus, Plus } from "@/components/icons";
@@ -168,7 +169,7 @@ export const OfferEditSheet = ({
     onError: (err: unknown) =>
       toast({
         title: "Couldn't update the post",
-        description: err instanceof Error ? err.message : "Try again.",
+        description: errorMessage(err, "Try again."),
         variant: "destructive",
       }),
   });

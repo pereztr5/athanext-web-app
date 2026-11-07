@@ -1,3 +1,4 @@
+import { errorMessage } from '@/utils/errorMessage';
 import type { ApiResponse, ApiError } from './client';
 import { supabase } from '@/integrations/supabase/client';
 
@@ -40,7 +41,7 @@ export async function getConfigurationValue(
       error: null,
     };
   } catch (err) {
-    const message = err instanceof Error ? err.message : 'Failed to fetch configuration';
+    const message = errorMessage(err, 'Failed to fetch configuration');
     return {
       data: null,
       error: buildApiError('FETCH_CONFIGURATION_ERROR', message, 500, err),

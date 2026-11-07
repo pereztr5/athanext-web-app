@@ -4,6 +4,7 @@
  * Add athlete for families who paid outside AthaNext, and the share link.
  * Opened from the camp row on My profile, the camp day sheet, or /profile?camp=<id>&view=registrations.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useMemo, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Check, ChevronLeft, ChevronRight, Link as LinkIcon, Lock, Plus, Search } from "@/components/icons";
@@ -33,7 +34,7 @@ const PAID_WITH: Record<CampRegistrationRow["pay_method"], string> = {
   outside: "Outside AthaNext",
 };
 
-const errorText = (err: unknown, fallback: string) => (err instanceof Error && err.message ? err.message : fallback);
+const errorText = (err: unknown, fallback: string) => errorMessage(err, fallback);
 
 const longDate = (iso: string | null) =>
   iso ? new Date(iso).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" }) : null;

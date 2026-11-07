@@ -2,6 +2,7 @@
  * Video call link on Schedule settings. The coach pastes their own Zoom, Meet or Teams URL.
  * Booking emails and the session page show it; the public coach listing does not.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { Video } from "@/components/icons";
@@ -28,7 +29,7 @@ export const MeetingLinkCard = ({ coachId }: { coachId: string }) => {
       toast({ title: value.trim() ? "Video link saved" : "Video link removed" });
       setError(null);
     },
-    onError: (err: unknown) => setError(err instanceof Error ? err.message : "Couldn't save the link"),
+    onError: (err: unknown) => setError(errorMessage(err, "Couldn't save the link")),
   });
 
   return (

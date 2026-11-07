@@ -4,6 +4,7 @@
  * open time. A request is withdrawn, not cancelled. Camp days come with the camp sign-up: no
  * pay, cancel or reschedule here; the coach manages them, and the camp page has the details.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -80,7 +81,7 @@ const AthleteSessionPage = () => {
       refresh();
     },
     onError: (err: unknown) =>
-      toast({ title: "Couldn't cancel", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+      toast({ title: "Couldn't cancel", description: errorMessage(err), variant: "destructive" }),
   });
 
   const withdraw = useMutation({
@@ -100,7 +101,7 @@ const AthleteSessionPage = () => {
       refresh();
     },
     onError: (err: unknown) =>
-      toast({ title: "Couldn't withdraw", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+      toast({ title: "Couldn't withdraw", description: errorMessage(err), variant: "destructive" }),
   });
 
   const pay = useMutation({
@@ -111,7 +112,7 @@ const AthleteSessionPage = () => {
       refresh();
     },
     onError: (err: unknown) =>
-      toast({ title: "Couldn't open checkout", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+      toast({ title: "Couldn't open checkout", description: errorMessage(err), variant: "destructive" }),
   });
 
   if (query.isLoading) return <div className="px-4 py-10 md:px-5"><p className={meta}>Loading…</p></div>;
@@ -421,7 +422,7 @@ const AthleteSessionPage = () => {
           if (occurrenceId !== id) navigate(ROUTES.COACH_SESSION.replace(":id", occurrenceId), { replace: true });
         }}
         onError={(err) =>
-          toast({ title: "Couldn't reschedule", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" })
+          toast({ title: "Couldn't reschedule", description: errorMessage(err, "Try again."), variant: "destructive" })
         }
       />
 

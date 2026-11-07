@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Dialog,
@@ -139,7 +140,7 @@ export function SharePricingDialog({
       toast({ title: "Share link updated" });
     } catch (error) {
       const message =
-        error instanceof Error ? error.message : "Could not update that link.";
+        errorMessage(error, "Could not update that link.");
       toast({
         title: "Could not update link",
         description: message,

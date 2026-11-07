@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useCallback, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { userProfilesAPI, type UserProfile } from "@/api/userProfiles";
@@ -113,7 +114,7 @@ export const useUserProfile = (): UseUserProfileReturn => {
         return data;
       } catch (err) {
         console.error("Error updating user profile:", err);
-        setUpdateError(err instanceof Error ? err.message : "Failed to update profile");
+        setUpdateError(errorMessage(err, "Failed to update profile"));
         return null;
       }
     },

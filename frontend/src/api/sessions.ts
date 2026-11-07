@@ -3,6 +3,7 @@
  * Centralized API functions for fetching session data from Supabase
  */
 
+import { errorMessage } from '@/utils/errorMessage';
 import type { ApiResponse, ApiError } from './client';
 import { supabase } from '@/integrations/supabase/client';
 import type {
@@ -440,7 +441,7 @@ export async function getMySessions(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to fetch sessions',
+        errorMessage(error, 'Failed to fetch sessions'),
         500,
         error
       ),
@@ -494,7 +495,7 @@ export async function cancelSession(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to cancel session',
+        errorMessage(error, 'Failed to cancel session'),
         500,
         error
       ),
@@ -534,7 +535,7 @@ export async function getCoachSessionFeedbackScreen(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to fetch session feedback data',
+        errorMessage(error, 'Failed to fetch session feedback data'),
         500,
         error
       ),
@@ -575,7 +576,7 @@ export async function upsertSlotAttendance(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to save attendance',
+        errorMessage(error, 'Failed to save attendance'),
         500,
         error
       ),
@@ -621,7 +622,7 @@ export async function upsertSlotFeedback(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to save feedback',
+        errorMessage(error, 'Failed to save feedback'),
         500,
         error
       ),
@@ -673,7 +674,7 @@ export async function getExistingFeedback(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to fetch existing feedback',
+        errorMessage(error, 'Failed to fetch existing feedback'),
         500,
         error
       ),
@@ -708,7 +709,7 @@ export async function getSubmittedFeedbackIds(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to fetch submitted feedback',
+        errorMessage(error, 'Failed to fetch submitted feedback'),
         500,
         error
       ),
@@ -745,7 +746,7 @@ export async function getCoachSubmittedSessionIds(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to fetch coach session feedback',
+        errorMessage(error, 'Failed to fetch coach session feedback'),
         500,
         error
       ),
@@ -779,7 +780,7 @@ export async function getCoachSlotFeedbackIds(
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to fetch coach slot feedback',
+        errorMessage(error, 'Failed to fetch coach slot feedback'),
         500,
         error
       ),
@@ -819,7 +820,7 @@ export async function upsertSessionFeedback(payload: {
       data: null,
       error: buildApiError(
         'UNKNOWN_ERROR',
-        error instanceof Error ? error.message : 'Failed to save session feedback',
+        errorMessage(error, 'Failed to save session feedback'),
         500,
         error
       ),

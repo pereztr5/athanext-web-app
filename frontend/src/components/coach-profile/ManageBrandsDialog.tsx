@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useRef, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { ArrowDown, ArrowUp, Pencil, Plus, X } from "@/components/icons";
@@ -154,7 +155,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
     } catch (error) {
       toast({
         title: "Could not save brand",
-        description: error instanceof Error ? error.message : "Try again.",
+        description: errorMessage(error, "Try again."),
         variant: "destructive",
       });
     } finally {
@@ -172,7 +173,7 @@ export function ManageBrandsDialog({ open, onOpenChange, coachId, currentBrands 
     } catch (error) {
       toast({
         title: "Could not save brands",
-        description: error instanceof Error ? error.message : "Try again.",
+        description: errorMessage(error, "Try again."),
         variant: "destructive",
       });
     } finally {

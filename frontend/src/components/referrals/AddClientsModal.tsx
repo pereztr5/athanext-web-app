@@ -1,3 +1,4 @@
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { Plus, X } from "@/components/icons";
 import {
@@ -58,7 +59,7 @@ export const AddClientsModal = ({ open, onClose, coachId }: AddClientsModalProps
     } catch (e) {
       toast({
         title: "Could not add clients",
-        description: e instanceof Error ? e.message : undefined,
+        description: errorMessage(e),
         variant: "destructive",
       });
     }

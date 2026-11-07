@@ -4,6 +4,7 @@
  * Stripe Checkout, or "Hold my spot" when the family pays the coach directly. Stripe returns
  * here with ?signup=…&session_id=…, which shows "You're in".
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link, Navigate, useLocation, useNavigate, useParams } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -250,7 +251,7 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
     return (
       <CampNotFound
         title="Couldn't open this camp"
-        body={page.error instanceof Error ? page.error.message : "Check your connection and try again."}
+        body={errorMessage(page.error, "Check your connection and try again.")}
       />
     );
   }
@@ -324,7 +325,7 @@ const CampFlow = ({ coachSlug, campSlug, canceled }: { coachSlug: string; campSl
         // Full group or camp: show the spots as they are now.
         if (err.status === 409) void queryClient.invalidateQueries({ queryKey: ["camp-page", coachSlug, campSlug] });
       }
-      setSubmitError(err instanceof Error ? err.message : "Could not save your spot. Try again.");
+      setSubmitError(errorMessage(err, "Could not save your spot. Try again."));
     }
   };
 
@@ -865,7 +866,7 @@ const Review = ({
             : "Your spot is confirmed as soon as payment goes through."}
         </p>
         {quote.isError ? (
-          <Notice>{quote.error instanceof Error ? quote.error.message : "Could not load the price."}</Notice>
+          <Notice>{errorMessage(quote.error, "Could not load the price.")}</Notice>
         ) : null}
       </section>
 

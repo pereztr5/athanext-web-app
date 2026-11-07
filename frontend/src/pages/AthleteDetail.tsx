@@ -4,6 +4,7 @@
  * Sessions list with the summary and next focus of each previous session and Add feedback where
  * it's due; family contact, the season goal and a private note.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -57,7 +58,7 @@ const AthleteDetailPage = () => {
 
   const refresh = () => queryClient.invalidateQueries({ queryKey: ["coach-athlete", id] });
   const fail = (error: unknown) =>
-    toast({ title: "That didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" });
+    toast({ title: "That didn't save", description: errorMessage(error, "Try again."), variant: "destructive" });
 
   const save = useMutation({
     mutationFn: (value: string) => rosterAPI.saveNote(id, value),

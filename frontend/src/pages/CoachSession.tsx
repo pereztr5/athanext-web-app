@@ -8,6 +8,7 @@
  * sign-ups, payments and the schedule are managed on the camp, so there is no Add, Reschedule
  * or Cancel there.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AthleteSessionPage from "./AthleteSession";
@@ -114,7 +115,7 @@ const CoachSessionPage = () => {
     refresh();
   };
   const fail = (error: unknown) =>
-    toast({ title: "That didn't save", description: error instanceof Error ? error.message : "Try again.", variant: "destructive" });
+    toast({ title: "That didn't save", description: errorMessage(error, "Try again."), variant: "destructive" });
 
   // Opens the athlete's thread or the coach's group channel; plain Messages if that fails.
   const message = useMutation({

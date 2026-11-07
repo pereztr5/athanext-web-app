@@ -2,6 +2,7 @@
  * The camp editor's questions (Michael's "Camps in Create session" + the coach mockup). The
  * desktop sheet shows them all at once; the phone shows one per screen.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import Cropper, { type Area } from "react-easy-crop";
@@ -429,7 +430,7 @@ const CoverField = ({
       patch({ coverUrl: url });
       closeCrop();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "The photo didn't upload. Try again.");
+      setError(errorMessage(err, "The photo didn't upload. Try again."));
     } finally {
       setBusy(false);
     }
@@ -694,7 +695,7 @@ const WaiverField = ({ draft, patch }: { draft: CampDraft; patch: Patch }) => {
     try {
       patch({ waiverUrl: await campsAPI.uploadWaiver(file) });
     } catch (err) {
-      setUploadError(err instanceof Error ? err.message : "The waiver didn't upload. Try again.");
+      setUploadError(errorMessage(err, "The waiver didn't upload. Try again."));
     } finally {
       setBusy(false);
       if (fileRef.current) fileRef.current.value = "";

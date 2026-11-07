@@ -4,6 +4,7 @@
  * Account fields show a save bar once something changes; switches save as soon as they flip.
  * AthaNext stores no card or bank details; payouts and the $29 plan are set up on Stripe's pages.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -257,7 +258,7 @@ const AccountTab = ({ coach, onDirtyChange }: {
       queryClient.invalidateQueries({ queryKey: ["coach-details"] });
       toast({ title: "Changes saved" });
     },
-    onError: (err) => toast({ title: "Couldn't save", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    onError: (err) => toast({ title: "Couldn't save", description: errorMessage(err), variant: "destructive" }),
   });
 
   const submit = () => {
@@ -384,7 +385,7 @@ const HowFamiliesPay = ({ coachId, offlinePay }: { coachId: string; offlinePay: 
       if (okTitle) toast({ title: okTitle });
     } catch (err) {
       setPay(previous);
-      toast({ title: "Couldn't save", description: err instanceof Error ? err.message : undefined, variant: "destructive" });
+      toast({ title: "Couldn't save", description: errorMessage(err), variant: "destructive" });
     }
   };
 
@@ -703,7 +704,7 @@ export const SecurityTab = ({ danger }: { danger: ReactNode }) => {
         navigate(ROUTES.AUTH);
       }, 2500);
     },
-    onError: (err) => setPwError(err instanceof Error && err.message ? err.message : PASSWORD_FALLBACK_MESSAGE),
+    onError: (err) => setPwError(errorMessage(err, PASSWORD_FALLBACK_MESSAGE)),
   });
 
   const submitPassword = () => {
@@ -875,7 +876,7 @@ const DeactivateCard = ({ coachId }: { coachId: string }) => {
       void sendAccountEmail("coach_deactivated");
       toast({ title: "Account deactivated", description: "Families can no longer book you. Reactivate any time from here." });
     },
-    onError: (err) => toast({ title: "Couldn't deactivate", description: err instanceof Error ? err.message : undefined, variant: "destructive" }),
+    onError: (err) => toast({ title: "Couldn't deactivate", description: errorMessage(err), variant: "destructive" }),
   });
   return (
     <ConfirmWordCard

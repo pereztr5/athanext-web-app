@@ -4,6 +4,7 @@
  * organizations from the database, brands and gear. Text fields save on Done. Packages,
  * session types, locations, credentials and deals save as soon as their editor closes.
  */
+import { errorMessage } from "@/utils/errorMessage";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
@@ -193,7 +194,7 @@ export const OwnProfileEditor = ({
       await saveServices(next);
       return true;
     } catch (err) {
-      toast({ title: "Couldn't save session types", description: err instanceof Error ? err.message : "Try again.", variant: "destructive" });
+      toast({ title: "Couldn't save session types", description: errorMessage(err, "Try again."), variant: "destructive" });
       return false;
     }
   };
