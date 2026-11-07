@@ -748,13 +748,7 @@ test.describe("coach invite link", () => {
     await expect(page.getByRole("button", { name: "Accept invite" })).toBeDisabled();
   });
 
-  // BUG: the invite page right after an invited sign-up says "You're signed in without an
-  // athlete profile" and offers only "Log in with another account". useReferralInvite
-  // (src/hooks/useReferrals.ts) is fetched on /auth as soon as the account is signed in, before
-  // the profile has an athlete_id, so is_athlete comes back false; the app-wide staleTime of 5
-  // minutes (src/App.tsx) then serves that answer to /invite/:token instead of asking again. A
-  // reload shows the Accept form. Finishing the profile should invalidate ["referral-invite"].
-  test.fixme("right after an invited sign-up the invite page offers Accept without a reload", async ({ page, backend }) => {
+  test("right after an invited sign-up the invite page offers Accept without a reload", async ({ page, backend }) => {
     await signUpFromInvite(page, backend);
     await expect(page.getByText("How do you know Coach Casey Coach?")).toBeVisible();
   });
