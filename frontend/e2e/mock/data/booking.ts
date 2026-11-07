@@ -244,10 +244,7 @@ export const seedCoachProfile = (backend: MockBackend, coach: Row = {}) => {
   backend.rpc.record_coach_share_event = null;
 };
 
-/**
- * One availability period with two occurrences, for the signed-out profile's weekly table. Both
- * are on the same day so they share a week whatever today is (the table shows one week at a time).
- */
+/** One availability period with two occurrences, for the signed-out profile's weekly table. */
 export const availabilityPeriod = (): Row => {
   const occ = (id: string, days: number, start: string, end: string): Row => ({
     id,
@@ -276,7 +273,7 @@ export const availabilityPeriod = (): Row => {
     created_at: "2025-01-01T00:00:00Z",
     updated_at: "2025-01-01T00:00:00Z",
     weekly_slots: [],
-    occurrences: [occ("00000000-0000-4000-8000-0000000a0201", 2, "10:00:00", "11:00:00"), occ("00000000-0000-4000-8000-0000000a0202", 2, "12:00:00", "13:00:00")],
+    occurrences: [occ("00000000-0000-4000-8000-0000000a0201", 2, "10:00:00", "11:00:00"), occ("00000000-0000-4000-8000-0000000a0202", 3, "10:00:00", "11:00:00")],
   };
 };
 
