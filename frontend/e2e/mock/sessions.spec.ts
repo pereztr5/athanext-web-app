@@ -332,11 +332,7 @@ test.describe("Session page as a family", () => {
     expect(asked).toMatchObject({ p_coach_id: IDS.coach });
   });
 
-  // BUG: athleteSessionAPI.reschedule (src/api/athleteSession.ts) calls a module-level
-  // `const rpc = supabase.rpc as ...` with no `this`, so it throws "Cannot read properties of
-  // undefined (reading 'rest')" before sending anything. Every family reschedule fails with
-  // "Couldn't reschedule" and reschedule_my_booking is never called.
-  test.fixme("rescheduling moves my booking to another open time", async ({ page, as, backend }) => {
+  test("rescheduling moves my booking to another open time", async ({ page, as, backend }) => {
     const s = booked();
     const target = addDays(today(), 6);
     installAthleteSessions(backend, [s]);
