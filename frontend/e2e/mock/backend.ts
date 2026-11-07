@@ -164,8 +164,9 @@ export class MockBackend {
     return this.tables[name];
   }
 
+  /** Adds copies of `rows`, so a test that changes a seeded row can't leak into the next test. */
   seed(name: string, rows: Row[]) {
-    this.table(name).push(...rows);
+    this.table(name).push(...rows.map((row) => structuredClone(row)));
     return this;
   }
 
